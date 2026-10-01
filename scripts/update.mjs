@@ -5,11 +5,13 @@
 //   data/latest.json   – what the web page reads
 //   data/state.json    – Kalman filter state, station list, cached CAMS forecast
 //   data/static/elev.json – terrain elevation grid (built once)
+//   data/met.json      – ECMWF IFS HRES meteorology on nested grids (refreshed every 6 h)
 //   data/history/obs-YYYY-MM.csv, data/history/fcst-YYYY-MM.csv – for verification
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { buildDEM, sampleGrid } from './dem.mjs';
 import { regressionKriging } from './rk.mjs';
+import { fetchMet, sampleMet, MET_MODEL } from './met.mjs';
 
 // ------------------------------------------------------------------ config
 const CFG = {
@@ -17,7 +19,8 @@ const CFG = {
   bbox: [92.0, 5.5, 110.0, 24.5],
   gridBbox: [92.0, 5.5, 110.0, 24.0],  // covers every region in the page's drop-down
   gridStep: 0.5,                 // deg; keeps Open-Meteo calls inside the free tier
-  camsRefreshH: 8,               // CAMS runs twice a day; 3 pulls/day keeps Open-Meteo under its 10k/day free limit
+  camsRefreshH: 12,              // CAMS is issued twice a day; with the met pulls this stays under Open-Meteo's 10k/day free limit
+  met: { refreshH: 6, grids: [ { name: 'north', bbox: [96.5, 14.5, 102.5, 21.5], step: 0.25 }, { name: 'domain', bbox: [92, 5, 110, 25], step: 1.0 } ] },
   stationRefreshH: 24,
   maxStations: 300,
   obsMaxAgeH: 3,                 // ignore station values older than this
@@ -240,8 +243,18 @@ async function main() {
       obs: s.obs ? { t: s.obs.t, v: r1(s.obs.v) } : null, bias: k ? +b.toFixed(3) : null, nUpd: k?.n || 0, raw, corr };
   });
 
+  // 4b. meteorology (fixed model, nested grids), refreshed every few hours
+  let met = await readJSON(path.join(DATA, 'met.json'), null);
+  const metKey = JSON.stringify(CFG.met.grids) + MET_MODEL;
+  if (!met || met.key !== metKey || now - met.fetched > CFG.met.refreshH * HOUR) {
+    try {
+      met = await fetchMet(CFG.met.grids, { get, sleep, log, keepFrom: now - 36 * HOUR });
+      met.key = metKey; await writeJSON(path.join(DATA, 'met.json'), met);
+    } catch (e) { log(`met refresh failed: ${e.message}${met ? ' (keeping previous)' : ''}`); }
+  }
+
   // 5. regression kriging (RIMM-type) at the analysis hour, in log space:
-  //    ln(obs+1) = b0 + b1 ln(CAMS+1) + b2 elev_km + residual;  residual → ordinary kriging on a 0.1° grid.
+  //    ln(obs+1) = b0 + b1 ln(CAMS+1) + b2 elev_km + b3 ln(BLH/1000) + b4 wind100 + residual;  residual → ordinary kriging on a 0.1° grid.
   //    The page applies it to every forecast hour, fading the correction with lead time (biasLeadEfoldH).
   let dem = await readJSON(path.join(DATA, 'static', 'elev.json'), null);
   const demKey = `${g.join(',')}|${CFG.rk.demStep}`;
@@ -259,6 +272,7 @@ async function main() {
     if (!s.monitor || !s.obs || now - s.obs.t > CFG.obsMaxAgeH * HOUR) return;
     const c = interpT(C.times, C.st[i], s.obs.t); if (c == null) return;
     const x = [Math.log(c + 1)]; if (dem) { const e = sampleGrid(dem, s.lat, s.lon); if (e == null) return; x.push(e / 1000); }
+    if (met) { const m = sampleMet(met, s.lat, s.lon, s.obs.t); x.push(Math.log(Math.max(m.blh, 50) / 1000), m.ws); }
     rkObs.push({ lat: s.lat, lon: s.lon, y: Math.log(s.obs.v + 1), x, obs: s.obs.v, cams: c, t: s.obs.t });
   });
   if (rkObs.length >= CFG.rk.minStations) {
@@ -267,7 +281,7 @@ async function main() {
     if (out) {
       const err = (a, b) => ({ rmse: +Math.sqrt(a.reduce((s, v, i) => s + (v - b[i]) ** 2, 0) / a.length).toFixed(2), mb: +(a.reduce((s, v, i) => s + v - b[i], 0) / a.length).toFixed(2) });
       const o = rkObs.map(r => r.obs), tSorted = rkObs.map(r => r.t).sort((a, b) => a - b);
-      rk = { t: tSorted[Math.floor(tSorted.length / 2)], n: rkObs.length, beta: out.beta.map(b => +b.toFixed(4)), predictors: dem ? ['ln(CAMS+1)', 'elevation_km'] : ['ln(CAMS+1)'],
+      rk = { t: tSorted[Math.floor(tSorted.length / 2)], n: rkObs.length, beta: out.beta.map(b => +b.toFixed(4)), predictors: ['ln(CAMS+1)', ...(dem ? ['elevation_km'] : []), ...(met ? ['ln(BLH_km)', 'wind100_ms'] : [])],
         vario: { ...out.vario, c0: +out.vario.c0.toFixed(4), c1: +out.vario.c1.toFixed(4) }, maxKm: out.maxKm, leadEfoldH: CFG.biasLeadEfoldH,
         cv: { n: o.length, cams: err(rkObs.map(r => r.cams), o), rk: err(out.cv, o) }, resid: out.resid };
       log(`RK: ${rk.n} monitors, beta=[${rk.beta.join(', ')}], range ${rk.vario.a_km} km, LOO RMSE CAMS ${rk.cv.cams.rmse} → RK ${rk.cv.rk.rmse} µg/m³`);
@@ -283,6 +297,7 @@ async function main() {
     generated: now, camsIssued: C.at, bbox: CFG.bbox, runlog: RUNLOG,
     method: { kf: CFG.kf, biasLeadEfoldH: CFG.biasLeadEfoldH, rk: CFG.rk },
     rk, dem: dem ? { file: 'data/static/elev.json', step: dem.step, source: dem.source } : null,
+    met: met ? { file: 'data/met.json', model: met.model, fetched: met.fetched, grids: met.grids.map(g => ({ step: g.step, bbox: [g.lon0, g.lat0, g.lon0 + (g.nx - 1) * g.step, g.lat0 + (g.ny - 1) * g.step] })) } : null,
     hours, stations: outStations,
     grid: { lon0: g[0], lat0: g[1], step, nx, ny, values: gridRaw },  // raw CAMS; the page applies rk
     hotspots: { cols: ['lat', 'lon', 'frp', 't', 'conf', 'sat'], rows: hot },

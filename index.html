@@ -301,7 +301,8 @@ td.num{text-align:right;font-family:var(--font-data);font-variant-numeric:tabula
       <span class="eq">Q [g s⁻¹] = EF [g kg⁻¹] × 0.368 [kg MJ⁻¹] × FRP [MW]</span>
       <p class="note">0.368 kg of dry matter burned per MJ of fire radiative energy is from Wooster et al. (2005). EF for PM<sub>2.5</sub> is from Akagi et al. (2011). Each cluster emits at its observed FRP for the chosen burn duration after its last detection, released as a puff every 20 minutes.</p>
       <h3>Transport and spread</h3>
-      <p class="note">Puffs move with the 80 m forecast wind, interpolated in space (bilinear on a 0.5–1° grid) and time. Pasquill–Gifford stability class comes from 10 m wind, solar radiation and cloud cover (Turner 1970 table). Spread uses Briggs (1973) open-country σ<sub>y</sub>, σ<sub>z</sub>, with σ<sub>y</sub> not smaller than 0.5 m s⁻¹ × travel time for long-range drift (Heffter 1965).</p>
+      <p class="note">Meteorology is ECMWF IFS HRES (9 km), fixed by name through the Open-Meteo API so every run uses the same model. The hourly job samples it every 6 h on two nested grids, 0.25° over northern Thailand (96.5–102.5°E, 14.5–21.5°N) and 1° over the whole domain, and the model uses the finer grid wherever it covers the point (bilinear in space, linear in time). Variables: 100 m wind (transport), 10 m wind, shortwave radiation and cloud cover (stability class), boundary-layer height (vertical mixing limit) and precipitation (wet removal).</p>
+      <p class="note">Puffs move with the 100 m wind. Pasquill–Gifford stability class comes from 10 m wind, solar radiation and cloud cover (Turner 1970 table). Spread uses Briggs (1973) open-country σ<sub>y</sub>, σ<sub>z</sub>, with σ<sub>y</sub> not smaller than 0.5 m s⁻¹ × travel time for long-range drift (Heffter 1965). Rain removes particles at the rate Λ = 8×10⁻⁵·P<sup>0.79</sup> s⁻¹ (P in mm h⁻¹), the default particle scavenging coefficient of HYSPLIT, so each puff's mass falls by e<sup>−Λ·Δt</sup> per step.</p>
       <span class="eq">C = M / (2π σy²) · exp(−r² / 2σy²) · Fz</span>
       <span class="eq">Fz = 2 / (√(2π) σz)  if σz &lt; 0.8 h,  else 1 / h</span>
       <p class="note">h is the deepest boundary layer the puff has met, so smoke mixed aloft in the afternoon is not squeezed back to the ground at night.</p>
@@ -320,9 +321,9 @@ td.num{text-align:right;font-family:var(--font-data);font-variant-numeric:tabula
       <p class="note">Each monitor's log-ratio bias b = ln(obs+1) − ln(CAMS+1) is tracked with a scalar Kalman filter (random-walk state), following the predictor bias correction of Delle Monache et al. (2006). The forecast at the station is (CAMS+1)·e<sup>b·w</sup> − 1, where w = e<sup>−lead/48 h</sup> fades the correction with lead time.</p>
       <h3>Map: regression kriging with a CAMS drift</h3>
       <p class="note">At the latest observation hour, measured PM<sub>2.5</sub> at reference monitors is regressed on the CAMS value and terrain elevation, in log space:</p>
-      <span class="eq">ln(PM+1) = β₀ + β₁·ln(CAMS+1) + β₂·z + ε</span>
-      <p class="note">z is elevation in km from a 0.05° terrain grid (AWS Terrain Tiles, largely SRTM-derived). The residuals ε are interpolated by ordinary kriging with an exponential semivariogram fitted each hour (nearest 16 monitors, residual grid 0.1°). This is the regression–interpolation structure used for the EEA European air-quality maps (Horálek et al., 2025), kriging with a chemistry-transport-model drift as in Real et al. (2022), and regression/universal kriging as compared by Beelen et al. (2009). Elevation is included because it improved PM<sub>2.5</sub> mapping over Thailand in Han et al. (2022). For forecast hours the map is</p>
-      <span class="eq">ln(PM+1) = ln(CAMS+1) + w·[β₀ + (β₁−1)·ln(CAMS+1) + β₂·z + ε̂],  w = e<sup>−lead/48 h</sup></span>
+      <span class="eq">ln(PM+1) = β₀ + β₁·ln(CAMS+1) + β₂·z + β₃·ln(BLH) + β₄·U + ε</span>
+      <p class="note">z is elevation in km from a 0.05° terrain grid (AWS Terrain Tiles, largely SRTM-derived); BLH (km) and U, the 100 m wind speed (m s⁻¹), come from the ECMWF IFS HRES fields above at the observation hour and, for forecasts, at each valid hour. They let the map respond to shallow mixing and calm nights at a finer scale than CAMS; wind speed is also a predictor in the hourly 1 km PM<sub>2.5</sub> model for Thailand of Punpukdee et al. (2024). The residuals ε are interpolated by ordinary kriging with an exponential semivariogram fitted each hour (nearest 16 monitors, residual grid 0.1°). This is the regression–interpolation structure used for the EEA European air-quality maps (Horálek et al., 2025), kriging with a chemistry-transport-model drift as in Real et al. (2022), and regression/universal kriging as compared by Beelen et al. (2009). Elevation is included because it improved PM<sub>2.5</sub> mapping over Thailand in Han et al. (2022). For forecast hours the map is</p>
+      <span class="eq">ln(PM+1) = ln(CAMS+1) + w·[β₀ + (β₁−1)·ln(CAMS+1) + β₂·z + β₃·ln(BLH) + β₄·U + ε̂],  w = e<sup>−lead/48 h</sup></span>
       <p class="note">so the correction is full at the analysis hour and the map returns to CAMS for long leads. Far from monitors the kriged residual fades to zero and only the regression part remains. The map is computed at 0.05°; real detail comes from the monitors and the terrain, while CAMS itself is about 0.4°.</p>
       <div id="rkBox" class="note"></div>
       <h3>Fine total PM<sub>2.5</sub></h3>
@@ -332,7 +333,9 @@ td.num{text-align:right;font-family:var(--font-data);font-variant-numeric:tabula
       <h3>Sources</h3>
       <ol>
         <li>NASA FIRMS active fire data, VIIRS 375 m and MODIS. firms.modaps.eosdis.nasa.gov</li>
-        <li>Open-Meteo forecast API (wind, boundary layer height, radiation, cloud). open-meteo.com</li>
+        <li>ECMWF IFS HRES forecast via the Open-Meteo forecast API (models=ecmwf_ifs): wind at 10 m and 100 m, boundary-layer height, shortwave radiation, cloud cover, precipitation. open-meteo.com</li>
+        <li>NOAA ARL HYSPLIT tutorial, section 11.5 Wet Deposition for Particles (default scavenging coefficient 8×10⁻⁵, exponent 0.79). ready.arl.noaa.gov/documents/Tutorial_2019/html/chem_wetp.html</li>
+        <li>Punpukdee, P., Winijkul, E., Kyaw, P.P., Virdis, S.G.P., Xue, W., Nguyen, T.P.L. (2024). Estimation of hourly one square kilometer fine particulate matter concentration over Thailand using aerosol optical depth. Frontiers in Environmental Science 11. doi:10.3389/fenvs.2023.1303152</li>
         <li>Wooster, M. J., Roberts, G., Perry, G. L. W., Kaufman, Y. J. (2005). Retrieval of biomass combustion rates and totals from fire radiative power observations. JGR Atmospheres 110, D24311. doi:10.1029/2005JD006318</li>
         <li>Akagi, S. K., et al. (2011). Emission factors for open and domestic biomass burning for use in atmospheric models. ACP 11, 4039–4072. doi:10.5194/acp-11-4039-2011</li>
         <li>Briggs, G. A. (1973). Diffusion estimation for small emissions. ATDL Contribution No. 79, NOAA.</li>
@@ -406,6 +409,7 @@ td.num{text-align:right;font-family:var(--font-data);font-variant-numeric:tabula
 /*MODEL-START*/
 // ---------------------------------------------------------------- constants
 const KG_PER_MJ = 0.368;            // Wooster et al. 2005
+const WET_A = 8e-5, WET_B = 0.79;   // scavenging Λ = A·P^B (s⁻¹, P in mm/h), HYSPLIT default for particles
 const DEG = Math.PI/180, MPD = 111320; // metres per degree latitude
 const REGIONS = {
   north:    {name:'Northern Thailand', bbox:[96.5,15.0,102.8,22.0]},
@@ -596,7 +600,7 @@ function windGridSpec(sources, region, maxPts=600){
 // Pack hourly fields into Float32Arrays indexed [t][iy][ix]
 function packWind(spec,times,perPoint){ // perPoint[iy*nx+ix] = {ws10,wd10,ws80,wd80,blh,sw,cc} arrays
   const {nx,ny}=spec, nt=times.length, N=nt*nx*ny;
-  const f={u:new Float32Array(N),v:new Float32Array(N),ws10:new Float32Array(N),blh:new Float32Array(N),sw:new Float32Array(N),cc:new Float32Array(N)};
+  const f={u:new Float32Array(N),v:new Float32Array(N),ws10:new Float32Array(N),blh:new Float32Array(N),sw:new Float32Array(N),cc:new Float32Array(N),pr:new Float32Array(N)};
   for(let p=0;p<nx*ny;p++){const d=perPoint[p];
     for(let t=0;t<nt;t++){const i=t*nx*ny+p;
       const ws=d.ws80[t]??d.ws10[t]??2, wd=(d.wd80[t]??d.wd10[t]??0)*DEG;
@@ -604,7 +608,7 @@ function packWind(spec,times,perPoint){ // perPoint[iy*nx+ix] = {ws10,wd10,ws80,
       f.ws10[i]=d.ws10[t]??ws*0.7;
       const hr=new Date(times[t]).getUTCHours(), sw=d.sw[t]??0;
       f.sw[i]=sw; f.cc[i]=d.cc[t]??50;
-      f.blh[i]=d.blh[t]??(sw>50?1500:300);
+      f.blh[i]=d.blh[t]??(sw>50?1500:300); f.pr[i]=(d.pr&&d.pr[t])||0;
     }}
   return {spec,times,...f};
 }
@@ -616,13 +620,28 @@ function sampleWind(W,lat,lon,t){
   let ft=(t-T[0])/3600000; ft=Math.min(Math.max(ft,0),nt-1.0001);
   const it=Math.floor(ft), at=ft-it, nxy=nx*ny;
   const out={};
-  for(const k of ['u','v','ws10','blh','sw','cc']){const a=W[k];let s=0;
+  for(const k of ['u','v','ws10','blh','sw','cc','pr']){const a=W[k];let s=0;
     for(const [dt,wt] of [[0,1-at],[1,at]]){const base=(it+dt)*nxy;
       s+=wt*((1-ax)*(1-ay)*a[base+iy*nx+ix]+ax*(1-ay)*a[base+iy*nx+ix+1]+(1-ax)*ay*a[base+(iy+1)*nx+ix]+ax*ay*a[base+(iy+1)*nx+ix+1]);}
     out[k]=s;}
   return out;
 }
 
+// nested meteorology from the hourly pipeline (data/met.json): finest grid containing the point, bilinear + linear in time
+function sampleMet(M,lat,lon,t){
+  const T=M.times, nt=T.length; let ft=(t-T[0])/3600e3; ft=Math.min(Math.max(ft,0),nt-1.0001);
+  const it=Math.floor(ft), at=ft-it;
+  for(let gi=0;gi<M.grids.length;gi++){const g=M.grids[gi];
+    let fx=(lon-g.lon0)/g.step, fy=(lat-g.lat0)/g.step;
+    if(!(fx>=0&&fy>=0&&fx<=g.nx-1&&fy<=g.ny-1)&&gi<M.grids.length-1) continue;
+    fx=Math.min(Math.max(fx,0),g.nx-1.0001); fy=Math.min(Math.max(fy,0),g.ny-1.0001);
+    const ix=Math.floor(fx), iy=Math.floor(fy), ax=fx-ix, ay=fy-iy, nxy=g.nx*g.ny, o={};
+    for(const k of M.vars){const a=g.data[k]; let s=0;
+      for(let dt=0;dt<2;dt++){const wt=dt?at:1-at, b=(it+dt)*nxy;
+        s+=wt*((1-ax)*(1-ay)*a[b+iy*g.nx+ix]+ax*(1-ay)*a[b+iy*g.nx+ix+1]+(1-ax)*ay*a[b+(iy+1)*g.nx+ix]+ax*ay*a[b+(iy+1)*g.nx+ix+1]);}
+      o[k]=s;}
+    o.cls/=2; o.ws=Math.hypot(o.u,o.v); return o;}
+}
 // ---------------------------------------------------------------- stability & sigmas
 // Pasquill-Gifford class (1=A … 6=F) after Turner (1970). Returns a real number; half classes = average.
 function pgClass(u, sw, cc){
@@ -672,11 +691,12 @@ function simulate(sources, W, opts){
     }
     // advect
     for(let i=P.length-1;i>=0;i--){const p=P[i];
-      const w=sampleWind(W,p.lat,p.lon,t);
+      const w=W.sample?W.sample(p.lat,p.lon,t):sampleWind(W,p.lat,p.lon,t);
       const sp=Math.hypot(w.u,w.v);
       p.lat+=w.v*dt/MPD; p.lon+=w.u*dt/(MPD*Math.cos(p.lat*DEG));
       p.x+=Math.max(sp,0.5)*dt; p.age+=dt; p.h=Math.max(p.h,w.blh,100);
-      const cls=pgClass(w.ws10,w.sw,w.cc);
+      const cls=w.cls??pgClass(w.ws10,w.sw,w.cc);
+      if(w.pr>0) p.m*=Math.exp(-WET_A*Math.pow(w.pr,WET_B)*dt);   // below-cloud wet removal, HYSPLIT default
       const sy=Math.hypot(SY0,Math.max(sigma(p.x,cls,sigYc),0.5*p.age));
       const sz=Math.hypot(SZ0,sigma(p.x,cls,sigZc));
       p.sy=Math.max(p.sy,sy); p.sz=Math.min(Math.max(p.sz,sz),5000);
@@ -893,18 +913,18 @@ async function fetchFirms(){
 }
 async function fetchWind(spec, pastDays, forecastDays){
   const pts=[]; for(let iy=0;iy<spec.ny;iy++) for(let ix=0;ix<spec.nx;ix++) pts.push([spec.lat0+iy*spec.step, spec.lon0+ix*spec.step]);
-  const vars='wind_speed_10m,wind_direction_10m,wind_speed_80m,wind_direction_80m,boundary_layer_height,shortwave_radiation,cloud_cover';
+  const vars='wind_speed_10m,wind_direction_10m,wind_speed_100m,wind_direction_100m,boundary_layer_height,shortwave_radiation,cloud_cover,precipitation';
   const per=[]; let times=null;
   for(let i=0;i<pts.length;i+=100){
     const chunk=pts.slice(i,i+100);
     busy(`Getting forecast winds… ${Math.min(i+100,pts.length)}/${pts.length} grid points`);
     const url=`https://api.open-meteo.com/v1/forecast?latitude=${chunk.map(p=>p[0].toFixed(2)).join(',')}&longitude=${chunk.map(p=>p[1].toFixed(2)).join(',')}`+
-      `&hourly=${vars}&wind_speed_unit=ms&timeformat=unixtime&timezone=GMT&past_days=${pastDays}&forecast_days=${forecastDays}`;
+      `&hourly=${vars}&models=ecmwf_ifs&wind_speed_unit=ms&timeformat=unixtime&timezone=GMT&past_days=${pastDays}&forecast_days=${forecastDays}`;
     const r=await fetch(url); if(!r.ok) throw new Error(`Open-Meteo HTTP ${r.status}: ${(await r.text()).slice(0,140)}`);
     let js=await r.json(); if(!Array.isArray(js)) js=[js];
     for(const o of js){const h=o.hourly; if(!times) times=h.time.map(s=>s*1000);
-      per.push({ws10:h.wind_speed_10m,wd10:h.wind_direction_10m,ws80:h.wind_speed_80m||[],wd80:h.wind_direction_80m||[],
-        blh:h.boundary_layer_height||[],sw:h.shortwave_radiation||[],cc:h.cloud_cover||[]});}
+      per.push({ws10:h.wind_speed_10m,wd10:h.wind_direction_10m,ws80:h.wind_speed_100m||[],wd80:h.wind_direction_100m||[],
+        blh:h.boundary_layer_height||[],sw:h.shortwave_radiation||[],cc:h.cloud_cover||[],pr:h.precipitation||[]});}
   }
   return packWind(spec,times,per);
 }
@@ -943,10 +963,14 @@ async function runAuto(quiet){ try{ await runAuto_(quiet); }catch(e){ busy(null)
 async function runAuto_(quiet){
   if(!quiet) busy('Loading the latest hourly data…');
   const d=await loadPipeline();
-  if(d){P.data=d; await loadDEM(); await runModel(pipelineHotspots(d),'live',null,quiet); showFreshness(); loadVerify(); renderRK();}
+  if(d){P.data=d; busy('Loading meteorology…'); await Promise.all([loadDEM(),loadMet()]); await runModel(pipelineHotspots(d),'live',null,quiet); showFreshness(); loadVerify(); renderRK();}
   else if(!quiet){P.data=null; await runLive();}
 }
-let DEM=null;
+let DEM=null, MET=null;
+async function loadMet(){
+  if(!P.data?.met) {MET=null; return;} if(MET&&MET.fetched===P.data.met.fetched) return;
+  try{const r=await fetch(P.data.met.file+'?f='+P.data.met.fetched); if(r.ok) MET=await r.json();}catch(e){MET=null;}
+}
 async function loadDEM(){
   if(DEM||!P.data?.dem) return;
   try{const r=await fetch(P.data.dem.file,{cache:'force-cache'}); if(r.ok) DEM=await r.json();}catch(e){}
@@ -959,9 +983,12 @@ function sampleRegular(Gr,lat,lon){
 // regression-kriging map value from raw CAMS c at (lat,lon) for valid time t
 function rkValue(c,lat,lon,t){
   const rk=P.data&&P.data.rk; if(!rk||c<0) return c;
-  const hasZ=rk.beta.length>2; if(hasZ&&!DEM) return c;
+  const names=rk.predictors||['ln(CAMS+1)'];
+  if(names.includes('elevation_km')&&!DEM) return c; if(names.includes('ln(BLH_km)')&&!MET) return c;
   const w=Math.exp(-Math.max(0,(t-rk.t)/36e5)/(rk.leadEfoldH||48)), lc=Math.log(c+1);
-  let reg=rk.beta[0]+rk.beta[1]*lc; if(hasZ){const z=sampleRegular(DEM,lat,lon); reg+=rk.beta[2]*((z??0)/1000);}
+  const m=MET&&names.includes('ln(BLH_km)')?sampleMet(MET,lat,lon,t):null;
+  let reg=rk.beta[0];
+  names.forEach((nm,j)=>{const b=rk.beta[j+1]; reg+=b*(nm==='ln(CAMS+1)'?lc:nm==='elevation_km'?(sampleRegular(DEM,lat,lon)??0)/1000:nm==='ln(BLH_km)'?Math.log(Math.max(m.blh,50)/1000):nm==='wind100_ms'?m.ws:0);});
   const r=sampleRegular(rk.resid,lat,lon)??0;
   return Math.max(0,Math.exp(lc+w*((reg-lc)+r))-1);
 }
@@ -971,7 +998,7 @@ function renderRK(){
   $('rkBox').innerHTML=`<div class="tablewrap"><table><tbody>
     <tr><th>Analysis hour</th><td>${fmtT(rk.t)}</td></tr>
     <tr><th>Monitors used</th><td class="num">${rk.n}</td></tr>
-    <tr><th>β₀, β₁${b.length>2?', β₂ (per km)':''}</th><td class="num">${b.join(', ')}</td></tr>
+    <tr><th>Coefficients</th><td>${['intercept',...(rk.predictors||[])].map((nm,j)=>`${esc(nm)} ${b[j]}`).join('<br>')}</td></tr>
     <tr><th>Variogram</th><td>nugget ${rk.vario.c0.toFixed(3)}, partial sill ${rk.vario.c1.toFixed(3)}, range ${rk.vario.a_km} km</td></tr>
     <tr><th>Leave-one-out RMSE</th><td>CAMS ${rk.cv.cams.rmse} → RK ${rk.cv.rk.rmse} µg/m³</td></tr>
     <tr><th>Leave-one-out bias</th><td>CAMS ${rk.cv.cams.mb} → RK ${rk.cv.rk.mb} µg/m³</td></tr></tbody></table></div>`;
@@ -1140,7 +1167,8 @@ async function runModel(hotsRaw,mode,windOverride,quiet){
   let W;
   if(windOverride) W=windOverride(spec);
   else { const oldest=Math.min(...S.sources.map(s=>s.t0)); const past=Math.min(5,Math.max(1,Math.ceil((now-oldest)/864e5)+1));
-    W=await fetchWind(spec,past,Math.ceil(horizon/24)+1); }
+    if(MET) W={times:MET.times, sample:(la,lo,t)=>sampleMet(MET,la,lo,t)};
+    else W=await fetchWind(spec,past,Math.ceil(horizon/24)+1); }
   busy('Running dispersion…');
   await new Promise(r=>setTimeout(r,20));
   const top=S.sources.slice(0,800); // strongest clusters across the whole domain; keeps the browser responsive

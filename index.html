@@ -115,9 +115,13 @@ td.num{text-align:right;font-family:var(--font-data);font-variant-numeric:tabula
 .stmark{width:12px;height:12px;border-radius:2px;border:1.5px solid var(--fg);box-sizing:border-box}
 .legend .keys span{display:flex;gap:6px;align-items:center}
 .dot{width:10px;height:10px;border-radius:50%;display:inline-block;flex:none}
-.basemap-switch{position:absolute;left:12px;top:84px;z-index:500;background:var(--panel);border:1px solid var(--line);border-radius:6px;display:flex;flex-direction:column;overflow:hidden;font-size:.75rem}
-.basemap-switch button{border:0;background:none;padding:6px 10px;text-align:left;cursor:pointer;color:var(--muted)}
-.basemap-switch button[aria-pressed="true"]{background:var(--ember-soft);color:var(--fg);font-weight:600}
+.basemap-switch{position:absolute;left:50px;top:10px;z-index:500}
+.basemap-switch select{font-size:.75rem;padding:5px 6px;border:1px solid var(--line);border-radius:4px;background:var(--panel);box-shadow:0 1px 4px rgb(0 0 0 / .15)}
+.vh{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+.legend summary{cursor:pointer;font-weight:600;font-size:.75rem;list-style:none}
+.legend summary::-webkit-details-marker{display:none}
+.legend summary::after{content:" ▾";color:var(--muted)}
+.legend details:not([open]) summary::after{content:" ▸"}
 .leaflet-tooltip.plabel{background:none;border:0;box-shadow:none;color:var(--muted);font:500 10px/1 var(--font-body);padding:0;text-shadow:0 0 3px var(--land),0 0 3px var(--land)}
 .leaflet-tooltip.tlabel{background:none;border:0;box-shadow:none;color:var(--fg);font:600 11px/1 var(--font-body);padding:0 0 0 4px;text-shadow:0 0 3px var(--land),0 0 3px var(--land),0 0 3px var(--land)}
 .hide-plabel .plabel,.hide-tlabel .tlabel{display:none}
@@ -130,7 +134,10 @@ td.num{text-align:right;font-family:var(--font-data);font-variant-numeric:tabula
   aside{grid-row:2;border-right:0;border-top:1px solid var(--line)}
   .pane{overflow:visible}
   body{height:auto}
-  .legend{max-width:150px}
+  .legend{max-width:170px;font-size:.68rem;padding:6px 8px}
+  .legend .keys{display:none}
+  .scrub{left:8px;right:8px;bottom:8px;padding:6px 8px;gap:8px}
+  .scrub .t{min-width:7.5em;font-size:.72rem}
 }
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 
@@ -325,7 +332,7 @@ td.num{text-align:right;font-family:var(--font-data);font-variant-numeric:tabula
 
   <div class="mapwrap">
     <div id="map" aria-label="Map of hotspots and smoke forecast"></div>
-    <div class="legend" id="legend">
+    <div class="legend" id="legend"><details id="legDet" open><summary>Layers and legend</summary>
       <div class="layerpick" role="radiogroup" aria-label="Map layer">
         <label><input type="radio" name="layer" id="lyTotal" value="total" checked> Total PM<sub>2.5</sub> forecast</label>
         <label><input type="radio" name="layer" id="lyFire" value="fire"> Fire smoke only</label>
@@ -344,14 +351,16 @@ td.num{text-align:right;font-family:var(--font-data);font-variant-numeric:tabula
         <span><i class="dot" style="background:var(--ember)"></i>Hotspot (size = FRP)</span>
         <span><i class="dot" style="border:2px solid var(--fg)"></i>Town / receptor</span>
         <span><i class="dot" style="border-radius:2px;border:1.5px solid var(--fg);background:var(--aq2)"></i>Monitor (measured now)</span>
-      </div>
+      </div></details>
     </div>
-    <div class="basemap-switch" role="group" aria-label="Basemap">
-      <button type="button" id="bmStreet" aria-pressed="true">Street map</button>
-      <button type="button" id="bmTerrain" aria-pressed="false">Terrain</button>
-      <button type="button" id="bmSat" aria-pressed="false">Satellite</button>
-      <button type="button" id="bmPlain" aria-pressed="false">Plain (offline)</button>
-    </div>
+    <div class="basemap-switch"><label for="bmSel" class="vh">Basemap</label>
+      <select id="bmSel">
+        <option value="light">Light map</option>
+        <option value="street">Street map</option>
+        <option value="terrain">Terrain</option>
+        <option value="sat">Satellite</option>
+        <option value="plain">Plain (offline)</option>
+      </select></div>
     <div class="scrub">
       <button class="btn" id="btnPlay" type="button" aria-label="Play forecast">▶</button>
       <input id="slider" type="range" min="0" max="0" value="0" aria-label="Forecast hour">
@@ -626,7 +635,7 @@ const map=L.map('map',{zoomControl:true,preferCanvas:true}).setView([18.8,99.8],
 map.createPane('land').style.zIndex=150;
 map.createPane('lines').style.zIndex=380; map.getPane('lines').style.pointerEvents='none';
 const GEO_P=JSON.parse($('geoProv').textContent), GEO_C=JSON.parse($('geoCtry').textContent);
-let landLayer,provLayer,ctryLayer,provLabels,tiles,bm=store.get('hsw.basemap')||'street';
+let landLayer,provLayer,ctryLayer,provLabels,tiles,bm=store.get('hsw.basemap2')||'light';
 function styleBase(){
   if(landLayer) map.removeLayer(landLayer); if(provLayer) map.removeLayer(provLayer); if(ctryLayer) map.removeLayer(ctryLayer);
   map.getContainer().style.background=cssVar('--sea');
@@ -645,7 +654,8 @@ provLabels=L.layerGroup(GEO_P.features.map(f=>L.marker(provCentroid(f),{icon:L.d
 function labelZoom(){const z=map.getZoom();map.getContainer().classList.toggle('hide-plabel',z<8);map.getContainer().classList.toggle('hide-tlabel',z<7);}
 map.on('zoomend',labelZoom);
 const TILESETS={
-  street:()=>[`https://{s}.basemaps.cartocdn.com/${isDark()?'dark_all':'light_all'}/{z}/{x}/{y}{r}.png`,{subdomains:'abcd',maxZoom:18,attribution:'© OpenStreetMap contributors © CARTO'}],
+  light:()=>[`https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/${isDark()?'World_Dark_Gray_Base':'World_Light_Gray_Base'}/MapServer/tile/{z}/{y}/{x}`,{maxZoom:16,attribution:'Basemap © Esri, HERE, Garmin, © OpenStreetMap contributors'}],
+  street:()=>['https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap contributors'}],
   terrain:()=>['https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',{subdomains:'abc',maxZoom:17,attribution:'© OpenStreetMap contributors, SRTM · © OpenTopoMap (CC-BY-SA)'}],
   sat:()=>['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:18,attribution:'Imagery © Esri, Maxar, Earthstar Geographics'}],
 };
@@ -656,11 +666,11 @@ function setTiles(){
       .on('tileload',()=>ok++).on('tileerror',()=>{if(++fails>6&&!ok){setBasemap('plain');banner('Online map tiles could not load here, so the page switched to the built-in outline map. Fires, wind and smoke still work.','info');}}).addTo(map);}
   else map.attributionControl.addAttribution('Borders: Natural Earth');
   styleBase();
-  ['street','terrain','sat','plain'].forEach(k=>$('bm'+{street:'Street',terrain:'Terrain',sat:'Sat',plain:'Plain'}[k]).setAttribute('aria-pressed',k===bm));
+  $('bmSel').value=bm;
 }
-function setBasemap(k){bm=k;store.set('hsw.basemap',k);setTiles();}
-$('bmStreet').onclick=()=>setBasemap('street');$('bmTerrain').onclick=()=>setBasemap('terrain');
-$('bmSat').onclick=()=>setBasemap('sat');$('bmPlain').onclick=()=>setBasemap('plain');
+function setBasemap(k){bm=k;store.set('hsw.basemap2',k);setTiles();}
+$('bmSel').onchange=e=>setBasemap(e.target.value);
+if(matchMedia('(max-width:820px)').matches) $('legDet').open=false;
 setTiles(); labelZoom();
 const reTheme=()=>{setTiles();if(S.hots.length){drawHotspots();drawTraj();}drawTowns();};
 matchMedia('(prefers-color-scheme: dark)').addEventListener('change',reTheme);
@@ -784,7 +794,7 @@ function drawGrid(){
   const vals=G.values[i], cv=document.createElement('canvas'); cv.width=G.nx; cv.height=G.ny;
   const ctx=cv.getContext('2d'), img=ctx.createImageData(G.nx,G.ny);
   for(let y=0;y<G.ny;y++) for(let x=0;x<G.nx;x++){const v=vals[y*G.nx+x]; if(v<0) continue; const c=hexRGB(pcdColor(v)), o=((G.ny-1-y)*G.nx+x)*4;
-    img.data[o]=c[0];img.data[o+1]=c[1];img.data[o+2]=c[2];img.data[o+3]=120;}
+    img.data[o]=c[0];img.data[o+1]=c[1];img.data[o+2]=c[2];img.data[o+3]=v<10?0:v<15?Math.round((v-10)*9):Math.min(150,60+v*1.2);}
   ctx.putImageData(img,0,0);
   const h=G.step/2;
   gridLayer=L.imageOverlay(cv.toDataURL(),[[G.lat0-h,G.lon0-h],[G.lat0+(G.ny-1)*G.step+h,G.lon0+(G.nx-1)*G.step+h]],{interactive:false}).addTo(map);
@@ -805,7 +815,8 @@ function drawStations(){
 function renderStations(){
   if(!P.data){$('stList').innerHTML='Station data appear here when the page runs from the hosted site.';return;}
   const now=Date.now(), b=REGIONS[$('region').value].bbox;
-  const rows=P.data.stations.filter(s=>inBox(s.lat,s.lon,b)).map(s=>({s,st:seriesStats(s.corr.map(v=>v??0),P.data.hours,now)}))
+  const inReg=P.data.stations.filter(s=>inBox(s.lat,s.lon,b)), ref=inReg.filter(s=>s.monitor), lowN=inReg.length-ref.length;
+  const rows=(ref.length?ref:inReg).map(s=>({s,st:seriesStats(s.corr.map(v=>v??0),P.data.hours,now)}))
     .sort((a,b)=>b.st.mean24-a.st.mean24).slice(0,15);
   $('stList').innerHTML=rows.length?rows.map(({s,st})=>{const bd=pcdBand(st.mean24);
     return `<div class="alert" data-sid="${s.id}"><i class="sev" style="background:var(--${bd.key})"></i>
@@ -813,6 +824,7 @@ function renderStations(){
       <div class="sub"><span class="pill" style="background:var(--${bd.key})">${bd.en}</span> ${s.obs?`now ${fmtN(s.obs.v)} µg/m³`:'no recent reading'}</div></div>
       <div class="val">${fmtN(st.mean24)}<small>24-h max</small>${fmtN(st.peak)}<small>1-h max</small></div></div>`;}).join('')
     :'No reporting stations in this region.';
+  if(ref.length&&lowN) $('stList').insertAdjacentHTML('beforeend',`<p class="note">Reference monitors only. ${lowN} low-cost sensors are on the map (faded) but not ranked here.</p>`);
   $('stList').querySelectorAll('.alert').forEach(el=>el.onclick=()=>focusStation(+el.dataset.sid));
 }
 function focusStation(id){

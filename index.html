@@ -116,6 +116,15 @@ td.num{text-align:right;font-family:var(--font-data);font-variant-numeric:tabula
 .pcdbar{display:grid;grid-template-columns:15fr 10fr 12.5fr 37.5fr 25fr;height:10px;border-radius:2px;overflow:hidden;margin:5px 0 3px;opacity:.85}
 .legend .ticks span:last-child:empty{display:none}
 .chip.stale{border-color:var(--aq4);color:var(--aq4)}
+.locate-btn{width:30px;height:30px;display:grid;place-items:center;background:var(--panel);border:0;border-radius:4px;box-shadow:0 1px 5px rgba(0,0,0,.35);cursor:pointer;color:var(--fg)}
+.locate-btn[aria-busy="true"] svg{animation:spin 1s linear infinite}
+.locate-btn.on{color:var(--focus)}
+@keyframes spin{to{transform:rotate(360deg)}}
+.here{min-width:210px;font-size:12.5px}
+.here .big{font:600 1.5rem/1.1 var(--font-data);font-variant-numeric:tabular-nums}
+.here table{font-size:11.5px}
+.here td,.here th{padding:3px 4px}
+.here .act{margin-top:6px;display:flex;gap:6px}
 .stmark{width:12px;height:12px;border-radius:2px;border:1.5px solid var(--fg);box-sizing:border-box}
 .legend .keys span{display:flex;gap:6px;align-items:center}
 .dot{width:10px;height:10px;border-radius:50%;display:inline-block;flex:none}
@@ -949,7 +958,8 @@ function setTimeline(){
   if(i<0){i=S.times.findIndex(h=>h>=Date.now()-HR/2); if(i<0) i=Math.max(0,S.times.length-1);}
   S.hour=i; sl.value=i;
 }
-function redrawTime(){updateTimeLabel();drawPlume();drawGrid();drawContours();drawTowns();drawStations();}
+function redrawTime(){if(hereLayer&&hereLL){const mk=hereLayer.getLayers()[1]; if(mk.isPopupOpen()) mk.setPopupContent(hereHTML(hereLL.lat,hereLL.lon,hereLL.acc));}
+  updateTimeLabel();drawPlume();drawGrid();drawContours();drawTowns();drawStations();}
 
 // ---- hourly data written by the GitHub Actions pipeline (same site)
 async function loadPipeline(){
@@ -1104,6 +1114,66 @@ for(const id of ['shContour','shSt','shHot','shTown']){
   $(id).addEventListener('change',()=>{store.set('hsw.'+id,$(id).checked?'1':'0');applyVisibility();});
 }
 function stationNow(s,t){const i=gIdx(t);return i>=0?s.corr[i]:null;}
+
+// ---- "my location": PM2.5 and nearby fires at the viewer's position (stays in the browser)
+function camsAt(lat,lon,i){const G=P.data.grid, vals=G.values[i]; const fx=(lon-G.lon0)/G.step, fy=(lat-G.lat0)/G.step;
+  if(fx<0||fy<0||fx>G.nx-1||fy>G.ny-1) return -1;
+  const x0=Math.min(Math.floor(fx),G.nx-2), y0=Math.min(Math.floor(fy),G.ny-2), ax=fx-x0, ay=fy-y0;
+  const a=vals[y0*G.nx+x0], b=vals[y0*G.nx+x0+1], c=vals[(y0+1)*G.nx+x0], d=vals[(y0+1)*G.nx+x0+1];
+  return (a<0||b<0||c<0||d<0)?-1:(1-ax)*(1-ay)*a+ax*(1-ay)*b+(1-ax)*ay*c+ax*ay*d;}
+function totalAt(lat,lon,t){const i=gIdx(t); if(!P.data||i<0) return null; const c=camsAt(lat,lon,i); return c<0?null:rkValue(c,lat,lon,t);}
+function fireAt(lat,lon,t){const si=simIdx(t); if(si<0||!S.sim) return 0; return concAt(S.sim.snaps[si],lat,lon);}
+let hereLayer=null, hereLL=null;
+function hereHTML(lat,lon,acc){
+  const now=Date.now(), tNow=Math.round(now/HR)*HR, tSl=curT();
+  const vNow=totalAt(lat,lon,tNow), vSl=tSl!=null&&tSl!==tNow?totalAt(lat,lon,tSl):null;
+  let peak=null,tPeak=null,sum=0,n=0;
+  if(P.data) for(const t of P.data.hours){ if(t<tNow||t>tNow+24*HR) continue; const v=totalAt(lat,lon,t); if(v==null) continue; sum+=v; n++; if(peak==null||v>peak){peak=v;tPeak=t;} }
+  const mean24=n?sum/n:null, fire=fireAt(lat,lon,tNow);
+  let st=null,dSt=1e9; if(P.data) for(const x of P.data.stations){ if(!x.monitor||!x.obs) continue; const d=haversineKm(lat,lon,x.lat,x.lon); if(d<dSt){dSt=d;st=x;} }
+  let nHot=0,dHot=1e9; for(const h of S.hots){const d=haversineKm(lat,lon,h.lat,h.lon); if(d<=20) nHot++; if(d<dHot) dHot=d;}
+  const pv=provinceOf(lat,lon), b=vNow!=null?pcdBand(vNow):null;
+  return `<div class="here"><div class="note">${pv?esc(pv.n)+(pv.th?' · '+esc(pv.th):''):'Your location'}${acc?` · ±${acc<1000?Math.round(acc)+' m':(acc/1000).toFixed(1)+' km'}`:''}</div>
+    ${vNow!=null?`<div class="big">${fmtN(vNow)} <small style="font-size:.7rem">µg/m³</small></div><span class="pill" style="background:var(--${b.key})">${b.en}</span> <span class="note">PM₂.₅ now (forecast map)</span>`:'<p class="note">No forecast here yet.</p>'}
+    <table><tbody>
+      ${mean24!=null?`<tr><th>Next 24 h</th><td class="num">mean ${fmtN(mean24)}, max ${fmtN(peak)} at ${new Date(tPeak).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}</td></tr>`:''}
+      ${vSl!=null?`<tr><th>At slider time</th><td class="num">${fmtN(vSl)} µg/m³</td></tr>`:''}
+      <tr><th>Fire smoke now</th><td class="num">${fire>=0.1?fmtN(fire)+' µg/m³':'none modelled'}</td></tr>
+      <tr><th>Nearest monitor</th><td>${st?`${esc(st.name)}<br>${fmtN(st.obs.v)} µg/m³, ${dSt.toFixed(0)} km`:'–'}</td></tr>
+      <tr><th>Hotspots</th><td class="num">${nHot} within 20 km${dHot<1e9?`, nearest ${dHot.toFixed(1)} km`:''}</td></tr>
+    </tbody></table>
+    <div class="act"><button class="btn" type="button" id="hereAdd">Add as my point</button></div>
+    <div class="note" style="font-size:.68rem">Your location stays on this device.</div></div>`;
+}
+function showHere(lat,lon,acc,fly){
+  hereLL={lat,lon,acc};
+  if(hereLayer) map.removeLayer(hereLayer);
+  const col=cssVar('--focus');
+  hereLayer=L.layerGroup([
+    L.circle([lat,lon],{radius:Math.max(acc||0,30),color:col,weight:1,fillColor:col,fillOpacity:.12,interactive:false}),
+    L.circleMarker([lat,lon],{radius:7,color:'#fff',weight:2,fillColor:col,fillOpacity:1})
+      .bindPopup(()=>hereHTML(lat,lon,acc),{maxWidth:280})]).addTo(map);
+  if(fly) map.flyTo([lat,lon],Math.max(map.getZoom(),10));
+  const mk=hereLayer.getLayers()[1]; mk.openPopup();
+}
+map.on('popupopen',e=>{const b=e.popup.getElement()?.querySelector('#hereAdd'); if(b&&hereLL) b.onclick=()=>{
+  S.myPts.push({name:'My location',lat:+hereLL.lat.toFixed(4),lon:+hereLL.lon.toFixed(4),cc:'★'}); store.set('hsw.points',JSON.stringify(S.myPts));
+  computeReceptors(); drawTowns(); renderWarnings(); b.textContent='Added'; b.disabled=true;};});
+const LocateCtl=L.Control.extend({options:{position:'topleft'},onAdd(){
+  const b=L.DomUtil.create('button','locate-btn'); b.type='button'; b.title='Show PM2.5 at my location'; b.setAttribute('aria-label','Show PM2.5 at my location');
+  b.innerHTML='<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/><circle cx="12" cy="12" r="8"/></svg>';
+  L.DomEvent.disableClickPropagation(b);
+  b.onclick=()=>{
+    if(!navigator.geolocation){banner('This browser cannot share its location.','info');return;}
+    b.setAttribute('aria-busy','true');
+    navigator.geolocation.getCurrentPosition(pos=>{b.removeAttribute('aria-busy'); b.classList.add('on');
+        showHere(pos.coords.latitude,pos.coords.longitude,pos.coords.accuracy,true);},
+      err=>{b.removeAttribute('aria-busy');
+        banner(err.code===1?'Location permission was declined. Allow location for this site in the browser settings, then tap the button again.':
+               err.code===3?'Finding your location took too long. Move to open sky or turn on Wi-Fi, then try again.':'Your location is not available right now.','info'); showTab('warn');},
+      {enableHighAccuracy:true,timeout:15000,maximumAge:60000});};
+  return b;}});
+new LocateCtl().addTo(map);
 function drawStations(){
   stationLayer.clearLayers(); if(!P.data) return; const t=curT(), live=Math.abs(t-Date.now())<HR;
   for(const s of P.data.stations){ if(!inRegion(s.lat,s.lon)) continue;

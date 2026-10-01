@@ -1467,9 +1467,17 @@ $('btnPlay').onclick=()=>{if(playT){clearInterval(playT);playT=null;$('btnPlay')
   if(!S.times.length) return; $('btnPlay').textContent='❚❚';
   playT=setInterval(()=>{const sl=$('slider');S.hour=(+sl.value+1)%(+sl.max+1);sl.value=S.hour;redrawTime();},450);};
 for(const id of ['warnkm']) $(id).addEventListener('change',()=>{computeReceptors();renderAll();});
-function fitRegion(){const R=regionShape(), b=R?R.bbox:REGIONS.msea.bbox; map.fitBounds([[b[1],b[0]],[b[3],b[2]]],{padding:[10,10]});}
+// keep the view inside the chosen region: panning stops at its edge and zooming out stops when the whole region is in view
+function lockRegion(){
+  const R=regionShape(), b=R?R.bbox:REGIONS.msea.bbox, B=L.latLngBounds([[b[1],b[0]],[b[3],b[2]]]);
+  map.setMaxBounds(B.pad(0.08)); map.options.maxBoundsViscosity=1.0;
+  map.setMinZoom(Math.max(3,map.getBoundsZoom(B.pad(0.08),false)));
+  return B;
+}
+function fitRegion(){const B=lockRegion(); map.fitBounds(B,{padding:[10,10]});}
+window.addEventListener('resize',()=>{clearTimeout(window.__lockT); window.__lockT=setTimeout(lockRegion,250);});
 $('region').addEventListener('change',()=>{fitRegion(); drawRegionMask(); computeReceptors(); if(S.hots.length){drawHotspots();} renderAll(); redrawTime();});
-drawRegionMask();
+drawRegionMask(); fitRegion();
 
 function renderLegend(){
   const u=unitMode(), bar=$('legBar'), ticks=$('legTicks');

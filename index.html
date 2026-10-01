@@ -275,6 +275,7 @@ td.num{text-align:right;font-family:var(--font-data);font-variant-numeric:tabula
           <option value="14.8">Pasture maintenance, 14.8 g/kg</option>
         </select></div>
       <div class="row">
+        <div class="field"><label for="alpha">Fire detail weight α (fine layer)</label><input id="alpha" type="number" min="0" max="5" step="0.1" value="1"></div>
         <div class="field"><label for="dur">Fire keeps burning (h)</label><input id="dur" type="number" min="1" max="24" step="1" value="6"></div>
         <div class="field"><label for="horizon">Forecast ahead (h)</label>
           <select id="horizon"><option>24</option><option selected>48</option><option>72</option></select></div>
@@ -315,6 +316,8 @@ td.num{text-align:right;font-family:var(--font-data);font-variant-numeric:tabula
       </ol>
       <h3>Hourly forecast pipeline</h3>
       <p class="note">Every hour a GitHub Actions job pulls PM<sub>2.5</sub> from reference monitors on OpenAQ, the CAMS PM<sub>2.5</sub> forecast through Open-Meteo, and VIIRS hotspots from FIRMS. A Kalman filter tracks each station's log-ratio bias, b = ln(obs+1) − ln(CAMS+1), and the forecast is scaled by e<sup>b</sup>, with the correction fading over about 48 h of lead time. Between stations the bias is spread by inverse-distance weighting out to 150 km. The fire-smoke layer is the separate dispersion model above.</p>
+      <h3>Fine total PM<sub>2.5</sub></h3>
+      <p class="note">The fine layer adds sub-grid structure from the fire-smoke model to the corrected CAMS field: C<sub>fine</sub> = C<sub>CAMS,corr</sub> + α·(C<sub>fire</sub> − ⟨C<sub>fire</sub>⟩<sub>0.5°</sub>), where ⟨·⟩<sub>0.5°</sub> is the mean over a CAMS-sized box. The 0.5° average stays equal to CAMS, so fire smoke already in CAMS (GFAS) is not counted twice. Detail comes from fires only; α is set in Settings and will be calibrated against stations in the burning season.</p>
       <h3>How well it has done</h3>
       <div id="verifyBox" class="note">Scores appear after the pipeline has run for a day or more.</div>
       <h3>Sources</h3>
@@ -339,6 +342,7 @@ td.num{text-align:right;font-family:var(--font-data);font-variant-numeric:tabula
     <div class="legend" id="legend"><details id="legDet" open><summary>Layers and legend</summary>
       <div class="layerpick" role="radiogroup" aria-label="Map layer">
         <label><input type="radio" name="layer" id="lyTotal" value="total" checked> Total PM<sub>2.5</sub> forecast</label>
+        <label><input type="radio" name="layer" id="lyFine" value="fine"> Total PM<sub>2.5</sub>, fine (fire detail)</label>
         <label><input type="radio" name="layer" id="lyFire" value="fire"> Fire smoke only</label>
       </div>
       <div id="legTotal">
@@ -725,7 +729,7 @@ const S={hots:[],sources:[],sim:null,recep:[],hour:0,mode:null,myPts:[]};
 try{S.myPts=JSON.parse(store.get('hsw.points')||'[]');}catch(e){S.myPts=[];}
 
 // restore settings
-for(const id of ['region','mapkey','days','minconf','fuel','dur','horizon','warnkm','proxy']){
+for(const id of ['region','mapkey','days','minconf','fuel','dur','horizon','warnkm','proxy','alpha']){
   const v=store.get('hsw.'+id); if(v!=null) $(id).value=v;
   $(id).addEventListener('change',()=>store.set('hsw.'+id,$(id).value));
 }
@@ -944,24 +948,39 @@ async function loadVerify(){
 
 // ---- total PM2.5 grid layer and station markers
 let gridLayer=null; const stationLayer=L.layerGroup().addTo(map);
-const layerMode=()=>$('lyFire').checked?'fire':'total';
+const layerMode=()=>$('lyFire').checked?'fire':$('lyFine').checked?'fine':'total';
+const gridMode=()=>layerMode()==='total'||layerMode()==='fine';
 function pcdColor(v){return cssVar('--'+pcdBand(v).key);}
 function hexRGB(h){h=h.replace('#','');if(h.length===3)h=h.split('').map(c=>c+c).join('');const n=parseInt(h,16);return [(n>>16)&255,(n>>8)&255,n&255];}
 function drawGrid(){
   if(gridLayer){map.removeLayer(gridLayer);gridLayer=null;}
-  if(!P.data||layerMode()!=='total') return; const G=P.data.grid, i=gIdx(curT()); if(i<0) return;
+  S.fine=null;
+  if(!P.data||!gridMode()) return; const G=P.data.grid, i=gIdx(curT()); if(i<0) return;
   const vals=G.values[i], R=regionShape();
+  const base=(lat,lon)=>{const fx=(lon-G.lon0)/G.step, fy=(lat-G.lat0)/G.step; if(fx<0||fy<0||fx>G.nx-1||fy>G.ny-1) return -1;
+    const x0=Math.min(Math.floor(fx),G.nx-2), y0=Math.min(Math.floor(fy),G.ny-2), ax=fx-x0, ay=fy-y0;
+    const a=vals[y0*G.nx+x0], b=vals[y0*G.nx+x0+1], c=vals[(y0+1)*G.nx+x0], d=vals[(y0+1)*G.nx+x0+1];
+    return (a<0||b<0||c<0||d<0)?-1:(1-ax)*(1-ay)*a+ax*(1-ay)*b+(1-ax)*ay*c+ax*ay*d;};
   const bandRGB=PCD.map(b=>hexRGB(cssVar('--'+b.key)));
   let so=G.lat0, w=G.lon0, n=G.lat0+(G.ny-1)*G.step, e=G.lon0+(G.nx-1)*G.step;
   if(R){so=Math.max(so,R.bbox[1]-.2); w=Math.max(w,R.bbox[0]-.2); n=Math.min(n,R.bbox[3]+.2); e=Math.min(e,R.bbox[2]+.2);}
-  const W=Math.min(900,Math.round((e-w)*40)), H=Math.min(900,Math.round((mercY(n)-mercY(so))/DEG*40));
-  const url=regionCanvas(so,w,n,e,W,H,(lat,lon)=>{
-    const fx=(lon-G.lon0)/G.step, fy=(lat-G.lat0)/G.step; if(fx<0||fy<0||fx>G.nx-1||fy>G.ny-1) return null;
-    const x0=Math.min(Math.floor(fx),G.nx-2), y0=Math.min(Math.floor(fy),G.ny-2), ax=fx-x0, ay=fy-y0;
-    const a=vals[y0*G.nx+x0], b=vals[y0*G.nx+x0+1], c=vals[(y0+1)*G.nx+x0], d=vals[(y0+1)*G.nx+x0+1];
-    if(a<0||b<0||c<0||d<0) return null;
-    const v=(1-ax)*(1-ay)*a+ax*(1-ay)*b+(1-ax)*ay*c+ax*ay*d, rgb=bandRGB[PCD.indexOf(pcdBand(v))];
-    return [rgb[0],rgb[1],rgb[2],v<15?40+v*2:Math.min(160,70+v*1.2)];});
+  const ppd=layerMode()==='fine'?80:40;
+  const W=Math.min(1100,Math.round((e-w)*ppd)), H=Math.min(1100,Math.round((mercY(n)-mercY(so))/DEG*ppd));
+  let value=base;
+  if(layerMode()==='fine'){
+    // fine total = CAMS (corrected) + α × (fire smoke − its own mean over a CAMS-sized box): keeps the 0.5° mean, adds sub-grid fire structure
+    let cell=0.025; while(((e-w)/cell)*((n-so)/cell)>400000) cell*=1.25;
+    const fx=Math.ceil((e-w)/cell), fy=Math.ceil((n-so)/cell), F=new Float32Array(fx*fy), alpha=Math.max(0,+$('alpha').value||0);
+    const si=simIdx(curT()), snap=si>=0&&S.sim?S.sim.snaps[si]:null;
+    let P_=null, A_=null;
+    if(snap&&snap.n&&alpha>0){P_=puffField(snap,w,so,fx,fy,cell); A_=boxMean(P_,fx,fy,Math.max(1,Math.round(G.step/2/cell)));}
+    for(let y=0;y<fy;y++) for(let x=0;x<fx;x++){const b=base(so+(y+.5)*cell,w+(x+.5)*cell);
+      F[y*fx+x]=b<0?NaN:Math.max(0,b+(P_?alpha*(P_[y*fx+x]-A_[y*fx+x]):0));}
+    S.fine={F,w,so,nx:fx,ny:fy,cell};
+    value=(lat,lon)=>{const x=Math.floor((lon-w)/cell), y=Math.floor((lat-so)/cell); if(x<0||y<0||x>=fx||y>=fy) return -1; const v=F[y*fx+x]; return v===v?v:-1;};
+  }
+  const url=regionCanvas(so,w,n,e,W,H,(lat,lon)=>{const v=value(lat,lon); if(v<0) return null;
+    const rgb=bandRGB[PCD.indexOf(pcdBand(v))]; return [rgb[0],rgb[1],rgb[2],v<15?40+v*2:Math.min(160,70+v*1.2)];});
   const parts=[L.imageOverlay(url,[[so,w],[n,e]],{interactive:false})];
   if(!R) parts.push(L.rectangle([[so,w],[n,e]],{color:cssVar('--muted'),weight:1,dashArray:'4 4',fill:false,interactive:false}));
   gridLayer=L.layerGroup(parts).addTo(map);
@@ -991,12 +1010,14 @@ function isoSegments(g,NX,NY,lv){
 }
 function drawContours(){
   if(contourLayer){map.removeLayer(contourLayer);contourLayer=null;}
-  if(!P.data||layerMode()!=='total'||!shown('shContour')) return; const G=P.data.grid, i=gIdx(curT()); if(i<0) return;
-  const k=4, {g,NX,NY}=upsample(G.values[i],G.nx,G.ny,k), st=G.step/k;
+  if(!P.data||!gridMode()||!shown('shContour')) return; const G=P.data.grid, i=gIdx(curT()); if(i<0) return;
+  let g,NX,NY,st,la0,lo0;
+  if(layerMode()==='fine'&&S.fine){({F:g,nx:NX,ny:NY,cell:st}=S.fine); la0=S.fine.so+st/2; lo0=S.fine.w+st/2;}
+  else {const k=4; ({g,NX,NY}=upsample(G.values[i],G.nx,G.ny,k)); st=G.step/k; la0=G.lat0; lo0=G.lon0;}
   contourLayer=L.layerGroup();
   CLEVELS.forEach((lv,j)=>{const segs=isoSegments(g,NX,NY,lv); if(!segs.length) return;
     const col=cssVar('--'+PCD[j+1].key);
-    const ll=segs.map(([a,b])=>[[G.lat0+a[1]*st,G.lon0+a[0]*st],[G.lat0+b[1]*st,G.lon0+b[0]*st]]).filter(([p,q])=>inRegion(p[0],p[1])&&inRegion(q[0],q[1])); if(!ll.length) return;
+    const ll=segs.map(([a,b])=>[[la0+a[1]*st,lo0+a[0]*st],[la0+b[1]*st,lo0+b[0]*st]]).filter(([p,q])=>inRegion(p[0],p[1])&&inRegion(q[0],q[1])); if(!ll.length) return;
     L.polyline(ll,{color:col,weight:2,opacity:.95,interactive:false}).addTo(contourLayer);
   });
   contourLayer.addTo(map);
@@ -1174,18 +1195,30 @@ function clearPlume(){if(plume){map.removeLayer(plume);plume=null;}}
 // smoke colour ramp (µg/m3)
 const RAMP=[[1,[250,214,140,.30]],[5,[245,180,90,.50]],[15,[236,140,60,.62]],[37.5,[196,66,15,.72]],[75,[120,30,40,.82]],[150,[60,10,60,.9]]];
 function rampColor(c){if(c<RAMP[0][0]) return null;for(let i=1;i<RAMP.length;i++){if(c<RAMP[i][0]){const [a,ca]=RAMP[i-1],[b,cb]=RAMP[i];const f=Math.log(c/a)/Math.log(b/a);return ca.map((v,k)=>v+(cb[k]-v)*f);}}return RAMP[RAMP.length-1][1];}
-function drawPlume(){
-  clearPlume(); if(!S.sim) return; const si=simIdx(curT()); const s=si>=0?S.sim.snaps[si]:null; if(!s||!s.n||layerMode()!=='fire') return;
-  let w=180,so=90,e=-180,n=-90;
-  for(let i=0;i<s.n;i++){const r=3*s.sy[i]/MPD;w=Math.min(w,s.lon[i]-r*1.1);e=Math.max(e,s.lon[i]+r*1.1);so=Math.min(so,s.lat[i]-r);n=Math.max(n,s.lat[i]+r);}
-  let cell=0.02; while(((e-w)/cell)*((n-so)/cell)>360000) cell*=1.25;
-  const nx=Math.ceil((e-w)/cell), ny=Math.ceil((n-so)/cell), G=new Float32Array(nx*ny);
+function puffField(s,w,so,nx,ny,cell){
+  const F=new Float32Array(nx*ny);
   for(let i=0;i<s.n;i++){const sy=s.sy[i], s2=2*sy*sy, amp=s.m[i]/(Math.PI*s2)*s.fz[i];
     const cl=Math.cos(s.lat[i]*DEG)*MPD, rLat=3*sy/MPD, rLon=3*sy/cl;
     const x0=Math.max(0,Math.floor((s.lon[i]-rLon-w)/cell)), x1=Math.min(nx-1,Math.ceil((s.lon[i]+rLon-w)/cell));
     const y0=Math.max(0,Math.floor((s.lat[i]-rLat-so)/cell)), y1=Math.min(ny-1,Math.ceil((s.lat[i]+rLat-so)/cell));
     for(let y=y0;y<=y1;y++){const la=so+(y+.5)*cell, dy=(la-s.lat[i])*MPD;
-      for(let x=x0;x<=x1;x++){const dx=(w+(x+.5)*cell-s.lon[i])*cl, r2=dx*dx+dy*dy; if(r2<9*s2) G[y*nx+x]+=amp*Math.exp(-r2/s2);}}}
+      for(let x=x0;x<=x1;x++){const dx=(w+(x+.5)*cell-s.lon[i])*cl, r2=dx*dx+dy*dy; if(r2<9*s2) F[y*nx+x]+=amp*Math.exp(-r2/s2);}}}
+  return F;
+}
+function boxMean(F,nx,ny,k){ // mean over a (2k+1)² window, via an integral image
+  const W=nx+1, I=new Float64Array(W*(ny+1)), out=new Float32Array(nx*ny);
+  for(let y=0;y<ny;y++){let row=0; for(let x=0;x<nx;x++){row+=F[y*nx+x]; I[(y+1)*W+x+1]=I[y*W+x+1]+row;}}
+  for(let y=0;y<ny;y++){const ya=Math.max(0,y-k), yb=Math.min(ny,y+k+1);
+    for(let x=0;x<nx;x++){const xa=Math.max(0,x-k), xb=Math.min(nx,x+k+1);
+      out[y*nx+x]=(I[yb*W+xb]-I[ya*W+xb]-I[yb*W+xa]+I[ya*W+xa])/((yb-ya)*(xb-xa));}}
+  return out;
+}
+function drawPlume(){
+  clearPlume(); if(!S.sim) return; const si=simIdx(curT()); const s=si>=0?S.sim.snaps[si]:null; if(!s||!s.n||layerMode()!=='fire') return;
+  let w=180,so=90,e=-180,n=-90;
+  for(let i=0;i<s.n;i++){const r=3*s.sy[i]/MPD;w=Math.min(w,s.lon[i]-r*1.1);e=Math.max(e,s.lon[i]+r*1.1);so=Math.min(so,s.lat[i]-r);n=Math.max(n,s.lat[i]+r);}
+  let cell=0.02; while(((e-w)/cell)*((n-so)/cell)>360000) cell*=1.25;
+  const nx=Math.ceil((e-w)/cell), ny=Math.ceil((n-so)/cell), G=puffField(s,w,so,nx,ny,cell);
   const nTop=so+ny*cell, eR=w+nx*cell;
   const url=regionCanvas(so,w,nTop,eR,nx,Math.max(1,Math.round(ny*(mercY(nTop)-mercY(so))/((nTop-so)*DEG))),(lat,lon)=>{
     const x=Math.floor((lon-w)/cell), y=Math.floor((lat-so)/cell); if(x<0||y<0||x>=nx||y>=ny) return null;
@@ -1236,7 +1269,8 @@ $('region').addEventListener('change',()=>{fitRegion(); drawRegionMask(); comput
 drawRegionMask();
 
 for(const el of document.querySelectorAll('input[name=layer]')) el.addEventListener('change',()=>{
-  $('legTotal').hidden=layerMode()!=='total'; $('legFire').hidden=layerMode()!=='fire'; redrawTime();});
+  $('legTotal').hidden=!gridMode(); $('legFire').hidden=layerMode()!=='fire'; redrawTime();});
+$('alpha').addEventListener('change',()=>redrawTime());
 // first paint, then refresh every 30 minutes while the tab is open
 computeReceptors(); renderAll(); applyVisibility();
 runAuto(false).then(()=>{ if(!P.data){ $('lyFire').checked=true; $('legTotal').hidden=true; $('legFire').hidden=false; redrawTime(); } });

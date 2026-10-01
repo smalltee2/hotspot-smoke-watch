@@ -290,7 +290,13 @@ async function main() {
   const gridRaw = hours.map((t, j) => gridPts.map((_, p) => { const v = C.grid[p][i0 + j]; return v == null ? -1 : r1(v); }));
 
   // 6. hotspots
-  const hot = await firmsHotspots();
+  let hot = await firmsHotspots();
+  if (!hot.length) {   // FIRMS unreachable or empty: keep the last good set (≤ 12 h old) rather than blanking the map
+    const prev = await readJSON(path.join(DATA, 'latest.json'), null);
+    const rows = prev?.hotspots?.rows || [], age = now - (prev?.hotspots?.fetched || prev?.generated || 0);
+    if (rows.length && age < 12 * HOUR) { hot = rows; log(`FIRMS returned nothing; reusing ${rows.length} hotspots from ${Math.round(age / 6e4)} min ago`); }
+  }
+  const hotFetched = RUNLOG.some(l => l.startsWith('FIRMS') && !l.includes('failed') && !l.includes('reusing')) ? now : null;
 
   // 7. outputs
   await writeJSON(path.join(DATA, 'latest.json'), {
@@ -300,7 +306,7 @@ async function main() {
     met: met ? { file: 'data/met.json', model: met.model, fetched: met.fetched, grids: met.grids.map(g => ({ step: g.step, bbox: [g.lon0, g.lat0, g.lon0 + (g.nx - 1) * g.step, g.lat0 + (g.ny - 1) * g.step] })) } : null,
     hours, stations: outStations,
     grid: { lon0: g[0], lat0: g[1], step, nx, ny, values: gridRaw },  // raw CAMS; the page applies rk
-    hotspots: { cols: ['lat', 'lon', 'frp', 't', 'conf', 'sat'], rows: hot },
+    hotspots: { cols: ['lat', 'lon', 'frp', 't', 'conf', 'sat'], rows: hot, fetched: hotFetched ?? (await readJSON(path.join(DATA, 'latest.json'), null))?.hotspots?.fetched ?? null },
   });
   const ym = new Date(now).toISOString().slice(0, 7);
   await appendCSV(path.join(DATA, 'history', `obs-${ym}.csv`), 'time_utc,station_id,obs_pm25,cams_raw', obsRows);

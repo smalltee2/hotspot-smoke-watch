@@ -31,6 +31,7 @@
   --aq1:#4aa8ee; --aq2:#51c26a; --aq3:#e9bd2c; --aq4:#ff8a3a; --aq5:#ff5a5a; color-scheme:dark}
 
 *{box-sizing:border-box}
+[hidden]{display:none!important}
 html,body{height:100%;margin:0}
 body{background:var(--bg);color:var(--fg);font:14px/1.45 var(--font-body);display:flex;flex-direction:column}
 button,input,select{font:inherit;color:inherit}
@@ -762,7 +763,8 @@ function pipelineHotspots(d){
   return (d.hotspots?.rows||[]).map(([lat,lon,frp,t,conf,sat])=>({lat,lon,frp,t,sat:sat||'VIIRS',level:conf==='l'?'l':conf==='h'?'h':'n',pass:`${sat}|${t}`}))
     .filter(h=>inBox(h.lat,h.lon,REGIONS[$('region').value].bbox));
 }
-async function runAuto(quiet){
+async function runAuto(quiet){ try{ await runAuto_(quiet); }catch(e){ busy(null); if(!quiet) banner(`<b>Update failed.</b> ${esc(e.message)}`); console.error(e); } }
+async function runAuto_(quiet){
   if(!quiet) busy('Loading the latest hourly data…');
   const d=await loadPipeline();
   if(d){P.data=d; await runModel(pipelineHotspots(d),'live',null,quiet); showFreshness(); loadVerify();}

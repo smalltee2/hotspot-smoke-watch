@@ -1,2 +1,8 @@
 node_modules/
 .DS_Store
+_site/
+data/latest.json
+data/met.json
+data/state.json
+data/runlog.json
+data/verify.json

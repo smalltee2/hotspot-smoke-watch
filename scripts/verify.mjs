@@ -23,15 +23,20 @@ function score(pairs) {
   return { mb: rnd(mf - mo), rmse: rnd(Math.sqrt(se / n)), r: vf > 0 && vo > 0 ? rnd(cov / Math.sqrt(vf * vo)) : null, mean_obs: rnd(mo) };
 }
 
-const files = await fs.readdir(HIST).catch(() => []);
+// history files: legacy monthly files at the top level, and one file per run in YYYY-MM/ folders
+const files = [];
+for (const e of await fs.readdir(HIST, { withFileTypes: true }).catch(() => [])) {
+  if (e.isFile()) files.push(e.name);
+  else if (e.isDirectory()) for (const f of await fs.readdir(path.join(HIST, e.name)).catch(() => [])) files.push(path.join(e.name, f));
+}
 const cutoff = Date.now() - WINDOW_DAYS * 864e5;
 const obs = new Map();
-for (const f of files.filter(f => f.startsWith('obs-'))) for (const r of await readCSV(path.join(HIST, f))) {
+for (const f of files.filter(f => path.basename(f).startsWith('obs-'))) for (const r of await readCSV(path.join(HIST, f))) {
   const t = Date.parse(r.time_utc); if (t < cutoff) continue;
   obs.set(`${r.station_id}|${new Date(Math.round(t / 3600e3) * 3600e3).toISOString().slice(0, 13)}`, +r.obs_pm25);
 }
 const byLead = new Map();
-for (const f of files.filter(f => f.startsWith('fcst-'))) for (const r of await readCSV(path.join(HIST, f))) {
+for (const f of files.filter(f => path.basename(f).startsWith('fcst-'))) for (const r of await readCSV(path.join(HIST, f))) {
   if (Date.parse(r.valid_utc) < cutoff) continue;
   const o = obs.get(`${r.station_id}|${r.valid_utc.slice(0, 13)}`); if (o == null) continue;
   const L = +r.lead_h; if (!byLead.has(L)) byLead.set(L, { raw: [], cor: [] });

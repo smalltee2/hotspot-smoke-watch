@@ -13,7 +13,9 @@ Hourly PM2.5 warning page for Northern Thailand and mainland Southeast Asia.
 |---|---|---|
 | `scripts/update.mjs` | GitHub Actions, hourly | OpenAQ obs, CAMS, FIRMS → Kalman correction → `data/latest.json` |
 | `scripts/verify.mjs` | same job | RMSE / bias / r by lead time → `data/verify.json` |
-| `index.html` | GitHub Pages | reads `data/*.json`; runs the fire-smoke model in the browser |
+| `index.html` | GitHub Pages (deployed by the workflow) | reads `data/*.json`; runs the fire-smoke model in the browser |
+
+Large, changing files (`latest.json`, `met.json`, `state.json`) are not committed: they are published to Pages and carried between runs in the Actions cache. Git keeps only the per-run verification CSVs in `data/history/YYYY-MM/` and the static terrain grid `data/static/elev.json`.
 
 No dependencies; Node 20.
 
@@ -21,7 +23,7 @@ No dependencies; Node 20.
 
 1. **Secrets** (Settings → Secrets and variables → Actions): `OPENAQ_API_KEY`, `FIRMS_MAP_KEY`.
 2. **Workflow permissions** (Settings → Actions → General): *Read and write permissions*.
-3. **Pages** (Settings → Pages): Deploy from branch `main`, folder `/ (root)`.
+3. **Pages** (Settings → Pages): Source **GitHub Actions**. The hourly workflow publishes `index.html` and the data files as a Pages artifact.
 4. Actions → *Hourly update* → *Run workflow* for the first run.
 
 Tunable settings are in the `CFG` block at the top of `scripts/update.mjs` (area, grid step, Kalman Q/R, IDW radius, bias fade with lead time).

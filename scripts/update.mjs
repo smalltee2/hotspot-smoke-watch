@@ -6,7 +6,8 @@
 //   data/state.json    – Kalman filter state, station list, cached CAMS forecast
 //   data/static/elev.json – terrain elevation grid (built once)
 //   data/met.json      – ECMWF IFS HRES meteorology on nested grids (refreshed every 6 h)
-//   data/history/obs-YYYY-MM.csv, data/history/fcst-YYYY-MM.csv – for verification
+//   data/history/YYYY-MM/obs-YYYYMMDDTHH.csv, fcst-YYYYMMDDTHH.csv – for verification (committed)
+//   latest/met/state/runlog/verify JSON are published to GitHub Pages and carried between runs in the Actions cache, not committed
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { buildDEM, sampleGrid } from './dem.mjs';
@@ -308,12 +309,14 @@ async function main() {
     grid: { lon0: g[0], lat0: g[1], step, nx, ny, values: gridRaw },  // raw CAMS; the page applies rk
     hotspots: { cols: ['lat', 'lon', 'frp', 't', 'conf', 'sat'], rows: hot, fetched: hotFetched ?? (await readJSON(path.join(DATA, 'latest.json'), null))?.hotspots?.fetched ?? null },
   });
-  const ym = new Date(now).toISOString().slice(0, 7);
-  await appendCSV(path.join(DATA, 'history', `obs-${ym}.csv`), 'time_utc,station_id,obs_pm25,cams_raw', obsRows);
+  // history: one small new file per run (never rewritten), so git stores each row once
+  const iso = new Date(now).toISOString(), ym = iso.slice(0, 7), stamp = iso.slice(0, 13).replace(/[-:]/g, '');
+  const hdir = path.join(DATA, 'history', ym);
+  await appendCSV(path.join(hdir, `obs-${stamp}.csv`), 'time_utc,station_id,obs_pm25,cams_raw', obsRows);
   const fRows = [];
-  for (const s of outStations) for (const L of CFG.logLeads) { const j = L; if (j < hours.length && s.raw[j] != null)
+  for (const s of outStations) if (s.monitor) for (const L of CFG.logLeads) { const j = L; if (j < hours.length && s.raw[j] != null)
     fRows.push([new Date(now).toISOString().slice(0, 13) + ':00Z', new Date(hours[j]).toISOString().slice(0, 13) + ':00Z', s.id, L, s.raw[j], s.corr[j]]); }
-  await appendCSV(path.join(DATA, 'history', `fcst-${ym}.csv`), 'issued_utc,valid_utc,station_id,lead_h,cams_raw,corrected', fRows);
+  await appendCSV(path.join(hdir, `fcst-${stamp}.csv`), 'issued_utc,valid_utc,station_id,lead_h,cams_raw,corrected', fRows);
   await writeJSON(path.join(DATA, 'state.json'), state);
   log(`done: ${outStations.length} stations, ${hot.length} hotspots, grid ${nx}×${ny}×${hours.length}`);
 }

@@ -6,10 +6,15 @@ on:
   workflow_dispatch: {}    # "Run workflow" button for manual runs
   push:
     branches: [main]
-    paths: ['scripts/**', '.github/workflows/update.yml']   # rerun when the pipeline code changes
+    paths: ['scripts/**', 'index.html', '.github/workflows/update.yml']   # rerun and redeploy when code or page changes
 
+# Pages is deployed from this workflow (Settings → Pages → Source: GitHub Actions).
+# Large, constantly changing files (latest/met/state JSON) go only to Pages and the Actions cache,
+# so git history grows only by the small per-run verification CSVs.
 permissions:
   contents: write
+  pages: write
+  id-token: write
 
 concurrency:
   group: hourly-update
@@ -18,23 +23,67 @@ concurrency:
 jobs:
   update:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-node@v5
         with:
           node-version: '22'
+
+      - name: Restore working state from the last run
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            data/state.json
+            data/met.json
+            data/latest.json
+          key: pipeline-state-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: pipeline-state-
+
       - name: Fetch data, correct forecast, write JSON
         env:
           OPENAQ_API_KEY: ${{ secrets.OPENAQ_API_KEY }}
           FIRMS_MAP_KEY: ${{ secrets.FIRMS_MAP_KEY }}
         run: node scripts/update.mjs && node scripts/verify.mjs
-      - name: Commit data
+
+      - name: Save working state for the next run
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            data/state.json
+            data/met.json
+            data/latest.json
+          key: pipeline-state-${{ github.run_id }}-${{ github.run_attempt }}
+
+      - name: Commit verification history and static files only
         if: always()
         run: |
           git config user.name "hotspot-bot"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data
+          git add data/history data/static
           git diff --cached --quiet && exit 0
-          git commit -m "data: $(date -u +'%Y-%m-%d %H:%M UTC')"
+          git commit -m "history: $(date -u +'%Y-%m-%d %H:%M UTC')"
           for i in 1 2 3; do git pull --rebase -q && git push -q && break; sleep 5; done
+
+      - name: Build site
+        if: always()
+        run: |
+          mkdir -p _site/data/static
+          cp index.html _site/
+          for f in latest.json met.json verify.json runlog.json; do [ -f "data/$f" ] && cp "data/$f" _site/data/ || true; done
+          [ -f data/static/elev.json ] && cp data/static/elev.json _site/data/static/ || true
+          ls -la _site _site/data
+
+      - uses: actions/configure-pages@v5
+        if: always()
+      - uses: actions/upload-pages-artifact@v3
+        if: always()
+        with:
+          path: _site
+      - id: deployment
+        if: always()
+        uses: actions/deploy-pages@v4

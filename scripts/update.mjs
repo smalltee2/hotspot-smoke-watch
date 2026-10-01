@@ -52,14 +52,16 @@ async function appendCSV(p, header, rows) {
   await fs.appendFile(p, (exists ? '' : header + '\n') + rows.map(r => r.join(',')).join('\n') + '\n');
 }
 const sleep = ms => new Promise(r => setTimeout(r, ms));
-async function get(url, opt = {}, tries = 3) {
+async function get(url, opt = {}, tries = 3, waitMs = 2000) {
   for (let i = 0; i < tries; i++) {
     try {
       const r = await fetch(url, { ...opt, signal: AbortSignal.timeout(60e3) });
       if (r.status === 429) { await sleep(5000 * (i + 1)); continue; }
       if (!r.ok) throw new Error(`HTTP ${r.status} ${(await r.text()).slice(0, 200)}`);
       return r;
-    } catch (e) { if (i === tries - 1) throw e; await sleep(2000 * (i + 1)); }
+    } catch (e) {
+      if (e.cause?.code && !e.message.includes(e.cause.code)) e.message += ` (${e.cause.code})`;   // e.g. ECONNRESET, UND_ERR_CONNECT_TIMEOUT
+      if (i === tries - 1) throw e; await sleep(waitMs * (i + 1)); }
   }
 }
 function km(a, b, c, d) { const p = Math.PI / 180, dl = (c - a) * p, dn = (d - b) * p;
@@ -131,7 +133,8 @@ async function firmsHotspots() {
   const rows = [];
   for (const src of CFG.firmsSources) {
     try {
-      const txt = await (await get(`https://firms.modaps.eosdis.nasa.gov/api/area/csv/${key}/${src}/${CFG.bbox.join(',')}/${CFG.firmsDays}`)).text();
+      // FIRMS sometimes drops connections from cloud runners: 5 tries, 10–50 s apart
+      const txt = await (await get(`https://firms.modaps.eosdis.nasa.gov/api/area/csv/${key}/${src}/${CFG.bbox.join(',')}/${CFG.firmsDays}`, {}, 5, 10000)).text();
       const lines = txt.trim().split('\n'); const head = lines[0].split(',');
       if (!head.includes('latitude')) { log(`FIRMS ${src}: unexpected reply: ${txt.slice(0, 120).replace(/\s+/g, ' ')}`); continue; }
       const ix = k => head.indexOf(k);

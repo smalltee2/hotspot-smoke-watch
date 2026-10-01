@@ -868,7 +868,7 @@ function showTab(name){document.querySelectorAll('.tabs button').forEach(b=>b.se
 // ---- map
 const isDark=()=>{const a=document.documentElement.dataset.theme;return a?a==='dark':matchMedia('(prefers-color-scheme: dark)').matches;};
 if(typeof L==='undefined'){document.getElementById('map').innerHTML='<div class="msg" style="margin:16px">The map library could not load. Check the internet connection, or open the page in a normal browser rather than a preview window.</div>';throw new Error('Leaflet missing');}
-const map=L.map('map',{zoomControl:true,preferCanvas:true}).setView([18.8,99.8],7);
+const map=L.map('map',{zoomControl:true,preferCanvas:true,zoomSnap:0.25,zoomDelta:0.5,wheelPxPerZoomLevel:120}).setView([18.8,99.8],7);
 // ---- basemaps: built-in vector outline (always there, works offline) + optional online tiles
 map.createPane('land').style.zIndex=150;
 map.createPane('lines').style.zIndex=380; map.getPane('lines').style.pointerEvents='none';
@@ -1539,13 +1539,19 @@ $('btnPlay').onclick=()=>{if(playT){clearInterval(playT);playT=null;$('btnPlay')
   playT=setInterval(()=>{const sl=$('slider');S.hour=(+sl.value+1)%(+sl.max+1);sl.value=S.hour;redrawTime();},450);};
 for(const id of ['warnkm']) $(id).addEventListener('change',()=>{computeReceptors();renderAll();});
 // keep the view inside the chosen region: panning stops at its edge and zooming out stops when the whole region is in view
+// space taken by the controls that float over the map, so the region is fitted into the clear part
+function mapPads(){const sc=document.querySelector('.scrub'), h=sc?sc.offsetHeight+14:60;
+  return {paddingTopLeft:L.point(12,48), paddingBottomRight:L.point(12,h)};}
 function lockRegion(){
   const R=regionShape(), b=R?R.bbox:REGIONS.msea.bbox, B=L.latLngBounds([[b[1],b[0]],[b[3],b[2]]]);
-  map.setMaxBounds(B.pad(0.08)); map.options.maxBoundsViscosity=1.0;
-  map.setMinZoom(Math.max(3,map.getBoundsZoom(B.pad(0.08),false)));
+  map.setMaxBounds(null); map.setMinZoom(2);           // release the old lock first so the new fit is not clamped by it
+  map.invalidateSize();
+  const pd=mapPads(), z=map.getBoundsZoom(B,false,pd.paddingTopLeft.add(pd.paddingBottomRight));
+  const sz=map.getSize(); if(sz.x>80&&sz.y>80&&isFinite(z)) map.setMinZoom(Math.max(2,Math.min(z-0.25,9)));   // skip while the map has no size yet
+  map.setMaxBounds(B.pad(0.1)); map.options.maxBoundsViscosity=1.0;
   return B;
 }
-function fitRegion(){const B=lockRegion(); map.fitBounds(B,{padding:[10,10]});}
+function fitRegion(){const B=lockRegion(); map.fitBounds(B,{...mapPads(),animate:false});}
 window.addEventListener('resize',()=>{clearTimeout(window.__lockT); window.__lockT=setTimeout(()=>{map.invalidateSize(); lockRegion();},250);});
 if(window.ResizeObserver) new ResizeObserver(()=>map.invalidateSize()).observe(document.querySelector('.mapwrap'));
 $('region').addEventListener('change',()=>{fitRegion(); drawRegionMask(); computeReceptors(); if(S.hots.length){drawHotspots();} renderAll(); redrawTime();});

@@ -9,6 +9,7 @@ const DEG = Math.PI / 180;
 
 // Pasquill–Gifford class (1=A … 6=F) from 10 m wind, insolation and cloud, after Turner (1970). Same as the page.
 export function pgClass(u, sw, cc) {
+  if (cc >= 90) return 4;   // overcast: neutral (D) day or night, Turner (1970)
   if (sw > 10) {
     const ins = sw > 600 ? 0 : sw > 300 ? 1 : 2;
     const T = [[1, 1.5, 2], [1.5, 2, 3], [2, 2.5, 3], [3, 3.5, 4], [3, 4, 4]];

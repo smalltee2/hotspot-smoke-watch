@@ -382,10 +382,10 @@ td.num{text-align:right;font-family:var(--font-data);font-variant-numeric:tabula
       <h3>Warning levels</h3>
       <p class="note">Bands follow Thailand's PCD PM<sub>2.5</sub> scale in force since 1 June 2023 (24-h standard 37.5 µg/m³): 0–15, 15.1–25, 25.1–37.5, 37.6–75, above 75 µg/m³. The page applies them to the fire-added part only. Background from traffic, cooking and long-range haze is not included.</p>
       <h3>AQI</h3>
-      <p class="note">Thai AQI follows the Pollution Control Department bands in force since 1 June 2023 (PM<sub>2.5</sub> 24-h mean 0–15, 15.1–25, 25.1–37.5, 37.6–75 and above 75.1 µg/m³ → AQI 0–25, 26–50, 51–100, 101–200 and 201+); above 75.1 µg/m³ the page extends the index at the slope of the 101–200 band. US AQI follows the EPA PM<sub>2.5</sub> breakpoints revised in 2024 (0–9.0, 9.1–35.4, 35.5–55.4, 55.5–125.4, 125.5–225.4, 225.5+ µg/m³ → AQI 0–50, 51–100, 101–150, 151–200, 201–300, 301+), with concentrations truncated to 0.1 µg/m³ and linear interpolation inside each band. Both indices are defined on the 24-hour mean, so in the AQI and 24-h views the map, the station colours and the location box use the mean of the 24 hourly values ending at the selected hour; a mean needs at least 18 of the 24 hours (75 %). Station AQI uses the monitor's own hourly readings, kept by the pipeline for the last 30 hours. The pipeline publishes the previous 24 hours of the corrected field with every run, so the 24-h mean is complete from the current hour onward.</p>
+      <p class="note">Thai AQI follows the Pollution Control Department bands in force since 1 June 2023 (PM<sub>2.5</sub> 24-h mean 0–15, 15.1–25, 25.1–37.5, 37.6–75 and above 75.1 µg/m³ → AQI 0–25, 26–50, 51–100, 101–200 and 201+); above 75.1 µg/m³ the page extends the index at the slope of the 101–200 band. US AQI follows the EPA PM<sub>2.5</sub> breakpoints revised in 2024 (0–9.0, 9.1–35.4, 35.5–55.4, 55.5–125.4, 125.5–225.4, 225.5–325.4 µg/m³ → AQI 0–50, 51–100, 101–150, 151–200, 201–300, 301–500; higher values are shown as 500), with concentrations truncated to 0.1 µg/m³ and linear interpolation inside each band. Both indices are defined on the 24-hour mean, so in the AQI and 24-h views the map, the station colours and the location box use the mean of the 24 hourly values ending at the selected hour; a mean needs at least 18 of the 24 hours (75 %). Station AQI uses the monitor's own hourly readings, kept by the pipeline for the last 30 hours. The pipeline publishes the previous 24 hours of the corrected field with every run, so the 24-h mean is complete from the current hour onward.</p>
       <h3>Limits</h3>
       <ol>
-        <li>Screening tool, not a regulatory model. No plume rise, chemistry, deposition or rain-out; terrain only enters through the forecast wind.</li>
+        <li>Screening tool, not a regulatory model. No plume rise, chemistry or dry deposition (wet removal is included); terrain only enters through the forecast wind and the map regression.</li>
         <li>Satellites see a fire only at overpass; fires that start between passes or burn under cloud are missed.</li>
         <li>The burn-duration setting dominates totals. Compare runs with 3, 6 and 12 h.</li>
         <li>Check against ground monitors (PCD Air4Thai, CMU CCDC DustBoy) before acting on a warning.</li>
@@ -393,17 +393,17 @@ td.num{text-align:right;font-family:var(--font-data);font-variant-numeric:tabula
       <h3>Hourly forecast pipeline</h3>
       <p class="note">Every hour a GitHub Actions job pulls PM<sub>2.5</sub> from reference monitors on OpenAQ, the CAMS global PM<sub>2.5</sub> forecast through Open-Meteo, and VIIRS hotspots from NASA FIRMS. Two corrections are applied to CAMS: a Kalman filter per station for the station forecasts, and regression kriging for the map.</p>
       <h3>Station forecasts: Kalman filter</h3>
-      <p class="note">Each monitor's log-ratio bias b = ln(obs+1) − ln(CAMS+1) is tracked with a scalar Kalman filter (random-walk state), following the predictor bias correction of Delle Monache et al. (2006). The forecast at the station is (CAMS+1)·e<sup>b·w</sup> − 1, where w = e<sup>−lead/48 h</sup> fades the correction with lead time.</p>
+      <p class="note">Each monitor's log-ratio bias b = ln(obs+1) − ln(CAMS+1) is tracked with a scalar Kalman filter (random-walk state), following the predictor bias correction of Delle Monache et al. (2006). The forecast at the station is (CAMS+1)·e<sup>b·w</sup> − 1, where w = e<sup>−lead/48 h</sup> fades the correction with lead time. The noise settings (Q = 0.02, R = 0.15 per hour, in log units) and the 48 h e-folding time are starting values, not fitted ones; they will be tuned from the lead-time verification below.</p>
       <h3>Map: regression kriging with a CAMS drift</h3>
       <p class="note">At the latest observation hour, measured PM<sub>2.5</sub> at reference monitors is regressed on the CAMS value and terrain elevation, in log space:</p>
       <span class="eq">ln(PM+1) = β₀ + β₁·ln(CAMS+1) + β₂·z + β₃·ln(BLH) + β₄·U + ε</span>
       <p class="note">z is elevation in km from a 0.05° terrain grid (AWS Terrain Tiles, largely SRTM-derived); BLH (km) and U, the 100 m wind speed (m s⁻¹), come from the ECMWF IFS HRES fields above at the observation hour and, for forecasts, at each valid hour. They let the map respond to shallow mixing and calm nights at a finer scale than CAMS; wind speed is also a predictor in the hourly 1 km PM<sub>2.5</sub> model for Thailand of Punpukdee et al. (2024). The residuals ε are interpolated by ordinary kriging with an exponential semivariogram fitted each hour (nearest 16 monitors, residual grid 0.1°). This is the regression–interpolation structure used for the EEA European air-quality maps (Horálek et al., 2025), kriging with a chemistry-transport-model drift as in Real et al. (2022), and regression/universal kriging as compared by Beelen et al. (2009). Elevation is included because it improved PM<sub>2.5</sub> mapping over Thailand in Han et al. (2022). For forecast hours the map is</p>
       <span class="eq">ln(PM+1) = ln(CAMS+1) + w·[β₀ + (β₁−1)·ln(CAMS+1) + β₂·z + β₃·ln(BLH) + β₄·U + ε̂],  w = e<sup>−lead/48 h</sup></span>
-      <p class="note">so the correction is full at the analysis hour and the map returns to CAMS for long leads. Far from monitors the kriged residual fades to zero and only the regression part remains. The map is computed at 0.05°; real detail comes from the monitors and the terrain, while CAMS itself is about 0.4°.</p>
+      <p class="note">so the correction is full at the analysis hour and the map returns to CAMS for long leads. Far from monitors the kriged residual fades to zero and only the regression part remains. The map is computed at 0.05°; real detail comes from the monitors and the terrain, while CAMS itself is about 0.4°. Because the model works in log space, e<sup>ŷ</sup> − 1 is a median-type estimate; the mean would be about e<sup>σ²/2</sup> higher (≈ 5–13 % for σ = 0.3–0.5). The page shows the median, and the leave-one-out and lead-time bias below show whether that matters. Leave-one-out scores refit the regression and the variogram without the left-out monitor.</p>
       <p class="note"><strong>Uncertainty layer.</strong> The regression-kriging prediction variance (Hengl et al., 2007) is the kriging variance of the residual plus the variance of the regression part: σ² = σ²<sub>OK</sub> + s²/n + (x₀−x̄)ᵀ·Cov(β<sub>slopes</sub>)·(x₀−x̄) (the regression variance in centred form), with σ²<sub>OK</sub> = Σλᵢγ(xᵢ,x₀) + μ from the ordinary-kriging system and Cov(β<sub>slopes</sub>) = s²(X<sub>c</sub>ᵀX<sub>c</sub>)⁻¹ from the regression on centred predictors (an ordinary-least-squares stand-in for the generalised-least-squares term). Where the kriged residual is faded out, σ² rises toward the variogram sill. Because the model is in log space, the 68% range is (PM+1)·e<sup>±σ</sup> − 1, and the map shows e<sup>σ</sup> − 1 as a percentage. σ is checked hourly by leave-one-out: about 68% of left-out monitors should fall inside ±1σ. It covers the analysis hour only; forecast error grows with lead time (table below).</p>
       <div id="rkBox" class="note"></div>
       <h3>Fine total PM<sub>2.5</sub></h3>
-      <p class="note">The fine layer adds sub-grid structure from the fire-smoke model to the regression-kriging map: C<sub>fine</sub> = C<sub>RK</sub> + α·(C<sub>fire</sub> − ⟨C<sub>fire</sub>⟩<sub>0.5°</sub>), where ⟨·⟩<sub>0.5°</sub> is the mean over a CAMS-sized box, computed at 0.025°. The 0.5° average stays equal to the map below it, so fire smoke already in CAMS (GFAS) is not counted twice. This follows the idea of sub-grid dispersion without double counting in uEMEP (Denby et al., 2020); here a box-mean high-pass replaces uEMEP's local-fraction bookkeeping, which CAMS does not provide. α is set in Settings and will be calibrated against monitors in the burning season.</p>
+      <p class="note">The fine layer adds sub-grid structure from the fire-smoke model to the regression-kriging map: C<sub>fine</sub> = C<sub>RK</sub> + α·(C<sub>fire</sub> − ⟨C<sub>fire</sub>⟩<sub>0.5°</sub>), where ⟨·⟩<sub>0.5°</sub> is the mean over a CAMS-sized box, computed at 0.025° (coarser for large regions and 24-h views). The ≈0.5° moving average stays approximately equal to the map below it (exactly, except where the sum is clipped at zero), so fire smoke already in CAMS (GFAS) is not counted twice. This follows the idea of sub-grid dispersion without double counting in uEMEP (Denby et al., 2020); here a box-mean high-pass replaces uEMEP's local-fraction bookkeeping, which CAMS does not provide. α is set in Settings and will be calibrated against monitors in the burning season.</p>
       <h3>How well it has done</h3>
       <div id="verifyBox" class="note">Scores appear after the pipeline has run for a day or more.</div>
       <h3>Sources</h3>
@@ -746,6 +746,7 @@ function sampleMet(M,lat,lon,t){
 // ---------------------------------------------------------------- stability & sigmas
 // Pasquill-Gifford class (1=A … 6=F) after Turner (1970). Returns a real number; half classes = average.
 function pgClass(u, sw, cc){
+  if(cc>=90) return 4;   // overcast: neutral (D) day or night, Turner (1970)
   if(sw>10){ // day: insolation strong >600, moderate 300-600, slight <300 W/m2
     const ins = sw>600?0: sw>300?1:2;
     const T=[[1,1.5,2],[1.5,2,3],[2,2.5,3],[3,3.5,4],[3,4,4]];
@@ -810,7 +811,7 @@ function simulate(sources, W, opts){
 function concAt(s,lat,lon){
   let c=0; const cl=Math.cos(lat*DEG)*MPD;
   for(let i=0;i<s.n;i++){const dx=(lon-s.lon[i])*cl, dy=(lat-s.lat[i])*MPD, sy=s.sy[i];
-    const r2=dx*dx+dy*dy, s2=2*sy*sy; if(r2>9*s2) continue;
+    const r2=dx*dx+dy*dy, s2=2*sy*sy; if(r2>4.5*s2) continue;   // 3σ, same as puffField
     c+=s.m[i]/(Math.PI*s2)*Math.exp(-r2/s2)*s.fz[i];}
   return c; // µg/m3
 }
@@ -820,11 +821,12 @@ function receptorSeries(sim,pts){
 // stats from a series aligned with sim.hours: value now, 1h peak, max running 24h mean
 function seriesStats(series,hours,now){
   let iNow=hours.findIndex(h=>h>=now); if(iNow<0) iNow=hours.length-1;
-  let peak=0,tPeak=null; for(let i=Math.max(0,iNow-23);i<series.length;i++) if(series[i]>peak){peak=series[i];tPeak=hours[i];}
-  let best=0,tBest=null; const win=24;
-  for(let i=iNow;i<series.length;i++){const a=Math.max(0,i-win+1);let s=0;for(let j=a;j<=i;j++)s+=series[j];
-    const mean=s/win; if(mean>best){best=mean;tBest=hours[i];}}
-  return {now:series[iNow]||0,peak,tPeak,mean24:best,tMean:tBest};
+  let peak=0,tPeak=null; for(let i=Math.max(0,iNow-23);i<series.length;i++) if(series[i]!=null&&series[i]>peak){peak=series[i];tPeak=hours[i];}
+  // highest running 24-h mean from now on; missing hours (null) are skipped and a mean needs ≥ 18 of 24 values
+  let best=0,tBest=null;
+  for(let i=iNow;i<series.length;i++){let s=0,n=0;for(let j=Math.max(0,i-23);j<=i;j++){const v=series[j]; if(v!=null){s+=v;n++;}}
+    if(n>=18&&s/n>best){best=s/n;tBest=hours[i];}}
+  return {now:series[iNow]??0,peak,tPeak,mean24:best,tMean:tBest};
 }
 
 // demo inputs (clearly synthetic)
@@ -1147,7 +1149,7 @@ function renderRK(){
     <tr><th>Analysis hour</th><td>${fmtT(rk.t)}</td></tr>
     <tr><th>Monitors used</th><td class="num">${rk.n}</td></tr>
     <tr><th>Coefficients</th><td>${['intercept',...(rk.predictors||[])].map((nm,j)=>`${esc(nm)} ${b[j]}`).join('<br>')}</td></tr>
-    <tr><th>Variogram</th><td>nugget ${rk.vario.c0.toFixed(3)}, partial sill ${rk.vario.c1.toFixed(3)}, range ${rk.vario.a_km} km</td></tr>
+    <tr><th>Variogram</th><td>nugget ${rk.vario.c0.toFixed(3)}, partial sill ${rk.vario.c1.toFixed(3)}, range parameter a ${rk.vario.a_km} km (practical range ≈ ${3*rk.vario.a_km} km)</td></tr>
     <tr><th>Leave-one-out RMSE</th><td>CAMS ${rk.cv.cams.rmse} → RK ${rk.cv.rk.rmse} µg/m³</td></tr>
     <tr><th>Leave-one-out bias</th><td>CAMS ${rk.cv.cams.mb} → RK ${rk.cv.rk.mb} µg/m³</td></tr>
     ${rk.cv.cover1s!=null?`<tr><th>±1σ check (leave-one-out)</th><td>${Math.round(rk.cv.cover1s*100)}% of monitors inside ±1σ (68% if σ is right); median σ ±${Math.round((Math.exp(rk.cv.sdMedian)-1)*100)}%</td></tr>`:''}</tbody></table></div>`;
@@ -1318,13 +1320,13 @@ function totalAt(lat,lon,t){const i=gIdx(t); if(!P.data||i<0) return null; const
 function fireAt(lat,lon,t){const si=simIdx(t); if(si<0||!S.sim) return 0; return concAt(S.sim.snaps[si],lat,lon);}
 let hereLayer=null, hereLL=null;
 function hereHTML(lat,lon,acc){
-  const now=Date.now(), tNow=Math.round(now/HR)*HR, tSl=curT();
+  const now=Date.now(), tNow=Math.floor(now/HR)*HR, tSl=curT();
   const vNow=totalAt(lat,lon,tNow), vSl=tSl!=null&&tSl!==tNow?totalAt(lat,lon,tSl):null;
   let p24=0,n24=0; if(P.data) for(const t of P.data.hours){ if(t>tNow||t<=tNow-24*HR) continue; const v=totalAt(lat,lon,t); if(v!=null){p24+=v;n24++;} }
   const past24=n24>=18?p24/n24:null;
   let peak=null,tPeak=null,sum=0,n=0;
-  if(P.data) for(const t of P.data.hours){ if(t<tNow||t>tNow+24*HR) continue; const v=totalAt(lat,lon,t); if(v==null) continue; sum+=v; n++; if(peak==null||v>peak){peak=v;tPeak=t;} }
-  const mean24=n?sum/n:null, fire=fireAt(lat,lon,tNow);
+  if(P.data) for(const t of P.data.hours){ if(t<=tNow||t>tNow+24*HR) continue; const v=totalAt(lat,lon,t); if(v==null) continue; sum+=v; n++; if(peak==null||v>peak){peak=v;tPeak=t;} }
+  const mean24=n>=18?sum/n:null, fire=fireAt(lat,lon,tNow);
   let st=null,dSt=1e9; if(P.data) for(const x of P.data.stations){ if(!x.monitor||!x.obs) continue; const d=haversineKm(lat,lon,x.lat,x.lon); if(d<dSt){dSt=d;st=x;} }
   let nHot=0,dHot=1e9; for(const h of S.hots){const d=haversineKm(lat,lon,h.lat,h.lon); if(d<=20) nHot++; if(d<dHot) dHot=d;}
   const pv=provinceOf(lat,lon);
@@ -1403,7 +1405,7 @@ function renderStations(){
   if(!P.data){$('stList').innerHTML=T('Station data appear here when the page runs from the hosted site.','ข้อมูลสถานีจะแสดงเมื่อเปิดหน้าเว็บจากเว็บไซต์ที่โฮสต์');return;}
   const now=Date.now(), b=REGIONS[$('region').value].bbox;
   const inReg=P.data.stations.filter(s=>inRegion(s.lat,s.lon)), ref=inReg.filter(s=>s.monitor), lowN=inReg.length-ref.length;
-  const rows=(ref.length?ref:inReg).map(s=>({s,st:seriesStats(s.corr.map(v=>v??0),P.data.hours,now)}))
+  const rows=(ref.length?ref:inReg).map(s=>({s,st:seriesStats(s.corr,P.data.hours,now)}))
     .sort((a,b)=>b.st.mean24-a.st.mean24).slice(0,15);
   $('stList').innerHTML=rows.length?rows.map(({s,st})=>{const bd=bandFor(st.mean24);
     return `<div class="alert" data-sid="${s.id}"><i class="sev" style="background:${bd.color}"></i>

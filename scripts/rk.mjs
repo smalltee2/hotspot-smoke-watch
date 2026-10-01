@@ -89,15 +89,23 @@ export function regressionKriging(obs, gridSpec, opt = {}) {
   const regVar = x => { let q = s2 / n; if (covSlope) for (let j = 0; j < p; j++) for (let k = 0; k < p; k++) q += (x[j] - xbar[j]) * covSlope[j][k] * (x[k] - xbar[k]); return Math.max(0, q); };
   const vario = fitVariogram(pts, res);
   const maxKm = Math.min(400, Math.max(150, 3 * vario.a)), K = opt.K || 16;
-  // fade the kriged residual to 0 between 1× and 2× maxKm/... from the nearest station, so far areas revert to the regression
+  // fade the kriged residual linearly from 1 at maxKm/2 to 0 at maxKm from the nearest monitor, so far areas revert to the regression
   const fade = d => d <= maxKm / 2 ? 1 : d >= maxKm ? 0 : 1 - (d - maxKm / 2) / (maxKm / 2);
   // leave-one-out cross-validation (log space → µg/m³)
   // residual error variance where the kriged residual is faded by f: Var(ε − fε̂) ≈ sill − (2f − f²)(sill − σ²_OK),
   // using Cov(ε, ε̂) ≈ Var(ε̂) ≈ sill − σ²_OK; equals σ²_OK at f = 1 and the sill at f = 0
   const sill = vario.c0 + vario.c1;
   const residVar = k => { const f = fade(k.dmin); return Math.max(0, sill - (2 * f - f * f) * (sill - k.varOK)); };
-  const cvSd = [], cv = obs.map((o, i) => { const k = krige(pts, res, vario, o.lat, o.lon, { K, maxKm, skip: i });
-    const yhat = pred(o) + k.est * fade(k.dmin); cvSd.push(Math.sqrt(residVar(k) + regVar(o.x))); return { yhat, c: Math.exp(yhat) - 1 }; });
+  // leave-one-out: refit the regression and the variogram without the left-out monitor, so the score is not optimistic
+  const cvSd = [], cv = obs.map((o, i) => {
+    const rest = obs.filter((_, j) => j !== i), b = ols(rest.map(r => r.x), rest.map(r => r.y)) || beta;
+    const pr = r => b[0] + r.x.reduce((s, v, j) => s + b[j + 1] * v, 0);
+    const rp = rest.map(r => [r.lat, r.lon]), rr = rest.map(r => r.y - pr(r)), vi = fitVariogram(rp, rr);
+    const mk = Math.min(400, Math.max(150, 3 * vi.a)), fd = d => d <= mk / 2 ? 1 : d >= mk ? 0 : 1 - (d - mk / 2) / (mk / 2);
+    const k = krige(rp, rr, vi, o.lat, o.lon, { K, maxKm: mk }), f = fd(k.dmin), sl = vi.c0 + vi.c1;
+    const yhat = pr(o) + k.est * f;
+    cvSd.push(Math.sqrt(Math.max(0, sl - (2 * f - f * f) * (sl - k.varOK)) + regVar(o.x)));
+    return { yhat, c: Math.exp(yhat) - 1 }; });
   // calibration check: share of monitors whose left-out value falls inside ±1σ (log space); ≈ 0.68 if σ is right
   const cover = cv.filter((c, i) => Math.abs(obs[i].y - c.yhat) <= cvSd[i]).length / obs.length;
   const { lon0, lat0, step, nx, ny } = gridSpec, values = new Array(nx * ny), sd = new Array(nx * ny);

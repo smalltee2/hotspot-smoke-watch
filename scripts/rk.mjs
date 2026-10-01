@@ -56,7 +56,7 @@ const gam = (v, h) => h <= 0 ? 0 : v.c0 + v.c1 * (1 - Math.exp(-h / v.a));
 export function krige(pts, res, v, lat, lon, { K = 16, maxKm = 400, skip = -1 } = {}) {
   const near = [];
   for (let i = 0; i < pts.length; i++) { if (i === skip) continue; const d = kmFast(lat, lon, pts[i][0], pts[i][1]); if (d <= maxKm) near.push([d, i]); }
-  if (near.length < 3) return { est: 0, dmin: Infinity };
+  if (near.length < 3) return { est: 0, dmin: Infinity, varOK: v.c0 + v.c1 };
   near.sort((a, b) => a[0] - b[0]); const nn = near.slice(0, K), n = nn.length;
   const A = Array.from({ length: n + 1 }, () => new Array(n + 1).fill(1)), b = new Array(n + 1).fill(1);
   A[n][n] = 0;
@@ -64,9 +64,10 @@ export function krige(pts, res, v, lat, lon, { K = 16, maxKm = 400, skip = -1 } 
     for (let j = 0; j < n; j++) A[i][j] = i === j ? 0 : gam(v, kmFast(pts[nn[i][1]][0], pts[nn[i][1]][1], pts[nn[j][1]][0], pts[nn[j][1]][1]));
     b[i] = gam(v, nn[i][0]);
   }
-  const w = solve(A, b); if (!w) return { est: 0, dmin: nn[0][0] };
-  let est = 0; for (let i = 0; i < n; i++) est += w[i] * res[nn[i][1]];
-  return { est, dmin: nn[0][0] };
+  const g0 = b.slice(), w = solve(A, b); if (!w) return { est: 0, dmin: nn[0][0] };
+  let est = 0, varOK = w[n]; for (let i = 0; i < n; i++) { est += w[i] * res[nn[i][1]]; varOK += w[i] * g0[i]; }
+  // ordinary-kriging variance σ² = Σ λᵢ γ(xᵢ, x₀) + μ (μ = Lagrange multiplier), bounded by the sill
+  return { est, dmin: nn[0][0], varOK: Math.min(Math.max(varOK, 0), v.c0 + v.c1) };
 }
 
 // Full analysis. obs: [{lat, lon, y, x: [predictors]}]; grid: {lon0, lat0, step, nx, ny}; predictorsAt not needed (residual only).
@@ -75,16 +76,34 @@ export function regressionKriging(obs, gridSpec, opt = {}) {
   const beta = ols(X, y); if (!beta) return null;
   const pred = o => beta[0] + o.x.reduce((s, v, j) => s + beta[j + 1] * v, 0);
   const res = obs.map(o => o.y - pred(o)), pts = obs.map(o => [o.lat, o.lon]);
+  // covariance of the regression coefficients, s²(XᵀX)⁻¹, for the regression part of the prediction variance
+  const p = beta.length, XtX = Array.from({ length: p }, () => new Array(p).fill(0));
+  for (const o of obs) { const r = [1, ...o.x]; for (let j = 0; j < p; j++) for (let k = 0; k < p; k++) XtX[j][k] += r[j] * r[k]; }
+  for (let j = 1; j < p; j++) XtX[j][j] += 1e-6 * obs.length;   // same small ridge as ols()
+  const s2 = res.reduce((a, e) => a + e * e, 0) / Math.max(1, obs.length - p);
+  const inv = Array.from({ length: p }, (_, j) => solve(XtX.map(r => r.slice()), Array.from({ length: p }, (_, k) => +(k === j))));
+  const covBeta = inv.every(Boolean) ? inv.map(col => col.map(x => s2 * x)) : null;   // symmetric, so columns = rows
+  const regVar = x => { if (!covBeta) return 0; const r = [1, ...x]; let q = 0; for (let j = 0; j < p; j++) for (let k = 0; k < p; k++) q += r[j] * covBeta[j][k] * r[k]; return Math.max(0, q); };
   const vario = fitVariogram(pts, res);
   const maxKm = Math.min(400, Math.max(150, 3 * vario.a)), K = opt.K || 16;
   // fade the kriged residual to 0 between 1× and 2× maxKm/... from the nearest station, so far areas revert to the regression
   const fade = d => d <= maxKm / 2 ? 1 : d >= maxKm ? 0 : 1 - (d - maxKm / 2) / (maxKm / 2);
   // leave-one-out cross-validation (log space → µg/m³)
-  const cv = obs.map((o, i) => { const k = krige(pts, res, vario, o.lat, o.lon, { K, maxKm, skip: i }); return Math.exp(pred(o) + k.est * fade(k.dmin)) - 1; });
-  const { lon0, lat0, step, nx, ny } = gridSpec, values = new Array(nx * ny);
+  // residual error variance where the kriged residual is faded by f: Var(ε − fε̂) ≈ sill − (2f − f²)(sill − σ²_OK),
+  // using Cov(ε, ε̂) ≈ Var(ε̂) ≈ sill − σ²_OK; equals σ²_OK at f = 1 and the sill at f = 0
+  const sill = vario.c0 + vario.c1;
+  const residVar = k => { const f = fade(k.dmin); return Math.max(0, sill - (2 * f - f * f) * (sill - k.varOK)); };
+  const cvSd = [], cv = obs.map((o, i) => { const k = krige(pts, res, vario, o.lat, o.lon, { K, maxKm, skip: i });
+    const yhat = pred(o) + k.est * fade(k.dmin); cvSd.push(Math.sqrt(residVar(k) + regVar(o.x))); return { yhat, c: Math.exp(yhat) - 1 }; });
+  // calibration check: share of monitors whose left-out value falls inside ±1σ (log space); ≈ 0.68 if σ is right
+  const cover = cv.filter((c, i) => Math.abs(obs[i].y - c.yhat) <= cvSd[i]).length / obs.length;
+  const { lon0, lat0, step, nx, ny } = gridSpec, values = new Array(nx * ny), sd = new Array(nx * ny);
   for (let iy = 0; iy < ny; iy++) for (let ix = 0; ix < nx; ix++) {
     const k = krige(pts, res, vario, lat0 + iy * step, lon0 + ix * step, { K, maxKm });
     values[iy * nx + ix] = Math.round(k.est * fade(k.dmin) * 1000) / 1000;
+    sd[iy * nx + ix] = Math.round(Math.sqrt(residVar(k)) * 100) / 100;   // residual part only; the page adds the regression part
   }
-  return { beta, vario: { c0: vario.c0, c1: vario.c1, a_km: vario.a, nbins: vario.bins.length, fallback: !!vario.fallback }, maxKm, cv, resid: { lon0, lat0, step, nx, ny, values } };
+  return { beta, covBeta, vario: { c0: vario.c0, c1: vario.c1, a_km: vario.a, nbins: vario.bins.length, fallback: !!vario.fallback }, maxKm,
+    cv: cv.map(c => c.c), cvCover1s: Math.round(cover * 100) / 100, cvSdMedian: Math.round([...cvSd].sort((a, b) => a - b)[cvSd.length >> 1] * 1000) / 1000,
+    resid: { lon0, lat0, step, nx, ny, values, sd } };
 }

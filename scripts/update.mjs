@@ -296,8 +296,9 @@ async function main() {
       const o = rkObs.map(r => r.obs), tSorted = rkObs.map(r => r.t).sort((a, b) => a - b);
       rk = { t: tSorted[Math.floor(tSorted.length / 2)], n: rkObs.length, beta: out.beta.map(b => +b.toFixed(4)), predictors: ['ln(CAMS+1)', ...(dem ? ['elevation_km'] : []), ...(met ? ['ln(BLH_km)', 'wind100_ms'] : [])],
         vario: { ...out.vario, c0: +out.vario.c0.toFixed(4), c1: +out.vario.c1.toFixed(4) }, maxKm: out.maxKm, leadEfoldH: CFG.biasLeadEfoldH,
-        cv: { n: o.length, cams: err(rkObs.map(r => r.cams), o), rk: err(out.cv, o) }, resid: out.resid };
-      log(`RK: ${rk.n} monitors, beta=[${rk.beta.join(', ')}], range ${rk.vario.a_km} km, LOO RMSE CAMS ${rk.cv.cams.rmse} → RK ${rk.cv.rk.rmse} µg/m³`);
+        cv: { n: o.length, cams: err(rkObs.map(r => r.cams), o), rk: err(out.cv, o), cover1s: out.cvCover1s, sdMedian: out.cvSdMedian },
+        covBeta: out.covBeta && out.covBeta.map(r => r.map(x => +x.toPrecision(4))), resid: out.resid };
+      log(`RK: ${rk.n} monitors, beta=[${rk.beta.join(', ')}], range ${rk.vario.a_km} km, LOO RMSE CAMS ${rk.cv.cams.rmse} → RK ${rk.cv.rk.rmse} µg/m³, ±1σ coverage ${rk.cv.cover1s}`);
     }
   } else log(`RK skipped: only ${rkObs.length} monitors with fresh data`);
   const gridRaw = hours.map((t, j) => gridPts.map((_, p) => { const v = C.grid[p][i0 + j]; return v == null ? -1 : r1(v); }));

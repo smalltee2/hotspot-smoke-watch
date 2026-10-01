@@ -397,6 +397,7 @@ td.num{text-align:right;font-family:var(--font-data);font-variant-numeric:tabula
       <p class="note">z is elevation in km from a 0.05° terrain grid (AWS Terrain Tiles, largely SRTM-derived); BLH (km) and U, the 100 m wind speed (m s⁻¹), come from the ECMWF IFS HRES fields above at the observation hour and, for forecasts, at each valid hour. They let the map respond to shallow mixing and calm nights at a finer scale than CAMS; wind speed is also a predictor in the hourly 1 km PM<sub>2.5</sub> model for Thailand of Punpukdee et al. (2024). The residuals ε are interpolated by ordinary kriging with an exponential semivariogram fitted each hour (nearest 16 monitors, residual grid 0.1°). This is the regression–interpolation structure used for the EEA European air-quality maps (Horálek et al., 2025), kriging with a chemistry-transport-model drift as in Real et al. (2022), and regression/universal kriging as compared by Beelen et al. (2009). Elevation is included because it improved PM<sub>2.5</sub> mapping over Thailand in Han et al. (2022). For forecast hours the map is</p>
       <span class="eq">ln(PM+1) = ln(CAMS+1) + w·[β₀ + (β₁−1)·ln(CAMS+1) + β₂·z + β₃·ln(BLH) + β₄·U + ε̂],  w = e<sup>−lead/48 h</sup></span>
       <p class="note">so the correction is full at the analysis hour and the map returns to CAMS for long leads. Far from monitors the kriged residual fades to zero and only the regression part remains. The map is computed at 0.05°; real detail comes from the monitors and the terrain, while CAMS itself is about 0.4°.</p>
+      <p class="note"><strong>Uncertainty layer.</strong> The regression-kriging prediction variance (Hengl et al., 2007) is the kriging variance of the residual plus the variance of the regression part: σ² = σ²<sub>OK</sub> + x₀ᵀ·Cov(β)·x₀, with σ²<sub>OK</sub> = Σλᵢγ(xᵢ,x₀) + μ from the ordinary-kriging system and Cov(β) = s²(XᵀX)⁻¹ from the regression (an ordinary-least-squares stand-in for the generalised-least-squares term). Where the kriged residual is faded out, σ² rises toward the variogram sill. Because the model is in log space, the 68% range is (PM+1)·e<sup>±σ</sup> − 1, and the map shows e<sup>σ</sup> − 1 as a percentage. σ is checked hourly by leave-one-out: about 68% of left-out monitors should fall inside ±1σ. It covers the analysis hour only; forecast error grows with lead time (table below).</p>
       <div id="rkBox" class="note"></div>
       <h3>Fine total PM<sub>2.5</sub></h3>
       <p class="note">The fine layer adds sub-grid structure from the fire-smoke model to the regression-kriging map: C<sub>fine</sub> = C<sub>RK</sub> + α·(C<sub>fire</sub> − ⟨C<sub>fire</sub>⟩<sub>0.5°</sub>), where ⟨·⟩<sub>0.5°</sub> is the mean over a CAMS-sized box, computed at 0.025°. The 0.5° average stays equal to the map below it, so fire smoke already in CAMS (GFAS) is not counted twice. This follows the idea of sub-grid dispersion without double counting in uEMEP (Denby et al., 2020); here a box-mean high-pass replaces uEMEP's local-fraction bookkeeping, which CAMS does not provide. α is set in Settings and will be calibrated against monitors in the burning season.</p>
@@ -423,6 +424,7 @@ td.num{text-align:right;font-family:var(--font-data);font-variant-numeric:tabula
         <li>Horálek, J., et al. (2025). Air quality maps of EEA member and cooperating countries for 2023. ETC/HE Report 2025/5.</li>
         <li>Han, S., Kundhikanjana, W., Towashiraporn, P., Stratoulias, D. (2022). Interpolation-based fusion of Sentinel-5P, SRTM, and regulatory-grade ground stations data for producing spatially continuous maps of PM2.5 concentrations nationwide over Thailand. Atmosphere 13(2), 161. doi:10.3390/atmos13020161</li>
         <li>Denby, B. R., et al. (2020). Description of the uEMEP_v5 downscaling approach for the EMEP MSC-W chemistry transport model. Geoscientific Model Development 13, 6303–6323. doi:10.5194/gmd-13-6303-2020</li>
+        <li>Hengl, T., Heuvelink, G. B. M., Rossiter, D. G. (2007). About regression-kriging: From equations to case studies. Computers &amp; Geosciences 33(10), 1301–1315. doi:10.1016/j.cageo.2007.05.001</li>
         <li>Terrain: AWS Terrain Tiles (Terrarium encoding), open data on AWS.</li>
       </ol>
     </section>
@@ -435,6 +437,7 @@ td.num{text-align:right;font-family:var(--font-data);font-variant-numeric:tabula
         <label><input type="radio" name="layer" id="lyTotal" value="total" checked> Total PM<sub>2.5</sub> forecast</label>
         <label><input type="radio" name="layer" id="lyFine" value="fine"> Total PM<sub>2.5</sub>, fine (fire detail)</label>
         <label><input type="radio" name="layer" id="lyFire" value="fire"> Fire smoke only</label>
+        <label><input type="radio" name="layer" id="lyUnc" value="unc"> Map uncertainty (±1σ)</label>
       </div>
       <div class="field" style="margin:4px 0 6px"><label for="unitSel" style="font-size:.7rem">Show as</label>
         <select id="unitSel" style="font-size:.75rem;padding:3px 4px">
@@ -447,6 +450,11 @@ td.num{text-align:right;font-family:var(--font-data);font-variant-numeric:tabula
         <div class="pcdbar" id="legBar"></div>
         <div class="ticks" id="legTicks"></div>
         <div class="note" style="font-size:.68rem" id="legNote"></div>
+      </div>
+      <div id="legUnc" hidden>
+        <div class="pcdbar" id="uncBar" style="grid-template-columns:1fr 1fr 1fr 1fr 1fr"></div>
+        <div class="ticks"><span>±0%</span><span>25</span><span>50</span><span>75</span><span>100</span><span>%+</span></div>
+        <div class="note" style="font-size:.68rem">Half-width of the 68% range, as % of (PM₂.₅+1). Regression-kriging variance at the analysis hour; forecast hours carry extra error (see Method → How well it has done).</div>
       </div>
       <div id="legFire" hidden>
         <div class="bar"></div>
@@ -1072,17 +1080,31 @@ function sampleRegular(Gr,lat,lon){
   return (1-ax)*(1-ay)*v[y0*Gr.nx+x0]+ax*(1-ay)*v[y0*Gr.nx+x0+1]+(1-ax)*ay*v[(y0+1)*Gr.nx+x0]+ax*ay*v[(y0+1)*Gr.nx+x0+1];
 }
 // regression-kriging map value from raw CAMS c at (lat,lon) for valid time t
+// predictor vector at (lat,lon,t) in the order of rk.predictors; null if a needed input has not loaded
+function rkX(c,lat,lon,t){
+  const rk=P.data&&P.data.rk, names=rk.predictors||['ln(CAMS+1)'];
+  if(names.includes('elevation_km')&&!DEM) return null; if(names.includes('ln(BLH_km)')&&!MET) return null;
+  const m=MET&&names.includes('ln(BLH_km)')?sampleMet(MET,lat,lon,t):null;
+  return names.map(nm=>nm==='ln(CAMS+1)'?Math.log(c+1):nm==='elevation_km'?(sampleRegular(DEM,lat,lon)??0)/1000:nm==='ln(BLH_km)'?Math.log(Math.max(m.blh,50)/1000):nm==='wind100_ms'?m.ws:0);
+}
 function rkValue(c,lat,lon,t){
   const rk=P.data&&P.data.rk; if(!rk||c<0) return c;
-  const names=rk.predictors||['ln(CAMS+1)'];
-  if(names.includes('elevation_km')&&!DEM) return c; if(names.includes('ln(BLH_km)')&&!MET) return c;
+  const x=rkX(c,lat,lon,t); if(!x) return c;
   const w=Math.exp(-Math.max(0,(t-rk.t)/36e5)/(rk.leadEfoldH||48)), lc=Math.log(c+1);
-  const m=MET&&names.includes('ln(BLH_km)')?sampleMet(MET,lat,lon,t):null;
-  let reg=rk.beta[0];
-  names.forEach((nm,j)=>{const b=rk.beta[j+1]; reg+=b*(nm==='ln(CAMS+1)'?lc:nm==='elevation_km'?(sampleRegular(DEM,lat,lon)??0)/1000:nm==='ln(BLH_km)'?Math.log(Math.max(m.blh,50)/1000):nm==='wind100_ms'?m.ws:0);});
+  const reg=x.reduce((a,v,j)=>a+rk.beta[j+1]*v,rk.beta[0]);
   const r=sampleRegular(rk.resid,lat,lon)??0;
   return Math.max(0,Math.exp(lc+w*((reg-lc)+r))-1);
 }
+// regression-kriging standard deviation in log space at the analysis hour (Hengl et al., 2007):
+// kriged-residual variance (from the pipeline grid) + regression part x₀ᵀ Cov(β) x₀
+function rkSigma(c,lat,lon){
+  const rk=P.data&&P.data.rk; if(!rk||!rk.resid.sd||c<0) return null;
+  const sr=sampleRegular({...rk.resid,values:rk.resid.sd},lat,lon); if(sr==null) return null;
+  let q=0; const x=rk.covBeta?rkX(c,lat,lon,rk.t):null;
+  if(x){const r=[1,...x]; for(let j=0;j<r.length;j++) for(let k=0;k<r.length;k++) q+=r[j]*rk.covBeta[j][k]*r[k];}
+  return Math.sqrt(sr*sr+Math.max(0,q));
+}
+const UNC_BINS=[25,50,75,100,Infinity], UNC_COL=['#ddd3f0','#b9a3e3','#9472cf','#6d47b5','#47238a'];
 function renderRK(){
   const rk=P.data&&P.data.rk; if(!rk){$('rkBox').textContent='Regression kriging has not run yet (needs at least 15 monitors with fresh data).';return;}
   const b=rk.beta.map(x=>x.toFixed(3));
@@ -1092,7 +1114,8 @@ function renderRK(){
     <tr><th>Coefficients</th><td>${['intercept',...(rk.predictors||[])].map((nm,j)=>`${esc(nm)} ${b[j]}`).join('<br>')}</td></tr>
     <tr><th>Variogram</th><td>nugget ${rk.vario.c0.toFixed(3)}, partial sill ${rk.vario.c1.toFixed(3)}, range ${rk.vario.a_km} km</td></tr>
     <tr><th>Leave-one-out RMSE</th><td>CAMS ${rk.cv.cams.rmse} → RK ${rk.cv.rk.rmse} µg/m³</td></tr>
-    <tr><th>Leave-one-out bias</th><td>CAMS ${rk.cv.cams.mb} → RK ${rk.cv.rk.mb} µg/m³</td></tr></tbody></table></div>`;
+    <tr><th>Leave-one-out bias</th><td>CAMS ${rk.cv.cams.mb} → RK ${rk.cv.rk.mb} µg/m³</td></tr>
+    ${rk.cv.cover1s!=null?`<tr><th>±1σ check (leave-one-out)</th><td>${Math.round(rk.cv.cover1s*100)}% of monitors inside ±1σ (68% if σ is right); median σ ±${Math.round((Math.exp(rk.cv.sdMedian)-1)*100)}%</td></tr>`:''}</tbody></table></div>`;
 }
 function showFreshness(){
   if(!P.data) return; const age=(Date.now()-P.data.generated)/HR;
@@ -1111,7 +1134,7 @@ async function loadVerify(){
 
 // ---- total PM2.5 grid layer and station markers
 let gridLayer=null; const stationLayer=L.layerGroup().addTo(map);
-const layerMode=()=>$('lyFire').checked?'fire':$('lyFine').checked?'fine':'total';
+const layerMode=()=>$('lyUnc').checked?'unc':$('lyFire').checked?'fire':$('lyFine').checked?'fine':'total';
 const gridMode=()=>layerMode()==='total'||layerMode()==='fine';
 const unitMode=()=>$('unitSel').value;   // 'ug' | 'ug24' | 'th' | 'us'
 const avg24=()=>unitMode()!=='ug';
@@ -1150,6 +1173,7 @@ function hourField(i,so,w,fx,fy,cell,fine){
 function drawGrid(){
   if(gridLayer){map.removeLayer(gridLayer);gridLayer=null;}
   S.fine=null; S.fieldInfo='';
+  if(P.data&&layerMode()==='unc') return drawUnc();
   if(!P.data||!gridMode()) return; const G=P.data.grid, i=gIdx(curT()); if(i<0) return;
   const R=regionShape();
   const scheme=unitMode()==='us'?US_BANDS.map(b=>({max:b.max,rgb:hexRGB(b.color)})):PCD.map(b=>({max:b.max,rgb:hexRGB(cssVar('--'+b.key))}));
@@ -1179,6 +1203,27 @@ function drawGrid(){
   const parts=[L.imageOverlay(url,[[so,w],[n,e]],{interactive:false})];
   if(!R) parts.push(L.rectangle([[so,w],[n,e]],{color:cssVar('--muted'),weight:1,dashArray:'4 4',fill:false,interactive:false}));
   gridLayer=L.layerGroup(parts).addTo(map);
+}
+// uncertainty layer: relative half-width of the 68% range, (e^σ − 1)·100 %, at the analysis hour
+function drawUnc(){
+  const rk=P.data.rk; if(!rk||!rk.resid.sd){S.fieldInfo='Uncertainty appears after the next pipeline run.'; return;}
+  const G=P.data.grid, i=gIdx(rk.t); if(i<0) return; const R=regionShape();
+  let so=G.lat0, w=G.lon0, n=G.lat0+(G.ny-1)*G.step, e=G.lon0+(G.nx-1)*G.step;
+  if(R){so=Math.max(so,R.bbox[1]-.2); w=Math.max(w,R.bbox[0]-.2); n=Math.min(n,R.bbox[3]+.2); e=Math.min(e,R.bbox[2]+.2);}
+  const W=Math.min(1100,Math.round((e-w)*60)), H=Math.min(1100,Math.round((mercY(n)-mercY(so))/DEG*60));
+  const rgb=UNC_COL.map(hexRGB);
+  let cell=0.05; while(((e-w)/cell)*((n-so)/cell)>200000) cell*=1.25;
+  const fx=Math.ceil((e-w)/cell), fy=Math.ceil((n-so)/cell), key=[P.data.generated,so,w,fx,fy,!!DEM,!!MET].join('|');
+  if(!S.unc||S.unc.key!==key){const F=new Float32Array(fx*fy);
+    for(let y=0;y<fy;y++) for(let x=0;x<fx;x++){const la=so+(y+.5)*cell, lo=w+(x+.5)*cell, sg=rkSigma(camsAt(la,lo,i),la,lo); F[y*fx+x]=sg==null?NaN:(Math.exp(sg)-1)*100;}
+    S.unc={key,F};}
+  const F=S.unc.F;
+  const url=regionCanvas(so,w,n,e,W,H,(lat,lon)=>{const x=Math.floor((lon-w)/cell), y=Math.floor((lat-so)/cell); if(x<0||y<0||x>=fx||y>=fy) return null;
+    const pct=F[y*fx+x]; if(pct!==pct) return null; const c=rgb[UNC_BINS.findIndex(b=>pct<b)]; return [c[0],c[1],c[2],150];});
+  const parts=[L.imageOverlay(url,[[so,w],[n,e]],{interactive:false})];
+  if(!R) parts.push(L.rectangle([[so,w],[n,e]],{color:cssVar('--muted'),weight:1,dashArray:'4 4',fill:false,interactive:false}));
+  gridLayer=L.layerGroup(parts).addTo(map);
+  S.fieldInfo=`Uncertainty at the analysis hour ${fmtT(rk.t)}`;
 }
 // ---- contour lines on the corrected grid (marching squares on a 4× bilinear upsample)
 const CLEVELS=[15,25,37.5,75]; let contourLayer=null;
@@ -1248,9 +1293,12 @@ function hereHTML(lat,lon,acc){
   let st=null,dSt=1e9; if(P.data) for(const x of P.data.stations){ if(!x.monitor||!x.obs) continue; const d=haversineKm(lat,lon,x.lat,x.lon); if(d<dSt){dSt=d;st=x;} }
   let nHot=0,dHot=1e9; for(const h of S.hots){const d=haversineKm(lat,lon,h.lat,h.lon); if(d<=20) nHot++; if(d<dHot) dHot=d;}
   const pv=provinceOf(lat,lon);
+  let rangeRow=''; {const iA=P.data&&P.data.rk?gIdx(P.data.rk.t):-1, sg=iA>=0?rkSigma(camsAt(lat,lon,iA),lat,lon):null, vA=iA>=0?totalAt(lat,lon,P.data.rk.t):null;
+    if(sg!=null&&vA!=null) rangeRow=`<tr><th>Likely range at ${new Date(P.data.rk.t).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})} (68%)</th><td class="num">${fmtN(Math.max(0,(vA+1)*Math.exp(-sg)-1))}–${fmtN((vA+1)*Math.exp(sg)-1)} µg/m³</td></tr>`;}
   return `<div class="here"><div class="note">${pv?esc(pv.n)+(pv.th?' · '+esc(pv.th):''):'Your location'}${acc?` · ±${acc<1000?Math.round(acc)+' m':(acc/1000).toFixed(1)+' km'}`:''}</div>
     ${vNow!=null?`<div class="big">${fmtN(vNow)} <small style="font-size:.7rem">µg/m³</small></div>${pill(vNow)} <span class="note">PM₂.₅ now (forecast map)</span>`:'<p class="note">No forecast here yet.</p>'}
     <table><tbody>
+      ${rangeRow}
       ${mean24!=null?`<tr><th>AQI, next 24 h</th><td>Thai ${aqiTH(mean24)} · US ${aqiUS(mean24)}</td></tr>`:''}
       ${past24!=null?`<tr><th>AQI now (24-h mean ${fmtN(past24)})</th><td>Thai ${aqiTH(past24)} · US ${aqiUS(past24)}</td></tr>`:''}
       ${mean24!=null?`<tr><th>Next 24 h</th><td class="num">mean ${fmtN(mean24)}, max ${fmtN(peak)} at ${new Date(tPeak).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}</td></tr>`:''}
@@ -1526,7 +1574,7 @@ function focusTown(name){
 
 // ---- controls
 $('btnRun').onclick=()=>runAuto(false); $('btnRun2').onclick=()=>runAuto(false);
-$('btnDemo').onclick=async()=>{busy('Building demo…');const now=Date.now();P.data=null;$('lyFire').checked=true;$('legTotal').hidden=true;$('legFire').hidden=false;
+$('btnDemo').onclick=async()=>{busy('Building demo…');const now=Date.now();P.data=null;$('lyFire').checked=true;$('legTotal').hidden=true;$('legUnc').hidden=true;$('legFire').hidden=false;
   await runModel(demoData(now),'demo',spec=>demoWind(spec,Math.floor((now-30*3600e3)/3600e3)*3600e3,30+(+$('horizon').value)+2));};
 $('csvIn').onchange=async e=>{const f=e.target.files[0]; if(!f) return;
   try{busy('Reading CSV…');const hots=rowsToHotspots(parseCSV(await f.text())).filter(h=>inBox(h.lat,h.lon,REGIONS.msea.bbox));
@@ -1572,11 +1620,12 @@ function renderLegend(){
 $('unitSel').addEventListener('change',()=>{store.set('hsw.unitSel',$('unitSel').value); renderLegend(); renderAll(); redrawTime();});
 renderLegend();
 for(const el of document.querySelectorAll('input[name=layer]')) el.addEventListener('change',()=>{
-  $('legTotal').hidden=!gridMode(); $('legFire').hidden=layerMode()!=='fire'; redrawTime();});
+  $('legTotal').hidden=!gridMode(); $('legFire').hidden=layerMode()!=='fire'; $('legUnc').hidden=layerMode()!=='unc'; redrawTime();});
+$('uncBar').innerHTML=UNC_COL.map(c=>`<i style="background:${c}"></i>`).join('');
 $('alpha').addEventListener('change',()=>{FIELD_CACHE.clear(); redrawTime();});
 // first paint, then refresh every 30 minutes while the tab is open
 computeReceptors(); renderAll(); applyVisibility();
-runAuto(false).then(()=>{ if(!P.data){ $('lyFire').checked=true; $('legTotal').hidden=true; $('legFire').hidden=false; redrawTime(); } });
+runAuto(false).then(()=>{ if(!P.data){ $('lyFire').checked=true; $('legTotal').hidden=true; $('legUnc').hidden=true; $('legFire').hidden=false; redrawTime(); } });
 setInterval(()=>{ if(document.visibilityState==='visible' && P.data) runAuto(true); },30*60e3);
 </script>
 </body>

@@ -126,7 +126,11 @@ td.num{text-align:right;font-family:var(--font-data);font-variant-numeric:tabula
 .locate-btn[aria-busy="true"] svg{animation:spin 1s linear infinite}
 .locate-btn.on{color:var(--focus)}
 @keyframes spin{to{transform:rotate(360deg)}}
-.here{width:min(250px,calc(100vw - 90px));font-size:12.5px;overflow-wrap:anywhere}
+.herebox{border-bottom:1px solid var(--line);padding:10px 16px 12px;background:var(--panel)}
+.herebox .hhead{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:4px}
+.herebox .hhead strong{font:600 .78rem/1.2 var(--font-display);text-transform:uppercase;letter-spacing:.09em;color:var(--muted)}
+.herebox .x{border:0;background:none;font-size:1.2rem;line-height:1;cursor:pointer;color:var(--muted);padding:4px 6px}
+.here{font-size:12.5px;overflow-wrap:anywhere}
 .here .big{font:600 1.5rem/1.1 var(--font-data);font-variant-numeric:tabular-nums;margin:2px 0}
 .here table{font-size:11.5px;width:100%;table-layout:fixed;margin-top:6px}
 .here th{width:38%;vertical-align:top}
@@ -278,6 +282,7 @@ td.num{text-align:right;font-family:var(--font-data);font-variant-numeric:tabula
       <div><b id="sFrp">–</b><span>FRP, MW</span></div>
       <div><b id="sWarn">–</b><span>Towns warned</span></div>
     </div>
+    <section id="hereBox" class="herebox" hidden aria-live="polite"></section>
     <div class="tabs" role="tablist">
       <button role="tab" aria-selected="true" data-tab="warn" id="tab-warn">Warnings</button>
       <button role="tab" aria-selected="false" data-tab="hot" id="tab-hot">Hotspots</button>
@@ -1034,7 +1039,7 @@ function setTimeline(){
   if(i<0){i=S.times.findIndex(h=>h>=Date.now()-HR/2); if(i<0) i=Math.max(0,S.times.length-1);}
   S.hour=i; sl.value=i;
 }
-function redrawTime(){if(hereLayer&&hereLL){const mk=hereLayer.getLayers()[1]; if(mk.isPopupOpen()) mk.setPopupContent(hereHTML(hereLL.lat,hereLL.lon,hereLL.acc));}
+function redrawTime(){if(hereLL&&!$('hereBox').hidden) renderHereBox();
   updateTimeLabel();drawPlume();drawGrid();drawContours();drawTowns();drawStations();}
 
 // ---- hourly data written by the GitHub Actions pipeline (same site)
@@ -1257,20 +1262,31 @@ function hereHTML(lat,lon,acc){
     <div class="act"><button class="btn" type="button" id="hereAdd">Add as my point</button></div>
     <div class="note" style="font-size:.68rem">Your location stays on this device.</div></div>`;
 }
+// the readout sits in the side panel (below the map on phones), not in a map popup:
+// a popup makes Leaflet auto-pan, which fights the region lock and makes the map shake
+function renderHereBox(){
+  const box=$('hereBox'); if(!hereLL){box.hidden=true;return;}
+  const inside=!map.options.maxBounds||map.options.maxBounds.contains([hereLL.lat,hereLL.lon]);
+  box.innerHTML=`<div class="hhead"><strong>My location</strong><button class="x" type="button" id="hereClose" aria-label="Close my location">×</button></div>`+
+    hereHTML(hereLL.lat,hereLL.lon,hereLL.acc)+(inside?'':'<p class="note">You are outside the selected region. Pick a larger region to see your location on the map.</p>');
+  box.hidden=false;
+  $('hereClose').onclick=()=>{hereLL=null; box.hidden=true; if(hereLayer){map.removeLayer(hereLayer);hereLayer=null;} document.querySelector('.locate-btn')?.classList.remove('on');};
+  const b=$('hereAdd'); if(b) b.onclick=()=>{
+    S.myPts.push({name:'My location',lat:+hereLL.lat.toFixed(4),lon:+hereLL.lon.toFixed(4),cc:'★'}); store.set('hsw.points',JSON.stringify(S.myPts));
+    computeReceptors(); drawTowns(); renderWarnings(); b.textContent='Added'; b.disabled=true;};
+}
 function showHere(lat,lon,acc,fly){
   hereLL={lat,lon,acc};
   if(hereLayer) map.removeLayer(hereLayer);
   const col=cssVar('--focus');
-  hereLayer=L.layerGroup([
-    L.circle([lat,lon],{radius:Math.max(acc||0,30),color:col,weight:1,fillColor:col,fillOpacity:.12,interactive:false}),
-    L.circleMarker([lat,lon],{radius:7,color:'#fff',weight:2,fillColor:col,fillOpacity:1})
-      .bindPopup(()=>hereHTML(lat,lon,acc),{maxWidth:Math.min(270,innerWidth-60),minWidth:180,autoPanPadding:[16,16]})]).addTo(map);
-  if(fly) map.flyTo([lat,lon],Math.max(map.getZoom(),10));
-  const mk=hereLayer.getLayers()[1]; mk.openPopup();
+  const mk=L.circleMarker([lat,lon],{radius:7,color:'#fff',weight:2,fillColor:col,fillOpacity:1})
+    .bindTooltip('My location').on('click',()=>{renderHereBox(); $('hereBox').scrollIntoView({behavior:'smooth',block:'nearest'});});
+  hereLayer=L.layerGroup([L.circle([lat,lon],{radius:Math.max(acc||0,30),color:col,weight:1,fillColor:col,fillOpacity:.12,interactive:false}),mk]).addTo(map);
+  const inside=!map.options.maxBounds||map.options.maxBounds.contains([lat,lon]);
+  if(fly&&inside) map.setView([lat,lon],Math.max(map.getZoom(),10),{animate:true});
+  renderHereBox();
+  if(matchMedia('(max-width:820px)').matches) $('hereBox').scrollIntoView({behavior:'smooth',block:'nearest'});
 }
-map.on('popupopen',e=>{const b=e.popup.getElement()?.querySelector('#hereAdd'); if(b&&hereLL) b.onclick=()=>{
-  S.myPts.push({name:'My location',lat:+hereLL.lat.toFixed(4),lon:+hereLL.lon.toFixed(4),cc:'★'}); store.set('hsw.points',JSON.stringify(S.myPts));
-  computeReceptors(); drawTowns(); renderWarnings(); b.textContent='Added'; b.disabled=true;};});
 const LocateCtl=L.Control.extend({options:{position:'topleft'},onAdd(){
   const b=L.DomUtil.create('button','locate-btn'); b.type='button'; b.title='Show PM2.5 at my location'; b.setAttribute('aria-label','Show PM2.5 at my location');
   b.innerHTML='<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/><circle cx="12" cy="12" r="8"/></svg>';

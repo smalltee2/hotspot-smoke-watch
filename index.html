@@ -120,10 +120,12 @@ td.num{text-align:right;font-family:var(--font-data);font-variant-numeric:tabula
 .locate-btn[aria-busy="true"] svg{animation:spin 1s linear infinite}
 .locate-btn.on{color:var(--focus)}
 @keyframes spin{to{transform:rotate(360deg)}}
-.here{min-width:210px;font-size:12.5px}
-.here .big{font:600 1.5rem/1.1 var(--font-data);font-variant-numeric:tabular-nums}
-.here table{font-size:11.5px}
-.here td,.here th{padding:3px 4px}
+.here{width:min(250px,calc(100vw - 90px));font-size:12.5px;overflow-wrap:anywhere}
+.here .big{font:600 1.5rem/1.1 var(--font-data);font-variant-numeric:tabular-nums;margin:2px 0}
+.here table{font-size:11.5px;width:100%;table-layout:fixed;margin-top:6px}
+.here th{width:38%;vertical-align:top}
+.here td,.here th{padding:3px 4px;white-space:normal;text-align:left;overflow-wrap:anywhere}
+.here .pill{white-space:nowrap}
 .here .act{margin-top:6px;display:flex;gap:6px}
 .stmark{width:12px;height:12px;border-radius:2px;border:1.5px solid var(--fg);box-sizing:border-box}
 .legend .keys span{display:flex;gap:6px;align-items:center}
@@ -1152,7 +1154,7 @@ function showHere(lat,lon,acc,fly){
   hereLayer=L.layerGroup([
     L.circle([lat,lon],{radius:Math.max(acc||0,30),color:col,weight:1,fillColor:col,fillOpacity:.12,interactive:false}),
     L.circleMarker([lat,lon],{radius:7,color:'#fff',weight:2,fillColor:col,fillOpacity:1})
-      .bindPopup(()=>hereHTML(lat,lon,acc),{maxWidth:280})]).addTo(map);
+      .bindPopup(()=>hereHTML(lat,lon,acc),{maxWidth:Math.min(270,innerWidth-60),minWidth:180,autoPanPadding:[16,16]})]).addTo(map);
   if(fly) map.flyTo([lat,lon],Math.max(map.getZoom(),10));
   const mk=hereLayer.getLayers()[1]; mk.openPopup();
 }

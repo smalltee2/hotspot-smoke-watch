@@ -20,16 +20,17 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
-          node-version: '20'
+          node-version: '22'
       - name: Fetch data, correct forecast, write JSON
         env:
           OPENAQ_API_KEY: ${{ secrets.OPENAQ_API_KEY }}
           FIRMS_MAP_KEY: ${{ secrets.FIRMS_MAP_KEY }}
         run: node scripts/update.mjs && node scripts/verify.mjs
       - name: Commit data
+        if: always()
         run: |
           git config user.name "hotspot-bot"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"

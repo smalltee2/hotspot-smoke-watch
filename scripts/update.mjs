@@ -150,7 +150,7 @@ async function camsSeries(points) {
       `&longitude=${c.map(p => p[1].toFixed(3)).join(',')}&hourly=pm2_5&timeformat=unixtime&timezone=GMT&past_days=1&forecast_days=4`;
     let js = await (await get(url)).json(); if (!Array.isArray(js)) js = [js];
     for (const o of js) { if (!times) times = o.hourly.time.map(s => s * 1000); out.push(o.hourly.pm2_5.map(v => v == null ? null : r1(v))); }
-    await sleep(500);
+    if (i + 100 < points.length) await sleep(12000); // ≤ 500 locations/min (free tier allows 600)
   }
   return { times, series: out };
 }
@@ -197,9 +197,15 @@ async function main() {
   const stIds = stations.map(s => s.id).join(',');
   if (!state.cams || now - state.cams.at > CFG.camsRefreshH * HOUR || state.cams.stIds !== stIds) {
     const pts = stations.map(s => [s.lat, s.lon]).concat(gridPts);
-    const { times, series } = await camsSeries(pts);
-    state.cams = { at: now, times, stIds, st: series.slice(0, stations.length), grid: series.slice(stations.length) };
-    log(`CAMS refreshed: ${pts.length} points × ${times.length} h`);
+    try {
+      const { times, series } = await camsSeries(pts);
+      state.cams = { at: now, times, stIds, st: series.slice(0, stations.length), grid: series.slice(stations.length) };
+      log(`CAMS refreshed: ${pts.length} points × ${times.length} h`);
+    } catch (e) {
+      log(`CAMS refresh failed: ${e.message}`);
+      if (!state.cams || state.cams.stIds !== stIds) throw e;   // cannot continue without a forecast for these stations
+      log('using the previous CAMS forecast');
+    }
   }
   const C = state.cams;
 
@@ -264,4 +270,9 @@ async function main() {
   log(`done: ${outStations.length} stations, ${hot.length} hotspots, grid ${nx}×${ny}×${hours.length}`);
 }
 
-main().catch(e => { console.error(e); process.exit(1); });
+main().catch(async e => {
+  log(`FAILED: ${e.stack || e.message}`);
+  process.exitCode = 1;
+}).finally(async () => {
+  await writeJSON(path.join(DATA, 'runlog.json'), { at: now, ok: !process.exitCode, log: RUNLOG });
+});

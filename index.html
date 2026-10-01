@@ -128,7 +128,7 @@ td.num{text-align:right;font-family:var(--font-data);font-variant-numeric:tabula
 .legend details:not([open]) summary::after{content:" ▸"}
 .leaflet-tooltip.plabel{background:none;border:0;box-shadow:none;color:var(--muted);font:500 10px/1 var(--font-body);padding:0;text-shadow:0 0 3px var(--land),0 0 3px var(--land)}
 .leaflet-tooltip.tlabel{background:none;border:0;box-shadow:none;color:var(--fg);font:600 11px/1 var(--font-body);padding:0 0 0 4px;text-shadow:0 0 3px var(--land),0 0 3px var(--land),0 0 3px var(--land)}
-.hide-plabel .plabel,.hide-tlabel .tlabel{display:none}
+.hide-plabel .plabel,.hide-tlabel .tlabel,.hide-mlabel .tlabel.minor{display:none}
 .busy{position:absolute;inset:0;z-index:700;display:grid;place-items:center;background:rgb(0 0 0 / .18)}
 .busy div{background:var(--panel);border:1px solid var(--line);padding:12px 16px;border-radius:6px;font-weight:500}
 
@@ -403,21 +403,119 @@ const PCD = [
 const pcdBand = c => PCD.find(b => c <= b.max);
 
 const TOWNS = [
- ['Chiang Mai',18.788,98.985,'TH'],['Chiang Rai',19.910,99.840,'TH'],['Lampang',18.290,99.490,'TH'],
- ['Lamphun',18.580,99.008,'TH'],['Mae Hong Son',19.302,97.970,'TH'],['Nan',18.783,100.779,'TH'],
- ['Phayao',19.166,99.902,'TH'],['Phrae',18.145,100.141,'TH'],['Uttaradit',17.620,100.099,'TH'],
- ['Tak',16.884,99.126,'TH'],['Mae Sot',16.713,98.575,'TH'],['Sukhothai',17.007,99.823,'TH'],
- ['Phitsanulok',16.821,100.265,'TH'],['Kamphaeng Phet',16.483,99.522,'TH'],['Phichit',16.441,100.349,'TH'],
- ['Nakhon Sawan',15.704,100.137,'TH'],['Phetchabun',16.419,101.160,'TH'],['Loei',17.486,101.722,'TH'],
- ['Uthai Thani',15.380,100.025,'TH'],['Fang',19.917,99.214,'TH'],['Mae Sai',20.428,99.876,'TH'],
- ['Bangkok',13.756,100.502,'TH'],['Khon Kaen',16.441,102.836,'TH'],['Udon Thani',17.415,102.787,'TH'],
- ['Nakhon Ratchasima',14.980,102.098,'TH'],['Ubon Ratchathani',15.244,104.848,'TH'],
- ['Vientiane',17.975,102.633,'LA'],['Luang Prabang',19.886,102.135,'LA'],['Xayaboury',19.251,101.709,'LA'],
- ['Houayxay',20.277,100.413,'LA'],['Oudomxay',20.692,101.986,'LA'],['Luang Namtha',20.950,101.401,'LA'],
- ['Tachileik',20.448,99.881,'MM'],['Kengtung',21.291,99.608,'MM'],['Taunggyi',20.783,97.038,'MM'],
- ['Mandalay',21.959,96.089,'MM'],['Yangon',16.841,96.173,'MM'],['Hanoi',21.028,105.854,'VN'],
- ['Phnom Penh',11.556,104.928,'KH'],['Siem Reap',13.362,103.860,'KH'],
-].map(([name,lat,lon,cc]) => ({name,lat,lon,cc}));
+ ['Amnat Charoen',15.858,104.629,'TH','cap'],
+ ['Ang Thong',14.583,100.45,'TH','cap'],
+ ['Aranyaprathet',13.682,102.497,'TH','town'],
+ ['Ayutthaya',14.359,100.568,'TH','cap'],
+ ['Bangkok',13.752,100.515,'TH','cap'],
+ ['Bua Yai',15.584,102.419,'TH','town'],
+ ['Bueng Kan',18.36,103.646,'TH','cap'],
+ ['Buri Ram',15.0,103.117,'TH','cap'],
+ ['Chachoengsao',13.679,101.076,'TH','cap'],
+ ['Chai Nat',15.179,100.126,'TH','cap'],
+ ['Chaiyaphum',15.804,102.039,'TH','cap'],
+ ['Chanthaburi',12.613,102.098,'TH','cap'],
+ ['Chiang Khong',20.262,100.405,'TH','town'],
+ ['Chiang Mai',18.8,98.98,'TH','cap'],
+ ['Chiang Rai',19.912,99.826,'TH','cap'],
+ ['Chiang Saen',20.274,100.087,'TH','town'],
+ ['Chon Buri',13.4,101.0,'TH','cap'],
+ ['Chumphon',10.513,99.187,'TH','cap'],
+ ['Fang',19.917,99.214,'TH','town'],
+ ['Hat Yai',6.996,100.471,'TH','town'],
+ ['Hot',18.193,98.611,'TH','town'],
+ ['Hua Hin',12.57,99.944,'TH','town'],
+ ['Kalasin',16.428,103.509,'TH','cap'],
+ ['Kamphaeng Phet',16.473,99.529,'TH','cap'],
+ ['Kanchanaburi',14.017,99.522,'TH','cap'],
+ ['Khon Kaen',16.42,102.83,'TH','cap'],
+ ['Krabi',8.052,98.912,'TH','cap'],
+ ['Lampang',18.292,99.481,'TH','cap'],
+ ['Lamphun',18.503,99.074,'TH','cap'],
+ ['Li',17.796,98.954,'TH','town'],
+ ['Loei',17.492,101.732,'TH','cap'],
+ ['Lom Sak',16.778,101.243,'TH','town'],
+ ['Lopburi',14.804,100.619,'TH','cap'],
+ ['Mae Chaem',18.497,98.364,'TH','town'],
+ ['Mae Hong Son',19.301,97.969,'TH','cap'],
+ ['Mae Moh',18.283,99.66,'TH','town'],
+ ['Mae Sai',20.428,99.876,'TH','town'],
+ ['Mae Sariang',18.163,97.933,'TH','town'],
+ ['Mae Sot',16.716,98.571,'TH','town'],
+ ['Maha Sarakham',16.184,103.298,'TH','cap'],
+ ['Mukdahan',16.545,104.723,'TH','cap'],
+ ['Nakhon Nayok',14.2,101.216,'TH','cap'],
+ ['Nakhon Pathom',13.818,100.064,'TH','cap'],
+ ['Nakhon Phanom',17.394,104.769,'TH','cap'],
+ ['Nakhon Ratchasima',15.0,102.1,'TH','cap'],
+ ['Nakhon Sawan',15.7,100.07,'TH','cap'],
+ ['Nakhon Si Thammarat',8.4,99.97,'TH','cap'],
+ ['Nan',18.787,100.771,'TH','cap'],
+ ['Narathiwat',6.432,101.821,'TH','cap'],
+ ['Nong Bua Lam Phu',17.204,102.441,'TH','cap'],
+ ['Nong Khai',17.873,102.748,'TH','cap'],
+ ['Nonthaburi',13.834,100.483,'TH','cap'],
+ ['Pai',19.358,98.441,'TH','town'],
+ ['Pathum Thani',14.017,100.533,'TH','cap'],
+ ['Pattani',6.864,101.25,'TH','cap'],
+ ['Pattaya',12.927,100.877,'TH','town'],
+ ['Phang Nga',8.451,98.534,'TH','cap'],
+ ['Phatthalung',7.615,100.081,'TH','cap'],
+ ['Phayao',19.171,99.908,'TH','cap'],
+ ['Phetchabun',16.419,101.159,'TH','cap'],
+ ['Phetchaburi',13.113,99.941,'TH','cap'],
+ ['Phichit',16.439,100.349,'TH','cap'],
+ ['Phitsanulok',16.828,100.273,'TH','cap'],
+ ['Phrae',18.153,100.163,'TH','cap'],
+ ['Phuket',7.877,98.382,'TH','cap'],
+ ['Prachin Buri',14.057,101.377,'TH','cap'],
+ ['Prachuap Khiri Khan',11.803,99.8,'TH','cap'],
+ ['Ranong',9.962,98.638,'TH','cap'],
+ ['Ratchaburi',13.542,99.822,'TH','cap'],
+ ['Rayong',12.672,101.281,'TH','cap'],
+ ['Roi Et',16.051,103.655,'TH','cap'],
+ ['Sa Kaeo',13.814,102.072,'TH','cap'],
+ ['Sakhon Nakhon',17.168,104.148,'TH','cap'],
+ ['Samut Prakan',13.607,100.611,'TH','cap'],
+ ['Samut Sakhon',13.536,100.274,'TH','cap'],
+ ['Samut Songkhram',13.413,100.001,'TH','cap'],
+ ['Saraburi',14.53,100.88,'TH','cap'],
+ ['Satun',6.617,100.067,'TH','cap'],
+ ['Si Racha',13.159,100.929,'TH','town'],
+ ['Si Sa Ket',15.12,104.33,'TH','cap'],
+ ['Sing Buri',14.887,100.401,'TH','cap'],
+ ['Songkhla',7.21,100.56,'TH','cap'],
+ ['Sukhothai',17.012,99.752,'TH','cap'],
+ ['Suphan Buri',14.471,100.129,'TH','cap'],
+ ['Surat Thani',9.15,99.34,'TH','cap'],
+ ['Surin',14.887,103.491,'TH','cap'],
+ ['Tak',16.885,99.129,'TH','cap'],
+ ['Thoeng',19.686,100.195,'TH','town'],
+ ['Thung Song',8.154,99.729,'TH','town'],
+ ['Trang',7.563,99.608,'TH','cap'],
+ ['Trat',12.237,102.509,'TH','cap'],
+ ['Ubon Ratchathani',15.25,104.83,'TH','cap'],
+ ['Udon Thani',17.405,102.789,'TH','cap'],
+ ['Uthai Thani',15.382,100.026,'TH','cap'],
+ ['Uttaradit',17.632,100.097,'TH','cap'],
+ ['Wiang Pa Pao',19.355,99.505,'TH','town'],
+ ['Yala',6.55,101.285,'TH','cap'],
+ ['Yasothon',15.788,104.151,'TH','cap'],
+ ['Vientiane',17.975,102.633,'LA','cap'],
+ ['Luang Prabang',19.886,102.135,'LA','cap'],
+ ['Xayaboury',19.251,101.709,'LA','cap'],
+ ['Houayxay',20.277,100.413,'LA','cap'],
+ ['Oudomxay',20.692,101.986,'LA','cap'],
+ ['Luang Namtha',20.950,101.401,'LA','cap'],
+ ['Tachileik',20.448,99.881,'MM','cap'],
+ ['Kengtung',21.291,99.608,'MM','cap'],
+ ['Taunggyi',20.783,97.038,'MM','cap'],
+ ['Mandalay',21.959,96.089,'MM','cap'],
+ ['Yangon',16.841,96.173,'MM','cap'],
+ ['Hanoi',21.028,105.854,'VN','cap'],
+ ['Phnom Penh',11.556,104.928,'KH','cap'],
+ ['Siem Reap',13.362,103.860,'KH','cap']
+].map(([name,lat,lon,cc,kind]) => ({name,lat,lon,cc,kind}));
 
 // ---------------------------------------------------------------- helpers
 function haversineKm(a,b,c,d){const p=DEG,dl=(c-a)*p,dn=(d-b)*p;const h=Math.sin(dl/2)**2+Math.cos(a*p)*Math.cos(c*p)*Math.sin(dn/2)**2;return 12742*Math.asin(Math.sqrt(h));}
@@ -661,7 +759,7 @@ function provCentroid(f){let b=L.geoJSON(f).getBounds();let best=null,area=0;
   return best||b.getCenter();}
 provLabels=L.layerGroup(GEO_P.features.map(f=>L.marker(provCentroid(f),{icon:L.divIcon({className:'',html:'',iconSize:[0,0]}),interactive:false,keyboard:false})
   .bindTooltip(f.properties.th?`${f.properties.n} · ${f.properties.th}`:f.properties.n,{permanent:true,direction:'center',className:'plabel'}))).addTo(map);
-function labelZoom(){const z=map.getZoom();map.getContainer().classList.toggle('hide-plabel',z<8);map.getContainer().classList.toggle('hide-tlabel',z<7);}
+function labelZoom(){const z=map.getZoom();map.getContainer().classList.toggle('hide-plabel',z<8);map.getContainer().classList.toggle('hide-tlabel',z<7);map.getContainer().classList.toggle('hide-mlabel',z<9);}
 map.on('zoomend',labelZoom);
 const TILESETS={
   light:()=>[`https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/${isDark()?'World_Dark_Gray_Base':'World_Light_Gray_Base'}/MapServer/tile/{z}/{y}/{x}`,{maxZoom:16,attribution:'Basemap © Esri, HERE, Garmin, © OpenStreetMap contributors'}],
@@ -1006,10 +1104,10 @@ function drawTowns(){
   townLayer.clearLayers(); const fg=cssVar('--fg');
   const recs=S.recep.length?S.recep:allReceptors().map(p=>({...p,st:{mean24:0,peak:0}}));
   for(const r of recs){const si=simIdx(curT()); const val=si>=0&&r.series?.length?r.series[si]||0:0; const b=pcdBand(val);
-    L.circleMarker([r.lat,r.lon],{radius:r.cc==='★'?6:5,weight:2,color:fg,fillColor:val>=1?cssVar('--'+b.key):cssVar('--panel'),fillOpacity:1})
+    L.circleMarker([r.lat,r.lon],{radius:r.cc==='★'?6:r.kind==='town'?3.5:5,weight:2,color:fg,fillColor:val>=1?cssVar('--'+b.key):cssVar('--panel'),fillOpacity:1})
      .bindTooltip(`${r.name}: ${fmtN(val)} µg/m³ fire PM₂.₅ at this hour`).on('click',()=>focusTown(r.name)).addTo(townLayer);
     L.marker([r.lat,r.lon],{icon:L.divIcon({className:'',html:'',iconSize:[0,0]}),interactive:false,keyboard:false})
-     .bindTooltip(r.name,{permanent:true,direction:'right',offset:[6,0],className:'tlabel'}).addTo(townLayer);}
+     .bindTooltip(r.name,{permanent:true,direction:'right',offset:[6,0],className:r.kind==='town'?'tlabel minor':'tlabel'}).addTo(townLayer);}
 }
 function clearPlume(){if(plume){map.removeLayer(plume);plume=null;}}
 // smoke colour ramp (µg/m3)

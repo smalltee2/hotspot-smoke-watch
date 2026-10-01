@@ -4,6 +4,9 @@ on:
   schedule:
     - cron: '7 * * * *'   # every hour at :07 UTC (GitHub may start a few minutes late)
   workflow_dispatch: {}    # "Run workflow" button for manual runs
+  push:
+    branches: [main]
+    paths: ['scripts/**', '.github/workflows/update.yml']   # rerun when the pipeline code changes
 
 permissions:
   contents: write

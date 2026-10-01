@@ -16,7 +16,7 @@ const CFG = {
   gridStep: 0.5,                 // deg; keeps Open-Meteo calls inside the free tier
   camsRefreshH: 6,               // CAMS runs twice a day, no need to re-pull hourly
   stationRefreshH: 24,
-  maxStations: 150,
+  maxStations: 300,
   obsMaxAgeH: 3,                 // ignore station values older than this
   firmsSources: ['VIIRS_SNPP_NRT', 'VIIRS_NOAA20_NRT', 'VIIRS_NOAA21_NRT'],
   firmsDays: 2,
@@ -31,7 +31,9 @@ const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..')
 const DATA = path.join(ROOT, 'data');
 const now = Date.now();
 const HOUR = 3600e3;
-const log = (...a) => console.log(new Date().toISOString().slice(11, 19), ...a);
+const RUNLOG = [];
+const SECRETS = [process.env.FIRMS_MAP_KEY, process.env.OPENAQ_API_KEY].map(k => (k || '').trim()).filter(k => k.length > 6);
+const log = (...a) => { let line = a.join(' '); for (const k of SECRETS) line = line.split(k).join('***'); RUNLOG.push(line); console.log(new Date().toISOString().slice(11, 19), line); };
 
 // ------------------------------------------------------------------ helpers
 async function readJSON(p, dflt) { try { return JSON.parse(await fs.readFile(p, 'utf8')); } catch { return dflt; } }
@@ -60,7 +62,7 @@ const r1 = x => Math.round(x * 10) / 10;
 
 // ------------------------------------------------------------------ OpenAQ
 const OAQ = 'https://api.openaq.org/v3';
-const oaqHeaders = () => ({ 'X-API-Key': process.env.OPENAQ_API_KEY, Accept: 'application/json' });
+const oaqHeaders = () => ({ 'X-API-Key': (process.env.OPENAQ_API_KEY || '').trim(), Accept: 'application/json' });
 
 async function oaqStations() {
   const out = [];
@@ -117,14 +119,14 @@ async function oaqLatest(stations) {
 
 // ------------------------------------------------------------------ FIRMS
 async function firmsHotspots() {
-  const key = process.env.FIRMS_MAP_KEY;
+  const key = (process.env.FIRMS_MAP_KEY || '').trim();
   if (!key) { log('FIRMS_MAP_KEY missing, skipping hotspots'); return []; }
   const rows = [];
   for (const src of CFG.firmsSources) {
     try {
       const txt = await (await get(`https://firms.modaps.eosdis.nasa.gov/api/area/csv/${key}/${src}/${CFG.bbox.join(',')}/${CFG.firmsDays}`)).text();
       const lines = txt.trim().split('\n'); const head = lines[0].split(',');
-      if (!head.includes('latitude')) { log(`FIRMS ${src}: ${txt.slice(0, 120)}`); continue; }
+      if (!head.includes('latitude')) { log(`FIRMS ${src}: unexpected reply: ${txt.slice(0, 120).replace(/\s+/g, ' ')}`); continue; }
       const ix = k => head.indexOf(k);
       for (const l of lines.slice(1)) {
         const v = l.split(',');
@@ -178,12 +180,12 @@ async function main() {
   state.kf ||= {};
 
   // 1. station list (daily)
-  if (!state.stations || now - (state.stationsAt || 0) > CFG.stationRefreshH * HOUR) {
+  if (!state.stations || state.stationsCap !== CFG.maxStations || now - (state.stationsAt || 0) > CFG.stationRefreshH * HOUR) {
     const all = await oaqStations();
     const fresh = all.filter(s => now - s.last < 7 * 24 * HOUR);
     fresh.sort((a, b) => (b.monitor - a.monitor) || (b.last - a.last));
     state.stations = fresh.slice(0, CFG.maxStations);
-    state.stationsAt = now;
+    state.stationsAt = now; state.stationsCap = CFG.maxStations;
     log(`stations: ${all.length} with pm25 in area, ${fresh.length} active, keeping ${state.stations.length}`);
   }
   const stations = state.stations;
@@ -246,7 +248,7 @@ async function main() {
 
   // 7. outputs
   await writeJSON(path.join(DATA, 'latest.json'), {
-    generated: now, camsIssued: C.at, bbox: CFG.bbox,
+    generated: now, camsIssued: C.at, bbox: CFG.bbox, runlog: RUNLOG,
     method: { kf: CFG.kf, biasLeadEfoldH: CFG.biasLeadEfoldH, idw: CFG.idw },
     hours, stations: outStations,
     grid: { lon0: g[0], lat0: g[1], step, nx, ny, values: gridCorr },

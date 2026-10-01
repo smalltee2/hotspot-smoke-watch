@@ -1,0 +1,36 @@
+name: Hourly update
+
+on:
+  schedule:
+    - cron: '7 * * * *'   # every hour at :07 UTC (GitHub may start a few minutes late)
+  workflow_dispatch: {}    # "Run workflow" button for manual runs
+
+permissions:
+  contents: write
+
+concurrency:
+  group: hourly-update
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Fetch data, correct forecast, write JSON
+        env:
+          OPENAQ_API_KEY: ${{ secrets.OPENAQ_API_KEY }}
+          FIRMS_MAP_KEY: ${{ secrets.FIRMS_MAP_KEY }}
+        run: node scripts/update.mjs && node scripts/verify.mjs
+      - name: Commit data
+        run: |
+          git config user.name "hotspot-bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data
+          git diff --cached --quiet && exit 0
+          git commit -m "data: $(date -u +'%Y-%m-%d %H:%M UTC')"
+          for i in 1 2 3; do git pull --rebase -q && git push -q && break; sleep 5; done

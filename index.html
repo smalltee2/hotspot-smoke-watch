@@ -320,7 +320,7 @@ td.num{text-align:right;font-family:var(--font-data);font-variant-numeric:tabula
       <h3>Warning levels</h3>
       <p class="note">Bands follow Thailand's PCD PM<sub>2.5</sub> scale in force since 1 June 2023 (24-h standard 37.5 µg/m³): 0–15, 15.1–25, 25.1–37.5, 37.6–75, above 75 µg/m³. The page applies them to the fire-added part only. Background from traffic, cooking and long-range haze is not included.</p>
       <h3>AQI</h3>
-      <p class="note">Thai AQI follows the Pollution Control Department bands in force since 1 June 2023 (PM<sub>2.5</sub> 24-h mean 0–15, 15.1–25, 25.1–37.5, 37.6–75 and above 75.1 µg/m³ → AQI 0–25, 26–50, 51–100, 101–200 and 201+); above 75.1 µg/m³ the page extends the index at the slope of the 101–200 band. US AQI follows the EPA PM<sub>2.5</sub> breakpoints revised in 2024 (0–9.0, 9.1–35.4, 35.5–55.4, 55.5–125.4, 125.5–225.4, 225.5+ µg/m³ → AQI 0–50, 51–100, 101–150, 151–200, 201–300, 301+), with concentrations truncated to 0.1 µg/m³ and linear interpolation inside each band. Both indices are defined on the 24-hour mean; AQI computed from an hourly value is shown as indicative only.</p>
+      <p class="note">Thai AQI follows the Pollution Control Department bands in force since 1 June 2023 (PM<sub>2.5</sub> 24-h mean 0–15, 15.1–25, 25.1–37.5, 37.6–75 and above 75.1 µg/m³ → AQI 0–25, 26–50, 51–100, 101–200 and 201+); above 75.1 µg/m³ the page extends the index at the slope of the 101–200 band. US AQI follows the EPA PM<sub>2.5</sub> breakpoints revised in 2024 (0–9.0, 9.1–35.4, 35.5–55.4, 55.5–125.4, 125.5–225.4, 225.5+ µg/m³ → AQI 0–50, 51–100, 101–150, 151–200, 201–300, 301+), with concentrations truncated to 0.1 µg/m³ and linear interpolation inside each band. Both indices are defined on the 24-hour mean, so in the AQI and 24-h views the map, the station colours and the location box use the mean of the 24 hourly values ending at the selected hour; a mean needs at least 18 of the 24 hours (75 %). Station AQI uses the monitor's own hourly readings, kept by the pipeline for the last 30 hours. The pipeline publishes the previous 24 hours of the corrected field with every run, so the 24-h mean is complete from the current hour onward.</p>
       <h3>Limits</h3>
       <ol>
         <li>Screening tool, not a regulatory model. No plume rise, chemistry, deposition or rain-out; terrain only enters through the forecast wind.</li>
@@ -379,9 +379,10 @@ td.num{text-align:right;font-family:var(--font-data);font-variant-numeric:tabula
       </div>
       <div class="field" style="margin:4px 0 6px"><label for="unitSel" style="font-size:.7rem">Show as</label>
         <select id="unitSel" style="font-size:.75rem;padding:3px 4px">
-          <option value="ug">PM₂.₅ µg/m³ (Thai PCD colours)</option>
-          <option value="th">Thai AQI</option>
-          <option value="us">US AQI (EPA)</option>
+          <option value="ug">PM₂.₅ hourly, µg/m³</option>
+          <option value="ug24">PM₂.₅ 24-h mean, µg/m³</option>
+          <option value="th">Thai AQI (24-h mean)</option>
+          <option value="us">US AQI (24-h mean)</option>
         </select></div>
       <div id="legTotal">
         <div class="pcdbar" id="legBar"></div>
@@ -1053,45 +1054,67 @@ async function loadVerify(){
 let gridLayer=null; const stationLayer=L.layerGroup().addTo(map);
 const layerMode=()=>$('lyFire').checked?'fire':$('lyFine').checked?'fine':'total';
 const gridMode=()=>layerMode()==='total'||layerMode()==='fine';
-const unitMode=()=>$('unitSel').value;   // 'ug' | 'th' | 'us'
+const unitMode=()=>$('unitSel').value;   // 'ug' | 'ug24' | 'th' | 'us'
+const avg24=()=>unitMode()!=='ug';
 function bandFor(v){ if(unitMode()==='us'){const b=US_BANDS.find(b=>v<=b.max); return {color:b.color,en:b.en,ink:(b.max<=35.4)?'#1d2321':'#fff'};}
   const b=pcdBand(v); return {color:cssVar('--'+b.key),en:b.en,ink:'#fff'}; }
 function pcdColor(v){return bandFor(v).color;}
 function fmtVal(v){ if(v==null) return '–'; const u=unitMode(); return u==='th'?`AQI ${aqiTH(v)}`:u==='us'?`US AQI ${aqiUS(v)}`:`${fmtN(v)} µg/m³`; }
-const unitShort=()=>({ug:'µg/m³',th:'Thai AQI',us:'US AQI'})[unitMode()];
+const unitShort=()=>({ug:'µg/m³',ug24:'µg/m³',th:'Thai AQI',us:'US AQI'})[unitMode()];
 const valNum=v=>{const u=unitMode(); return u==='th'?String(aqiTH(v)):u==='us'?String(aqiUS(v)):fmtN(v);};
 function pill(v){const b=bandFor(v); return `<span class="pill" style="background:${b.color};color:${b.ink}">${b.en}</span>`;}
 function contourScheme(){ return unitMode()==='us'
   ? US_BANDS.slice(0,5).map((b,i)=>({lv:b.max,color:US_BANDS[i+1].color}))
   : [15,25,37.5,75].map((lv,j)=>({lv,color:cssVar('--'+PCD[j+1].key)})); }
 function hexRGB(h){h=h.replace('#','');if(h.length===3)h=h.split('').map(c=>c+c).join('');const n=parseInt(h,16);return [(n>>16)&255,(n>>8)&255,n&255];}
-function drawGrid(){
-  if(gridLayer){map.removeLayer(gridLayer);gridLayer=null;}
-  S.fine=null;
-  if(!P.data||!gridMode()) return; const G=P.data.grid, i=gIdx(curT()); if(i<0) return;
-  const vals=G.values[i], R=regionShape();
-  const base=(lat,lon)=>{const fx=(lon-G.lon0)/G.step, fy=(lat-G.lat0)/G.step; if(fx<0||fy<0||fx>G.nx-1||fy>G.ny-1) return -1;
-    const x0=Math.min(Math.floor(fx),G.nx-2), y0=Math.min(Math.floor(fy),G.ny-2), ax=fx-x0, ay=fy-y0;
+// one hour of the map field on a regular cell grid, cached (24-h means reuse 24 of these)
+const FIELD_CACHE=new Map();
+function hourField(i,so,w,fx,fy,cell,fine){
+  const G=P.data.grid, alpha=Math.max(0,+$('alpha').value||0);
+  const key=[P.data.generated,i,so.toFixed(3),w.toFixed(3),fx,fy,cell,fine?alpha:'-',S.sim?S.sim.tStart:0,!!DEM,!!MET].join('|');
+  if(FIELD_CACHE.has(key)) return FIELD_CACHE.get(key);
+  const vals=G.values[i], t=P.data.hours[i];
+  const base=(lat,lon)=>{const fxx=(lon-G.lon0)/G.step, fyy=(lat-G.lat0)/G.step; if(fxx<0||fyy<0||fxx>G.nx-1||fyy>G.ny-1) return -1;
+    const x0=Math.min(Math.floor(fxx),G.nx-2), y0=Math.min(Math.floor(fyy),G.ny-2), ax=fxx-x0, ay=fyy-y0;
     const a=vals[y0*G.nx+x0], b=vals[y0*G.nx+x0+1], c=vals[(y0+1)*G.nx+x0], d=vals[(y0+1)*G.nx+x0+1];
     return (a<0||b<0||c<0||d<0)?-1:(1-ax)*(1-ay)*a+ax*(1-ay)*b+(1-ax)*ay*c+ax*ay*d;};
+  // fine total = map + α × (fire smoke − its own mean over a CAMS-sized box): keeps the 0.5° mean, adds sub-grid fire structure
+  let P_=null, A_=null;
+  if(fine&&alpha>0&&S.sim){const si=simIdx(t), snap=si>=0?S.sim.snaps[si]:null;
+    if(snap&&snap.n){P_=puffField(snap,w,so,fx,fy,cell); A_=boxMean(P_,fx,fy,Math.max(1,Math.round(G.step/2/cell)));}}
+  const F=new Float32Array(fx*fy);
+  for(let y=0;y<fy;y++) for(let x=0;x<fx;x++){const la=so+(y+.5)*cell, lo=w+(x+.5)*cell, b=rkValue(base(la,lo),la,lo,t);
+    F[y*fx+x]=b<0?NaN:Math.max(0,b+(P_?alpha*(P_[y*fx+x]-A_[y*fx+x]):0));}
+  FIELD_CACHE.set(key,F); if(FIELD_CACHE.size>60) FIELD_CACHE.delete(FIELD_CACHE.keys().next().value);
+  return F;
+}
+function drawGrid(){
+  if(gridLayer){map.removeLayer(gridLayer);gridLayer=null;}
+  S.fine=null; S.fieldInfo='';
+  if(!P.data||!gridMode()) return; const G=P.data.grid, i=gIdx(curT()); if(i<0) return;
+  const R=regionShape();
   const scheme=unitMode()==='us'?US_BANDS.map(b=>({max:b.max,rgb:hexRGB(b.color)})):PCD.map(b=>({max:b.max,rgb:hexRGB(cssVar('--'+b.key))}));
   let so=G.lat0, w=G.lon0, n=G.lat0+(G.ny-1)*G.step, e=G.lon0+(G.nx-1)*G.step;
   if(R){so=Math.max(so,R.bbox[1]-.2); w=Math.max(w,R.bbox[0]-.2); n=Math.min(n,R.bbox[3]+.2); e=Math.min(e,R.bbox[2]+.2);}
-  const ppd=layerMode()==='fine'?80:60;
-  const W=Math.min(1100,Math.round((e-w)*ppd)), H=Math.min(1100,Math.round((mercY(n)-mercY(so))/DEG*ppd));
-  const tNow=curT(); let value=base;
-  {
-    // fine total = CAMS (corrected) + α × (fire smoke − its own mean over a CAMS-sized box): keeps the 0.5° mean, adds sub-grid fire structure
-    const fineMode=layerMode()==='fine'; let cell=fineMode?0.025:0.05; while(((e-w)/cell)*((n-so)/cell)>400000) cell*=1.25;
-    const fx=Math.ceil((e-w)/cell), fy=Math.ceil((n-so)/cell), F=new Float32Array(fx*fy), alpha=Math.max(0,+$('alpha').value||0);
-    const si=simIdx(curT()), snap=si>=0&&S.sim?S.sim.snaps[si]:null;
-    let P_=null, A_=null;
-    if(fineMode&&snap&&snap.n&&alpha>0){P_=puffField(snap,w,so,fx,fy,cell); A_=boxMean(P_,fx,fy,Math.max(1,Math.round(G.step/2/cell)));}
-    for(let y=0;y<fy;y++) for(let x=0;x<fx;x++){const la=so+(y+.5)*cell, lo=w+(x+.5)*cell, b=rkValue(base(la,lo),la,lo,tNow);
-      F[y*fx+x]=b<0?NaN:Math.max(0,b+(P_?alpha*(P_[y*fx+x]-A_[y*fx+x]):0));}
-    S.fine={F,w,so,nx:fx,ny:fy,cell};
-    value=(lat,lon)=>{const x=Math.floor((lon-w)/cell), y=Math.floor((lat-so)/cell); if(x<0||y<0||x>=fx||y>=fy) return -1; const v=F[y*fx+x]; return v===v?v:-1;};
+  const fine=layerMode()==='fine', avg=avg24();
+  // 24-h means cost 24 fields per frame, so they run on a coarser grid
+  let cell=fine?0.025:0.05; const cap=avg?120000:400000; while(((e-w)/cell)*((n-so)/cell)>cap) cell*=1.25;
+  const fx=Math.ceil((e-w)/cell), fy=Math.ceil((n-so)/cell);
+  let F;
+  if(!avg) F=hourField(i,so,w,fx,fy,cell,fine);
+  else {
+    // standard averaging time for AQI: mean of the 24 hourly values ending at the selected hour (needs ≥ 18 of them)
+    const idx=[]; for(let k=Math.max(0,i-23);k<=i;k++) idx.push(k);
+    if(idx.length<18){S.fieldInfo='24-h mean needs 18 hours of data before this time.'; return;}
+    F=new Float32Array(fx*fy); const cnt=new Uint8Array(fx*fy);
+    for(const k of idx){const Fk=hourField(k,so,w,fx,fy,cell,fine); for(let q=0;q<F.length;q++){const v=Fk[q]; if(v===v){F[q]+=v;cnt[q]++;}}}
+    for(let q=0;q<F.length;q++) F[q]=cnt[q]>=18?F[q]/cnt[q]:NaN;
+    S.fieldInfo=`24-h mean ending ${fmtT(P.data.hours[i])}`;
   }
+  S.fine={F,w,so,nx:fx,ny:fy,cell};
+  const value=(lat,lon)=>{const x=Math.floor((lon-w)/cell), y=Math.floor((lat-so)/cell); if(x<0||y<0||x>=fx||y>=fy) return -1; const v=F[y*fx+x]; return v===v?v:-1;};
+  const ppd=fine?80:60;
+  const W=Math.min(1100,Math.round((e-w)*ppd)), H=Math.min(1100,Math.round((mercY(n)-mercY(so))/DEG*ppd));
   const url=regionCanvas(so,w,n,e,W,H,(lat,lon)=>{const v=value(lat,lon); if(v<0) return null;
     const rgb=scheme.find(b=>v<=b.max).rgb; return [rgb[0],rgb[1],rgb[2],v<15?40+v*2:Math.min(160,70+v*1.2)];});
   const parts=[L.imageOverlay(url,[[so,w],[n,e]],{interactive:false})];
@@ -1158,6 +1181,8 @@ let hereLayer=null, hereLL=null;
 function hereHTML(lat,lon,acc){
   const now=Date.now(), tNow=Math.round(now/HR)*HR, tSl=curT();
   const vNow=totalAt(lat,lon,tNow), vSl=tSl!=null&&tSl!==tNow?totalAt(lat,lon,tSl):null;
+  let p24=0,n24=0; if(P.data) for(const t of P.data.hours){ if(t>tNow||t<=tNow-24*HR) continue; const v=totalAt(lat,lon,t); if(v!=null){p24+=v;n24++;} }
+  const past24=n24>=18?p24/n24:null;
   let peak=null,tPeak=null,sum=0,n=0;
   if(P.data) for(const t of P.data.hours){ if(t<tNow||t>tNow+24*HR) continue; const v=totalAt(lat,lon,t); if(v==null) continue; sum+=v; n++; if(peak==null||v>peak){peak=v;tPeak=t;} }
   const mean24=n?sum/n:null, fire=fireAt(lat,lon,tNow);
@@ -1167,8 +1192,8 @@ function hereHTML(lat,lon,acc){
   return `<div class="here"><div class="note">${pv?esc(pv.n)+(pv.th?' · '+esc(pv.th):''):'Your location'}${acc?` · ±${acc<1000?Math.round(acc)+' m':(acc/1000).toFixed(1)+' km'}`:''}</div>
     ${vNow!=null?`<div class="big">${fmtN(vNow)} <small style="font-size:.7rem">µg/m³</small></div>${pill(vNow)} <span class="note">PM₂.₅ now (forecast map)</span>`:'<p class="note">No forecast here yet.</p>'}
     <table><tbody>
-      ${mean24!=null?`<tr><th>AQI, next 24 h mean</th><td>Thai ${aqiTH(mean24)} · US ${aqiUS(mean24)}</td></tr>`:''}
-      ${vNow!=null?`<tr><th>AQI from this hour</th><td>Thai ${aqiTH(vNow)} · US ${aqiUS(vNow)} <span class="note">(indicative)</span></td></tr>`:''}
+      ${mean24!=null?`<tr><th>AQI, next 24 h</th><td>Thai ${aqiTH(mean24)} · US ${aqiUS(mean24)}</td></tr>`:''}
+      ${past24!=null?`<tr><th>AQI now (24-h mean ${fmtN(past24)})</th><td>Thai ${aqiTH(past24)} · US ${aqiUS(past24)}</td></tr>`:''}
       ${mean24!=null?`<tr><th>Next 24 h</th><td class="num">mean ${fmtN(mean24)}, max ${fmtN(peak)} at ${new Date(tPeak).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}</td></tr>`:''}
       ${vSl!=null?`<tr><th>At slider time</th><td class="num">${fmtN(vSl)} µg/m³</td></tr>`:''}
       <tr><th>Fire smoke now</th><td class="num">${fire>=0.1?fmtN(fire)+' µg/m³':'none modelled'}</td></tr>
@@ -1210,10 +1235,13 @@ new LocateCtl().addTo(map);
 function drawStations(){
   stationLayer.clearLayers(); if(!P.data) return; const t=curT(), live=Math.abs(t-Date.now())<HR;
   for(const s of P.data.stations){ if(!inRegion(s.lat,s.lon)) continue;
-    const f=stationNow(s,t); const v=live&&s.obs?s.obs.v:f; if(v==null) continue;
+    const f=stationNow(s,t);
+    let v=live&&s.obs?s.obs.v:f;
+    if(avg24()){ if(live&&s.obs24&&s.obs24.valid) v=s.obs24.v; else { const i=gIdx(t); if(i>=23){let a=0,n=0; for(let k=i-23;k<=i;k++){const c=s.corr[k]; if(c!=null){a+=c;n++;}} v=n>=18?a/n:null;} else v=null; } }
+    if(v==null) continue;
     const icon=L.divIcon({className:'',html:`<div class="stmark" style="background:${pcdColor(v)};${s.monitor?'':'opacity:.6'}"></div>`,iconSize:[12,12],iconAnchor:[6,6]});
     L.marker([s.lat,s.lon],{icon,keyboard:false}).bindTooltip(()=>`<b>${esc(s.name)}</b>${s.provider?` · ${esc(s.provider)}`:''}<br>`+
-      (s.obs?`Measured ${fmtN(s.obs.v)} µg/m³${unitMode()!=='ug'?` (${fmtVal(s.obs.v)}, hourly)`:''} at ${fmtT(s.obs.t)}<br>`:'No recent reading<br>')+
+      (s.obs?`Measured ${fmtN(s.obs.v)} µg/m³ at ${fmtT(s.obs.t)}<br>`:'No recent reading<br>')+(s.obs24?`24-h mean ${fmtN(s.obs24.v)} µg/m³ (${s.obs24.n}/24 h${s.obs24.valid?'':', incomplete'}) · Thai AQI ${aqiTH(s.obs24.v)} · US AQI ${aqiUS(s.obs24.v)}<br>`:'')+
       (f!=null?`Forecast ${fmtN(f)} µg/m³ at slider time`:'')+(s.bias!=null?`<br>CAMS ×${Math.exp(s.bias).toFixed(2)} at this station`:''))
       .on('click',()=>focusStation(s.id)).addTo(stationLayer);
   }
@@ -1227,7 +1255,7 @@ function renderStations(){
   $('stList').innerHTML=rows.length?rows.map(({s,st})=>{const bd=bandFor(st.mean24);
     return `<div class="alert" data-sid="${s.id}"><i class="sev" style="background:${bd.color}"></i>
       <div><div class="name">${esc(s.name)} <span class="note">${esc(s.cc||'')}${s.monitor?'':' · low-cost sensor'}</span></div>
-      <div class="sub">${pill(st.mean24)} ${s.obs?`now ${fmtN(s.obs.v)} µg/m³${unitMode()!=='ug'?` (${fmtVal(s.obs.v)}, hourly)`:''}`:'no recent reading'}</div></div>
+      <div class="sub">${pill(st.mean24)} ${s.obs?`now ${fmtN(s.obs.v)} µg/m³`:'no recent reading'}${s.obs24&&s.obs24.valid&&unitMode()!=='ug'?` · measured 24-h ${fmtVal(s.obs24.v)}`:''}</div></div>
       <div class="val">${valNum(st.mean24)}<small>max 24-h ${unitShort()}</small>${fmtN(st.peak)}<small>1-h max µg/m³</small></div></div>`;}).join('')
     :'No reporting stations in this region.';
   if(ref.length&&lowN) $('stList').insertAdjacentHTML('beforeend',`<p class="note">Reference monitors only. ${lowN} low-cost sensors are on the map (faded) but not ranked here.</p>`);
@@ -1283,7 +1311,7 @@ async function runModel(hotsRaw,mode,windOverride,quiet){
   else if(S.sources.length>800) banner(`Modelling the 800 strongest of ${S.sources.length} clusters to keep the page fast.`,'info');
   else banner('');
   // slider
-  setTimeline();
+  setTimeline(); FIELD_CACHE.clear();
   drawHotspots(); drawTraj(); renderAll(); redrawTime();
   if(!quiet) fitRegion();
 }
@@ -1403,7 +1431,7 @@ function drawPlume(){
 function updateTimeLabel(){
   if(!S.times.length){$('tlabel').innerHTML='–<small>&nbsp;</small>';return;}
   const t=curT(), dh=Math.round((t-Date.now())/36e5);
-  $('tlabel').innerHTML=`${fmtT(t)}<small>${dh===0?'now':dh>0?`+${dh} h forecast`:`${dh} h (past)`}</small>`;
+  $('tlabel').innerHTML=`${fmtT(t)}<small>${dh===0?'now':dh>0?`+${dh} h forecast`:`${dh} h (past)`}${typeof avg24==='function'&&avg24()&&gridMode()?' · 24-h mean':''}</small>`;
 }
 function focusTown(name){
   const r=S.recep.find(x=>x.name===name)||allReceptors().find(x=>x.name===name); if(!r) return;
@@ -1451,15 +1479,15 @@ function renderLegend(){
   else { bar.style.gridTemplateColumns='15fr 10fr 12.5fr 37.5fr 25fr';
     bar.innerHTML=PCD.map(b=>`<i style="background:var(--${b.key})"></i>`).join('');
     ticks.innerHTML=(u==='th'?['0','25','50','100','200','']:['0','15','25','37.5','75','']).map(t=>`<span>${t}</span>`).join(''); }
-  $('legNote').textContent=(u==='ug'?'PM₂.₅ µg/m³':u==='th'?'Thai AQI (PCD 2023 bands)':'US AQI (EPA 2024 breakpoints)')+
-    ' · CAMS + monitors + terrain. AQI is defined on the 24-h mean; hourly map values are indicative. Dashed box: forecast area.';
+  $('legNote').textContent=({ug:'PM₂.₅ hourly, µg/m³',ug24:'PM₂.₅ 24-h mean, µg/m³',th:'Thai AQI from the 24-h mean (PCD 2023)',us:'US AQI from the 24-h mean (EPA 2024)'})[u]+
+    ' · CAMS + monitors + terrain. 24-h values are the mean of the 24 hours ending at the slider time. Dashed box: forecast area.';
 }
 {const v=store.get('hsw.unitSel'); if(v) $('unitSel').value=v;}
 $('unitSel').addEventListener('change',()=>{store.set('hsw.unitSel',$('unitSel').value); renderLegend(); renderAll(); redrawTime();});
 renderLegend();
 for(const el of document.querySelectorAll('input[name=layer]')) el.addEventListener('change',()=>{
   $('legTotal').hidden=!gridMode(); $('legFire').hidden=layerMode()!=='fire'; redrawTime();});
-$('alpha').addEventListener('change',()=>redrawTime());
+$('alpha').addEventListener('change',()=>{FIELD_CACHE.clear(); redrawTime();});
 // first paint, then refresh every 30 minutes while the tab is open
 computeReceptors(); renderAll(); applyVisibility();
 runAuto(false).then(()=>{ if(!P.data){ $('lyFire').checked=true; $('legTotal').hidden=true; $('legFire').hidden=false; redrawTime(); } });

@@ -184,7 +184,7 @@ function interpT(times, arr, t) {
 async function main() {
   if (!process.env.OPENAQ_API_KEY) throw new Error('OPENAQ_API_KEY is not set');
   const state = await readJSON(path.join(DATA, 'state.json'), {});
-  state.kf ||= {};
+  state.kf ||= {}; state.obsHist ||= {};
 
   // 1. station list (daily)
   if (!state.stations || state.stationsCap !== CFG.maxStations || now - (state.stationsAt || 0) > CFG.stationRefreshH * HOUR) {
@@ -223,6 +223,10 @@ async function main() {
   stations.forEach((s, i) => {
     const o = obs.get(s.id); if (!o || now - o.t > CFG.obsMaxAgeH * HOUR || o.v < 0 || o.v > 1500) return;
     s.obs = o;
+    // keep the last 30 h of hourly observations per station for standard 24-h means (AQI)
+    const hk = Math.round(o.t / HOUR) * HOUR, H = (state.obsHist[s.id] ||= []);
+    if (!H.some(([t]) => t === hk)) H.push([hk, r1(o.v)]);
+    state.obsHist[s.id] = H.filter(([t]) => t > now - 30 * HOUR);
     const k = state.kf[s.id];
     if (k && o.t <= k.t) return;            // already used this hour
     const raw = interpT(C.times, C.st[i], o.t); if (raw == null) return;
@@ -232,16 +236,24 @@ async function main() {
   });
   log(`Kalman updated at ${obsRows.length} stations`);
 
+  // 24-h mean of observations ending at the latest hour; valid with ≥ 18 of 24 hourly values (75 %)
+  function obs24(id) {
+    const H = state.obsHist[id] || []; if (!H.length) return null;
+    const tEnd = Math.max(...H.map(([t]) => t)), w = H.filter(([t]) => t > tEnd - 24 * HOUR);
+    return { v: r1(w.reduce((a, [, v]) => a + v, 0) / w.length), n: w.length, tEnd, valid: w.length >= 18 };
+  }
+
   // 4. corrected forecasts at stations
   const t0 = Math.floor(now / HOUR) * HOUR;
-  const i0 = Math.max(0, C.times.findIndex(t => t >= t0));
-  const hours = C.times.slice(i0);
+  const iNow = Math.max(0, C.times.findIndex(t => t >= t0));
+  const i0 = Math.max(0, iNow - 24);        // output starts 24 h back so 24-h running means are complete
+  const hours = C.times.slice(i0), jNow = iNow - i0;
   const outStations = stations.map((s, i) => {
     const k = state.kf[s.id]; const b = k && now - k.t < CFG.kf.maxGapH * HOUR ? k.b : 0;
     const raw = C.st[i].slice(i0);
     const corr = raw.map((v, j) => v == null ? null : r1(correct(v, b, (hours[j] - (k?.t || now)) / HOUR)));
     return { id: s.id, name: s.name, lat: s.lat, lon: s.lon, monitor: s.monitor, provider: s.provider, cc: s.country,
-      obs: s.obs ? { t: s.obs.t, v: r1(s.obs.v) } : null, bias: k ? +b.toFixed(3) : null, nUpd: k?.n || 0, raw, corr };
+      obs: s.obs ? { t: s.obs.t, v: r1(s.obs.v) } : null, obs24: obs24(s.id), bias: k ? +b.toFixed(3) : null, nUpd: k?.n || 0, raw, corr };
   });
 
   // 4b. meteorology (fixed model, nested grids), refreshed every few hours
@@ -314,7 +326,7 @@ async function main() {
   const hdir = path.join(DATA, 'history', ym);
   await appendCSV(path.join(hdir, `obs-${stamp}.csv`), 'time_utc,station_id,obs_pm25,cams_raw', obsRows);
   const fRows = [];
-  for (const s of outStations) if (s.monitor) for (const L of CFG.logLeads) { const j = L; if (j < hours.length && s.raw[j] != null)
+  for (const s of outStations) if (s.monitor) for (const L of CFG.logLeads) { const j = jNow + L; if (j < hours.length && s.raw[j] != null)
     fRows.push([new Date(now).toISOString().slice(0, 13) + ':00Z', new Date(hours[j]).toISOString().slice(0, 13) + ':00Z', s.id, L, s.raw[j], s.corr[j]]); }
   await appendCSV(path.join(hdir, `fcst-${stamp}.csv`), 'issued_utc,valid_utc,station_id,lead_h,cams_raw,corrected', fRows);
   await writeJSON(path.join(DATA, 'state.json'), state);

@@ -347,6 +347,7 @@ td.num{text-align:right;font-family:var(--font-data);font-variant-numeric:tabula
           <option value="9.9" data-th="ป่าเขตร้อน 9.9 g/kg">Tropical forest, 9.9 g/kg</option>
           <option value="15" data-th="ป่าเขตอบอุ่น 15 g/kg">Temperate forest, 15 g/kg</option>
         </select></div>
+      <div class="field"><label><input type="checkbox" id="fuelLC" checked> <span data-th="ชนิดเชื้อเพลิงรายจุดจากแผนที่ใช้ที่ดิน MODIS (แบบ FINN) — ใช้ค่าด้านบนเมื่อไม่มีข้อมูล">Fuel type per fire from MODIS land cover (as in FINN); the type above is used where land cover is missing</span></label></div>
       <div class="row">
         <div class="field"><label for="alpha" data-th="น้ำหนักรายละเอียดไฟ α (ชั้นละเอียด)">Fire detail weight α (fine layer)</label><input id="alpha" type="number" min="0" max="5" step="0.1" value="1"></div>
         <div class="field"><label for="fireProf" data-th="รูปแบบเวลาการเผา">Fire time profile</label>
@@ -376,7 +377,7 @@ td.num{text-align:right;font-family:var(--font-data);font-variant-numeric:tabula
       <p>It pulls active-fire detections from NASA FIRMS, groups them into fire clusters, converts each cluster's fire radiative power (FRP) into a PM<sub>2.5</sub> emission rate, and releases Gaussian puffs that drift with forecast winds from Open-Meteo. Ground-level smoke concentration is summed over all puffs every hour.</p>
       <h3>Emission</h3>
       <span class="eq">Q [g s⁻¹] = EF [g kg⁻¹] × 0.368 [kg MJ⁻¹] × FRP [MW]</span>
-      <p class="note">0.368 kg of dry matter burned per MJ of fire radiative energy is from Wooster et al. (2005). The PM<sub>2.5</sub> emission factor is chosen by fuel type from the FINN v2.5 table (Wiedinmyer et al., 2023, Table 4; savanna/grassland 7.17, woody savanna/shrubs 7.1, crops 6.43, tropical forest 9.9, temperate forest 15 g kg⁻¹), which updates FINN v1 (Wiedinmyer et al., 2011) mostly with the averages of Akagi et al. (2011). One fuel type is used for all fires for now; FINN assigns it per fire from MODIS land cover.</p>
+      <p class="note">0.368 kg of dry matter burned per MJ of fire radiative energy is from Wooster et al. (2005). The PM<sub>2.5</sub> emission factor is chosen by fuel type from the FINN v2.5 table (Wiedinmyer et al., 2023, Table 4; savanna/grassland 7.17, woody savanna/shrubs 7.1, crops 6.43, tropical forest 9.9, temperate forest 15 g kg⁻¹), which updates FINN v1 (Wiedinmyer et al., 2011) mostly with the averages of Akagi et al. (2011). Each detection gets its fuel type from the MODIS IGBP land-cover map (MCD12Q1, Terra+Aqua, previous year; read from NASA GIBS tiles at ≈ 1 km and decoded exactly through the GIBS colour map), mapped to the FINN v2.5 types as in Wiedinmyer et al. (2023, Table 1): evergreen broadleaf → tropical forest within 23.5° of the equator; deciduous broadleaf → temperate forest; shrublands and woody savannas → woody savanna/shrubs; savannas, grasslands, wetlands, cropland/natural mosaics and barren → savanna/grassland; croplands → crops; water, snow and unclassified pixels are dropped, as in FINN. Urban pixels go to savanna/grassland, because FINN's tree-cover rule needs MODIS VCF, which is not used here. A cluster's emission factor is the FRP-weighted mean of its detections. The fuel type chosen in Settings is used where land cover is missing.</p>
       <p class="note"><strong>Daily fire cycle.</strong> VIIRS sees a fire about twice a day (≈ 13:30 and 01:30 local time), near the afternoon peak of burning, so holding the 13:30 FRP for many hours overstates the day's emission. Detections are grouped by 0.1° cell and local solar day, and each group burns along a Gaussian daily cycle on a night baseline, the form used by Zhang et al. (2020) with Himawari and VIIRS:</p>
       <span class="eq">FRP(t) = FRP<sub>night</sub> + A·exp(−(t − 13:00)² / 2σ²),  A = (FRP<sub>day</sub> − FRP<sub>night</sub>) / exp(−(t<sub>VIIRS</sub> − 13:00)² / 2σ²)</span>
       <p class="note">so the curve passes through the observed daytime FRP at the overpass. σ = 2.39 h (April–August) or 1.63 h (September–March), the values Zhang et al. fitted for cropland fires in eastern China; Giglio (2007) found tropical burning peaks between 13:00 and 18:30 local time. A fire's daily energy is then FRP<sub>night</sub>·24 h + A·σ√(2π), about 4–6 h of the overpass FRP instead of a fixed burn time. These parameters are not yet fitted for Thailand; geostationary (Himawari) FRP would allow that. The older constant-duration option remains in Settings. FINN itself provides daily totals and leaves the daily cycle to the user (Wiedinmyer et al., 2011, 2023).</p>
@@ -685,20 +686,43 @@ function rowsToHotspots(rows){
 const confOK=(h,min)=> min==='l' ? true : min==='n' ? h.level!=='l' : h.level==='h';
 
 // Group into 0.1° cells. FRP of a cluster = max over overpasses of the summed FRP in that pass.
+// ---- per-fire fuel type from MODIS IGBP land cover, mapped as in FINN v2.5 (Wiedinmyer et al. 2023, Table 1),
+// PM2.5 emission factors from FINN v2.5 Table 4 (g/kg dry matter)
+const FINN_EF={SG:7.17, WS:7.1, TROP:9.9, TEMP:15, BOR:18.4, TEMPEV:17.9, CROP:6.43};
+const FINN_NAME={SG:'savanna/grassland',WS:'woody savanna/shrubs',TROP:'tropical forest',TEMP:'temperate forest',BOR:'boreal forest',TEMPEV:'temperate evergreen forest',CROP:'crops'};
+function finnType(igbp,lat){
+  switch(igbp){
+    case 1: return lat>50?'BOR':'TEMPEV';
+    case 2: return Math.abs(lat)<23.5?'TROP':'TEMP';
+    case 3: return lat>50?'BOR':'TEMP';
+    case 4: return 'TEMP';                                    // FINN maps all deciduous broadleaf forest to temperate forest
+    case 5: return lat>50?'BOR':Math.abs(lat)<23.5?'TROP':'TEMP';
+    case 6: case 7: case 8: return 'WS';
+    case 9: case 10: case 11: case 14: case 16: return 'SG';
+    case 12: return 'CROP';
+    case 13: return 'SG';                                     // urban: FINN reassigns by tree cover (VCF); without it, the <40 % case
+    case 0: case 15: case 17: case 255: return 'REMOVE';      // water, snow/ice, unclassified: FINN drops these fires
+    default: return null;                                     // no land-cover value: use the fuel type chosen in Settings
+  }
+}
 // local solar time from longitude (h); a fire's "day" runs from local midnight to local midnight
 const lstOff=lon=>lon/15*3600e3;
-function clusterSources(hots, cell=0.1){
+function clusterSources(hots, cell=0.1, efDefault=7.17, byLC=false){
   const m=new Map();
   for(const h of hots){
+    const ft=byLC?finnType(h.igbp,h.lat):null; if(ft==='REMOVE') continue;
+    const ef=ft?FINN_EF[ft]:efDefault;
     const ld=Math.floor((h.t+lstOff(h.lon))/864e5), lh=((h.t+lstOff(h.lon))%864e5)/3600e3, day=lh>=6&&lh<18;
     const k=Math.floor(h.lat/cell)+':'+Math.floor(h.lon/cell)+':'+ld;
-    let c=m.get(k); if(!c){c={n:0,wlat:0,wlon:0,w:0,ld,passes:new Map(),t0:0,pix:0};m.set(k,c);}
+    let c=m.get(k); if(!c){c={n:0,wlat:0,wlon:0,w:0,ld,passes:new Map(),t0:0,pix:0,efw:0,types:{}};m.set(k,c);}
     c.n++; const w=Math.max(h.frp,0.5); c.wlat+=h.lat*w; c.wlon+=h.lon*w; c.w+=w; c.pix=Math.max(c.pix,h.frp);
+    c.efw+=ef*w; const tk=ft||'set'; c.types[tk]=(c.types[tk]||0)+w;   // FRP-weighted emission factor of the group
     const ps=c.passes.get(h.pass)||{f:0,t:h.t,day}; ps.f+=h.frp; c.passes.set(h.pass,ps); c.t0=Math.max(c.t0,h.t);
   }
   return [...m.values()].map(c=>{const lon=c.wlon/c.w, P=[...c.passes.values()];
     const dayP=P.filter(p=>p.day).sort((a,b)=>b.f-a.f)[0], nightF=Math.max(0,...P.filter(p=>!p.day).map(p=>p.f));
-    return {lat:c.wlat/c.w, lon, n:c.n, frp:Math.max(...P.map(p=>p.f)), t0:c.t0, pix:c.pix,
+    return {lat:c.wlat/c.w, lon, n:c.n, frp:Math.max(...P.map(p=>p.f)), t0:c.t0, pix:c.pix, ef:c.efw/c.w,
+      fuel:Object.entries(c.types).sort((a,b)=>b[1]-a[1])[0][0],
       dayFRP:dayP?dayP.f:0, tDay:dayP?dayP.t:null, nightFRP:nightF, d0:c.ld*864e5-lstOff(lon)};}).sort((a,b)=>b.frp-a.frp);
 }
 // ---- fire diurnal cycle: Gaussian on a night baseline, ρ(t) = ρ_n + A·exp(−(t−t_pk)²/2σ²), local solar time.
@@ -808,9 +832,9 @@ function simulate(sources, W, opts){
   const tEnd=Math.min(opts.tEnd, W.times[W.times.length-1]);
   // release schedule: a puff every 20 min carrying EF × 0.368 kg/MJ × FRP(t) × 20 min of PM2.5 (µg)
   const queue=[];
-  sources.forEach((s,si)=>{s.q=ef*KG_PER_MJ*s.frp; const [a,b]=win(s), fmax=Math.max(s.frp,1e-9);
+  sources.forEach((s,si)=>{const efs=s.ef??ef; s.q=efs*KG_PER_MJ*s.frp; const [a,b]=win(s), fmax=Math.max(s.frp,1e-9);
     for(let tr=Math.max(a,tStart); tr<b && tr<tEnd; tr+=rel){ const f=fireRate(s,tr+rel/2,prof,dur); if(f<0.01*fmax) continue;
-      queue.push({tr,si,f,m:ef*KG_PER_MJ*f*(rel/1e3)*1e6}); }});
+      queue.push({tr,si,f,m:efs*KG_PER_MJ*f*(rel/1e3)*1e6}); }});
   queue.sort((a,b)=>a.tr-b.tr);
   let injTot=0, injBL=0;
   const P=[]; let qi=0;
@@ -938,6 +962,7 @@ for(const id of ['region','mapkey','days','minconf','fuel','fireProf','dur','hor
   if(v!=null&&(el.tagName!=='SELECT'||[...el.options].some(o=>o.value===v))) el.value=v;   // ignore values from older option lists
   $(id).addEventListener('change',()=>store.set('hsw.'+id,$(id).value));
 }
+{const v=store.get('hsw.fuelLC'); if(v!=null) $('fuelLC').checked=v==='1'; $('fuelLC').addEventListener('change',()=>store.set('hsw.fuelLC',$('fuelLC').checked?'1':'0'));}
 {const v=store.get('hsw.plume'); if(v!=null) $('plume').checked=v==='1'; $('plume').addEventListener('change',()=>store.set('hsw.plume',$('plume').checked?'1':'0'));}
 if(store.get('hsw.v')!=='2'){$('mapkey').value='';store.set('hsw.mapkey','');store.set('hsw.v','2');}
 
@@ -1128,7 +1153,7 @@ async function loadPipeline(){
   try{const r=await fetch('data/latest.json?ts='+Date.now(),{cache:'no-store'}); if(!r.ok) return null; return await r.json();}catch(e){return null;}
 }
 function pipelineHotspots(d){
-  return (d.hotspots?.rows||[]).map(([lat,lon,frp,t,conf,sat])=>({lat,lon,frp,t,sat:sat||'VIIRS',level:conf==='l'?'l':conf==='h'?'h':'n',pass:`${sat}|${t}`}))
+  return (d.hotspots?.rows||[]).map(([lat,lon,frp,t,conf,sat,igbp])=>({lat,lon,frp,t,igbp:igbp??null,sat:sat||'VIIRS',level:conf==='l'?'l':conf==='h'?'h':'n',pass:`${sat}|${t}`}))
     .filter(h=>inBox(h.lat,h.lon,REGIONS.msea.bbox));
 }
 async function runAuto(quiet){ try{ await runAuto_(quiet); }catch(e){ busy(null); if(!quiet) banner(`<b>${T('Update failed.','อัปเดตไม่สำเร็จ')}</b> ${esc(e.message)}`); console.error(e); } }
@@ -1490,7 +1515,7 @@ async function runLive(){
 async function runModel(hotsRaw,mode,windOverride,quiet){
   const minc=$('minconf').value;
   S.hots=hotsRaw.filter(h=>confOK(h,minc));
-  S.sources=clusterSources(S.hots);
+  S.sources=clusterSources(S.hots,0.1,+$('fuel').value,$('fuelLC').checked);
   const now=Date.now(), horizon=+$('horizon').value;
   if(!S.sources.length){busy(null);setMode(mode);S.sim=null;clearPlume();setTimeline();drawHotspots();drawTraj();computeReceptors();renderAll();redrawTime();
     if(!quiet) banner(T(`No hotspots passed the filters in ${esc(REGIONS[$('region').value].name)}. Outside the burning season (roughly January–April in the north) this is normal. Try “Run demo” to see how the page works.`,`ไม่มีจุดความร้อนที่ผ่านเงื่อนไขในพื้นที่ที่เลือก นอกฤดูเผา (ภาคเหนือประมาณมกราคม–เมษายน) ถือเป็นเรื่องปกติ ลองกด “ทดลองด้วยข้อมูลจำลอง” ในแท็บตั้งค่าเพื่อดูการทำงานของหน้าเว็บ`),'info');return;}
@@ -1571,7 +1596,7 @@ function renderSources(){renderProvinces();
   const srcIdx=S.sources.map((s,i)=>i).filter(i=>inRegion(S.sources[i].lat,S.sources[i].lon)).slice(0,60);
   tb.innerHTML=srcIdx.map(i=>{const s=S.sources[i];const n=nearestTown(s.lat,s.lon);
     const pv=provinceOf(s.lat,s.lon);
-    return `<tr data-i="${i}" style="cursor:pointer"><td>${esc(townName(n.t))} <span class="note">${n.d.toFixed(0)} ${T('km','กม.')}${pv?' · '+esc(pv.th||pv.n):''}</span></td><td class="num">${s.n}</td><td class="num">${fmtN(s.frp)}</td><td class="num">${fmtN(ef*KG_PER_MJ*s.frp)}</td><td>${fmtT(s.t0)}</td></tr>`;}).join('')
+    return `<tr data-i="${i}" style="cursor:pointer"><td>${esc(townName(n.t))} <span class="note">${n.d.toFixed(0)} ${T('km','กม.')}${pv?' · '+esc(pv.th||pv.n):''}${s.fuel&&FINN_NAME[s.fuel]?' · '+FINN_NAME[s.fuel]:''}</span></td><td class="num">${s.n}</td><td class="num">${fmtN(s.frp)}</td><td class="num">${fmtN((s.ef??ef)*KG_PER_MJ*s.frp)}</td><td>${fmtT(s.t0)}</td></tr>`;}).join('')
     || `<tr><td colspan="5" class="note">${T('No clusters.','ไม่มีกลุ่มไฟ')}</td></tr>`;
   tb.querySelectorAll('tr[data-i]').forEach(tr=>tr.onclick=()=>{const s=S.sources[+tr.dataset.i];map.flyTo([s.lat,s.lon],10);showMapOnPhone();});
 }

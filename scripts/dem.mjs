@@ -5,17 +5,19 @@ import zlib from 'node:zlib';
 
 export function decodePNG(buf) {
   if (buf.readUInt32BE(0) !== 0x89504e47) throw new Error('not a PNG');
-  let pos = 8, w, h, depth, ctype, interlace; const idat = [];
+  let pos = 8, w, h, depth, ctype, interlace, plte = null; const idat = [];
   while (pos < buf.length) {
     const len = buf.readUInt32BE(pos), type = buf.toString('ascii', pos + 4, pos + 8), d = buf.subarray(pos + 8, pos + 8 + len);
     if (type === 'IHDR') { w = d.readUInt32BE(0); h = d.readUInt32BE(4); depth = d[8]; ctype = d[9]; interlace = d[12]; }
     else if (type === 'IDAT') idat.push(d);
+    else if (type === 'PLTE') plte = Buffer.from(d);
     else if (type === 'IEND') break;
     pos += 12 + len;
   }
-  const ch = { 0: 1, 2: 3, 4: 2, 6: 4 }[ctype];
-  if (depth !== 8 || interlace || !ch) throw new Error(`unsupported PNG (depth ${depth}, color ${ctype}, interlace ${interlace})`);
-  const raw = zlib.inflateSync(Buffer.concat(idat)), stride = w * ch, out = Buffer.alloc(h * stride);
+  // palette images (colour type 3, 1–8 bits): returned as palette indices, ch = 1, plus the palette (RGB triplets)
+  const pal = ctype === 3, ch = pal ? 1 : { 0: 1, 2: 3, 4: 2, 6: 4 }[ctype];
+  if ((pal ? ![1, 2, 4, 8].includes(depth) : depth !== 8) || interlace || !ch) throw new Error(`unsupported PNG (depth ${depth}, color ${ctype}, interlace ${interlace})`);
+  const raw = zlib.inflateSync(Buffer.concat(idat)), stride = pal ? Math.ceil(w * depth / 8) : w * ch, out = Buffer.alloc(h * stride);
   for (let y = 0; y < h; y++) {
     const f = raw[y * (stride + 1)], line = raw.subarray(y * (stride + 1) + 1, (y + 1) * (stride + 1)), o = y * stride;
     for (let x = 0; x < stride; x++) {
@@ -26,7 +28,12 @@ export function decodePNG(buf) {
       out[o + x] = v & 255;
     }
   }
-  return { w, h, ch, data: out };
+  if (pal && depth < 8) {   // unpack sub-byte indices
+    const idx = Buffer.alloc(w * h), per = 8 / depth, mask = (1 << depth) - 1;
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) idx[y * w + x] = (out[y * stride + Math.floor(x / per)] >> (8 - depth * (1 + x % per))) & mask;
+    return { w, h, ch: 1, data: idx, palette: plte };
+  }
+  return { w, h, ch, data: out, palette: pal ? plte : null };
 }
 
 const lon2x = (lon, n) => Math.floor((lon + 180) / 360 * n);

@@ -40,6 +40,7 @@ jobs:
             data/state.json
             data/met.json
             data/latest.json
+            data/landcover.bin
           key: pipeline-state-${{ github.run_id }}-${{ github.run_attempt }}
           restore-keys: pipeline-state-
 
@@ -57,6 +58,7 @@ jobs:
             data/state.json
             data/met.json
             data/latest.json
+            data/landcover.bin
           key: pipeline-state-${{ github.run_id }}-${{ github.run_attempt }}
 
       - name: Commit verification history and static files only

@@ -13,6 +13,7 @@ import path from 'node:path';
 import { buildDEM, sampleGrid } from './dem.mjs';
 import { regressionKriging } from './rk.mjs';
 import { fetchMet, sampleMet, packMet, MET_MODEL } from './met.mjs';
+import { buildLandcover, landcoverAt, packLandcover, unpackLandcover } from './landcover.mjs';
 
 // ------------------------------------------------------------------ config
 const CFG = {
@@ -317,6 +318,19 @@ async function main() {
     const rows = prev?.hotspots?.rows || [], age = now - (prev?.hotspots?.fetched || prev?.generated || 0);
     if (rows.length && age < 12 * HOUR) { hot = rows; log(`FIRMS returned nothing; reusing ${rows.length} hotspots from ${Math.round(age / 6e4)} min ago`); }
   }
+  // 6b. MODIS IGBP land cover at each detection (per-fire fuel type, as in FINN); map cached, refreshed for a new year
+  let LC = null;
+  try { LC = unpackLandcover(await fs.readFile(path.join(DATA, 'landcover.bin'))); } catch { }
+  const yNow = new Date(now).getUTCFullYear();
+  if (!LC || (LC.year < yNow - 1 && now - (LC.built || 0) > 30 * 864e5)) {
+    try { const nl = await buildLandcover(CFG.bbox, { get, log, year: yNow }); nl.built = now; LC = nl; await fs.writeFile(path.join(DATA, 'landcover.bin'), packLandcover(LC)); }
+    catch (e) { log(`land cover unavailable: ${e.message}${LC ? ' (keeping previous map)' : ''}`); }
+  }
+  if (LC) {
+    hot = hot.map(r => [...r.slice(0, 6), landcoverAt(LC, r[0], r[1])]);
+    const cnt = {}; for (const r of hot) cnt[r[6]] = (cnt[r[6]] || 0) + 1;
+    log(`land cover at hotspots (IGBP ${LC.year}): ${Object.entries(cnt).sort((a, b) => b[1] - a[1]).map(([k, v]) => `${k}:${v}`).join(' ')}`);
+  }
   const hotFetched = RUNLOG.some(l => l.startsWith('FIRMS') && !l.includes('failed') && !l.includes('reusing')) ? now : null;
 
   // 7. outputs
@@ -327,7 +341,7 @@ async function main() {
     met: met ? { file: 'data/met-web.json', model: met.model, fetched: met.fetched, grids: met.grids.map(g => ({ step: g.step, bbox: [g.lon0, g.lat0, g.lon0 + (g.nx - 1) * g.step, g.lat0 + (g.ny - 1) * g.step] })) } : null,
     hours, stations: outStations,
     grid: { lon0: g[0], lat0: g[1], step, nx, ny, values: gridRaw },  // raw CAMS; the page applies rk
-    hotspots: { cols: ['lat', 'lon', 'frp', 't', 'conf', 'sat'], rows: hot, fetched: hotFetched ?? (await readJSON(path.join(DATA, 'latest.json'), null))?.hotspots?.fetched ?? null },
+    hotspots: { cols: ['lat', 'lon', 'frp', 't', 'conf', 'sat', 'igbp'], igbpYear: LC?.year ?? null, rows: hot, fetched: hotFetched ?? (await readJSON(path.join(DATA, 'latest.json'), null))?.hotspots?.fetched ?? null },
   });
   // history: one small new file per run (never rewritten), so git stores each row once
   const iso = new Date(now).toISOString(), ym = iso.slice(0, 7), stamp = iso.slice(0, 13).replace(/[-:]/g, '');

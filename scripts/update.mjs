@@ -4,9 +4,12 @@
 // Writes:
 //   data/latest.json   – what the web page reads
 //   data/state.json    – Kalman filter state, station list, cached CAMS forecast
+//   data/static/elev.json – terrain elevation grid (built once)
 //   data/history/obs-YYYY-MM.csv, data/history/fcst-YYYY-MM.csv – for verification
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import { buildDEM, sampleGrid } from './dem.mjs';
+import { regressionKriging } from './rk.mjs';
 
 // ------------------------------------------------------------------ config
 const CFG = {
@@ -23,7 +26,7 @@ const CFG = {
   // Kalman filter on log-ratio bias b = ln(obs+1) - ln(raw+1)
   kf: { Q: 0.02, R: 0.15, P0: 0.5, maxGapH: 48 },
   biasLeadEfoldH: 48,            // bias correction fades with lead time
-  idw: { power: 2, radiusKm: 150 },
+  rk: { residStep: 0.1, demStep: 0.05, minStations: 15, K: 16 },  // regression kriging; residual grid and DEM resolution
   logLeads: [1, 3, 6, 12, 24, 48],
 };
 const PM25_ID = 2; // OpenAQ parameter id for pm25
@@ -237,18 +240,40 @@ async function main() {
       obs: s.obs ? { t: s.obs.t, v: r1(s.obs.v) } : null, bias: k ? +b.toFixed(3) : null, nUpd: k?.n || 0, raw, corr };
   });
 
-  // 5. corrected grid: inverse-distance weighting of station log-bias, fading to 0 beyond radius
-  const active = outStations.filter(s => s.bias != null && s.monitor);
-  const biasPts = active.length ? active : outStations.filter(s => s.bias != null);
-  const gridBias = gridPts.map(([la, lo]) => {
-    let wsum = 0, bsum = 0;
-    for (const s of biasPts) { const d = km(la, lo, s.lat, s.lon); if (d > CFG.idw.radiusKm) continue;
-      const w = 1 / Math.max(d, 5) ** CFG.idw.power; wsum += w; bsum += w * s.bias; }
-    if (!wsum) return 0;
-    const nearest = Math.min(...biasPts.map(s => km(la, lo, s.lat, s.lon)));
-    return (bsum / wsum) * Math.max(0, 1 - nearest / CFG.idw.radiusKm);
+  // 5. regression kriging (RIMM-type) at the analysis hour, in log space:
+  //    ln(obs+1) = b0 + b1 ln(CAMS+1) + b2 elev_km + residual;  residual → ordinary kriging on a 0.1° grid.
+  //    The page applies it to every forecast hour, fading the correction with lead time (biasLeadEfoldH).
+  let dem = await readJSON(path.join(DATA, 'static', 'elev.json'), null);
+  const demKey = `${g.join(',')}|${CFG.rk.demStep}`;
+  if (!dem || dem.key !== demKey) {
+    try {
+      dem = await buildDEM(g, CFG.rk.demStep, { log, fetchTile: async (z, x, y) =>
+        Buffer.from(await (await get(`https://s3.amazonaws.com/elevation-tiles-prod/terrarium/${z}/${x}/${y}.png`)).arrayBuffer()) });
+      dem.key = demKey;
+      await writeJSON(path.join(DATA, 'static', 'elev.json'), dem);
+    } catch (e) { log(`DEM unavailable, regression without elevation: ${e.message}`); dem = null; }
+  }
+  let rk = null;
+  const rkObs = [];
+  stations.forEach((s, i) => {
+    if (!s.monitor || !s.obs || now - s.obs.t > CFG.obsMaxAgeH * HOUR) return;
+    const c = interpT(C.times, C.st[i], s.obs.t); if (c == null) return;
+    const x = [Math.log(c + 1)]; if (dem) { const e = sampleGrid(dem, s.lat, s.lon); if (e == null) return; x.push(e / 1000); }
+    rkObs.push({ lat: s.lat, lon: s.lon, y: Math.log(s.obs.v + 1), x, obs: s.obs.v, cams: c, t: s.obs.t });
   });
-  const gridCorr = hours.map((t, j) => gridPts.map((_, p) => { const v = C.grid[p][i0 + j]; return v == null ? -1 : Math.round(correct(v, gridBias[p], (t - now) / HOUR)); }));
+  if (rkObs.length >= CFG.rk.minStations) {
+    const rs = CFG.rk.residStep, rnx = Math.round((g[2] - g[0]) / rs) + 1, rny = Math.round((g[3] - g[1]) / rs) + 1;
+    const out = regressionKriging(rkObs, { lon0: g[0], lat0: g[1], step: rs, nx: rnx, ny: rny }, { K: CFG.rk.K });
+    if (out) {
+      const err = (a, b) => ({ rmse: +Math.sqrt(a.reduce((s, v, i) => s + (v - b[i]) ** 2, 0) / a.length).toFixed(2), mb: +(a.reduce((s, v, i) => s + v - b[i], 0) / a.length).toFixed(2) });
+      const o = rkObs.map(r => r.obs), tSorted = rkObs.map(r => r.t).sort((a, b) => a - b);
+      rk = { t: tSorted[Math.floor(tSorted.length / 2)], n: rkObs.length, beta: out.beta.map(b => +b.toFixed(4)), predictors: dem ? ['ln(CAMS+1)', 'elevation_km'] : ['ln(CAMS+1)'],
+        vario: { ...out.vario, c0: +out.vario.c0.toFixed(4), c1: +out.vario.c1.toFixed(4) }, maxKm: out.maxKm, leadEfoldH: CFG.biasLeadEfoldH,
+        cv: { n: o.length, cams: err(rkObs.map(r => r.cams), o), rk: err(out.cv, o) }, resid: out.resid };
+      log(`RK: ${rk.n} monitors, beta=[${rk.beta.join(', ')}], range ${rk.vario.a_km} km, LOO RMSE CAMS ${rk.cv.cams.rmse} → RK ${rk.cv.rk.rmse} µg/m³`);
+    }
+  } else log(`RK skipped: only ${rkObs.length} monitors with fresh data`);
+  const gridRaw = hours.map((t, j) => gridPts.map((_, p) => { const v = C.grid[p][i0 + j]; return v == null ? -1 : r1(v); }));
 
   // 6. hotspots
   const hot = await firmsHotspots();
@@ -256,9 +281,10 @@ async function main() {
   // 7. outputs
   await writeJSON(path.join(DATA, 'latest.json'), {
     generated: now, camsIssued: C.at, bbox: CFG.bbox, runlog: RUNLOG,
-    method: { kf: CFG.kf, biasLeadEfoldH: CFG.biasLeadEfoldH, idw: CFG.idw },
+    method: { kf: CFG.kf, biasLeadEfoldH: CFG.biasLeadEfoldH, rk: CFG.rk },
+    rk, dem: dem ? { file: 'data/static/elev.json', step: dem.step, source: dem.source } : null,
     hours, stations: outStations,
-    grid: { lon0: g[0], lat0: g[1], step, nx, ny, values: gridCorr },
+    grid: { lon0: g[0], lat0: g[1], step, nx, ny, values: gridRaw },  // raw CAMS; the page applies rk
     hotspots: { cols: ['lat', 'lon', 'frp', 't', 'conf', 'sat'], rows: hot },
   });
   const ym = new Date(now).toISOString().slice(0, 7);

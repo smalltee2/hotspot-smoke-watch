@@ -315,9 +315,18 @@ td.num{text-align:right;font-family:var(--font-data);font-variant-numeric:tabula
         <li>Check against ground monitors (PCD Air4Thai, CMU CCDC DustBoy) before acting on a warning.</li>
       </ol>
       <h3>Hourly forecast pipeline</h3>
-      <p class="note">Every hour a GitHub Actions job pulls PM<sub>2.5</sub> from reference monitors on OpenAQ, the CAMS PM<sub>2.5</sub> forecast through Open-Meteo, and VIIRS hotspots from FIRMS. A Kalman filter tracks each station's log-ratio bias, b = ln(obs+1) − ln(CAMS+1), and the forecast is scaled by e<sup>b</sup>, with the correction fading over about 48 h of lead time. Between stations the bias is spread by inverse-distance weighting out to 150 km. The fire-smoke layer is the separate dispersion model above.</p>
+      <p class="note">Every hour a GitHub Actions job pulls PM<sub>2.5</sub> from reference monitors on OpenAQ, the CAMS global PM<sub>2.5</sub> forecast through Open-Meteo, and VIIRS hotspots from NASA FIRMS. Two corrections are applied to CAMS: a Kalman filter per station for the station forecasts, and regression kriging for the map.</p>
+      <h3>Station forecasts: Kalman filter</h3>
+      <p class="note">Each monitor's log-ratio bias b = ln(obs+1) − ln(CAMS+1) is tracked with a scalar Kalman filter (random-walk state), following the predictor bias correction of Delle Monache et al. (2006). The forecast at the station is (CAMS+1)·e<sup>b·w</sup> − 1, where w = e<sup>−lead/48 h</sup> fades the correction with lead time.</p>
+      <h3>Map: regression kriging with a CAMS drift</h3>
+      <p class="note">At the latest observation hour, measured PM<sub>2.5</sub> at reference monitors is regressed on the CAMS value and terrain elevation, in log space:</p>
+      <span class="eq">ln(PM+1) = β₀ + β₁·ln(CAMS+1) + β₂·z + ε</span>
+      <p class="note">z is elevation in km from a 0.05° terrain grid (AWS Terrain Tiles, largely SRTM-derived). The residuals ε are interpolated by ordinary kriging with an exponential semivariogram fitted each hour (nearest 16 monitors, residual grid 0.1°). This is the regression–interpolation structure used for the EEA European air-quality maps (Horálek et al., 2025), kriging with a chemistry-transport-model drift as in Real et al. (2022), and regression/universal kriging as compared by Beelen et al. (2009). Elevation is included because it improved PM<sub>2.5</sub> mapping over Thailand in Han et al. (2022). For forecast hours the map is</p>
+      <span class="eq">ln(PM+1) = ln(CAMS+1) + w·[β₀ + (β₁−1)·ln(CAMS+1) + β₂·z + ε̂],  w = e<sup>−lead/48 h</sup></span>
+      <p class="note">so the correction is full at the analysis hour and the map returns to CAMS for long leads. Far from monitors the kriged residual fades to zero and only the regression part remains. The map is computed at 0.05°; real detail comes from the monitors and the terrain, while CAMS itself is about 0.4°.</p>
+      <div id="rkBox" class="note"></div>
       <h3>Fine total PM<sub>2.5</sub></h3>
-      <p class="note">The fine layer adds sub-grid structure from the fire-smoke model to the corrected CAMS field: C<sub>fine</sub> = C<sub>CAMS,corr</sub> + α·(C<sub>fire</sub> − ⟨C<sub>fire</sub>⟩<sub>0.5°</sub>), where ⟨·⟩<sub>0.5°</sub> is the mean over a CAMS-sized box. The 0.5° average stays equal to CAMS, so fire smoke already in CAMS (GFAS) is not counted twice. Detail comes from fires only; α is set in Settings and will be calibrated against stations in the burning season.</p>
+      <p class="note">The fine layer adds sub-grid structure from the fire-smoke model to the regression-kriging map: C<sub>fine</sub> = C<sub>RK</sub> + α·(C<sub>fire</sub> − ⟨C<sub>fire</sub>⟩<sub>0.5°</sub>), where ⟨·⟩<sub>0.5°</sub> is the mean over a CAMS-sized box, computed at 0.025°. The 0.5° average stays equal to the map below it, so fire smoke already in CAMS (GFAS) is not counted twice. This follows the idea of sub-grid dispersion without double counting in uEMEP (Denby et al., 2020); here a box-mean high-pass replaces uEMEP's local-fraction bookkeeping, which CAMS does not provide. α is set in Settings and will be calibrated against monitors in the burning season.</p>
       <h3>How well it has done</h3>
       <div id="verifyBox" class="note">Scores appear after the pipeline has run for a day or more.</div>
       <h3>Sources</h3>
@@ -333,6 +342,12 @@ td.num{text-align:right;font-family:var(--font-data);font-variant-numeric:tabula
         <li>OpenAQ v3 API, reference-grade PM<sub>2.5</sub> monitors (Air4Thai and others). openaq.org</li>
         <li>Copernicus Atmosphere Monitoring Service (CAMS) global PM<sub>2.5</sub> forecast, via the Open-Meteo air quality API.</li>
         <li>Delle Monache, L., et al. (2006). Ozone ensemble forecasts: 2. A Kalman filter predictor bias correction. JGR Atmospheres 111, D05308.</li>
+        <li>Real, E., Couvidat, F., Ung, A., Malherbe, L., Raux, B., Gressent, A., Colette, A. (2022). Historical reconstruction of background air pollution over France for 2000–2015. Earth System Science Data 14, 2419–2443. doi:10.5194/essd-14-2419-2022</li>
+        <li>Beelen, R., Hoek, G., Pebesma, E., Vienneau, D., de Hoogh, K., Briggs, D. (2009). Mapping of background air pollution at a fine spatial scale across the European Union. Science of the Total Environment 407(6), 1852–1867. doi:10.1016/j.scitotenv.2008.11.048</li>
+        <li>Horálek, J., et al. (2025). Air quality maps of EEA member and cooperating countries for 2023. ETC/HE Report 2025/5.</li>
+        <li>Han, S., Kundhikanjana, W., Towashiraporn, P., Stratoulias, D. (2022). Interpolation-based fusion of Sentinel-5P, SRTM, and regulatory-grade ground stations data for producing spatially continuous maps of PM2.5 concentrations nationwide over Thailand. Atmosphere 13(2), 161. doi:10.3390/atmos13020161</li>
+        <li>Denby, B. R., et al. (2020). Description of the uEMEP_v5 downscaling approach for the EMEP MSC-W chemistry transport model. Geoscientific Model Development 13, 6303–6323. doi:10.5194/gmd-13-6303-2020</li>
+        <li>Terrain: AWS Terrain Tiles (Terrarium encoding), open data on AWS.</li>
       </ol>
     </section>
   </aside>
@@ -348,7 +363,7 @@ td.num{text-align:right;font-family:var(--font-data);font-variant-numeric:tabula
       <div id="legTotal">
         <div class="pcdbar"><i style="background:var(--aq1)"></i><i style="background:var(--aq2)"></i><i style="background:var(--aq3)"></i><i style="background:var(--aq4)"></i><i style="background:var(--aq5)"></i></div>
         <div class="ticks"><span>0</span><span>15</span><span>25</span><span>37.5</span><span>75</span><span></span></div>
-        <div class="note" style="font-size:.68rem">CAMS corrected with live station data, µg/m³. Dashed box: forecast area.</div>
+        <div class="note" style="font-size:.68rem">CAMS + monitors + terrain (regression kriging), µg/m³. Dashed box: forecast area.</div>
       </div>
       <div id="legFire" hidden>
         <div class="bar"></div>
@@ -928,8 +943,38 @@ async function runAuto(quiet){ try{ await runAuto_(quiet); }catch(e){ busy(null)
 async function runAuto_(quiet){
   if(!quiet) busy('Loading the latest hourly data…');
   const d=await loadPipeline();
-  if(d){P.data=d; await runModel(pipelineHotspots(d),'live',null,quiet); showFreshness(); loadVerify();}
+  if(d){P.data=d; await loadDEM(); await runModel(pipelineHotspots(d),'live',null,quiet); showFreshness(); loadVerify(); renderRK();}
   else if(!quiet){P.data=null; await runLive();}
+}
+let DEM=null;
+async function loadDEM(){
+  if(DEM||!P.data?.dem) return;
+  try{const r=await fetch(P.data.dem.file,{cache:'force-cache'}); if(r.ok) DEM=await r.json();}catch(e){}
+}
+function sampleRegular(Gr,lat,lon){
+  const fx=(lon-Gr.lon0)/Gr.step, fy=(lat-Gr.lat0)/Gr.step; if(fx<0||fy<0||fx>Gr.nx-1||fy>Gr.ny-1) return null;
+  const x0=Math.min(Math.floor(fx),Gr.nx-2), y0=Math.min(Math.floor(fy),Gr.ny-2), ax=fx-x0, ay=fy-y0, v=Gr.values;
+  return (1-ax)*(1-ay)*v[y0*Gr.nx+x0]+ax*(1-ay)*v[y0*Gr.nx+x0+1]+(1-ax)*ay*v[(y0+1)*Gr.nx+x0]+ax*ay*v[(y0+1)*Gr.nx+x0+1];
+}
+// regression-kriging map value from raw CAMS c at (lat,lon) for valid time t
+function rkValue(c,lat,lon,t){
+  const rk=P.data&&P.data.rk; if(!rk||c<0) return c;
+  const hasZ=rk.beta.length>2; if(hasZ&&!DEM) return c;
+  const w=Math.exp(-Math.max(0,(t-rk.t)/36e5)/(rk.leadEfoldH||48)), lc=Math.log(c+1);
+  let reg=rk.beta[0]+rk.beta[1]*lc; if(hasZ){const z=sampleRegular(DEM,lat,lon); reg+=rk.beta[2]*((z??0)/1000);}
+  const r=sampleRegular(rk.resid,lat,lon)??0;
+  return Math.max(0,Math.exp(lc+w*((reg-lc)+r))-1);
+}
+function renderRK(){
+  const rk=P.data&&P.data.rk; if(!rk){$('rkBox').textContent='Regression kriging has not run yet (needs at least 15 monitors with fresh data).';return;}
+  const b=rk.beta.map(x=>x.toFixed(3));
+  $('rkBox').innerHTML=`<div class="tablewrap"><table><tbody>
+    <tr><th>Analysis hour</th><td>${fmtT(rk.t)}</td></tr>
+    <tr><th>Monitors used</th><td class="num">${rk.n}</td></tr>
+    <tr><th>β₀, β₁${b.length>2?', β₂ (per km)':''}</th><td class="num">${b.join(', ')}</td></tr>
+    <tr><th>Variogram</th><td>nugget ${rk.vario.c0.toFixed(3)}, partial sill ${rk.vario.c1.toFixed(3)}, range ${rk.vario.a_km} km</td></tr>
+    <tr><th>Leave-one-out RMSE</th><td>CAMS ${rk.cv.cams.rmse} → RK ${rk.cv.rk.rmse} µg/m³</td></tr>
+    <tr><th>Leave-one-out bias</th><td>CAMS ${rk.cv.cams.mb} → RK ${rk.cv.rk.mb} µg/m³</td></tr></tbody></table></div>`;
 }
 function showFreshness(){
   if(!P.data) return; const age=(Date.now()-P.data.generated)/HR;
@@ -964,17 +1009,17 @@ function drawGrid(){
   const bandRGB=PCD.map(b=>hexRGB(cssVar('--'+b.key)));
   let so=G.lat0, w=G.lon0, n=G.lat0+(G.ny-1)*G.step, e=G.lon0+(G.nx-1)*G.step;
   if(R){so=Math.max(so,R.bbox[1]-.2); w=Math.max(w,R.bbox[0]-.2); n=Math.min(n,R.bbox[3]+.2); e=Math.min(e,R.bbox[2]+.2);}
-  const ppd=layerMode()==='fine'?80:40;
+  const ppd=layerMode()==='fine'?80:60;
   const W=Math.min(1100,Math.round((e-w)*ppd)), H=Math.min(1100,Math.round((mercY(n)-mercY(so))/DEG*ppd));
-  let value=base;
-  if(layerMode()==='fine'){
+  const tNow=curT(); let value=base;
+  {
     // fine total = CAMS (corrected) + α × (fire smoke − its own mean over a CAMS-sized box): keeps the 0.5° mean, adds sub-grid fire structure
-    let cell=0.025; while(((e-w)/cell)*((n-so)/cell)>400000) cell*=1.25;
+    const fineMode=layerMode()==='fine'; let cell=fineMode?0.025:0.05; while(((e-w)/cell)*((n-so)/cell)>400000) cell*=1.25;
     const fx=Math.ceil((e-w)/cell), fy=Math.ceil((n-so)/cell), F=new Float32Array(fx*fy), alpha=Math.max(0,+$('alpha').value||0);
     const si=simIdx(curT()), snap=si>=0&&S.sim?S.sim.snaps[si]:null;
     let P_=null, A_=null;
-    if(snap&&snap.n&&alpha>0){P_=puffField(snap,w,so,fx,fy,cell); A_=boxMean(P_,fx,fy,Math.max(1,Math.round(G.step/2/cell)));}
-    for(let y=0;y<fy;y++) for(let x=0;x<fx;x++){const b=base(so+(y+.5)*cell,w+(x+.5)*cell);
+    if(fineMode&&snap&&snap.n&&alpha>0){P_=puffField(snap,w,so,fx,fy,cell); A_=boxMean(P_,fx,fy,Math.max(1,Math.round(G.step/2/cell)));}
+    for(let y=0;y<fy;y++) for(let x=0;x<fx;x++){const la=so+(y+.5)*cell, lo=w+(x+.5)*cell, b=rkValue(base(la,lo),la,lo,tNow);
       F[y*fx+x]=b<0?NaN:Math.max(0,b+(P_?alpha*(P_[y*fx+x]-A_[y*fx+x]):0));}
     S.fine={F,w,so,nx:fx,ny:fy,cell};
     value=(lat,lon)=>{const x=Math.floor((lon-w)/cell), y=Math.floor((lat-so)/cell); if(x<0||y<0||x>=fx||y>=fy) return -1; const v=F[y*fx+x]; return v===v?v:-1;};
@@ -1011,9 +1056,8 @@ function isoSegments(g,NX,NY,lv){
 function drawContours(){
   if(contourLayer){map.removeLayer(contourLayer);contourLayer=null;}
   if(!P.data||!gridMode()||!shown('shContour')) return; const G=P.data.grid, i=gIdx(curT()); if(i<0) return;
-  let g,NX,NY,st,la0,lo0;
-  if(layerMode()==='fine'&&S.fine){({F:g,nx:NX,ny:NY,cell:st}=S.fine); la0=S.fine.so+st/2; lo0=S.fine.w+st/2;}
-  else {const k=4; ({g,NX,NY}=upsample(G.values[i],G.nx,G.ny,k)); st=G.step/k; la0=G.lat0; lo0=G.lon0;}
+  if(!S.fine) return;
+  const {F:g,nx:NX,ny:NY,cell:st}=S.fine, la0=S.fine.so+st/2, lo0=S.fine.w+st/2;
   contourLayer=L.layerGroup();
   CLEVELS.forEach((lv,j)=>{const segs=isoSegments(g,NX,NY,lv); if(!segs.length) return;
     const col=cssVar('--'+PCD[j+1].key);

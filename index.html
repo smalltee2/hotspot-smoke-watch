@@ -110,6 +110,9 @@ td.num{text-align:right;font-family:var(--font-data);font-variant-numeric:tabula
 .legend .ticks{display:flex;justify-content:space-between;font-family:var(--font-data);color:var(--muted)}
 .legend .keys{display:grid;gap:3px;margin-top:6px}
 .layerpick{display:grid;gap:3px;margin-bottom:6px;font-size:.75rem}
+.showpick{display:grid;gap:3px;margin-top:8px;padding-top:6px;border-top:1px solid var(--line);font-size:.75rem}
+.showpick strong{font-size:.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.cline{font:600 10px/1 var(--font-data)}
 .pcdbar{display:grid;grid-template-columns:15fr 10fr 12.5fr 37.5fr 25fr;height:10px;border-radius:2px;overflow:hidden;margin:5px 0 3px;opacity:.85}
 .legend .ticks span:last-child:empty{display:none}
 .chip.stale{border-color:var(--aq4);color:var(--aq4)}
@@ -352,6 +355,12 @@ td.num{text-align:right;font-family:var(--font-data);font-variant-numeric:tabula
         <span><i class="dot" style="background:var(--ember)"></i>Hotspot (size = FRP)</span>
         <span><i class="dot" style="border:2px solid var(--fg)"></i>Town / receptor</span>
         <span><i class="dot" style="border-radius:2px;border:1.5px solid var(--fg);background:var(--aq2)"></i>Monitor (measured now)</span>
+      </div>
+      <div class="showpick"><strong>Show on map</strong>
+        <label><input type="checkbox" id="shContour" checked> Contour lines</label>
+        <label><input type="checkbox" id="shSt" checked> OpenAQ stations</label>
+        <label><input type="checkbox" id="shHot" checked> Hotspots</label>
+        <label><input type="checkbox" id="shTown" checked> Towns</label>
       </div></details>
     </div>
     <div class="basemap-switch"><label for="bmSel" class="vh">Basemap</label>
@@ -753,7 +762,7 @@ function setTimeline(){
   if(i<0){i=S.times.findIndex(h=>h>=Date.now()-HR/2); if(i<0) i=Math.max(0,S.times.length-1);}
   S.hour=i; sl.value=i;
 }
-function redrawTime(){updateTimeLabel();drawPlume();drawGrid();drawTowns();drawStations();}
+function redrawTime(){updateTimeLabel();drawPlume();drawGrid();drawContours();drawTowns();drawStations();}
 
 // ---- hourly data written by the GitHub Actions pipeline (same site)
 async function loadPipeline(){
@@ -801,6 +810,49 @@ function drawGrid(){
   const h=G.step/2;
   gridLayer=L.imageOverlay(cv.toDataURL(),[[G.lat0-h,G.lon0-h],[G.lat0+(G.ny-1)*G.step+h,G.lon0+(G.nx-1)*G.step+h]],{interactive:false}).addTo(map);
   gridLayer.getElement()?.style.setProperty('image-rendering','auto');
+}
+// ---- contour lines on the corrected grid (marching squares on a 4× bilinear upsample)
+const CLEVELS=[15,25,37.5,75]; let contourLayer=null;
+const shown=id=>$(id).checked;
+function upsample(vals,nx,ny,k){
+  const NX=(nx-1)*k+1, NY=(ny-1)*k+1, out=new Float32Array(NX*NY);
+  for(let Y=0;Y<NY;Y++){const fy=Y/k, y0=Math.min(Math.floor(fy),ny-2), ay=fy-y0;
+    for(let X=0;X<NX;X++){const fx=X/k, x0=Math.min(Math.floor(fx),nx-2), ax=fx-x0;
+      const a=vals[y0*nx+x0],b=vals[y0*nx+x0+1],c=vals[(y0+1)*nx+x0],d=vals[(y0+1)*nx+x0+1];
+      out[Y*NX+X]=(a<0||b<0||c<0||d<0)?NaN:(1-ax)*(1-ay)*a+ax*(1-ay)*b+(1-ax)*ay*c+ax*ay*d;}}
+  return {g:out,NX,NY};
+}
+function isoSegments(g,NX,NY,lv){
+  const segs=[]; const it=(a,b)=>(lv-a)/(b-a);
+  for(let y=0;y<NY-1;y++) for(let x=0;x<NX-1;x++){
+    const v0=g[y*NX+x],v1=g[y*NX+x+1],v2=g[(y+1)*NX+x+1],v3=g[(y+1)*NX+x];
+    if(!(v0===v0&&v1===v1&&v2===v2&&v3===v3)) continue;
+    const c=(v0>=lv?1:0)|(v1>=lv?2:0)|(v2>=lv?4:0)|(v3>=lv?8:0); if(c===0||c===15) continue;
+    const B=[x+it(v0,v1),y], R=[x+1,y+it(v1,v2)], T=[x+it(v3,v2),y+1], Lf=[x,y+it(v0,v3)];
+    const M={1:[[Lf,B]],2:[[B,R]],3:[[Lf,R]],4:[[R,T]],5:[[Lf,T],[B,R]],6:[[B,T]],7:[[Lf,T]],8:[[Lf,T]],9:[[B,T]],10:[[Lf,B],[R,T]],11:[[R,T]],12:[[Lf,R]],13:[[B,R]],14:[[Lf,B]]}[c];
+    for(const sg of M) segs.push(sg);
+  }
+  return segs;
+}
+function drawContours(){
+  if(contourLayer){map.removeLayer(contourLayer);contourLayer=null;}
+  if(!P.data||layerMode()!=='total'||!shown('shContour')) return; const G=P.data.grid, i=gIdx(curT()); if(i<0) return;
+  const k=4, {g,NX,NY}=upsample(G.values[i],G.nx,G.ny,k), st=G.step/k;
+  contourLayer=L.layerGroup();
+  CLEVELS.forEach((lv,j)=>{const segs=isoSegments(g,NX,NY,lv); if(!segs.length) return;
+    const col=cssVar('--'+PCD[j+1].key);
+    L.polyline(segs.map(([a,b])=>[[G.lat0+a[1]*st,G.lon0+a[0]*st],[G.lat0+b[1]*st,G.lon0+b[0]*st]]),{color:col,weight:2,opacity:.95,interactive:false}).addTo(contourLayer);
+  });
+  contourLayer.addTo(map);
+}
+function applyVisibility(){
+  for(const [id,layers] of [['shHot',[hotLayer,trajLayer]],['shTown',[townLayer]],['shSt',[stationLayer]]])
+    for(const l of layers){ if(shown(id)) map.addLayer(l); else map.removeLayer(l); }
+  drawContours();
+}
+for(const id of ['shContour','shSt','shHot','shTown']){
+  const v=store.get('hsw.'+id); if(v!=null) $(id).checked=v==='1';
+  $(id).addEventListener('change',()=>{store.set('hsw.'+id,$(id).checked?'1':'0');applyVisibility();});
 }
 function stationNow(s,t){const i=gIdx(t);return i>=0?s.corr[i]:null;}
 function drawStations(){
@@ -1026,7 +1078,7 @@ $('region').addEventListener('change',()=>{const b=REGIONS[$('region').value].bb
 for(const el of document.querySelectorAll('input[name=layer]')) el.addEventListener('change',()=>{
   $('legTotal').hidden=layerMode()!=='total'; $('legFire').hidden=layerMode()!=='fire'; redrawTime();});
 // first paint, then refresh every 30 minutes while the tab is open
-computeReceptors(); renderAll();
+computeReceptors(); renderAll(); applyVisibility();
 runAuto(false).then(()=>{ if(!P.data){ $('lyFire').checked=true; $('legTotal').hidden=true; $('legFire').hidden=false; redrawTime(); } });
 setInterval(()=>{ if(document.visibilityState==='visible' && P.data) runAuto(true); },30*60e3);
 </script>

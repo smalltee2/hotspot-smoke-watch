@@ -11,10 +11,10 @@ import path from 'node:path';
 // ------------------------------------------------------------------ config
 const CFG = {
   // area for stations, hotspots and the corrected PM2.5 grid [W,S,E,N]
-  bbox: [92.0, 9.0, 110.0, 24.5],
-  gridBbox: [96.0, 13.0, 106.0, 22.5],
+  bbox: [92.0, 5.5, 110.0, 24.5],
+  gridBbox: [92.0, 5.5, 110.0, 24.0],  // covers every region in the page's drop-down
   gridStep: 0.5,                 // deg; keeps Open-Meteo calls inside the free tier
-  camsRefreshH: 6,               // CAMS runs twice a day, no need to re-pull hourly
+  camsRefreshH: 8,               // CAMS runs twice a day; 3 pulls/day keeps Open-Meteo under its 10k/day free limit
   stationRefreshH: 24,
   maxStations: 300,
   obsMaxAgeH: 3,                 // ignore station values older than this
@@ -195,15 +195,16 @@ async function main() {
   const nx = Math.round((g[2] - g[0]) / step) + 1, ny = Math.round((g[3] - g[1]) / step) + 1;
   const gridPts = []; for (let iy = 0; iy < ny; iy++) for (let ix = 0; ix < nx; ix++) gridPts.push([g[1] + iy * step, g[0] + ix * step]);
   const stIds = stations.map(s => s.id).join(',');
-  if (!state.cams || now - state.cams.at > CFG.camsRefreshH * HOUR || state.cams.stIds !== stIds) {
+  const gridKey = `${g.join(',')}|${step}`;
+  if (!state.cams || now - state.cams.at > CFG.camsRefreshH * HOUR || state.cams.stIds !== stIds || state.cams.gridKey !== gridKey) {
     const pts = stations.map(s => [s.lat, s.lon]).concat(gridPts);
     try {
       const { times, series } = await camsSeries(pts);
-      state.cams = { at: now, times, stIds, st: series.slice(0, stations.length), grid: series.slice(stations.length) };
+      state.cams = { at: now, times, stIds, gridKey, st: series.slice(0, stations.length), grid: series.slice(stations.length) };
       log(`CAMS refreshed: ${pts.length} points × ${times.length} h`);
     } catch (e) {
       log(`CAMS refresh failed: ${e.message}`);
-      if (!state.cams || state.cams.stIds !== stIds) throw e;   // cannot continue without a forecast for these stations
+      if (!state.cams || state.cams.stIds !== stIds || state.cams.gridKey !== gridKey) throw e;   // cannot continue without a forecast for these stations
       log('using the previous CAMS forecast');
     }
   }

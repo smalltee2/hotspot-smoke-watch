@@ -344,7 +344,7 @@ td.num{text-align:right;font-family:var(--font-data);font-variant-numeric:tabula
       <div id="legTotal">
         <div class="pcdbar"><i style="background:var(--aq1)"></i><i style="background:var(--aq2)"></i><i style="background:var(--aq3)"></i><i style="background:var(--aq4)"></i><i style="background:var(--aq5)"></i></div>
         <div class="ticks"><span>0</span><span>15</span><span>25</span><span>37.5</span><span>75</span><span></span></div>
-        <div class="note" style="font-size:.68rem">CAMS corrected with live station data, µg/m³</div>
+        <div class="note" style="font-size:.68rem">CAMS corrected with live station data, µg/m³. Dashed box: forecast area.</div>
       </div>
       <div id="legFire" hidden>
         <div class="bar"></div>
@@ -911,11 +911,12 @@ function drawGrid(){
   const vals=G.values[i], cv=document.createElement('canvas'); cv.width=G.nx; cv.height=G.ny;
   const ctx=cv.getContext('2d'), img=ctx.createImageData(G.nx,G.ny);
   for(let y=0;y<G.ny;y++) for(let x=0;x<G.nx;x++){const v=vals[y*G.nx+x]; if(v<0) continue; const c=hexRGB(pcdColor(v)), o=((G.ny-1-y)*G.nx+x)*4;
-    img.data[o]=c[0];img.data[o+1]=c[1];img.data[o+2]=c[2];img.data[o+3]=v<10?0:v<15?Math.round((v-10)*9):Math.min(150,60+v*1.2);}
+    img.data[o]=c[0];img.data[o+1]=c[1];img.data[o+2]=c[2];img.data[o+3]=v<15?40+v*2:Math.min(160,70+v*1.2);}
   ctx.putImageData(img,0,0);
   const h=G.step/2;
-  gridLayer=L.imageOverlay(cv.toDataURL(),[[G.lat0-h,G.lon0-h],[G.lat0+(G.ny-1)*G.step+h,G.lon0+(G.nx-1)*G.step+h]],{interactive:false}).addTo(map);
-  gridLayer.getElement()?.style.setProperty('image-rendering','auto');
+  const bnd=[[G.lat0-h,G.lon0-h],[G.lat0+(G.ny-1)*G.step+h,G.lon0+(G.nx-1)*G.step+h]];
+  gridLayer=L.layerGroup([L.imageOverlay(cv.toDataURL(),bnd,{interactive:false}),
+    L.rectangle(bnd,{color:cssVar('--muted'),weight:1,dashArray:'4 4',fill:false,interactive:false})]).addTo(map);
 }
 // ---- contour lines on the corrected grid (marching squares on a 4× bilinear upsample)
 const CLEVELS=[15,25,37.5,75]; let contourLayer=null;

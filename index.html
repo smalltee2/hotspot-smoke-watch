@@ -339,19 +339,23 @@ td.num{text-align:right;font-family:var(--font-data);font-variant-numeric:tabula
       </div>
 
       <h3 data-th="การปล่อยและการแพร่กระจาย">Emission and dispersion</h3>
-      <div class="field"><label for="fuel" data-th="ชนิดเชื้อเพลิง (ค่าการปล่อย PM&lt;sub&gt;2.5&lt;/sub&gt;, Akagi et al. 2011)">Fuel type (PM<sub>2.5</sub> emission factor, Akagi et al. 2011)</label>
+      <div class="field"><label for="fuel" data-th="ชนิดเชื้อเพลิง (ค่าการปล่อย PM&lt;sub&gt;2.5&lt;/sub&gt; ตาม FINN v2.5, Wiedinmyer et al. 2023)">Fuel type (PM<sub>2.5</sub> emission factor, FINN v2.5, Wiedinmyer et al. 2023)</label>
         <select id="fuel">
-          <option value="6.26" data-th="เศษวัสดุการเกษตร 6.26 g/kg">Crop residue, 6.26 g/kg</option>
-          <option value="7.17" selected data-th="ทุ่งหญ้า / ป่าผลัดใบแห้ง 7.17 g/kg">Savanna / dry deciduous, 7.17 g/kg</option>
-          <option value="9.1" data-th="ป่าเขตร้อน 9.1 g/kg">Tropical forest, 9.1 g/kg</option>
-          <option value="14.8" data-th="เผาทุ่งเลี้ยงสัตว์ 14.8 g/kg">Pasture maintenance, 14.8 g/kg</option>
+          <option value="7.17" selected data-th="ทุ่งหญ้า / สะวันนา 7.17 g/kg">Savanna / grassland, 7.17 g/kg</option>
+          <option value="7.1" data-th="สะวันนาไม้พุ่ม / ป่าโปร่ง 7.1 g/kg">Woody savanna / shrubs, 7.1 g/kg</option>
+          <option value="6.43" data-th="พื้นที่เกษตร 6.43 g/kg">Crops, 6.43 g/kg</option>
+          <option value="9.9" data-th="ป่าเขตร้อน 9.9 g/kg">Tropical forest, 9.9 g/kg</option>
+          <option value="15" data-th="ป่าเขตอบอุ่น 15 g/kg">Temperate forest, 15 g/kg</option>
         </select></div>
       <div class="row">
         <div class="field"><label for="alpha" data-th="น้ำหนักรายละเอียดไฟ α (ชั้นละเอียด)">Fire detail weight α (fine layer)</label><input id="alpha" type="number" min="0" max="5" step="0.1" value="1"></div>
-        <div class="field"><label for="dur" data-th="ไฟลุกต่อเนื่อง (ชม.)">Fire keeps burning (h)</label><input id="dur" type="number" min="1" max="24" step="1" value="6"></div>
+        <div class="field"><label for="fireProf" data-th="รูปแบบเวลาการเผา">Fire time profile</label>
+          <select id="fireProf"><option value="diurnal" selected data-th="วัฏจักรรายวัน (สูงสุด 13:00)">Daily cycle (peak 13:00)</option><option value="const" data-th="คงที่ตามจำนวนชั่วโมง">Constant for N hours</option></select></div>
+        <div class="field"><label for="dur" data-th="ไฟลุกต่อเนื่อง (ชม.) — แบบคงที่">Fire keeps burning (h), constant mode</label><input id="dur" type="number" min="1" max="24" step="1" value="6"></div>
         <div class="field"><label for="horizon" data-th="พยากรณ์ล่วงหน้า (ชม.)">Forecast ahead (h)</label>
           <select id="horizon"><option>24</option><option selected>48</option><option>72</option></select></div>
       </div>
+      <div class="field"><label><input type="checkbox" id="plume" checked> <span data-th="คำนวณความสูงควันลอยตัว (Sofiev et al. 2012)">Plume rise (Sofiev et al. 2012)</span></label></div>
       <div class="row">
         <div class="field"><label for="warnkm" data-th="รัศมีเตือนจุดความร้อน (กม.)">Hotspot alert radius (km)</label><input id="warnkm" type="number" min="2" max="100" value="20"></div>
         <div class="field"><label for="proxy">CORS proxy prefix</label><input id="proxy" type="text" placeholder="optional"></div>
@@ -372,10 +376,14 @@ td.num{text-align:right;font-family:var(--font-data);font-variant-numeric:tabula
       <p>It pulls active-fire detections from NASA FIRMS, groups them into fire clusters, converts each cluster's fire radiative power (FRP) into a PM<sub>2.5</sub> emission rate, and releases Gaussian puffs that drift with forecast winds from Open-Meteo. Ground-level smoke concentration is summed over all puffs every hour.</p>
       <h3>Emission</h3>
       <span class="eq">Q [g s⁻¹] = EF [g kg⁻¹] × 0.368 [kg MJ⁻¹] × FRP [MW]</span>
-      <p class="note">0.368 kg of dry matter burned per MJ of fire radiative energy is from Wooster et al. (2005). EF for PM<sub>2.5</sub> is from Akagi et al. (2011). Each cluster emits at its observed FRP for the chosen burn duration after its last detection, released as a puff every 20 minutes.</p>
+      <p class="note">0.368 kg of dry matter burned per MJ of fire radiative energy is from Wooster et al. (2005). The PM<sub>2.5</sub> emission factor is chosen by fuel type from the FINN v2.5 table (Wiedinmyer et al., 2023, Table 4; savanna/grassland 7.17, woody savanna/shrubs 7.1, crops 6.43, tropical forest 9.9, temperate forest 15 g kg⁻¹), which updates FINN v1 (Wiedinmyer et al., 2011) mostly with the averages of Akagi et al. (2011). One fuel type is used for all fires for now; FINN assigns it per fire from MODIS land cover.</p>
+      <p class="note"><strong>Daily fire cycle.</strong> VIIRS sees a fire about twice a day (≈ 13:30 and 01:30 local time), near the afternoon peak of burning, so holding the 13:30 FRP for many hours overstates the day's emission. Detections are grouped by 0.1° cell and local solar day, and each group burns along a Gaussian daily cycle on a night baseline, the form used by Zhang et al. (2020) with Himawari and VIIRS:</p>
+      <span class="eq">FRP(t) = FRP<sub>night</sub> + A·exp(−(t − 13:00)² / 2σ²),  A = (FRP<sub>day</sub> − FRP<sub>night</sub>) / exp(−(t<sub>VIIRS</sub> − 13:00)² / 2σ²)</span>
+      <p class="note">so the curve passes through the observed daytime FRP at the overpass. σ = 2.39 h (April–August) or 1.63 h (September–March), the values Zhang et al. fitted for cropland fires in eastern China; Giglio (2007) found tropical burning peaks between 13:00 and 18:30 local time. A fire's daily energy is then FRP<sub>night</sub>·24 h + A·σ√(2π), about 4–6 h of the overpass FRP instead of a fixed burn time. These parameters are not yet fitted for Thailand; geostationary (Himawari) FRP would allow that. The older constant-duration option remains in Settings. FINN itself provides daily totals and leaves the daily cycle to the user (Wiedinmyer et al., 2011, 2023).</p>
       <h3>Transport and spread</h3>
-      <p class="note">Meteorology is ECMWF IFS HRES (9 km), fixed by name through the Open-Meteo API so every run uses the same model. The hourly job samples it every 6 h on two nested grids, 0.25° over northern Thailand (96.5–102.5°E, 14.5–21.5°N) and 1° over the whole domain, and the model uses the finer grid wherever it covers the point (bilinear in space, linear in time). Variables: 100 m wind (transport), 10 m wind, shortwave radiation and cloud cover (stability class), boundary-layer height (vertical mixing limit) and precipitation (wet removal).</p>
+      <p class="note">Meteorology is ECMWF IFS HRES (9 km), fixed by name through the Open-Meteo API so every run uses the same model. The hourly job samples it every 6 h on two nested grids, 0.25° over northern Thailand (96.5–102.5°E, 14.5–21.5°N) and 1° over the whole domain, and the model uses the finer grid wherever it covers the point (bilinear in space, linear in time). Variables: 100 m wind (transport), 10 m wind, shortwave radiation and cloud cover (stability class), boundary-layer height (vertical mixing limit) and precipitation (wet removal). For plume rise, the free-troposphere stability N² = (g/θ)·∂θ/∂z is taken between 850 and 700 hPa from ECMWF IFS 0.25° (the 9 km feed has no pressure levels).</p>
       <p class="note">Puffs move with the 100 m wind. Pasquill–Gifford stability class comes from 10 m wind, solar radiation and cloud cover (Turner 1970 table). Spread uses Briggs (1973) open-country σ<sub>y</sub>, σ<sub>z</sub>, with σ<sub>y</sub> not smaller than 0.5 m s⁻¹ × travel time for long-range drift (Heffter 1965). Rain removes particles at the rate Λ = 8×10⁻⁵·P<sup>0.79</sup> s⁻¹ (P in mm h⁻¹), the default particle scavenging coefficient of HYSPLIT, so each puff's mass falls by e<sup>−Λ·Δt</sup> per step.</p>
+      <p class="note"><strong>Plume rise.</strong> The plume top follows Sofiev et al. (2012, Eq. 13, fitted to MISR plume heights for all fires): H<sub>p</sub> = 0.24·H<sub>abl</sub> + 170 m·(FRP/1 MW)<sup>0.35</sup>·exp(−0.6·N²/2.5×10⁻⁴ s⁻²). Emissions are spread evenly from the ground to H<sub>p</sub>, as models using this scheme do. Each puff starts with σ<sub>z</sub> = 0.8·min(H<sub>p</sub>, H<sub>abl</sub>), which gives the same ground concentration as an even 0–H<sub>p</sub> layer, and the fraction above the boundary layer, 1 − H<sub>abl</sub>/H<sub>p</sub>, is not brought down to the ground. FRP here is the largest single VIIRS pixel in the group, scaled by the daily cycle; Sofiev et al. fitted MODIS 1 km fire pixels, so heights may be slightly low.</p>
       <span class="eq">C = M / (2π σy²) · exp(−r² / 2σy²) · Fz</span>
       <span class="eq">Fz = 2 / (√(2π) σz)  if σz &lt; 0.8 h,  else 1 / h</span>
       <p class="note">h is the deepest boundary layer the puff has met, so smoke mixed aloft in the afternoon is not squeezed back to the ground at night.</p>
@@ -385,9 +393,9 @@ td.num{text-align:right;font-family:var(--font-data);font-variant-numeric:tabula
       <p class="note">Thai AQI follows the Pollution Control Department bands in force since 1 June 2023 (PM<sub>2.5</sub> 24-h mean 0–15, 15.1–25, 25.1–37.5, 37.6–75 and above 75.1 µg/m³ → AQI 0–25, 26–50, 51–100, 101–200 and 201+); above 75.1 µg/m³ the page extends the index at the slope of the 101–200 band. US AQI follows the EPA PM<sub>2.5</sub> breakpoints revised in 2024 (0–9.0, 9.1–35.4, 35.5–55.4, 55.5–125.4, 125.5–225.4, 225.5–325.4 µg/m³ → AQI 0–50, 51–100, 101–150, 151–200, 201–300, 301–500; higher values are shown as 500), with concentrations truncated to 0.1 µg/m³ and linear interpolation inside each band. Both indices are defined on the 24-hour mean, so in the AQI and 24-h views the map, the station colours and the location box use the mean of the 24 hourly values ending at the selected hour; a mean needs at least 18 of the 24 hours (75 %). Station AQI uses the monitor's own hourly readings, kept by the pipeline for the last 30 hours. The pipeline publishes the previous 24 hours of the corrected field with every run, so the 24-h mean is complete from the current hour onward.</p>
       <h3>Limits</h3>
       <ol>
-        <li>Screening tool, not a regulatory model. No plume rise, chemistry or dry deposition (wet removal is included); terrain only enters through the forecast wind and the map regression.</li>
+        <li>Screening tool, not a regulatory model. No chemistry or dry deposition (wet removal and plume rise are included); smoke injected above the boundary layer is dropped rather than re-entrained the next day; terrain only enters through the forecast wind and the map regression.</li>
         <li>Satellites see a fire only at overpass; fires that start between passes or burn under cloud are missed.</li>
-        <li>The burn-duration setting dominates totals. Compare runs with 3, 6 and 12 h.</li>
+        <li>The daily-cycle width σ and the fuel type dominate totals; both use literature values until they are calibrated against monitors in the burning season. Forecast hours after today have no new fires (no persistence).</li>
         <li>Check against ground monitors (PCD Air4Thai, CMU CCDC DustBoy) before acting on a warning.</li>
       </ol>
       <h3>Hourly forecast pipeline</h3>
@@ -427,6 +435,11 @@ td.num{text-align:right;font-family:var(--font-data);font-variant-numeric:tabula
         <li>Horálek, J., et al. (2025). Air quality maps of EEA member and cooperating countries for 2023. ETC/HE Report 2025/5.</li>
         <li>Han, S., Kundhikanjana, W., Towashiraporn, P., Stratoulias, D. (2022). Interpolation-based fusion of Sentinel-5P, SRTM, and regulatory-grade ground stations data for producing spatially continuous maps of PM2.5 concentrations nationwide over Thailand. Atmosphere 13(2), 161. doi:10.3390/atmos13020161</li>
         <li>Denby, B. R., et al. (2020). Description of the uEMEP_v5 downscaling approach for the EMEP MSC-W chemistry transport model. Geoscientific Model Development 13, 6303–6323. doi:10.5194/gmd-13-6303-2020</li>
+        <li>Wiedinmyer, C., Akagi, S. K., Yokelson, R. J., Emmons, L. K., Al-Saadi, J. A., Orlando, J. J., Soja, A. J. (2011). The Fire INventory from NCAR (FINN): a high resolution global model to estimate the emissions from open burning. Geoscientific Model Development 4, 625–641. doi:10.5194/gmd-4-625-2011</li>
+        <li>Wiedinmyer, C., Kimura, Y., McDonald-Buller, E. C., Emmons, L. K., Buchholz, R. R., Tang, W., Seto, K., Joseph, M. B., Barsanti, K. C., Carlton, A. G., Yokelson, R. (2023). The Fire Inventory from NCAR version 2.5: an updated global fire emissions model for climate and chemistry applications. Geoscientific Model Development 16, 3873–3891. doi:10.5194/gmd-16-3873-2023</li>
+        <li>Sofiev, M., Ermakova, T., Vankevich, R. (2012). Evaluation of the smoke-injection height from wild-land fires using remote-sensing data. Atmospheric Chemistry and Physics 12, 1995–2006. doi:10.5194/acp-12-1995-2012</li>
+        <li>Zhang, T., de Jong, M. C., Wooster, M. J., Xu, W., Wang, L. (2020). Trends in eastern China agricultural fire emissions derived from a combination of geostationary (Himawari) and polar (VIIRS) orbiter fire radiative power products. Atmospheric Chemistry and Physics 20, 10687–10705. doi:10.5194/acp-20-10687-2020</li>
+        <li>Giglio, L. (2007). Characterization of the tropical diurnal fire cycle using VIRS and MODIS observations. Remote Sensing of Environment 108(4), 407–421. doi:10.1016/j.rse.2006.11.018</li>
         <li>Hengl, T., Heuvelink, G. B. M., Rossiter, D. G. (2007). About regression-kriging: From equations to case studies. Computers &amp; Geosciences 33(10), 1301–1315. doi:10.1016/j.cageo.2007.05.001</li>
         <li>Terrain: AWS Terrain Tiles (Terrarium encoding), open data on AWS.</li>
       </ol>
@@ -672,17 +685,37 @@ function rowsToHotspots(rows){
 const confOK=(h,min)=> min==='l' ? true : min==='n' ? h.level!=='l' : h.level==='h';
 
 // Group into 0.1° cells. FRP of a cluster = max over overpasses of the summed FRP in that pass.
+// local solar time from longitude (h); a fire's "day" runs from local midnight to local midnight
+const lstOff=lon=>lon/15*3600e3;
 function clusterSources(hots, cell=0.1){
   const m=new Map();
   for(const h of hots){
-    const k=Math.floor(h.lat/cell)+':'+Math.floor(h.lon/cell);
-    let c=m.get(k); if(!c){c={n:0,wlat:0,wlon:0,w:0,passes:new Map(),t0:0};m.set(k,c);}
-    c.n++; const w=Math.max(h.frp,0.5); c.wlat+=h.lat*w; c.wlon+=h.lon*w; c.w+=w;
-    c.passes.set(h.pass,(c.passes.get(h.pass)||0)+h.frp); c.t0=Math.max(c.t0,h.t);
+    const ld=Math.floor((h.t+lstOff(h.lon))/864e5), lh=((h.t+lstOff(h.lon))%864e5)/3600e3, day=lh>=6&&lh<18;
+    const k=Math.floor(h.lat/cell)+':'+Math.floor(h.lon/cell)+':'+ld;
+    let c=m.get(k); if(!c){c={n:0,wlat:0,wlon:0,w:0,ld,passes:new Map(),t0:0,pix:0};m.set(k,c);}
+    c.n++; const w=Math.max(h.frp,0.5); c.wlat+=h.lat*w; c.wlon+=h.lon*w; c.w+=w; c.pix=Math.max(c.pix,h.frp);
+    const ps=c.passes.get(h.pass)||{f:0,t:h.t,day}; ps.f+=h.frp; c.passes.set(h.pass,ps); c.t0=Math.max(c.t0,h.t);
   }
-  return [...m.values()].map(c=>({lat:c.wlat/c.w, lon:c.wlon/c.w, n:c.n,
-    frp:Math.max(...c.passes.values()), t0:c.t0})).sort((a,b)=>b.frp-a.frp);
+  return [...m.values()].map(c=>{const lon=c.wlon/c.w, P=[...c.passes.values()];
+    const dayP=P.filter(p=>p.day).sort((a,b)=>b.f-a.f)[0], nightF=Math.max(0,...P.filter(p=>!p.day).map(p=>p.f));
+    return {lat:c.wlat/c.w, lon, n:c.n, frp:Math.max(...P.map(p=>p.f)), t0:c.t0, pix:c.pix,
+      dayFRP:dayP?dayP.f:0, tDay:dayP?dayP.t:null, nightFRP:nightF, d0:c.ld*864e5-lstOff(lon)};}).sort((a,b)=>b.frp-a.frp);
 }
+// ---- fire diurnal cycle: Gaussian on a night baseline, ρ(t) = ρ_n + A·exp(−(t−t_pk)²/2σ²), local solar time.
+// Form as in Zhang et al. (2020, ACP 20, 10687; Himawari + VIIRS); A is set so ρ equals the VIIRS daytime FRP at its overpass.
+// t_pk = 13:00 and σ = 2.39 h (Apr–Aug) or 1.63 h (Sep–Mar) are their fitted values for eastern-China cropland fires, to be refit for this region.
+const DIURNAL={tPk:13, sig:t=>{const mo=new Date(t).getUTCMonth()+1; return mo>=4&&mo<=8?2.39:1.63;}};
+function fireRate(s,t,prof,durMs){   // FRP in MW at time t
+  if(prof==='const') return t>=s.t0&&t<s.t0+durMs?s.frp:0;
+  if(t<s.d0||t>=s.d0+864e5) return 0;
+  const sg=DIURNAL.sig(s.d0+432e5), G=h=>Math.exp(-((h-DIURNAL.tPk)**2)/(2*sg*sg)), lh=(t-s.d0)/3600e3;
+  // the overpass factor is floored at its 2σ value (e^−2) so an off-peak detection cannot be inflated more than ≈7×
+  const A=s.dayFRP>0?Math.max(0,(s.dayFRP-s.nightFRP)/Math.max(Math.exp(-2),G((s.tDay-s.d0)/3600e3))):0;
+  return s.nightFRP+A*G(lh);
+}
+// ---- plume injection height, Sofiev et al. (2012, ACP 12, 1995), Eq. 13 (all fires):
+// H_p = 0.24·H_abl + 170 m·(FRP/1 MW)^0.35·exp(−0.6·N²_FT / 2.5×10⁻⁴ s⁻²)
+function plumeTop(frpMW,blh,n2){ return 0.24*blh+170*Math.pow(Math.max(frpMW,0),0.35)*Math.exp(-0.6*(n2??1e-4)/2.5e-4); }
 
 // ---------------------------------------------------------------- wind grid
 function windGridSpec(sources, region, maxPts=600){
@@ -767,22 +800,31 @@ function sigma(x,cls,fn){cls=Math.min(6,Math.max(1,cls)); const lo=Math.floor(cl
 // ---------------------------------------------------------------- simulation
 // sources: [{lat,lon,frp,t0}], W: wind, opts:{ef,durH,releaseS,dtS,tEnd}
 function simulate(sources, W, opts){
-  const ef=opts.ef, dur=opts.durH*3600e3, rel=(opts.releaseS||1200)*1e3, dt=(opts.dtS||600);
+  const ef=opts.ef, dur=opts.durH*3600e3, rel=(opts.releaseS||1200)*1e3, dt=(opts.dtS||600), prof=opts.profile||'diurnal', rise=opts.plumeRise!==false;
   const SY0=150, SZ0=40;
-  const t0min=Math.min(...sources.map(s=>s.t0));
+  const win=s=>prof==='const'?[s.t0,s.t0+dur]:[s.d0,s.d0+864e5];
+  const t0min=Math.min(...sources.map(s=>win(s)[0]));
   const tStart=Math.floor(Math.max(t0min, W.times[0])/3600e3)*3600e3;
   const tEnd=Math.min(opts.tEnd, W.times[W.times.length-1]);
-  // release schedule
+  // release schedule: a puff every 20 min carrying EF × 0.368 kg/MJ × FRP(t) × 20 min of PM2.5 (µg)
   const queue=[];
-  sources.forEach((s,si)=>{const q=ef*KG_PER_MJ*s.frp; s.q=q;
-    for(let tr=Math.max(s.t0,tStart); tr<s.t0+dur && tr<tEnd; tr+=rel) queue.push({tr,si,m:q*(rel/1e3)*1e6});});
+  sources.forEach((s,si)=>{s.q=ef*KG_PER_MJ*s.frp; const [a,b]=win(s), fmax=Math.max(s.frp,1e-9);
+    for(let tr=Math.max(a,tStart); tr<b && tr<tEnd; tr+=rel){ const f=fireRate(s,tr+rel/2,prof,dur); if(f<0.01*fmax) continue;
+      queue.push({tr,si,f,m:ef*KG_PER_MJ*f*(rel/1e3)*1e6}); }});
   queue.sort((a,b)=>a.tr-b.tr);
+  let injTot=0, injBL=0;
   const P=[]; let qi=0;
   const hours=[], snaps=[];
   const traj=sources.map(()=>[]); const trajPuff=new Set();
   for(let t=tStart; t<=tEnd; t+=dt*1e3){
     while(qi<queue.length && queue[qi].tr<t+dt*1e3){const q=queue[qi++];const s=sources[q.si];
-      const p={lat:s.lat,lon:s.lon,x:0,age:0,h:300,sy:SY0,sz:SZ0,m:q.m,si:q.si};
+      // plume rise: emissions spread evenly from the ground to H_p (Sofiev et al. 2012); the part above the boundary
+      // layer is not carried to the ground in this model; the part inside starts with σz matching a 0–H_p layer (0.8·H)
+      let m=q.m, sz0=SZ0, h0=300;
+      if(rise){const w0=W.sample?W.sample(s.lat,s.lon,q.tr):sampleWind(W,s.lat,s.lon,q.tr), blh=Math.max(100,w0.blh??1000);
+        const pix=s.pix*(q.f/Math.max(s.frp,1e-9)), Hp=Math.max(SZ0,plumeTop(pix,blh,w0.n2)), fBL=Math.min(1,blh/Hp);
+        injTot+=m; m*=fBL; injBL+=m; sz0=Math.max(SZ0,0.8*Math.min(Hp,blh)); h0=Math.max(300,blh);}
+      const p={lat:s.lat,lon:s.lon,x:0,age:0,h:h0,sy:SY0,sz:sz0,sz0,m,si:q.si};
       if(!trajPuff.has(q.si)){trajPuff.add(q.si);p.track=true;traj[q.si].push([s.lat,s.lon]);}
       P.push(p);}
     if((t-tStart)%3600e3===0){ // hourly snapshot
@@ -800,13 +842,13 @@ function simulate(sources, W, opts){
       const cls=w.cls??pgClass(w.ws10,w.sw,w.cc);
       if(w.pr>0) p.m*=Math.exp(-WET_A*Math.pow(w.pr,WET_B)*dt);   // below-cloud wet removal, HYSPLIT default
       const sy=Math.hypot(SY0,Math.max(sigma(p.x,cls,sigYc),0.5*p.age));
-      const sz=Math.hypot(SZ0,sigma(p.x,cls,sigZc));
+      const sz=Math.hypot(p.sz0,sigma(p.x,cls,sigZc));
       p.sy=Math.max(p.sy,sy); p.sz=Math.min(Math.max(p.sz,sz),5000);
       if(p.track) traj[p.si].push([p.lat,p.lon]);
       if(p.age>72*3600 || Math.abs(p.lat)>60) P.splice(i,1);
     }
   }
-  return {hours,snaps,traj,tStart,tEnd};
+  return {hours,snaps,traj,tStart,tEnd,fracBL:injTot?injBL/injTot:1};
 }
 function concAt(s,lat,lon){
   let c=0; const cl=Math.cos(lat*DEG)*MPD;
@@ -834,7 +876,9 @@ function demoData(now){
   let seed=7; const rnd=()=>((seed=(seed*16807)%2147483647)/2147483647);
   const centres=[[19.35,98.05,260],[18.55,98.55,180],[19.0,100.95,150],[19.4,101.6,220],[20.6,98.9,200],[17.4,98.4,120],[18.3,99.9,90],[20.2,100.9,140]];
   const hots=[];
-  const passes=[now-11*3600e3,now-23*3600e3];
+  // the most recent VIIRS-like overpasses: ≈13:30 and ≈01:30 Thailand time (06:30 and 18:30 UTC)
+  const last=hUTC=>{let t=Math.floor(now/864e5)*864e5+hUTC*3600e3; while(t>now) t-=864e5; return t;};
+  const passes=[last(6.5),last(18.5)];
   for(const [la,lo,n] of centres) for(let i=0;i<n;i++){
     const t=passes[i%2];
     hots.push({lat:la+(rnd()-0.5)*0.9,lon:lo+(rnd()-0.5)*0.9,frp:2+rnd()**2*45,t,sat:'DEMO',level:rnd()<0.15?'l':'n',pass:'demo'+t});}
@@ -889,10 +933,12 @@ const S={hots:[],sources:[],sim:null,recep:[],hour:0,mode:null,myPts:[]};
 try{S.myPts=JSON.parse(store.get('hsw.points')||'[]');}catch(e){S.myPts=[];}
 
 // restore settings
-for(const id of ['region','mapkey','days','minconf','fuel','dur','horizon','warnkm','proxy','alpha']){
-  const v=store.get('hsw.'+id); if(v!=null) $(id).value=v;
+for(const id of ['region','mapkey','days','minconf','fuel','fireProf','dur','horizon','warnkm','proxy','alpha']){
+  const v=store.get('hsw.'+id), el=$(id);
+  if(v!=null&&(el.tagName!=='SELECT'||[...el.options].some(o=>o.value===v))) el.value=v;   // ignore values from older option lists
   $(id).addEventListener('change',()=>store.set('hsw.'+id,$(id).value));
 }
+{const v=store.get('hsw.plume'); if(v!=null) $('plume').checked=v==='1'; $('plume').addEventListener('change',()=>store.set('hsw.plume',$('plume').checked?'1':'0'));}
 if(store.get('hsw.v')!=='2'){$('mapkey').value='';store.set('hsw.mapkey','');store.set('hsw.v','2');}
 
 // ---- tabs
@@ -1458,7 +1504,7 @@ async function runModel(hotsRaw,mode,windOverride,quiet){
   busy(T('Running dispersion…','กำลังคำนวณการแพร่กระจายควัน…'));
   await new Promise(r=>setTimeout(r,20));
   const top=S.sources.slice(0,800); // strongest clusters across the whole domain; keeps the browser responsive
-  S.sim=simulate(top,W,{ef:+$('fuel').value,durH:+$('dur').value,tEnd:now+horizon*3600e3});
+  S.sim=simulate(top,W,{ef:+$('fuel').value,durH:+$('dur').value,profile:$('fireProf').value,plumeRise:$('plume').checked,tEnd:now+horizon*3600e3});
   computeReceptors();
   if(mode==='live'&&!P.data){const cams=await fetchCams(S.recep); if(cams) S.recep.forEach((r,i)=>r.cams=cams[i]);}
   setMode(mode); busy(null);

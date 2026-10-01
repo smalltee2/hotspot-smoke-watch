@@ -258,7 +258,7 @@ async function main() {
 
   // 4b. meteorology (fixed model, nested grids), refreshed every few hours
   let met = await readJSON(path.join(DATA, 'met.json'), null);
-  const metKey = JSON.stringify(CFG.met.grids) + MET_MODEL;
+  const metKey = JSON.stringify(CFG.met.grids) + MET_MODEL + '|n2';
   if (!met || met.key !== metKey || now - met.fetched > CFG.met.refreshH * HOUR) {
     try {
       met = await fetchMet(CFG.met.grids, { get, sleep, log, keepFrom: now - 36 * HOUR });

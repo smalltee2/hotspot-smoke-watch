@@ -358,6 +358,7 @@ td.num{text-align:right;font-family:var(--font-data);font-variant-numeric:tabula
       </div>
       <div class="showpick"><strong>Show on map</strong>
         <label><input type="checkbox" id="shContour" checked> Contour lines</label>
+        <label><input type="checkbox" id="shProv"> Province borders and names</label>
         <label><input type="checkbox" id="shSt" checked> OpenAQ stations</label>
         <label><input type="checkbox" id="shHot" checked> Hotspots</label>
         <label><input type="checkbox" id="shTown" checked> Towns</label>
@@ -744,13 +745,20 @@ map.createPane('land').style.zIndex=150;
 map.createPane('lines').style.zIndex=380; map.getPane('lines').style.pointerEvents='none';
 const GEO_P=JSON.parse($('geoProv').textContent), GEO_C=JSON.parse($('geoCtry').textContent);
 let landLayer,provLayer,ctryLayer,provLabels,tiles,bm=store.get('hsw.basemap2')||'light';
+// One set of borders at a time: online basemaps draw their own country borders, so the built-in
+// outline map is used only for "Plain", plus optional province borders on top of an online map.
+{const v=store.get('hsw.shProv'); if(v!=null) document.getElementById('shProv').checked=v==='1';}
 function styleBase(){
-  if(landLayer) map.removeLayer(landLayer); if(provLayer) map.removeLayer(provLayer); if(ctryLayer) map.removeLayer(ctryLayer);
-  map.getContainer().style.background=cssVar('--sea');
-  landLayer=L.geoJSON(GEO_C,{pane:'land',interactive:false,style:{stroke:false,fillColor:cssVar('--land'),fillOpacity:1}}).addTo(map);
-  const online=bm!=='plain';
-  provLayer=L.geoJSON(GEO_P,{pane:'lines',interactive:false,style:{color:online?(bm==='sat'?'#ffffff':cssVar('--border')):cssVar('--prov'),weight:online?0.8:0.7,opacity:online?0.55:1,fill:false,dashArray:online?'3 3':null}}).addTo(map);
-  ctryLayer=L.geoJSON(GEO_C,{pane:'lines',interactive:false,style:{color:bm==='sat'?'#ffffff':cssVar('--border'),weight:1.6,opacity:.9,fill:false}}).addTo(map);
+  for(const l of [landLayer,provLayer,ctryLayer]) if(l) map.removeLayer(l);
+  landLayer=provLayer=ctryLayer=null;
+  const online=bm!=='plain', wantProv=!online||document.getElementById('shProv').checked;
+  map.getContainer().style.background=online?cssVar('--bg'):cssVar('--sea');
+  if(!online){
+    landLayer=L.geoJSON(GEO_C,{pane:'land',interactive:false,style:{stroke:false,fillColor:cssVar('--land'),fillOpacity:1}}).addTo(map);
+    ctryLayer=L.geoJSON(GEO_C,{pane:'lines',interactive:false,style:{color:cssVar('--border'),weight:1.6,opacity:.9,fill:false}}).addTo(map);
+  }
+  if(wantProv) provLayer=L.geoJSON(GEO_P,{pane:'lines',interactive:false,style:{color:bm==='sat'?'#ffffff':online?cssVar('--border'):cssVar('--prov'),weight:online?0.9:0.7,opacity:online?0.7:1,fill:false}}).addTo(map);
+  if(typeof provLabels!=='undefined'&&provLabels){ if(wantProv) map.addLayer(provLabels); else map.removeLayer(provLabels); }
 }
 function provCentroid(f){let b=L.geoJSON(f).getBounds();let best=null,area=0;
   const polys=f.geometry.type==='Polygon'?[f.geometry.coordinates]:f.geometry.coordinates;
@@ -948,6 +956,7 @@ function applyVisibility(){
     for(const l of layers){ if(shown(id)) map.addLayer(l); else map.removeLayer(l); }
   drawContours();
 }
+document.getElementById('shProv').addEventListener('change',e=>{store.set('hsw.shProv',e.target.checked?'1':'0');styleBase();});
 for(const id of ['shContour','shSt','shHot','shTown']){
   const v=store.get('hsw.'+id); if(v!=null) $(id).checked=v==='1';
   $(id).addEventListener('change',()=>{store.set('hsw.'+id,$(id).checked?'1':'0');applyVisibility();});

@@ -76,14 +76,17 @@ export function regressionKriging(obs, gridSpec, opt = {}) {
   const beta = ols(X, y); if (!beta) return null;
   const pred = o => beta[0] + o.x.reduce((s, v, j) => s + beta[j + 1] * v, 0);
   const res = obs.map(o => o.y - pred(o)), pts = obs.map(o => [o.lat, o.lon]);
-  // covariance of the regression coefficients, s²(XᵀX)⁻¹, for the regression part of the prediction variance
-  const p = beta.length, XtX = Array.from({ length: p }, () => new Array(p).fill(0));
-  for (const o of obs) { const r = [1, ...o.x]; for (let j = 0; j < p; j++) for (let k = 0; k < p; k++) XtX[j][k] += r[j] * r[k]; }
-  for (let j = 1; j < p; j++) XtX[j][j] += 1e-6 * obs.length;   // same small ridge as ols()
-  const s2 = res.reduce((a, e) => a + e * e, 0) / Math.max(1, obs.length - p);
+  // variance of the regression part at x₀, written in centred form for numerical stability (predictors can be
+  // nearly collinear): Var(x₀ᵀβ̂) = s²/n + (x₀ − x̄)ᵀ s²(X_cᵀX_c)⁻¹ (x₀ − x̄), X_c = centred predictors
+  const p = beta.length - 1, n = obs.length, xbar = new Array(p).fill(0);
+  for (const o of obs) for (let j = 0; j < p; j++) xbar[j] += o.x[j] / n;
+  const XtX = Array.from({ length: p }, () => new Array(p).fill(0));
+  for (const o of obs) for (let j = 0; j < p; j++) for (let k = 0; k < p; k++) XtX[j][k] += (o.x[j] - xbar[j]) * (o.x[k] - xbar[k]);
+  for (let j = 0; j < p; j++) XtX[j][j] += 1e-6 * n;   // same small ridge as ols()
+  const s2 = res.reduce((a, e) => a + e * e, 0) / Math.max(1, n - p - 1);
   const inv = Array.from({ length: p }, (_, j) => solve(XtX.map(r => r.slice()), Array.from({ length: p }, (_, k) => +(k === j))));
-  const covBeta = inv.every(Boolean) ? inv.map(col => col.map(x => s2 * x)) : null;   // symmetric, so columns = rows
-  const regVar = x => { if (!covBeta) return 0; const r = [1, ...x]; let q = 0; for (let j = 0; j < p; j++) for (let k = 0; k < p; k++) q += r[j] * covBeta[j][k] * r[k]; return Math.max(0, q); };
+  const covSlope = inv.every(Boolean) ? inv.map(col => col.map(x => s2 * x)) : null;   // symmetric, so columns = rows
+  const regVar = x => { let q = s2 / n; if (covSlope) for (let j = 0; j < p; j++) for (let k = 0; k < p; k++) q += (x[j] - xbar[j]) * covSlope[j][k] * (x[k] - xbar[k]); return Math.max(0, q); };
   const vario = fitVariogram(pts, res);
   const maxKm = Math.min(400, Math.max(150, 3 * vario.a)), K = opt.K || 16;
   // fade the kriged residual to 0 between 1× and 2× maxKm/... from the nearest station, so far areas revert to the regression
@@ -103,7 +106,7 @@ export function regressionKriging(obs, gridSpec, opt = {}) {
     values[iy * nx + ix] = Math.round(k.est * fade(k.dmin) * 1000) / 1000;
     sd[iy * nx + ix] = Math.round(Math.sqrt(residVar(k)) * 100) / 100;   // residual part only; the page adds the regression part
   }
-  return { beta, covBeta, vario: { c0: vario.c0, c1: vario.c1, a_km: vario.a, nbins: vario.bins.length, fallback: !!vario.fallback }, maxKm,
+  return { beta, regCov: { s2n: s2 / n, xbar, covSlope }, vario: { c0: vario.c0, c1: vario.c1, a_km: vario.a, nbins: vario.bins.length, fallback: !!vario.fallback }, maxKm,
     cv: cv.map(c => c.c), cvCover1s: Math.round(cover * 100) / 100, cvSdMedian: Math.round([...cvSd].sort((a, b) => a - b)[cvSd.length >> 1] * 1000) / 1000,
     resid: { lon0, lat0, step, nx, ny, values, sd } };
 }

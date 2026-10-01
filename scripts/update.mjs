@@ -12,7 +12,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { buildDEM, sampleGrid } from './dem.mjs';
 import { regressionKriging } from './rk.mjs';
-import { fetchMet, sampleMet, MET_MODEL } from './met.mjs';
+import { fetchMet, sampleMet, packMet, MET_MODEL } from './met.mjs';
 
 // ------------------------------------------------------------------ config
 const CFG = {
@@ -266,6 +266,10 @@ async function main() {
     } catch (e) { log(`met refresh failed: ${e.message}${met ? ' (keeping previous)' : ''}`); }
   }
 
+  // compact copy for the page: 36 h back (dispersion spin-up) to 75 h ahead (longest forecast option + interpolation)
+  if (met) { const web = packMet(met, now - 36 * HOUR, now + 75 * HOUR); await writeJSON(path.join(DATA, 'met-web.json'), web);
+    log(`met-web: ${web.times.length} h, ${(JSON.stringify(web).length / 1024).toFixed(0)} KB (full ${(JSON.stringify(met).length / 1024).toFixed(0)} KB)`); }
+
   // 5. regression kriging (RIMM-type) at the analysis hour, in log space:
   //    ln(obs+1) = b0 + b1 ln(CAMS+1) + b2 elev_km + b3 ln(BLH/1000) + b4 wind100 + residual;  residual → ordinary kriging on a 0.1° grid.
   //    The page applies it to every forecast hour, fading the correction with lead time (biasLeadEfoldH).
@@ -297,7 +301,7 @@ async function main() {
       rk = { t: tSorted[Math.floor(tSorted.length / 2)], n: rkObs.length, beta: out.beta.map(b => +b.toFixed(4)), predictors: ['ln(CAMS+1)', ...(dem ? ['elevation_km'] : []), ...(met ? ['ln(BLH_km)', 'wind100_ms'] : [])],
         vario: { ...out.vario, c0: +out.vario.c0.toFixed(4), c1: +out.vario.c1.toFixed(4) }, maxKm: out.maxKm, leadEfoldH: CFG.biasLeadEfoldH,
         cv: { n: o.length, cams: err(rkObs.map(r => r.cams), o), rk: err(out.cv, o), cover1s: out.cvCover1s, sdMedian: out.cvSdMedian },
-        covBeta: out.covBeta && out.covBeta.map(r => r.map(x => +x.toPrecision(4))), resid: out.resid };
+        regCov: { s2n: +out.regCov.s2n.toPrecision(4), xbar: out.regCov.xbar.map(x => +x.toPrecision(6)), covSlope: out.regCov.covSlope && out.regCov.covSlope.map(r => r.map(x => +x.toPrecision(6))) }, resid: out.resid };
       log(`RK: ${rk.n} monitors, beta=[${rk.beta.join(', ')}], range ${rk.vario.a_km} km, LOO RMSE CAMS ${rk.cv.cams.rmse} → RK ${rk.cv.rk.rmse} µg/m³, ±1σ coverage ${rk.cv.cover1s}`);
     }
   } else log(`RK skipped: only ${rkObs.length} monitors with fresh data`);
@@ -317,7 +321,7 @@ async function main() {
     generated: now, camsIssued: C.at, bbox: CFG.bbox, runlog: RUNLOG,
     method: { kf: CFG.kf, biasLeadEfoldH: CFG.biasLeadEfoldH, rk: CFG.rk },
     rk, dem: dem ? { file: 'data/static/elev.json', step: dem.step, source: dem.source } : null,
-    met: met ? { file: 'data/met.json', model: met.model, fetched: met.fetched, grids: met.grids.map(g => ({ step: g.step, bbox: [g.lon0, g.lat0, g.lon0 + (g.nx - 1) * g.step, g.lat0 + (g.ny - 1) * g.step] })) } : null,
+    met: met ? { file: 'data/met-web.json', model: met.model, fetched: met.fetched, grids: met.grids.map(g => ({ step: g.step, bbox: [g.lon0, g.lat0, g.lon0 + (g.nx - 1) * g.step, g.lat0 + (g.ny - 1) * g.step] })) } : null,
     hours, stations: outStations,
     grid: { lon0: g[0], lat0: g[1], step, nx, ny, values: gridRaw },  // raw CAMS; the page applies rk
     hotspots: { cols: ['lat', 'lon', 'frp', 't', 'conf', 'sat'], rows: hot, fetched: hotFetched ?? (await readJSON(path.join(DATA, 'latest.json'), null))?.hotspots?.fetched ?? null },

@@ -400,7 +400,7 @@ td.num{text-align:right;font-family:var(--font-data);font-variant-numeric:tabula
       <p class="note">z is elevation in km from a 0.05° terrain grid (AWS Terrain Tiles, largely SRTM-derived); BLH (km) and U, the 100 m wind speed (m s⁻¹), come from the ECMWF IFS HRES fields above at the observation hour and, for forecasts, at each valid hour. They let the map respond to shallow mixing and calm nights at a finer scale than CAMS; wind speed is also a predictor in the hourly 1 km PM<sub>2.5</sub> model for Thailand of Punpukdee et al. (2024). The residuals ε are interpolated by ordinary kriging with an exponential semivariogram fitted each hour (nearest 16 monitors, residual grid 0.1°). This is the regression–interpolation structure used for the EEA European air-quality maps (Horálek et al., 2025), kriging with a chemistry-transport-model drift as in Real et al. (2022), and regression/universal kriging as compared by Beelen et al. (2009). Elevation is included because it improved PM<sub>2.5</sub> mapping over Thailand in Han et al. (2022). For forecast hours the map is</p>
       <span class="eq">ln(PM+1) = ln(CAMS+1) + w·[β₀ + (β₁−1)·ln(CAMS+1) + β₂·z + β₃·ln(BLH) + β₄·U + ε̂],  w = e<sup>−lead/48 h</sup></span>
       <p class="note">so the correction is full at the analysis hour and the map returns to CAMS for long leads. Far from monitors the kriged residual fades to zero and only the regression part remains. The map is computed at 0.05°; real detail comes from the monitors and the terrain, while CAMS itself is about 0.4°.</p>
-      <p class="note"><strong>Uncertainty layer.</strong> The regression-kriging prediction variance (Hengl et al., 2007) is the kriging variance of the residual plus the variance of the regression part: σ² = σ²<sub>OK</sub> + x₀ᵀ·Cov(β)·x₀, with σ²<sub>OK</sub> = Σλᵢγ(xᵢ,x₀) + μ from the ordinary-kriging system and Cov(β) = s²(XᵀX)⁻¹ from the regression (an ordinary-least-squares stand-in for the generalised-least-squares term). Where the kriged residual is faded out, σ² rises toward the variogram sill. Because the model is in log space, the 68% range is (PM+1)·e<sup>±σ</sup> − 1, and the map shows e<sup>σ</sup> − 1 as a percentage. σ is checked hourly by leave-one-out: about 68% of left-out monitors should fall inside ±1σ. It covers the analysis hour only; forecast error grows with lead time (table below).</p>
+      <p class="note"><strong>Uncertainty layer.</strong> The regression-kriging prediction variance (Hengl et al., 2007) is the kriging variance of the residual plus the variance of the regression part: σ² = σ²<sub>OK</sub> + s²/n + (x₀−x̄)ᵀ·Cov(β<sub>slopes</sub>)·(x₀−x̄) (the regression variance in centred form), with σ²<sub>OK</sub> = Σλᵢγ(xᵢ,x₀) + μ from the ordinary-kriging system and Cov(β<sub>slopes</sub>) = s²(X<sub>c</sub>ᵀX<sub>c</sub>)⁻¹ from the regression on centred predictors (an ordinary-least-squares stand-in for the generalised-least-squares term). Where the kriged residual is faded out, σ² rises toward the variogram sill. Because the model is in log space, the 68% range is (PM+1)·e<sup>±σ</sup> − 1, and the map shows e<sup>σ</sup> − 1 as a percentage. σ is checked hourly by leave-one-out: about 68% of left-out monitors should fall inside ±1σ. It covers the analysis hour only; forecast error grows with lead time (table below).</p>
       <div id="rkBox" class="note"></div>
       <h3>Fine total PM<sub>2.5</sub></h3>
       <p class="note">The fine layer adds sub-grid structure from the fire-smoke model to the regression-kriging map: C<sub>fine</sub> = C<sub>RK</sub> + α·(C<sub>fire</sub> − ⟨C<sub>fire</sub>⟩<sub>0.5°</sub>), where ⟨·⟩<sub>0.5°</sub> is the mean over a CAMS-sized box, computed at 0.025°. The 0.5° average stays equal to the map below it, so fire smoke already in CAMS (GFAS) is not counted twice. This follows the idea of sub-grid dispersion without double counting in uEMEP (Denby et al., 2020); here a box-mean high-pass replaces uEMEP's local-fraction bookkeeping, which CAMS does not provide. α is set in Settings and will be calibrated against monitors in the burning season.</p>
@@ -761,7 +761,7 @@ const BY=[0.22,0.16,0.11,0.08,0.06,0.04];
 function sigYc(x,k){return BY[k]*x/Math.sqrt(1+1e-4*x);}
 function sigZc(x,k){switch(k){case 0:return 0.20*x;case 1:return 0.12*x;case 2:return 0.08*x/Math.sqrt(1+2e-4*x);
   case 3:return 0.06*x/Math.sqrt(1+1.5e-3*x);case 4:return 0.03*x/(1+3e-4*x);default:return 0.016*x/(1+3e-4*x);}}
-function sigma(x,cls,fn){const lo=Math.floor(cls)-1, hi=Math.ceil(cls)-1;return lo===hi?fn(x,lo):0.5*(fn(x,lo)+fn(x,hi));}
+function sigma(x,cls,fn){cls=Math.min(6,Math.max(1,cls)); const lo=Math.floor(cls)-1, hi=Math.ceil(cls)-1;return lo===hi?fn(x,lo):0.5*(fn(x,lo)+fn(x,hi));}
 
 // ---------------------------------------------------------------- simulation
 // sources: [{lat,lon,frp,t0}], W: wind, opts:{ef,durH,releaseS,dtS,tEnd}
@@ -1091,9 +1091,18 @@ async function runAuto_(quiet){
   else if(!quiet){P.data=null; await runLive();}
 }
 let DEM=null, MET=null;
+// met-web.json stores integers as hour-to-hour differences (see scripts/met.mjs packMet); rebuild the plain arrays
+function unpackMet(P){
+  if(P.enc!=='int-dt') return P; const nt=P.times.length;
+  for(const g of P.grids){const n=g.nx*g.ny;
+    for(const k of P.vars){const d=g.data[k], sc=P.scale[k]??1, out=new Float64Array(d.length);
+      for(let p=0;p<n;p++){let q=0; for(let t=0;t<nt;t++){q+=d[t*n+p]; out[t*n+p]=q/sc;}}
+      g.data[k]=out;}}
+  delete P.enc; return P;
+}
 async function loadMet(){
   if(!P.data?.met) {MET=null; return;} if(MET&&MET.fetched===P.data.met.fetched) return;
-  try{const r=await fetch(P.data.met.file+'?f='+P.data.met.fetched); if(r.ok) MET=await r.json();}catch(e){MET=null;}
+  try{const r=await fetch(P.data.met.file+'?f='+P.data.met.fetched); if(r.ok) MET=unpackMet(await r.json());}catch(e){MET=null;}
 }
 async function loadDEM(){
   if(DEM||!P.data?.dem) return;
@@ -1125,8 +1134,9 @@ function rkValue(c,lat,lon,t){
 function rkSigma(c,lat,lon){
   const rk=P.data&&P.data.rk; if(!rk||!rk.resid.sd||c<0) return null;
   const sr=sampleRegular({...rk.resid,values:rk.resid.sd},lat,lon); if(sr==null) return null;
-  let q=0; const x=rk.covBeta?rkX(c,lat,lon,rk.t):null;
-  if(x){const r=[1,...x]; for(let j=0;j<r.length;j++) for(let k=0;k<r.length;k++) q+=r[j]*rk.covBeta[j][k]*r[k];}
+  // regression part in centred form: s²/n + (x₀−x̄)ᵀ Cov(slopes) (x₀−x̄)
+  const R=rk.regCov; let q=R?R.s2n:0; const x=R&&R.covSlope?rkX(c,lat,lon,rk.t):null;
+  if(x) for(let j=0;j<x.length;j++) for(let k=0;k<x.length;k++) q+=(x[j]-R.xbar[j])*R.covSlope[j][k]*(x[k]-R.xbar[k]);
   return Math.sqrt(sr*sr+Math.max(0,q));
 }
 const UNC_BINS=[25,50,75,100,Infinity], UNC_COL=['#ddd3f0','#b9a3e3','#9472cf','#6d47b5','#47238a'];

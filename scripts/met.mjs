@@ -77,3 +77,32 @@ export function sampleMet(M, lat, lon, t) {
     return o;
   }
 }
+
+// Compact copy for the web page: same values (already rounded to 0.1 m/s, 10 m, 0.1 mm/h), stored as integers and
+// as differences from the previous hour at the same grid point, which gzip compresses well. Trimmed to [from, to].
+export const MET_SCALE = { u: 10, v: 10, blh: 0.1, cls: 1, pr: 10 };
+export function packMet(M, from, to) {
+  const T = M.times, a = Math.max(0, T.findIndex(t => t >= from)), b = Math.max(a + 1, T.findLastIndex(t => t <= to) + 1), nt = b - a;
+  const grids = M.grids.map(g => {
+    const n = g.nx * g.ny, data = {};
+    for (const k of M.vars) {
+      const src = g.data[k], sc = MET_SCALE[k] ?? 1, out = new Array(nt * n);
+      for (let t = 0; t < nt; t++) for (let p = 0; p < n; p++) {
+        const q = Math.round(src[(a + t) * n + p] * sc);
+        out[t * n + p] = t ? q - Math.round(src[(a + t - 1) * n + p] * sc) : q;
+      }
+      data[k] = out;
+    }
+    return { lon0: g.lon0, lat0: g.lat0, step: g.step, nx: g.nx, ny: g.ny, data };
+  });
+  return { model: M.model, fetched: M.fetched, vars: M.vars, enc: 'int-dt', scale: MET_SCALE, times: T.slice(a, b), grids };
+}
+export function unpackMet(P) {
+  if (P.enc !== 'int-dt') return P;
+  const nt = P.times.length;
+  for (const g of P.grids) { const n = g.nx * g.ny;
+    for (const k of P.vars) { const d = g.data[k], sc = P.scale[k] ?? 1, out = new Float64Array(d.length);
+      for (let p = 0; p < n; p++) { let q = 0; for (let t = 0; t < nt; t++) { q += d[t * n + p]; out[t * n + p] = q / sc; } }
+      g.data[k] = out; } }
+  delete P.enc; return P;
+}

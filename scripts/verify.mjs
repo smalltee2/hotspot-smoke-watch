@@ -35,16 +35,22 @@ for (const f of files.filter(f => path.basename(f).startsWith('obs-'))) for (con
   const t = Date.parse(r.time_utc); if (t < cutoff) continue;
   obs.set(`${r.station_id}|${new Date(Math.round(t / 3600e3) * 3600e3).toISOString().slice(0, 13)}`, +r.obs_pm25);
 }
-const byLead = new Map();
+// From 2 Oct 2026 the log also holds 24-h-mean forecasts (cams24, corr24, blend24) for Air4Thai stations, whose observations are
+// 24-h running means; those rows are scored like for like. Older rows compared hourly CAMS with 24-h observations and are kept apart.
+const byLead = new Map(), legacy = new Map();
 for (const f of files.filter(f => path.basename(f).startsWith('fcst-'))) { const seen = new Set(); for (const r of await readCSV(path.join(HIST, f))) {
   // several runs in one hour (manual or overlapping triggers) appended to the same file before 2 Oct 2026: keep the first forecast per station and lead
   const key = `${r.station_id}|${r.lead_h}|${r.valid_utc}`; if (seen.has(key)) continue; seen.add(key);
   if (Date.parse(r.valid_utc) < cutoff) continue;
   const o = obs.get(`${r.station_id}|${r.valid_utc.slice(0, 13)}`); if (o == null) continue;
-  const L = +r.lead_h; if (!byLead.has(L)) byLead.set(L, { raw: [], cor: [] });
-  byLead.get(L).raw.push([+r.cams_raw, o]); byLead.get(L).cor.push([+r.corrected, o]);
+  const L = +r.lead_h;
+  if (r.cams24 !== undefined && r.cams24 !== '' && r.blend24 !== '') {
+    if (!byLead.has(L)) byLead.set(L, { raw: [], cor: [], blend: [], per: [] });
+    const B = byLead.get(L); B.raw.push([+r.cams24, o]); B.cor.push([+r.corr24, o]); B.blend.push([+r.blend24, o]);
+  } else { if (!legacy.has(L)) legacy.set(L, { raw: [], cor: [] }); legacy.get(L).raw.push([+r.cams_raw, o]); legacy.get(L).cor.push([+r.corrected, o]); }
 } }
-const leads = [...byLead.entries()].sort((a, b) => a[0] - b[0])
-  .map(([L, v]) => ({ lead_h: L, n: v.raw.length, raw: score(v.raw), corrected: score(v.cor) }));
-await fs.writeFile(path.join(ROOT, 'data', 'verify.json'), JSON.stringify({ updated: Date.now(), window_days: WINDOW_DAYS, leads }));
+const useNew = byLead.size > 0, src = useNew ? byLead : legacy;
+const leads = [...src.entries()].sort((a, b) => a[0] - b[0])
+  .map(([L, v]) => ({ lead_h: L, n: v.raw.length, raw: score(v.raw), corrected: score(v.cor), blend: v.blend ? score(v.blend) : null }));
+await fs.writeFile(path.join(ROOT, 'data', 'verify.json'), JSON.stringify({ updated: Date.now(), window_days: WINDOW_DAYS, basis: useNew ? '24h' : 'legacy-hourly', leads }));
 console.log('verify:', leads.map(l => `${l.lead_h}h n=${l.n}`).join(' '));

@@ -318,6 +318,10 @@ td.num{text-align:right;font-family:var(--font-data);font-variant-numeric:tabula
       <div class="field"><label for="region" data-th="พื้นที่แสดงผล">Region</label>
         <select id="region">
           <option value="north" data-th="ภาคเหนือและพื้นที่ชายแดน">Northern Thailand and border areas</option>
+          <option value="northeast" data-th="ภาคตะวันออกเฉียงเหนือ (อีสาน)">Northeastern Thailand (Isan)</option>
+          <option value="central" data-th="ภาคกลาง">Central Thailand</option>
+          <option value="east" data-th="ภาคตะวันออก">Eastern Thailand</option>
+          <option value="south" data-th="ภาคใต้">Southern Thailand</option>
           <option value="thailand" data-th="ประเทศไทย">Thailand</option>
           <option value="msea" data-th="เอเชียตะวันออกเฉียงใต้ภาคพื้นทวีป">Mainland Southeast Asia</option>
         </select></div>
@@ -518,8 +522,12 @@ const WET_A = 8e-5, WET_B = 0.79;   // scavenging Λ = A·P^B (s⁻¹, P in mm/h
 const DEG = Math.PI/180, MPD = 111320; // metres per degree latitude
 const REGIONS = {
   north:    {name:'Northern Thailand', bbox:[96.5,15.0,102.8,22.0]},
+  northeast:{name:'Northeastern Thailand', bbox:[100.9,14.1,105.7,18.5]},
+  central:  {name:'Central Thailand', bbox:[98.1,12.9,101.4,16.3]},
+  east:     {name:'Eastern Thailand', bbox:[100.6,11.5,102.95,14.6]},
+  south:    {name:'Southern Thailand', bbox:[97.3,5.6,102.1,13.6]},
   thailand: {name:'Thailand',          bbox:[97.3, 5.5,105.7,20.6]},
-  msea:     {name:'Mainland SE Asia',  bbox:[92.0, 9.0,110.0,24.0]},
+  msea:     {name:'Mainland SE Asia',  bbox:[92.0, 5.5,110.0,24.0]},
 };
 // Thai PCD PM2.5 bands (µg/m3), effective 1 Jun 2023
 const PCD = [
@@ -981,12 +989,22 @@ map.createPane('lines').style.zIndex=380; map.getPane('lines').style.pointerEven
 map.createPane('regionmask').style.zIndex=395; map.getPane('regionmask').style.pointerEvents='none';
 const GEO_P=JSON.parse($('geoProv').textContent), GEO_C=JSON.parse($('geoCtry').textContent);
 // ---- display region: the model always runs on the whole domain; the region only limits what is drawn
-const NORTH_TH=['Chiang Mai','Chiang Rai','Lampang','Lamphun','Mae Hong Son','Nan','Phayao','Phrae','Uttaradit',
-  'Tak','Sukhothai','Phitsanulok','Kamphaeng Phet','Phichit','Phetchabun','Nakhon Sawan','Uthai Thani'];
+// Thai regions as used by the Thai Meteorological Department in its forecasts (77 provinces: 17 + 20 + 16 + 8 + 16)
+const REGION_PROV={
+  north:['Chiang Mai','Chiang Rai','Lampang','Lamphun','Mae Hong Son','Nan','Phayao','Phrae','Uttaradit',
+    'Tak','Sukhothai','Phitsanulok','Kamphaeng Phet','Phichit','Phetchabun','Nakhon Sawan','Uthai Thani'],
+  northeast:['Loei','Nong Bua Lam Phu','Udon Thani','Nong Khai','Bueng Kan','Sakon Nakhon','Nakhon Phanom','Mukdahan','Kalasin','Khon Kaen',
+    'Chaiyaphum','Maha Sarakham','Roi Et','Yasothon','Amnat Charoen','Ubon Ratchathani','Si Sa Ket','Surin','Buri Ram','Nakhon Ratchasima'],
+  central:['Bangkok','Nonthaburi','Pathum Thani','Samut Prakan','Samut Sakhon','Samut Songkhram','Nakhon Pathom','Phra Nakhon Si Ayutthaya',
+    'Ang Thong','Sing Buri','Chai Nat','Lopburi','Saraburi','Suphan Buri','Kanchanaburi','Ratchaburi'],
+  east:['Nakhon Nayok','Prachin Buri','Sa Kaeo','Chachoengsao','Chon Buri','Rayong','Chanthaburi','Trat'],
+  south:['Phetchaburi','Prachuap Khiri Khan','Chumphon','Surat Thani','Nakhon Si Thammarat','Phatthalung','Songkhla','Pattani','Yala','Narathiwat',
+    'Ranong','Phang Nga','Phuket','Krabi','Trang','Satun'],
+};
 const REGION_CACHE={};
 function regionShape(){ // {polys:[[ring,...],...] in [lon,lat], bbox} or null for the whole domain
   const k=$('region').value; if(k==='msea') return null; if(REGION_CACHE[k]) return REGION_CACHE[k];
-  const feats=GEO_P.features.filter(f=>f.properties.c==='THA'&&(k==='thailand'||NORTH_TH.includes(f.properties.n)));
+  const feats=GEO_P.features.filter(f=>f.properties.c==='THA'&&(k==='thailand'||(REGION_PROV[k]||[]).includes(f.properties.n)));
   const polys=[]; let w=180,so=90,e=-180,n=-90;
   for(const f of feats){const ps=f.geometry.type==='Polygon'?[f.geometry.coordinates]:f.geometry.coordinates;
     for(const pg of ps){polys.push(pg); for(const [x,y] of pg[0]){w=Math.min(w,x);e=Math.max(e,x);so=Math.min(so,y);n=Math.max(n,y);}}}

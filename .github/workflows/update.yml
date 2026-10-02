@@ -75,7 +75,10 @@ jobs:
         if: always()
         run: |
           mkdir -p _site/data/static
-          cp index.html _site/
+          # developer page = index.html as written; public page = the same file switched to public mode
+          cp index.html _site/dev.html
+          sed '0,/<html lang="en">/s//<html lang="en" data-mode="public">/' index.html > _site/index.html
+          grep -q 'data-mode="public"' _site/index.html
           for f in latest.json met-web.json verify.json runlog.json; do [ -f "data/$f" ] && cp "data/$f" _site/data/ || true; done
           [ -f data/static/elev.json ] && cp data/static/elev.json _site/data/static/ || true
           ls -la _site _site/data

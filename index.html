@@ -62,6 +62,11 @@ main{flex:1;display:grid;grid-template-columns:minmax(300px,380px) 1fr;min-heigh
 .leaflet-control-attribution:hover,.leaflet-control-attribution:focus-within{white-space:normal}
 aside{border-right:1px solid var(--line);background:var(--panel);display:flex;flex-direction:column;min-height:0;min-width:0}
 .summary{display:grid;grid-template-columns:repeat(4,1fr);border-bottom:1px solid var(--line)}
+/* one file, two audiences: the public page is this file with <html data-mode="public"> (built in the workflow) */
+html[data-mode=public] .dev-only{display:none!important}
+html:not([data-mode=public]) .pub-only{display:none!important}
+html[data-mode=public] .summary{grid-template-columns:repeat(2,1fr)}
+.about p,.about li{line-height:1.55}.about .lvl{display:grid;grid-template-columns:14px 1fr;gap:4px 10px;align-items:start;margin:6px 0}.about .lvl i{width:14px;height:14px;border-radius:3px;margin-top:3px}
 .summary div{padding:10px 8px;border-right:1px solid var(--line);min-width:0}
 .summary div:last-child{border-right:0}
 .summary b{display:block;font:600 1.25rem/1.1 var(--font-data);font-variant-numeric:tabular-nums}
@@ -280,8 +285,8 @@ td.num{text-align:right;font-family:var(--font-data);font-variant-numeric:tabula
   <aside>
     <div class="summary">
       <div><b id="sHot">–</b><span data-th="จุดความร้อน">Hotspots</span></div>
-      <div><b id="sSrc">–</b><span data-th="กลุ่มไฟ">Fire clusters</span></div>
-      <div><b id="sFrp">–</b><span data-th="FRP (MW)">FRP, MW</span></div>
+      <div class="dev-only"><b id="sSrc">–</b><span data-th="กลุ่มไฟ">Fire clusters</span></div>
+      <div class="dev-only"><b id="sFrp">–</b><span data-th="FRP (MW)">FRP, MW</span></div>
       <div><b id="sWarn">–</b><span data-th="เมืองที่เตือน">Towns warned</span></div>
     </div>
     <section id="hereBox" class="herebox" hidden aria-live="polite"></section>
@@ -289,16 +294,19 @@ td.num{text-align:right;font-family:var(--font-data);font-variant-numeric:tabula
       <button role="tab" aria-selected="true" data-tab="warn" id="tab-warn" data-th="คำเตือน">Warnings</button>
       <button role="tab" aria-selected="false" data-tab="hot" id="tab-hot" data-th="จุดความร้อน">Hotspots</button>
       <button role="tab" aria-selected="false" data-tab="set" id="tab-set" data-th="ตั้งค่า">Settings</button>
-      <button role="tab" aria-selected="false" data-tab="method" id="tab-method" data-th="วิธีการ">Method</button>
+      <button role="tab" aria-selected="false" data-tab="about" id="tab-about" class="pub-only" data-th="เกี่ยวกับ">About</button>
+      <button role="tab" aria-selected="false" data-tab="method" id="tab-method" class="dev-only" data-th="วิธีการ">Method</button>
     </div>
 
     <section class="pane" id="pane-warn" role="tabpanel">
       <div id="banner"></div>
       <h3 data-th="พยากรณ์ควันไฟรายเมือง">Smoke forecast at towns</h3>
-      <p class="note" data-th="PM&lt;sub&gt;2.5&lt;/sub&gt; ที่เพิ่มจากไฟ ใช้ค่าเฉลี่ย 24 ชม. สูงสุดในช่วงพยากรณ์ แบ่งระดับตามเกณฑ์กรมควบคุมมลพิษ คลิกชื่อเมืองเพื่อดูตำแหน่งบนแผนที่และกราฟรายชั่วโมง">Fire-added PM<sub>2.5</sub>, highest 24-h mean in the forecast window, banded on Thailand's PCD scale. Click a town to fly there and show its time series.</p>
+      <p class="note dev-only" data-th="PM&lt;sub&gt;2.5&lt;/sub&gt; ที่เพิ่มจากไฟ ใช้ค่าเฉลี่ย 24 ชม. สูงสุดในช่วงพยากรณ์ แบ่งระดับตามเกณฑ์กรมควบคุมมลพิษ คลิกชื่อเมืองเพื่อดูตำแหน่งบนแผนที่และกราฟรายชั่วโมง">Fire-added PM<sub>2.5</sub>, highest 24-h mean in the forecast window, banded on Thailand's PCD scale. Click a town to fly there and show its time series.</p>
+      <p class="note pub-only" data-th="ควันจากไฟป่าและการเผาที่คาดว่าจะมาถึงแต่ละเมือง (ค่าเฉลี่ย 24 ชม. สูงสุดในอีก 2 วันข้างหน้า) กดชื่อเมืองเพื่อดูกราฟรายชั่วโมง">Smoke from fires expected to reach each town (highest 24-hour average in the next two days). Tap a town for its hourly chart.</p>
       <div id="warnList"></div>
       <h3 data-th="สถานีตรวจวัด: 48 ชม. ข้างหน้า">Monitoring stations: next 48 h</h3>
-      <p class="note" data-th="PM&lt;sub&gt;2.5&lt;/sub&gt; ที่วัดได้ขณะนี้ และค่าพยากรณ์ CAMS ที่ปรับแก้ทุกชั่วโมงด้วยค่าตรวจวัดของสถานีนั้นเอง (PM&lt;sub&gt;2.5&lt;/sub&gt; รวมทุกแหล่ง)">Measured PM<sub>2.5</sub> now, and the CAMS forecast corrected hourly against each station's own readings (total PM<sub>2.5</sub>, all sources).</p>
+      <p class="note pub-only" data-th="ค่าฝุ่นที่วัดได้จริงตอนนี้ และค่าพยากรณ์ 2 วันข้างหน้าที่ปรับให้ตรงกับสถานีนั้น">PM<sub>2.5</sub> measured now, and the forecast for the next two days adjusted to each station.</p>
+      <p class="note dev-only" data-th="PM&lt;sub&gt;2.5&lt;/sub&gt; ที่วัดได้ขณะนี้ และค่าพยากรณ์ CAMS ที่ปรับแก้ทุกชั่วโมงด้วยค่าตรวจวัดของสถานีนั้นเอง (PM&lt;sub&gt;2.5&lt;/sub&gt; รวมทุกแหล่ง)">Measured PM<sub>2.5</sub> now, and the CAMS forecast corrected hourly against each station's own readings (total PM<sub>2.5</sub>, all sources).</p>
       <div id="stList" class="note">Station data appear here when the page runs from the hosted site.</div>
       <h3 data-th="จุดความร้อนใกล้เมือง">Hotspots close to towns</h3>
       <div id="nearList" class="note">–</div>
@@ -307,14 +315,15 @@ td.num{text-align:right;font-family:var(--font-data);font-variant-numeric:tabula
 
     <section class="pane" id="pane-hot" role="tabpanel" hidden>
       <h3 data-th="จุดความร้อนรายจังหวัด">Hotspots by province</h3>
-      <div class="tablewrap"><table id="provTable"><thead><tr><th data-th="จังหวัด">Province</th><th class="num" data-th="จุด">Hotspots</th><th class="num">FRP MW</th><th class="num" data-th="12 ชม. ล่าสุด">Last 12 h</th></tr></thead><tbody></tbody></table></div>
-      <h3 data-th="กลุ่มไฟขนาดใหญ่ที่สุด">Largest fire clusters</h3>
-      <p class="note" data-th="รวมจุดตรวจพบเป็นช่องขนาด 0.1° ค่า FRP คือผลรวมสูงสุดจากการโคจรผ่านครั้งเดียวในช่องนั้น ไฟเดียวกันที่ดาวเทียมสองดวงเห็นจึงไม่ถูกนับซ้ำ">Detections grouped into 0.1° cells. FRP is the largest single-overpass total in the cell, so the same fire seen by two satellites is not counted twice.</p>
-      <div class="tablewrap"><table id="srcTable"><thead><tr><th data-th="ใกล้เมือง">Cluster near</th><th class="num" data-th="จุด">Det.</th><th class="num">FRP MW</th><th class="num">PM₂.₅ g/s</th><th data-th="ตรวจพบล่าสุด">Last seen</th></tr></thead><tbody></tbody></table></div>
+      <div class="tablewrap"><table id="provTable"><thead><tr><th data-th="จังหวัด">Province</th><th class="num" data-th="จุด">Hotspots</th><th class="num dev-only">FRP MW</th><th class="num" data-th="12 ชม. ล่าสุด">Last 12 h</th></tr></thead><tbody></tbody></table></div>
+      <h3 class="dev-only" data-th="กลุ่มไฟขนาดใหญ่ที่สุด">Largest fire clusters</h3>
+      <p class="note dev-only" data-th="รวมจุดตรวจพบเป็นช่องขนาด 0.1° ค่า FRP คือผลรวมสูงสุดจากการโคจรผ่านครั้งเดียวในช่องนั้น ไฟเดียวกันที่ดาวเทียมสองดวงเห็นจึงไม่ถูกนับซ้ำ">Detections grouped into 0.1° cells. FRP is the largest single-overpass total in the cell, so the same fire seen by two satellites is not counted twice.</p>
+      <div class="tablewrap dev-only"><table id="srcTable"><thead><tr><th data-th="ใกล้เมือง">Cluster near</th><th class="num" data-th="จุด">Det.</th><th class="num">FRP MW</th><th class="num">PM₂.₅ g/s</th><th data-th="ตรวจพบล่าสุด">Last seen</th></tr></thead><tbody></tbody></table></div>
     </section>
 
     <section class="pane" id="pane-set" role="tabpanel" hidden>
-      <h3 data-th="พื้นที่และข้อมูลไฟ">Area and fire data</h3>
+      <h3 class="dev-only" data-th="พื้นที่และข้อมูลไฟ">Area and fire data</h3>
+      <h3 class="pub-only" data-th="พื้นที่และการแจ้งเตือน">Area and alerts</h3>
       <div class="field"><label for="region" data-th="พื้นที่แสดงผล">Region</label>
         <select id="region">
           <option value="north" data-th="ภาคเหนือและพื้นที่ชายแดน">Northern Thailand and border areas</option>
@@ -325,6 +334,7 @@ td.num{text-align:right;font-family:var(--font-data);font-variant-numeric:tabula
           <option value="thailand" data-th="ประเทศไทย">Thailand</option>
           <option value="msea" data-th="เอเชียตะวันออกเฉียงใต้ภาคพื้นทวีป">Mainland Southeast Asia</option>
         </select></div>
+      <div class="dev-only">
       <div class="field"><label for="mapkey">NASA FIRMS MAP_KEY</label>
         <input id="mapkey" type="password" autocomplete="off" placeholder="32-character key from firms.modaps.eosdis.nasa.gov/api/map_key">
         <span class="note" data-th="ใช้เฉพาะเมื่อเปิดหน้าเว็บโดยไม่มีไฟล์ข้อมูลรายชั่วโมง (เช่น เปิดจากไฟล์ในเครื่อง) หน้าเว็บที่โฮสต์ได้จุดความร้อนจากการอัปเดตรายชั่วโมงอยู่แล้ว เว้นว่างไว้ได้">Only needed when the page runs without its hourly data files (for example opened from your own disk). The hosted page gets hotspots from the hourly update instead, so leave this empty there.</span></div>
@@ -361,11 +371,12 @@ td.num{text-align:right;font-family:var(--font-data);font-variant-numeric:tabula
           <select id="horizon"><option>24</option><option selected>48</option><option>72</option></select></div>
       </div>
       <div class="field"><label><input type="checkbox" id="plume" checked> <span data-th="คำนวณความสูงควันลอยตัว (Sofiev et al. 2012)">Plume rise (Sofiev et al. 2012)</span></label></div>
+      </div>
       <div class="row">
         <div class="field"><label for="warnkm" data-th="รัศมีเตือนจุดความร้อน (กม.)">Hotspot alert radius (km)</label><input id="warnkm" type="number" min="2" max="100" value="20"></div>
-        <div class="field"><label for="proxy">CORS proxy prefix</label><input id="proxy" type="text" placeholder="optional"></div>
+        <div class="field dev-only"><label for="proxy">CORS proxy prefix</label><input id="proxy" type="text" placeholder="optional"></div>
       </div>
-      <div class="actions">
+      <div class="actions dev-only">
         <button class="btn primary" id="btnRun2" type="button" data-th="โหลดข้อมูลล่าสุด">Load live data</button>
         <button class="btn" id="btnDemo" type="button" data-th="ทดลองด้วยข้อมูลจำลอง">Run demo</button>
         <label class="btn" for="csvIn" data-th="อัปโหลดไฟล์ CSV ของ FIRMS">Upload FIRMS CSV</label>
@@ -375,7 +386,36 @@ td.num{text-align:right;font-family:var(--font-data);font-variant-numeric:tabula
       <div class="actions"><button class="btn" id="btnClearPts" type="button" data-th="ลบจุดของฉัน">Remove my points</button></div>
     </section>
 
+    <section class="pane about pub-only" id="pane-about" role="tabpanel" hidden>
+      <h3 data-th="หน้านี้แสดงอะไร">What this page shows</h3>
+      <p class="note" data-th="จุดไฟป่าและการเผาจากดาวเทียมของ NASA และพยากรณ์ฝุ่น PM&lt;sub&gt;2.5&lt;/sub&gt; ล่วงหน้า 2 วัน ที่ปรับให้ตรงกับค่าที่สถานีตรวจวัดวัดได้จริง อัปเดตทุกชั่วโมง">Fires seen by NASA satellites, and a two-day PM<sub>2.5</sub> forecast adjusted to what monitoring stations actually measure. Updated every hour.</p>
+      <h3 data-th="วิธีใช้">How to use it</h3>
+      <ul class="note">
+        <li data-th="กดปุ่มเป้าเล็งบนแผนที่ เพื่อดูค่าฝุ่นและไฟใกล้ตำแหน่งของคุณ">Tap the target button on the map to see PM<sub>2.5</sub> and nearby fires where you are.</li>
+        <li data-th="เลื่อนแถบเวลาใต้แผนที่ หรือกด ▶ เพื่อดูการพยากรณ์ชั่วโมงถัดไป">Move the time bar under the map, or press ▶, to see the coming hours.</li>
+        <li data-th="เลือก &quot;แสดงเป็น&quot; AQI ไทย หรือ AQI สหรัฐฯ ได้ในกล่องชั้นข้อมูล">Choose Thai or US AQI under “Show as” in the layers box.</li>
+        <li data-th="เปลี่ยนภาคได้ในแท็บตั้งค่า และคลิกบนแผนที่เพื่อเพิ่มจุดของคุณ เช่น บ้าน โรงเรียน">Change the region in Settings, and click the map to add your own places, such as home or a school.</li>
+      </ul>
+      <h3 data-th="ระดับสีและคำแนะนำ">Colours and what to do</h3>
+      <p class="note" data-th="ระดับตามเกณฑ์กรมควบคุมมลพิษ (ค่าเฉลี่ย 24 ชม.) คำแนะนำด้านล่างเป็นแนวทางทั่วไป">Levels follow Thailand's Pollution Control Department (24-hour average). The advice below is general guidance.</p>
+      <div class="lvl"><i style="background:var(--aq1)"></i><span data-th="&lt;b&gt;ดีมาก&lt;/b&gt; (0–15 µg/m³): ทำกิจกรรมกลางแจ้งได้ตามปกติ"><b>Very good</b> (0–15 µg/m³): outdoor activities as usual.</span></div>
+      <div class="lvl"><i style="background:var(--aq2)"></i><span data-th="&lt;b&gt;ดี&lt;/b&gt; (15.1–25): ทำกิจกรรมกลางแจ้งได้ตามปกติ"><b>Good</b> (15.1–25): outdoor activities as usual.</span></div>
+      <div class="lvl"><i style="background:var(--aq3)"></i><span data-th="&lt;b&gt;ปานกลาง&lt;/b&gt; (25.1–37.5): เด็ก ผู้สูงอายุ หญิงตั้งครรภ์ และผู้มีโรคหัวใจหรือปอด ควรลดกิจกรรมกลางแจ้งที่ใช้แรงนาน ๆ"><b>Moderate</b> (25.1–37.5): children, older people, pregnant women and people with heart or lung disease should cut down long, hard outdoor activity.</span></div>
+      <div class="lvl"><i style="background:var(--aq4)"></i><span data-th="&lt;b&gt;เริ่มมีผลกระทบต่อสุขภาพ&lt;/b&gt; (37.6–75): ทุกคนควรลดเวลาอยู่กลางแจ้ง กลุ่มเสี่ยงควรอยู่ในอาคารหรือใส่หน้ากากกันฝุ่น หากมีอาการ เช่น ไอ แน่นหน้าอก ควรพบแพทย์"><b>Starting to affect health</b> (37.6–75): everyone should spend less time outdoors; sensitive groups should stay indoors or wear a dust mask; see a doctor if you cough or feel chest tightness.</span></div>
+      <div class="lvl"><i style="background:var(--aq5)"></i><span data-th="&lt;b&gt;มีผลกระทบต่อสุขภาพ&lt;/b&gt; (มากกว่า 75): ทุกคนควรงดกิจกรรมกลางแจ้ง ใส่หน้ากาก N95 เมื่อออกนอกอาคาร และอยู่ในห้องที่มีเครื่องฟอกอากาศถ้าทำได้"><b>Affects health</b> (above 75): everyone should avoid outdoor activity, wear an N95 mask outside, and stay in a room with an air purifier if possible.</span></div>
+      <h3 data-th="ข้อควรรู้">Good to know</h3>
+      <ul class="note">
+        <li data-th="นี่คือการพยากรณ์ ไม่ใช่ประกาศทางการ ค่าจริงอาจต่างไปได้ โดยเฉพาะเมื่อพยากรณ์ล่วงหน้านาน">This is a forecast, not an official notice. Real values can differ, especially further ahead.</li>
+        <li data-th="ดาวเทียมเห็นไฟเพียงวันละประมาณ 2 ครั้ง ไฟที่เกิดระหว่างนั้นหรือใต้เมฆอาจไม่ถูกนับ">Satellites see fires only about twice a day; fires in between, or under cloud, can be missed.</li>
+        <li data-th="ค่าทางการดูได้ที่ Air4Thai ของกรมควบคุมมลพิษ (air4thai.pcd.go.th)">For official readings, see the Pollution Control Department's Air4Thai (air4thai.pcd.go.th).</li>
+      </ul>
+      <h3 data-th="ข้อมูลจาก">Data from</h3>
+      <p class="note" data-th="จุดไฟ: NASA FIRMS (ดาวเทียม VIIRS) · ฝุ่นพยากรณ์: Copernicus CAMS · ลมและสภาพอากาศ: ECMWF ผ่าน Open-Meteo · ค่าสถานี: กรมควบคุมมลพิษและเครือข่ายอื่นผ่าน OpenAQ · การใช้ที่ดิน: NASA MODIS">Fires: NASA FIRMS (VIIRS satellites) · PM<sub>2.5</sub> forecast: Copernicus CAMS · Wind and weather: ECMWF via Open-Meteo · Stations: Pollution Control Department and others via OpenAQ · Land cover: NASA MODIS.</p>
+      <p class="note"><a href="dev.html" data-th="หน้าสำหรับนักวิจัยและผู้พัฒนา (วิธีการคำนวณ ค่าตั้งค่า และผลตรวจสอบ) →">Page for researchers and developers (methods, settings and verification) →</a></p>
+    </section>
+
     <section class="pane method" id="pane-method" role="tabpanel" hidden>
+      <p class="note"><a href="./" data-th="← หน้าสำหรับประชาชนทั่วไป">← Page for the general public</a></p>
       <p class="note" data-th="รายละเอียดวิธีการและเอกสารอ้างอิงเขียนเป็นภาษาอังกฤษ เพื่อให้ตรงกับต้นฉบับของแต่ละวิธี"></p>
       <h3>What the page does</h3>
       <p>It pulls active-fire detections from NASA FIRMS, groups them into fire clusters, converts each cluster's fire radiative power (FRP) into a PM<sub>2.5</sub> emission rate, and releases Gaussian puffs that drift with forecast winds from Open-Meteo. Ground-level smoke concentration is summed over all puffs every hour.</p>
@@ -456,9 +496,9 @@ td.num{text-align:right;font-family:var(--font-data);font-variant-numeric:tabula
     <div class="legend" id="legend"><details id="legDet" open><summary data-th="ชั้นข้อมูลและคำอธิบาย">Layers and legend</summary>
       <div class="layerpick" role="radiogroup" aria-label="Map layer">
         <label><input type="radio" name="layer" id="lyTotal" value="total" checked> <span data-th="PM&lt;sub&gt;2.5&lt;/sub&gt; รวม (พยากรณ์)">Total PM<sub>2.5</sub> forecast</span></label>
-        <label><input type="radio" name="layer" id="lyFine" value="fine"> <span data-th="PM&lt;sub&gt;2.5&lt;/sub&gt; รวม ละเอียด (เห็นรายละเอียดไฟ)">Total PM<sub>2.5</sub>, fine (fire detail)</span></label>
+        <label class="dev-only"><input type="radio" name="layer" id="lyFine" value="fine"> <span data-th="PM&lt;sub&gt;2.5&lt;/sub&gt; รวม ละเอียด (เห็นรายละเอียดไฟ)">Total PM<sub>2.5</sub>, fine (fire detail)</span></label>
         <label><input type="radio" name="layer" id="lyFire" value="fire"> <span data-th="เฉพาะควันไฟ">Fire smoke only</span></label>
-        <label><input type="radio" name="layer" id="lyUnc" value="unc"> <span data-th="ความไม่แน่นอนของแผนที่ (±1σ)">Map uncertainty (±1σ)</span></label>
+        <label class="dev-only"><input type="radio" name="layer" id="lyUnc" value="unc"> <span data-th="ความไม่แน่นอนของแผนที่ (±1σ)">Map uncertainty (±1σ)</span></label>
       </div>
       <div class="field" style="margin:4px 0 6px"><label for="unitSel" style="font-size:.7rem" data-th="แสดงเป็น">Show as</label>
         <select id="unitSel" style="font-size:.75rem;padding:3px 4px">
@@ -935,6 +975,8 @@ function demoWind(spec,tStart,hours){
 // ================================================================= UI
 const $=id=>document.getElementById(id);
 const store={get(k){try{return localStorage.getItem(k);}catch(e){return null;}},set(k,v){try{localStorage.setItem(k,v);}catch(e){}}};
+// public page (index.html built with data-mode="public"): developer controls and technical text are hidden
+const PUBLIC=document.documentElement.dataset.mode==='public';
 // ---- language: Thai or English. Static text carries data-th; dynamic text uses T(en, th)
 let LANG=store.get('hsw.lang')||((navigator.language||'').toLowerCase().startsWith('th')?'th':'en');
 const T=(en,th)=>LANG==='th'?th:en;
@@ -965,19 +1007,20 @@ const S={hots:[],sources:[],sim:null,recep:[],hour:0,mode:null,myPts:[]};
 try{S.myPts=JSON.parse(store.get('hsw.points')||'[]');}catch(e){S.myPts=[];}
 
 // restore settings
-for(const id of ['region','mapkey','days','minconf','fuel','fireProf','dur','horizon','warnkm','proxy','alpha']){
+// on the public page only the visible settings are restored; hidden model settings always use their defaults
+for(const id of PUBLIC?['region','warnkm']:['region','mapkey','days','minconf','fuel','fireProf','dur','horizon','warnkm','proxy','alpha']){
   const v=store.get('hsw.'+id), el=$(id);
   if(v!=null&&(el.tagName!=='SELECT'||[...el.options].some(o=>o.value===v))) el.value=v;   // ignore values from older option lists
   $(id).addEventListener('change',()=>store.set('hsw.'+id,$(id).value));
 }
-{const v=store.get('hsw.fuelLC'); if(v!=null) $('fuelLC').checked=v==='1'; $('fuelLC').addEventListener('change',()=>store.set('hsw.fuelLC',$('fuelLC').checked?'1':'0'));}
-{const v=store.get('hsw.plume'); if(v!=null) $('plume').checked=v==='1'; $('plume').addEventListener('change',()=>store.set('hsw.plume',$('plume').checked?'1':'0'));}
+{const v=PUBLIC?null:store.get('hsw.fuelLC'); if(v!=null) $('fuelLC').checked=v==='1'; $('fuelLC').addEventListener('change',()=>store.set('hsw.fuelLC',$('fuelLC').checked?'1':'0'));}
+{const v=PUBLIC?null:store.get('hsw.plume'); if(v!=null) $('plume').checked=v==='1'; $('plume').addEventListener('change',()=>store.set('hsw.plume',$('plume').checked?'1':'0'));}
 if(store.get('hsw.v')!=='2'){$('mapkey').value='';store.set('hsw.mapkey','');store.set('hsw.v','2');}
 
 // ---- tabs
 document.querySelectorAll('.tabs button').forEach(b=>b.addEventListener('click',()=>showTab(b.dataset.tab)));
 function showTab(name){document.querySelectorAll('.tabs button').forEach(b=>b.setAttribute('aria-selected',b.dataset.tab===name));
-  for(const p of ['warn','hot','set','method']) $('pane-'+p).hidden = p!==name;}
+  for(const p of ['warn','hot','set','method','about']) $('pane-'+p).hidden = p!==name;}
 
 // ---- map
 const isDark=()=>{const a=document.documentElement.dataset.theme;return a?a==='dark':matchMedia('(prefers-color-scheme: dark)').matches;};
@@ -1486,7 +1529,7 @@ function drawStations(){
     const icon=L.divIcon({className:'',html:`<div class="stmark" style="background:${pcdColor(v)};${s.monitor?'':'opacity:.6'}"></div>`,iconSize:[12,12],iconAnchor:[6,6]});
     L.marker([s.lat,s.lon],{icon,keyboard:false}).bindTooltip(()=>`<b>${esc(s.name)}</b>${s.provider?` · ${esc(s.provider)}`:''}<br>`+
       (s.obs?`${T('Measured','ค่าตรวจวัด')} ${fmtN(s.obs.v)} µg/m³ ${T('at','เมื่อ')} ${fmtT(s.obs.t)}<br>`:T('No recent reading','ไม่มีค่าตรวจวัดล่าสุด')+'<br>')+(s.obs24?`${T('24-h mean','เฉลี่ย 24 ชม.')} ${fmtN(s.obs24.v)} µg/m³ (${s.obs24.n}/24 ${T('h','ชม.')}${s.obs24.valid?'':T(', incomplete',', ไม่ครบ')}) · ${T('Thai AQI','AQI ไทย')} ${aqiTH(s.obs24.v)} · ${T('US AQI','AQI สหรัฐฯ')} ${aqiUS(s.obs24.v)}<br>`:'')+
-      (f!=null?`${T('Forecast','พยากรณ์')} ${fmtN(f)} µg/m³ ${T('at slider time','ณ เวลาที่เลือก')}`:'')+(s.bias!=null?`<br>CAMS ×${Math.exp(s.bias).toFixed(2)} ${T('at this station','ที่สถานีนี้')}`:''))
+      (f!=null?`${T('Forecast','พยากรณ์')} ${fmtN(f)} µg/m³ ${T('at slider time','ณ เวลาที่เลือก')}`:'')+(s.bias!=null&&!PUBLIC?`<br>CAMS ×${Math.exp(s.bias).toFixed(2)} ${T('at this station','ที่สถานีนี้')}`:''))
       .on('click',()=>focusStation(s.id)).addTo(stationLayer);
   }
 }
@@ -1514,12 +1557,12 @@ function focusStation(id){
   const oi=s.obs?idxIn(H,Math.round(s.obs.t/HR)*HR):-1;
   $('townDetail').innerHTML=`<h3>${esc(s.name)}: ${T('PM₂.₅ forecast','พยากรณ์ PM₂.₅')}</h3><div class="tablewrap"><svg viewBox="0 0 ${W} ${Ht}" width="100%" role="img" aria-label="PM2.5 forecast at ${esc(s.name)}">
     <rect width="${W}" height="${Ht}" fill="var(--panel)"/>${lines}
-    <path d="${line(r)}" fill="none" stroke="var(--muted)" stroke-width="1.2" stroke-dasharray="2 2"/>
+    ${PUBLIC?'':`<path d="${line(r)}" fill="none" stroke="var(--muted)" stroke-width="1.2" stroke-dasharray="2 2"/>`}
     <path d="${line(c)}" fill="none" stroke="var(--ember)" stroke-width="1.8"/>
     ${oi>=0?`<circle cx="${X(oi)}" cy="${Y(s.obs.v)}" r="3.5" fill="var(--fg)"/>`:''}
     <text x="${pad}" y="${Ht-4}" font-size="8" fill="var(--muted)">${fmtT(H[0])}</text>
     <text x="${W-6}" y="${Ht-4}" font-size="8" fill="var(--muted)" text-anchor="end">${fmtT(H[H.length-1])}</text></svg></div>
-    <p class="note">${T('Solid: corrected forecast. Dashed grey: raw CAMS. Dot: latest measurement','เส้นทึบ: พยากรณ์ที่ปรับแก้แล้ว เส้นประสีเทา: CAMS ดิบ จุด: ค่าตรวจวัดล่าสุด')}${s.obs?` (${fmtN(s.obs.v)} µg/m³)`:''}. ${s.bias!=null?T(`This station currently reads ×${Math.exp(s.bias).toFixed(2)} of CAMS, from ${s.nUpd} hourly updates.`,`สถานีนี้วัดได้ประมาณ ×${Math.exp(s.bias).toFixed(2)} ของ CAMS จากการปรับ ${s.nUpd} ชั่วโมง`):T('No correction yet at this station.','ยังไม่มีการปรับแก้ที่สถานีนี้')}</p>`;
+    <p class="note">${PUBLIC?T('Solid line: forecast for this station. Dot: latest measurement','เส้นทึบ: ค่าพยากรณ์ของสถานีนี้ จุด: ค่าที่วัดได้ล่าสุด'):T('Solid: corrected forecast. Dashed grey: raw CAMS. Dot: latest measurement','เส้นทึบ: พยากรณ์ที่ปรับแก้แล้ว เส้นประสีเทา: CAMS ดิบ จุด: ค่าตรวจวัดล่าสุด')}${s.obs?` (${fmtN(s.obs.v)} µg/m³)`:''}. ${PUBLIC?'':s.bias!=null?T(`This station currently reads ×${Math.exp(s.bias).toFixed(2)} of CAMS, from ${s.nUpd} hourly updates.`,`สถานีนี้วัดได้ประมาณ ×${Math.exp(s.bias).toFixed(2)} ของ CAMS จากการปรับ ${s.nUpd} ชั่วโมง`):T('No correction yet at this station.','ยังไม่มีการปรับแก้ที่สถานีนี้')}</p>`;
 }
 
 // ---- main runs
@@ -1583,7 +1626,7 @@ function renderWarnings(){
   $('warnList').innerHTML = rows.length? rows.map(r=>{const b=bandFor(r.st.mean24);
     return `<div class="alert" data-name="${esc(r.name)}"><i class="sev" style="background:${b.color}"></i>
       <div><div class="name">${esc(townName(r))} <span class="note">${esc(r.cc)}</span></div>
-      <div class="sub">${pill(r.st.mean24)} ${T('24-h peak','สูงสุด 24 ชม.')} ${fmtT(r.st.tMean)}${r.cams!=null?` · ${T('CAMS total now','CAMS รวมขณะนี้')} ${fmtN(r.cams)}`:''}</div></div>
+      <div class="sub">${pill(r.st.mean24)} ${T('24-h peak','สูงสุด 24 ชม.')} ${fmtT(r.st.tMean)}${r.cams!=null&&!PUBLIC?` · ${T('CAMS total now','CAMS รวมขณะนี้')} ${fmtN(r.cams)}`:''}</div></div>
       <div class="val">${valNum(r.st.mean24)}<small>${T('max 24-h','สูงสุด 24 ชม.')} ${unitShort()}</small>${fmtN(r.st.peak)}<small>${T('1-h max','สูงสุด 1 ชม.')} µg/m³</small></div></div>`;}).join('')
     : `<p class="note">${T('No town gets more than 1 µg/m³ of fire smoke in the forecast window.','ไม่มีเมืองใดได้รับควันไฟเกิน 1 µg/m³ ในช่วงพยากรณ์')}</p>`;
   $('warnList').querySelectorAll('.alert').forEach(el=>el.onclick=()=>focusTown(el.dataset.name));
@@ -1606,7 +1649,7 @@ function renderProvinces(){
   for(const h of S.hots){if(!inRegion(h.lat,h.lon)) continue; if(h.prov===undefined)h.prov=provinceOf(h.lat,h.lon);const k=h.prov?h.prov.n+'|'+h.prov.c:'Outside mapped provinces|';
     let o=m.get(k);if(!o){o={p:h.prov,n:0,f:0,r:0};m.set(k,o);}o.n++;o.f+=h.frp;if(now-h.t<12*36e5)o.r++;}
   const rows=[...m.values()].sort((a,b)=>b.n-a.n).slice(0,40);
-  $('provTable').querySelector('tbody').innerHTML=rows.map(o=>`<tr><td>${o.p?esc(provName(o.p))+(LANG!=='th'&&o.p.th?` <span class="note">${esc(o.p.th)}</span>`:'')+` <span class="note">${CN[o.p.c]||''}</span>`:`<span class="note">${T('Outside mapped provinces','นอกเขตจังหวัดในแผนที่')}</span>`}</td><td class="num">${o.n}</td><td class="num">${fmtN(o.f)}</td><td class="num">${o.r}</td></tr>`).join('')
+  $('provTable').querySelector('tbody').innerHTML=rows.map(o=>`<tr><td>${o.p?esc(provName(o.p))+(LANG!=='th'&&o.p.th?` <span class="note">${esc(o.p.th)}</span>`:'')+` <span class="note">${CN[o.p.c]||''}</span>`:`<span class="note">${T('Outside mapped provinces','นอกเขตจังหวัดในแผนที่')}</span>`}</td><td class="num">${o.n}</td><td class="num dev-only">${fmtN(o.f)}</td><td class="num">${o.r}</td></tr>`).join('')
     ||`<tr><td colspan="4" class="note">${T('No hotspots loaded.','ยังไม่มีจุดความร้อน')}</td></tr>`;
 }
 function renderSources(){renderProvinces();
@@ -1741,9 +1784,9 @@ function renderLegend(){
     ticks.innerHTML=(u==='th'?['0','25','50','100','200','']:['0','15','25','37.5','75','']).map(t=>`<span>${t}</span>`).join(''); }
   $('legNote').textContent=LANG==='th'
     ? ({ug:'PM₂.₅ รายชั่วโมง (µg/m³)',ug24:'PM₂.₅ เฉลี่ย 24 ชม. (µg/m³)',th:'AQI ไทยจากค่าเฉลี่ย 24 ชม. (คพ. 2566)',us:'AQI สหรัฐฯ จากค่าเฉลี่ย 24 ชม. (EPA 2024)'})[u]+
-      ' · CAMS + สถานีตรวจวัด + ภูมิประเทศ ค่า 24 ชม. คือค่าเฉลี่ย 24 ชั่วโมงที่สิ้นสุด ณ เวลาที่เลือก กรอบเส้นประคือพื้นที่พยากรณ์'
+      (PUBLIC?' · ':' · CAMS + สถานีตรวจวัด + ภูมิประเทศ ')+'ค่า 24 ชม. คือค่าเฉลี่ย 24 ชั่วโมงที่สิ้นสุด ณ เวลาที่เลือก กรอบเส้นประคือพื้นที่พยากรณ์'
     : ({ug:'PM₂.₅ hourly, µg/m³',ug24:'PM₂.₅ 24-h mean, µg/m³',th:'Thai AQI from the 24-h mean (PCD 2023)',us:'US AQI from the 24-h mean (EPA 2024)'})[u]+
-    ' · CAMS + monitors + terrain. 24-h values are the mean of the 24 hours ending at the slider time. Dashed box: forecast area.';
+    (PUBLIC?' · ':' · CAMS + monitors + terrain. ')+'24-h values are the mean of the 24 hours ending at the slider time. Dashed box: forecast area.';
 }
 applyStaticLang(); if(!S.mode) $('modeChip').textContent=T('no data','ไม่มีข้อมูล');
 $('btnLang').onclick=()=>{ LANG=LANG==='th'?'en':'th'; store.set('hsw.lang',LANG); applyStaticLang(); if(S.mode) setMode(S.mode); else $('modeChip').textContent=T('no data','ไม่มีข้อมูล');

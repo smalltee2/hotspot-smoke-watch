@@ -61,10 +61,11 @@ export function krige(pts, res, v, lat, lon, { K = 16, maxKm = 400, skip = -1 } 
   const A = Array.from({ length: n + 1 }, () => new Array(n + 1).fill(1)), b = new Array(n + 1).fill(1);
   A[n][n] = 0;
   for (let i = 0; i < n; i++) {
-    for (let j = 0; j < n; j++) A[i][j] = i === j ? 0 : gam(v, kmFast(pts[nn[i][1]][0], pts[nn[i][1]][1], pts[nn[j][1]][0], pts[nn[j][1]][1]));
+    // two different monitors at the same spot: use the nugget, not 0, or the kriging matrix becomes singular
+    for (let j = 0; j < n; j++) A[i][j] = i === j ? 0 : Math.max(gam(v, kmFast(pts[nn[i][1]][0], pts[nn[i][1]][1], pts[nn[j][1]][0], pts[nn[j][1]][1])), v.c0 > 0 ? 0 : 1e-6, v.c0);
     b[i] = gam(v, nn[i][0]);
   }
-  const g0 = b.slice(), w = solve(A, b); if (!w) return { est: 0, dmin: nn[0][0] };
+  const g0 = b.slice(), w = solve(A, b); if (!w) return { est: 0, dmin: nn[0][0], varOK: v.c0 + v.c1 };
   let est = 0, varOK = w[n]; for (let i = 0; i < n; i++) { est += w[i] * res[nn[i][1]]; varOK += w[i] * g0[i]; }
   // ordinary-kriging variance σ² = Σ λᵢ γ(xᵢ, x₀) + μ (μ = Lagrange multiplier), bounded by the sill
   return { est, dmin: nn[0][0], varOK: Math.min(Math.max(varOK, 0), v.c0 + v.c1) };

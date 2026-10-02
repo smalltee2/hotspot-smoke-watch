@@ -41,6 +41,7 @@ jobs:
             data/met.json
             data/latest.json
             data/landcover.bin
+            data/verify.json
           key: pipeline-state-${{ github.run_id }}-${{ github.run_attempt }}
           restore-keys: pipeline-state-
 
@@ -59,6 +60,7 @@ jobs:
             data/met.json
             data/latest.json
             data/landcover.bin
+            data/verify.json
           key: pipeline-state-${{ github.run_id }}-${{ github.run_attempt }}
 
       - name: Commit verification history and static files only
@@ -69,9 +71,11 @@ jobs:
           git add data/history data/static
           git diff --cached --quiet && exit 0
           git commit -m "history: $(date -u +'%Y-%m-%d %H:%M UTC')"
-          for i in 1 2 3; do git pull --rebase -q && git push -q && break; sleep 5; done
+          for i in 1 2 3; do git pull --rebase -q && git push -q && exit 0; sleep 5; done
+          echo "::warning::history push failed after 3 tries" 
 
       - name: Build site
+        id: build
         if: always()
         run: |
           mkdir -p _site/data/static
@@ -84,11 +88,11 @@ jobs:
           ls -la _site _site/data
 
       - uses: actions/configure-pages@v5
-        if: always()
+        if: always() && steps.build.outcome == 'success'
       - uses: actions/upload-pages-artifact@v3
-        if: always()
+        if: always() && steps.build.outcome == 'success'
         with:
           path: _site
       - id: deployment
-        if: always()
+        if: always() && steps.build.outcome == 'success'
         uses: actions/deploy-pages@v4

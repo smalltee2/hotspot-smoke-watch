@@ -317,7 +317,7 @@ td.num{text-align:right;font-family:var(--font-data);font-variant-numeric:tabula
       <h3 data-th="จุดความร้อนรายจังหวัด">Hotspots by province</h3>
       <div class="tablewrap"><table id="provTable"><thead><tr><th data-th="จังหวัด">Province</th><th class="num" data-th="จุด">Hotspots</th><th class="num dev-only">FRP MW</th><th class="num" data-th="12 ชม. ล่าสุด">Last 12 h</th></tr></thead><tbody></tbody></table></div>
       <h3 class="dev-only" data-th="กลุ่มไฟขนาดใหญ่ที่สุด">Largest fire clusters</h3>
-      <p class="note dev-only" data-th="รวมจุดตรวจพบเป็นช่องขนาด 0.1° ค่า FRP คือผลรวมสูงสุดจากการโคจรผ่านครั้งเดียวในช่องนั้น ไฟเดียวกันที่ดาวเทียมสองดวงเห็นจึงไม่ถูกนับซ้ำ">Detections grouped into 0.1° cells. FRP is the largest single-overpass total in the cell, so the same fire seen by two satellites is not counted twice.</p>
+      <p class="note dev-only" data-th="รวมจุดตรวจพบเป็นกลุ่มตามช่อง 0.1° และวันตามเวลาท้องถิ่น ค่า FRP คือผลรวมสูงสุดจากการโคจรผ่านครั้งเดียวในกลุ่มนั้น ไฟเดียวกันที่ดาวเทียมสองดวงเห็นจึงไม่ถูกนับซ้ำ ช่องที่มีไฟหลายวันจะมีหลายแถว">Detections are grouped by 0.1° cell and local solar day. FRP is the largest single-overpass total in the group, so the same fire seen by two satellites is not counted twice. A cell that burned on several days has one row per day.</p>
       <div class="tablewrap dev-only"><table id="srcTable"><thead><tr><th data-th="ใกล้เมือง">Cluster near</th><th class="num" data-th="จุด">Det.</th><th class="num">FRP MW</th><th class="num">PM₂.₅ g/s</th><th data-th="ตรวจพบล่าสุด">Last seen</th></tr></thead><tbody></tbody></table></div>
     </section>
 
@@ -424,7 +424,7 @@ td.num{text-align:right;font-family:var(--font-data);font-variant-numeric:tabula
       <p class="note">0.368 kg of dry matter burned per MJ of fire radiative energy is from Wooster et al. (2005). The PM<sub>2.5</sub> emission factor is chosen by fuel type from the FINN v2.5 table (Wiedinmyer et al., 2023, Table 4; savanna/grassland 7.17, woody savanna/shrubs 7.1, crops 6.43, tropical forest 9.9, temperate forest 15 g kg⁻¹), which updates FINN v1 (Wiedinmyer et al., 2011) mostly with the averages of Akagi et al. (2011). Each detection gets its fuel type from the MODIS IGBP land-cover map (MCD12Q1, Terra+Aqua, previous year; read from NASA GIBS tiles at ≈ 1 km and decoded exactly through the GIBS colour map), mapped to the FINN v2.5 types as in Wiedinmyer et al. (2023, Table 1): evergreen broadleaf → tropical forest within 23.5° of the equator; deciduous broadleaf → temperate forest; shrublands and woody savannas → woody savanna/shrubs; savannas, grasslands, wetlands, cropland/natural mosaics and barren → savanna/grassland; croplands → crops; water, snow and unclassified pixels are dropped, as in FINN. Urban pixels go to savanna/grassland, because FINN's tree-cover rule needs MODIS VCF, which is not used here. A cluster's emission factor is the FRP-weighted mean of its detections. The fuel type chosen in Settings is used where land cover is missing.</p>
       <p class="note"><strong>Daily fire cycle.</strong> VIIRS sees a fire about twice a day (≈ 13:30 and 01:30 local time), near the afternoon peak of burning, so holding the 13:30 FRP for many hours overstates the day's emission. Detections are grouped by 0.1° cell and local solar day, and each group burns along a Gaussian daily cycle on a night baseline, the form used by Zhang et al. (2020) with Himawari and VIIRS:</p>
       <span class="eq">FRP(t) = FRP<sub>night</sub> + A·exp(−(t − 13:00)² / 2σ²),  A = (FRP<sub>day</sub> − FRP<sub>night</sub>) / exp(−(t<sub>VIIRS</sub> − 13:00)² / 2σ²)</span>
-      <p class="note">so the curve passes through the observed daytime FRP at the overpass. σ = 2.39 h (April–August) or 1.63 h (September–March), the values Zhang et al. fitted for cropland fires in eastern China; Giglio (2007) found tropical burning peaks between 13:00 and 18:30 local time. A fire's daily energy is then FRP<sub>night</sub>·24 h + A·σ√(2π), about 4–6 h of the overpass FRP instead of a fixed burn time. These parameters are not yet fitted for Thailand; geostationary (Himawari) FRP would allow that. The older constant-duration option remains in Settings. FINN itself provides daily totals and leaves the daily cycle to the user (Wiedinmyer et al., 2011, 2023).</p>
+      <p class="note">so the curve passes through the observed daytime FRP at the overpass; the overpass factor is floored at e<sup>−2</sup> and the daytime pulse is capped at 8 h of the observed FRP, so an off-peak detection (for example a morning MODIS pass in an uploaded file) cannot inflate a day's emission. σ = 2.39 h (April–August) or 1.63 h (September–March), the values Zhang et al. fitted for cropland fires in eastern China; Giglio (2007) found tropical burning peaks between 13:00 and 18:30 local time. A fire's daily energy is then FRP<sub>night</sub>·24 h + A·σ√(2π), about 4–6 h of the overpass FRP instead of a fixed burn time. These parameters are not yet fitted for Thailand; geostationary (Himawari) FRP would allow that. The older constant-duration option remains in Settings and groups detections by cell only, as before. Puffs are released every 30 min near the daily peak and every 90 min in the weak tail (every 20 min in constant mode); puffs older than 6 h move in 30-min steps and older than 24 h in 60-min steps, which changed town values by about 0.2 % in tests while making the model three times faster. FINN itself provides daily totals and leaves the daily cycle to the user (Wiedinmyer et al., 2011, 2023).</p>
       <h3>Transport and spread</h3>
       <p class="note">Meteorology is ECMWF IFS HRES (9 km), fixed by name through the Open-Meteo API so every run uses the same model. The hourly job samples it every 6 h on two nested grids, 0.25° over northern Thailand (96.5–102.5°E, 14.5–21.5°N) and 1° over the whole domain, and the model uses the finer grid wherever it covers the point (bilinear in space, linear in time). Variables: 100 m wind (transport), 10 m wind, shortwave radiation and cloud cover (stability class), boundary-layer height (vertical mixing limit) and precipitation (wet removal). For plume rise, the free-troposphere stability N² = (g/θ)·∂θ/∂z is taken between 850 and 700 hPa from ECMWF IFS 0.25° (the 9 km feed has no pressure levels).</p>
       <p class="note">Puffs move with the 100 m wind. Pasquill–Gifford stability class comes from 10 m wind, solar radiation and cloud cover (Turner 1970 table). Spread uses Briggs (1973) open-country σ<sub>y</sub>, σ<sub>z</sub>, with σ<sub>y</sub> not smaller than 0.5 m s⁻¹ × travel time for long-range drift (Heffter 1965). Rain removes particles at the rate Λ = 8×10⁻⁵·P<sup>0.79</sup> s⁻¹ (P in mm h⁻¹), the default particle scavenging coefficient of HYSPLIT, so each puff's mass falls by e<sup>−Λ·Δt</sup> per step.</p>
@@ -567,7 +567,7 @@ const REGIONS = {
   east:     {name:'Eastern Thailand', bbox:[100.6,11.5,102.95,14.6]},
   south:    {name:'Southern Thailand', bbox:[97.3,5.6,102.1,13.6]},
   thailand: {name:'Thailand',          bbox:[97.3, 5.5,105.7,20.6]},
-  msea:     {name:'Mainland SE Asia',  bbox:[92.0, 5.5,110.0,24.0]},
+  msea:     {name:'Mainland SE Asia',  bbox:[92.0, 5.5,110.0,24.5]},
 };
 // Thai PCD PM2.5 bands (µg/m3), effective 1 Jun 2023
 const PCD = [
@@ -755,13 +755,13 @@ function finnType(igbp,lat){
 }
 // local solar time from longitude (h); a fire's "day" runs from local midnight to local midnight
 const lstOff=lon=>lon/15*3600e3;
-function clusterSources(hots, cell=0.1, efDefault=7.17, byLC=false){
+function clusterSources(hots, cell=0.1, efDefault=7.17, byLC=false, byDay=true){
   const m=new Map();
   for(const h of hots){
     const ft=byLC?finnType(h.igbp,h.lat):null; if(ft==='REMOVE') continue;
     const ef=ft?FINN_EF[ft]:efDefault;
     const ld=Math.floor((h.t+lstOff(h.lon))/864e5), lh=((h.t+lstOff(h.lon))%864e5)/3600e3, day=lh>=6&&lh<18;
-    const k=Math.floor(h.lat/cell)+':'+Math.floor(h.lon/cell)+':'+ld;
+    const k=Math.floor(h.lat/cell)+':'+Math.floor(h.lon/cell)+(byDay?':'+ld:'');   // constant mode: one group per cell, as before
     let c=m.get(k); if(!c){c={n:0,wlat:0,wlon:0,w:0,ld,passes:new Map(),t0:0,pix:0,efw:0,types:{}};m.set(k,c);}
     c.n++; const w=Math.max(h.frp,0.5); c.wlat+=h.lat*w; c.wlon+=h.lon*w; c.w+=w; c.pix=Math.max(c.pix,h.frp);
     c.efw+=ef*w; const tk=ft||'set'; c.types[tk]=(c.types[tk]||0)+w;   // FRP-weighted emission factor of the group
@@ -782,12 +782,13 @@ function fireRate(s,t,prof,durMs){   // FRP in MW at time t
   if(t<s.d0||t>=s.d0+864e5) return 0;
   const sg=DIURNAL.sig(s.d0+432e5), G=h=>Math.exp(-((h-DIURNAL.tPk)**2)/(2*sg*sg)), lh=(t-s.d0)/3600e3;
   // the overpass factor is floored at its 2σ value (e^−2) so an off-peak detection cannot be inflated more than ≈7×
-  const A=s.dayFRP>0?Math.max(0,(s.dayFRP-s.nightFRP)/Math.max(Math.exp(-2),G((s.tDay-s.d0)/3600e3))):0;
+  let A=s.dayFRP>0?Math.max(0,(s.dayFRP-s.nightFRP)/Math.max(Math.exp(-2),G((s.tDay-s.d0)/3600e3))):0;
+  A=Math.min(A, s.dayFRP*8/(sg*Math.sqrt(2*Math.PI)));   // and the daytime pulse never carries more than 8 h of the observed FRP
   return s.nightFRP+A*G(lh);
 }
 // ---- plume injection height, Sofiev et al. (2012, ACP 12, 1995), Eq. 13 (all fires):
 // H_p = 0.24·H_abl + 170 m·(FRP/1 MW)^0.35·exp(−0.6·N²_FT / 2.5×10⁻⁴ s⁻²)
-function plumeTop(frpMW,blh,n2){ return 0.24*blh+170*Math.pow(Math.max(frpMW,0),0.35)*Math.exp(-0.6*(n2??1e-4)/2.5e-4); }
+function plumeTop(frpMW,blh,n2){ return 0.24*blh+170*Math.pow(Math.max(frpMW,0),0.35)*Math.exp(-0.6*(Number.isFinite(n2)?n2:1e-4)/2.5e-4); }
 
 // ---------------------------------------------------------------- wind grid
 function windGridSpec(sources, region, maxPts=600){
@@ -841,12 +842,14 @@ function sampleMet(M,lat,lon,t){
     let fx=(lon-g.lon0)/g.step, fy=(lat-g.lat0)/g.step;
     if(!(fx>=0&&fy>=0&&fx<=g.nx-1&&fy<=g.ny-1)&&gi<M.grids.length-1) continue;
     fx=Math.min(Math.max(fx,0),g.nx-1.0001); fy=Math.min(Math.max(fy,0),g.ny-1.0001);
+    // same trilinear weights as before, computed once per call (this runs for every puff every 10 min)
     const ix=Math.floor(fx), iy=Math.floor(fy), ax=fx-ix, ay=fy-iy, nxy=g.nx*g.ny, o={};
-    for(const k of M.vars){const a=g.data[k]; let s=0;
-      for(let dt=0;dt<2;dt++){const wt=dt?at:1-at, b=(it+dt)*nxy;
-        s+=wt*((1-ax)*(1-ay)*a[b+iy*g.nx+ix]+ax*(1-ay)*a[b+iy*g.nx+ix+1]+(1-ax)*ay*a[b+(iy+1)*g.nx+ix]+ax*ay*a[b+(iy+1)*g.nx+ix+1]);}
-      o[k]=s;}
-    o.cls/=2; o.ws=Math.hypot(o.u,o.v); return o;}
+    const i00=iy*g.nx+ix, i01=i00+1, i10=i00+g.nx, i11=i10+1, b0=it*nxy, b1=b0+nxy;
+    const w00=(1-ax)*(1-ay), w01=ax*(1-ay), w10=(1-ax)*ay, w11=ax*ay, t0w=1-at, t1w=at;
+    const V=M.vars;
+    for(let vi=0;vi<V.length;vi++){const a=g.data[V[vi]];
+      o[V[vi]]=t0w*(w00*a[b0+i00]+w01*a[b0+i01]+w10*a[b0+i10]+w11*a[b0+i11])+t1w*(w00*a[b1+i00]+w01*a[b1+i01]+w10*a[b1+i10]+w11*a[b1+i11]);}
+    o.cls/=2; o.ws=Math.sqrt(o.u*o.u+o.v*o.v); return o;}
 }
 // ---------------------------------------------------------------- stability & sigmas
 // Pasquill-Gifford class (1=A … 6=F) after Turner (1970). Returns a real number; half classes = average.
@@ -867,12 +870,14 @@ const BY=[0.22,0.16,0.11,0.08,0.06,0.04];
 function sigYc(x,k){return BY[k]*x/Math.sqrt(1+1e-4*x);}
 function sigZc(x,k){switch(k){case 0:return 0.20*x;case 1:return 0.12*x;case 2:return 0.08*x/Math.sqrt(1+2e-4*x);
   case 3:return 0.06*x/Math.sqrt(1+1.5e-3*x);case 4:return 0.03*x/(1+3e-4*x);default:return 0.016*x/(1+3e-4*x);}}
-function sigma(x,cls,fn){cls=Math.min(6,Math.max(1,cls)); const lo=Math.floor(cls)-1, hi=Math.ceil(cls)-1;return lo===hi?fn(x,lo):0.5*(fn(x,lo)+fn(x,hi));}
+function sigma(x,cls,fn){cls=Number.isFinite(cls)?Math.min(6,Math.max(1,cls)):4; const lo=Math.floor(cls)-1, hi=Math.ceil(cls)-1, f=cls-1-lo;   // linear between neighbouring classes; missing class → D
+  return lo===hi?fn(x,lo):(1-f)*fn(x,lo)+f*fn(x,hi);}
 
 // ---------------------------------------------------------------- simulation
 // sources: [{lat,lon,frp,t0}], W: wind, opts:{ef,durH,releaseS,dtS,tEnd}
 function simulate(sources, W, opts){
-  const ef=opts.ef, dur=opts.durH*3600e3, rel=(opts.releaseS||1200)*1e3, dt=(opts.dtS||600), prof=opts.profile||'diurnal', rise=opts.plumeRise!==false;
+  const dt0=opts.dtS||600;
+  const ef=opts.ef, dur=opts.durH*3600e3, rel=(opts.releaseS||(opts.profile==='const'?1200:1800))*1e3, dt=(opts.dtS||600), prof=opts.profile||'diurnal', rise=opts.plumeRise!==false;
   const SY0=150, SZ0=40;
   const win=s=>prof==='const'?[s.t0,s.t0+dur]:[s.d0,s.d0+864e5];
   const t0min=Math.min(...sources.map(s=>win(s)[0]));
@@ -881,8 +886,13 @@ function simulate(sources, W, opts){
   // release schedule: a puff every 20 min carrying EF × 0.368 kg/MJ × FRP(t) × 20 min of PM2.5 (µg)
   const queue=[];
   sources.forEach((s,si)=>{const efs=s.ef??ef; s.q=efs*KG_PER_MJ*s.frp; const [a,b]=win(s), fmax=Math.max(s.frp,1e-9);
-    for(let tr=Math.max(a,tStart); tr<b && tr<tEnd; tr+=rel){ const f=fireRate(s,tr+rel/2,prof,dur); if(f<0.01*fmax) continue;
-      queue.push({tr,si,f,m:efs*KG_PER_MJ*f*(rel/1e3)*1e6}); }});
+    // puffs every 30 min while the fire is near its peak, every 90 min in the weak night-time tail (keeps the browser fast)
+    let pk=fmax; if(prof!=='const') for(let h=0;h<24;h++) pk=Math.max(pk,fireRate(s,s.d0+h*36e5+18e5,prof,dur));
+    for(let tr=Math.max(a,tStart); tr<b && tr<tEnd;){ let step=rel; const f0=fireRate(s,tr+rel/2,prof,dur);
+      if(prof!=='const'&&f0<0.25*pk) step=3*rel;
+      const f=step===rel?f0:fireRate(s,tr+step/2,prof,dur);
+      if(f>=0.01*pk) queue.push({tr,si,f,m:efs*KG_PER_MJ*f*(step/1e3)*1e6});
+      tr+=step; }});
   queue.sort((a,b)=>a.tr-b.tr);
   let injTot=0, injBL=0;
   const P=[]; let qi=0;
@@ -896,7 +906,7 @@ function simulate(sources, W, opts){
       if(rise){const w0=W.sample?W.sample(s.lat,s.lon,q.tr):sampleWind(W,s.lat,s.lon,q.tr), blh=Math.max(100,w0.blh??1000);
         const pix=s.pix*(q.f/Math.max(s.frp,1e-9)), Hp=Math.max(SZ0,plumeTop(pix,blh,w0.n2)), fBL=Math.min(1,blh/Hp);
         injTot+=m; m*=fBL; injBL+=m; sz0=Math.max(SZ0,0.8*Math.min(Hp,blh)); h0=Math.max(300,blh);}
-      const p={lat:s.lat,lon:s.lon,x:0,age:0,h:h0,sy:SY0,sz:sz0,sz0,m,si:q.si};
+      const p={lat:s.lat,lon:s.lon,x:0,age:0,h:h0,sy:SY0,sz:sz0,sz0,m,si:q.si,ph:qi%6};
       if(!trajPuff.has(q.si)){trajPuff.add(q.si);p.track=true;traj[q.si].push([s.lat,s.lon]);}
       P.push(p);}
     if((t-tStart)%3600e3===0){ // hourly snapshot
@@ -905,19 +915,23 @@ function simulate(sources, W, opts){
         fz[i]= p.sz<0.8*p.h ? 2/(Math.sqrt(2*Math.PI)*p.sz) : 1/p.h;}
       hours.push(t); snaps.push({n,lat,lon,sy,fz,m});
     }
-    // advect
+    // advect; puffs older than 6 h move in 30-min steps and older than 24 h in 60-min steps (staggered), which keeps
+    // the browser fast in the burning season; near-source puffs keep the 10-min step
+    const kStep=Math.round((t-tStart)/(dt*1e3));
     for(let i=P.length-1;i>=0;i--){const p=P[i];
+      const mult=opts.fixedStep?1:p.age>86400?6:p.age>21600?3:1; if((kStep+p.ph)%mult) continue;
+      const dt=dt0*mult;
       const w=W.sample?W.sample(p.lat,p.lon,t):sampleWind(W,p.lat,p.lon,t);
-      const sp=Math.hypot(w.u,w.v);
+      const sp=Math.sqrt(w.u*w.u+w.v*w.v);
       p.lat+=w.v*dt/MPD; p.lon+=w.u*dt/(MPD*Math.cos(p.lat*DEG));
       p.x+=Math.max(sp,0.5)*dt; p.age+=dt; p.h=Math.max(p.h,w.blh,100);
       const cls=w.cls??pgClass(w.ws10,w.sw,w.cc);
       if(w.pr>0) p.m*=Math.exp(-WET_A*Math.pow(w.pr,WET_B)*dt);   // below-cloud wet removal, HYSPLIT default
-      const sy=Math.hypot(SY0,Math.max(sigma(p.x,cls,sigYc),0.5*p.age));
-      const sz=Math.hypot(p.sz0,sigma(p.x,cls,sigZc));
+      const syb=Math.max(sigma(p.x,cls,sigYc),0.5*p.age), szb=sigma(p.x,cls,sigZc);
+      const sy=Math.sqrt(SY0*SY0+syb*syb), sz=Math.sqrt(p.sz0*p.sz0+szb*szb);
       p.sy=Math.max(p.sy,sy); p.sz=Math.min(Math.max(p.sz,sz),5000);
       if(p.track) traj[p.si].push([p.lat,p.lon]);
-      if(p.age>72*3600 || Math.abs(p.lat)>60) P.splice(i,1);
+      if(p.age>72*3600 || Math.abs(p.lat)>60){ P[i]=P[P.length-1]; P.pop(); }   // swap-remove (already-advected puff moves in)
     }
   }
   return {hours,snaps,traj,tStart,tEnd,fracBL:injTot?injBL/injTot:1};
@@ -995,7 +1009,8 @@ const TOWN_TH={'Aranyaprathet':'อรัญประเทศ','Bua Yai':'บ�
   'Tachileik':'ท่าขี้เหล็ก','Kengtung':'เชียงตุง','Taunggyi':'ตองยี','Mandalay':'มัณฑะเลย์','Yangon':'ย่างกุ้ง','Hanoi':'ฮานอย','Phnom Penh':'พนมเปญ','Siem Reap':'เสียมราฐ',
   'My location':'ตำแหน่งของฉัน'};
 const _townTH=new Map();
-function townName(r){ if(LANG!=='th') return r.name; if(TOWN_TH[r.name]) return TOWN_TH[r.name];
+function townName(r){ const mp=/^(?:My point|จุดของฉัน) (\d+)$/.exec(r.name); if(mp) return T('My point','จุดของฉัน')+' '+mp[1];
+  if(LANG!=='th') return r.name; if(TOWN_TH[r.name]) return TOWN_TH[r.name];
   if(r.kind==='cap'&&r.cc==='TH'&&typeof provinceOf==='function'){ if(!_townTH.has(r.name)){const p=provinceOf(r.lat,r.lon); _townTH.set(r.name,p&&p.th||r.name);} return _townTH.get(r.name); }
   return r.name; }
 const provName=p=>LANG==='th'&&p.th?p.th:p.n;
@@ -1132,7 +1147,7 @@ matchMedia('(prefers-color-scheme: dark)').addEventListener('change',reTheme);
 new MutationObserver(reTheme).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
 const hotLayer=L.layerGroup().addTo(map), trajLayer=L.layerGroup().addTo(map), townLayer=L.layerGroup().addTo(map);
 let plume=null;
-map.on('click',e=>{const name=`My point ${S.myPts.length+1}`;S.myPts.push({name,lat:+e.latlng.lat.toFixed(4),lon:+e.latlng.lng.toFixed(4),cc:'★'});
+map.on('click',e=>{const name=`${T('My point','จุดของฉัน')} ${S.myPts.length+1}`;S.myPts.push({name,lat:+e.latlng.lat.toFixed(4),lon:+e.latlng.lng.toFixed(4),cc:'★'});
   store.set('hsw.points',JSON.stringify(S.myPts)); if(S.sim) computeReceptors(); drawTowns(); renderWarnings();});
 $('btnClearPts').onclick=()=>{S.myPts=[];store.set('hsw.points','[]');if(S.sim)computeReceptors();drawTowns();renderWarnings();};
 
@@ -1201,6 +1216,7 @@ const gIdx=t=>P.data?idxIn(P.data.hours,t):-1;
 function setTimeline(){
   const keep=curT();
   S.times=S.sim?S.sim.hours:(P.data?P.data.hours:[]);
+  if(S.sim&&P.data&&P.data.hours.length) S.times=S.times.filter(t=>t>=P.data.hours[0]);   // emission may start at local midnight, before the map data
   const sl=$('slider'); sl.max=Math.max(0,S.times.length-1);
   let i=keep!=null?idxIn(S.times,keep):-1;
   if(i<0){i=S.times.findIndex(h=>h>=Date.now()-HR/2); if(i<0) i=Math.max(0,S.times.length-1);}
@@ -1214,7 +1230,7 @@ async function loadPipeline(){
   try{const r=await fetch('data/latest.json?ts='+Date.now(),{cache:'no-store'}); if(!r.ok) return null; return await r.json();}catch(e){return null;}
 }
 function pipelineHotspots(d){
-  return (d.hotspots?.rows||[]).map(([lat,lon,frp,t,conf,sat,igbp])=>({lat,lon,frp,t,igbp:igbp??null,sat:sat||'VIIRS',level:conf==='l'?'l':conf==='h'?'h':'n',pass:`${sat}|${t}`}))
+  return (d.hotspots?.rows||[]).map(([lat,lon,frp,t,conf,sat,igbp])=>({lat,lon,frp,t,igbp:igbp??null,sat:sat||'VIIRS',level:conf==='l'?'l':conf==='h'?'h':'n',pass:`${sat}|${Math.round(t/6e5)}`}))   // one overpass may span acquisition minutes
     .filter(h=>inBox(h.lat,h.lon,REGIONS.msea.bbox));
 }
 async function runAuto(quiet){ try{ await runAuto_(quiet); }catch(e){ busy(null); if(!quiet) banner(`<b>${T('Update failed.','อัปเดตไม่สำเร็จ')}</b> ${esc(e.message)}`); console.error(e); } }
@@ -1464,7 +1480,7 @@ function hereHTML(lat,lon,acc){
   const pv=provinceOf(lat,lon);
   let rangeRow=''; {const iA=P.data&&P.data.rk?gIdx(P.data.rk.t):-1, sg=iA>=0?rkSigma(camsAt(lat,lon,iA),lat,lon):null, vA=iA>=0?totalAt(lat,lon,P.data.rk.t):null;
     if(sg!=null&&vA!=null) rangeRow=`<tr><th>${T('Likely range at','ช่วงที่น่าจะเป็น เวลา')} ${hm(P.data.rk.t)} (68%)</th><td class="num">${fmtN(Math.max(0,(vA+1)*Math.exp(-sg)-1))}–${fmtN((vA+1)*Math.exp(sg)-1)} µg/m³</td></tr>`;}
-  return `<div class="here"><div class="note">${pv?esc(provName(pv))+(LANG!=='th'&&pv.th?' · '+esc(pv.th):''):T('Your location','ตำแหน่งของคุณ')}${acc?` · ±${acc<1000?Math.round(acc)+' m':(acc/1000).toFixed(1)+' km'}`:''}</div>
+  return `<div class="here"><div class="note">${pv?esc(provName(pv))+(LANG!=='th'&&pv.th?' · '+esc(pv.th):''):T('Your location','ตำแหน่งของคุณ')}${acc?` · ±${acc<1000?Math.round(acc)+T(' m',' ม.'):(acc/1000).toFixed(1)+T(' km',' กม.')}`:''}</div>
     ${vNow!=null?`<div class="big">${fmtN(vNow)} <small style="font-size:.7rem">µg/m³</small></div>${pill(vNow)} <span class="note">${T('PM₂.₅ now (forecast map)','PM₂.₅ ขณะนี้ (จากแผนที่พยากรณ์)')}</span>`:`<p class="note">${T('No forecast here yet.','ยังไม่มีค่าพยากรณ์ที่ตำแหน่งนี้')}</p>`}
     <table><tbody>
       ${rangeRow}
@@ -1497,7 +1513,7 @@ function showHere(lat,lon,acc,fly){
   if(hereLayer) map.removeLayer(hereLayer);
   const col=cssVar('--focus');
   const mk=L.circleMarker([lat,lon],{radius:7,color:'#fff',weight:2,fillColor:col,fillOpacity:1})
-    .bindTooltip('My location').on('click',()=>{renderHereBox(); $('hereBox').scrollIntoView({behavior:'smooth',block:'nearest'});});
+    .bindTooltip(T('My location','ตำแหน่งของฉัน')).on('click',()=>{renderHereBox(); $('hereBox').scrollIntoView({behavior:'smooth',block:'nearest'});});
   hereLayer=L.layerGroup([L.circle([lat,lon],{radius:Math.max(acc||0,30),color:col,weight:1,fillColor:col,fillOpacity:.12,interactive:false}),mk]).addTo(map);
   const inside=!map.options.maxBounds||map.options.maxBounds.contains([lat,lon]);
   if(fly&&inside) map.setView([lat,lon],Math.max(map.getZoom(),10),{animate:true});
@@ -1505,7 +1521,7 @@ function showHere(lat,lon,acc,fly){
   if(matchMedia('(max-width:820px)').matches) $('hereBox').scrollIntoView({behavior:'smooth',block:'nearest'});
 }
 const LocateCtl=L.Control.extend({options:{position:'topleft'},onAdd(){
-  const b=L.DomUtil.create('button','locate-btn'); b.type='button'; b.title='Show PM2.5 at my location'; b.setAttribute('aria-label','Show PM2.5 at my location');
+  const b=L.DomUtil.create('button','locate-btn'); b.type='button'; b.title=T('Show PM2.5 at my location','ดูค่าฝุ่นที่ตำแหน่งของฉัน'); b.setAttribute('aria-label',b.title);
   b.innerHTML='<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/><circle cx="12" cy="12" r="8"/></svg>';
   L.DomEvent.disableClickPropagation(b);
   b.onclick=()=>{
@@ -1524,7 +1540,7 @@ function drawStations(){
   for(const s of P.data.stations){ if(!inRegion(s.lat,s.lon)) continue;
     const f=stationNow(s,t);
     let v=live&&s.obs?s.obs.v:f;
-    if(avg24()){ if(live&&s.obs24&&s.obs24.valid) v=s.obs24.v; else { const i=gIdx(t); if(i>=23){let a=0,n=0; for(let k=i-23;k<=i;k++){const c=s.corr[k]; if(c!=null){a+=c;n++;}} v=n>=18?a/n:null;} else v=null; } }
+    if(avg24()){ if(live&&s.obs24&&s.obs24.valid) v=s.obs24.v; else { const i=gIdx(t); if(i>=17){let a=0,n=0; for(let k=Math.max(0,i-23);k<=i;k++){const c=s.corr[k]; if(c!=null){a+=c;n++;}} v=n>=18?a/n:null;} else v=null; } }
     if(v==null) continue;
     const icon=L.divIcon({className:'',html:`<div class="stmark" style="background:${pcdColor(v)};${s.monitor?'':'opacity:.6'}"></div>`,iconSize:[12,12],iconAnchor:[6,6]});
     L.marker([s.lat,s.lon],{icon,keyboard:false}).bindTooltip(()=>`<b>${esc(s.name)}</b>${s.provider?` · ${esc(s.provider)}`:''}<br>`+
@@ -1576,10 +1592,10 @@ async function runLive(){
 async function runModel(hotsRaw,mode,windOverride,quiet){
   const minc=$('minconf').value;
   S.hots=hotsRaw.filter(h=>confOK(h,minc));
-  S.sources=clusterSources(S.hots,0.1,+$('fuel').value,$('fuelLC').checked);
+  S.sources=clusterSources(S.hots,0.1,+$('fuel').value,$('fuelLC').checked,$('fireProf').value!=='const');
   const now=Date.now(), horizon=+$('horizon').value;
   if(!S.sources.length){busy(null);setMode(mode);S.sim=null;clearPlume();setTimeline();drawHotspots();drawTraj();computeReceptors();renderAll();redrawTime();
-    if(!quiet) banner(T(`No hotspots passed the filters in ${esc(REGIONS[$('region').value].name)}. Outside the burning season (roughly January–April in the north) this is normal. Try “Run demo” to see how the page works.`,`ไม่มีจุดความร้อนที่ผ่านเงื่อนไขในพื้นที่ที่เลือก นอกฤดูเผา (ภาคเหนือประมาณมกราคม–เมษายน) ถือเป็นเรื่องปกติ ลองกด “ทดลองด้วยข้อมูลจำลอง” ในแท็บตั้งค่าเพื่อดูการทำงานของหน้าเว็บ`),'info');return;}
+    if(!quiet) banner(T(`No hotspots in ${esc(REGIONS[$('region').value].name)} right now. Outside the burning season (roughly January–April in the north) this is normal.${PUBLIC?'':' Try “Run demo” in Settings to see how the page works.'}`,`ขณะนี้ไม่มีจุดความร้อนในพื้นที่ที่เลือก นอกฤดูเผา (ภาคเหนือประมาณมกราคม–เมษายน) ถือเป็นเรื่องปกติ${PUBLIC?'':' ลองกด “ทดลองด้วยข้อมูลจำลอง” ในแท็บตั้งค่าเพื่อดูการทำงานของหน้าเว็บ'}`),'info');return;}
   const reg=REGIONS.msea.bbox;
   const spec=windGridSpec(S.sources,reg);
   let W;
@@ -1595,7 +1611,7 @@ async function runModel(hotsRaw,mode,windOverride,quiet){
   if(mode==='live'&&!P.data){const cams=await fetchCams(S.recep); if(cams) S.recep.forEach((r,i)=>r.cams=cams[i]);}
   setMode(mode); busy(null);
   if(mode==='demo') banner(T('<b>Demo run.</b> Hotspots and winds are synthetic, generated to show how the page behaves. Nothing here describes real conditions.','<b>ข้อมูลจำลอง</b> จุดความร้อนและลมสร้างขึ้นเพื่อแสดงการทำงานของหน้าเว็บ ไม่ใช่สภาพจริง'));
-  else if(S.sources.length>800) banner(T(`Modelling the 800 strongest of ${S.sources.length} clusters to keep the page fast.`,`คำนวณเฉพาะ 800 กลุ่มไฟที่แรงที่สุดจาก ${S.sources.length} กลุ่ม เพื่อให้หน้าเว็บทำงานเร็ว`),'info');
+  else if(S.sources.length>800) banner(T(`Modelling the 800 strongest of ${S.sources.length} fire groups (0.1° cell × day) to keep the page fast.`,`คำนวณเฉพาะ 800 กลุ่มไฟที่แรงที่สุดจาก ${S.sources.length} กลุ่ม (ช่อง 0.1° × วัน) เพื่อให้หน้าเว็บทำงานเร็ว`),'info');
   else banner('');
   // slider
   setTimeline(); FIELD_CACHE.clear();
@@ -1616,12 +1632,14 @@ function nearestTown(lat,lon){let best=null,d=1e9;for(const t of TOWNS){const k=
 function renderAll(){renderSummary();renderWarnings();renderStations();renderSources();drawTowns();updateTimeLabel();}
 function renderSummary(){
   const hr=S.hots.filter(h=>inRegion(h.lat,h.lon)), sr=S.sources.filter(c=>inRegion(c.lat,c.lon));
-  $('sHot').textContent=hr.length.toLocaleString(); $('sSrc').textContent=sr.length.toLocaleString();
-  $('sFrp').textContent=Math.round(sr.reduce((a,c)=>a+c.frp,0)).toLocaleString();
+  // groups are per 0.1° cell and local day; count each cell once and take its strongest day
+  const cells=new Map(); for(const c of sr){const k=Math.floor(c.lat/0.1)+':'+Math.floor(c.lon/0.1); cells.set(k,Math.max(cells.get(k)||0,c.frp));}
+  $('sHot').textContent=hr.length.toLocaleString(); $('sSrc').textContent=cells.size.toLocaleString();
+  $('sFrp').textContent=Math.round([...cells.values()].reduce((a,v)=>a+v,0)).toLocaleString();
   $('sWarn').textContent=S.sim?S.recep.filter(r=>r.st.mean24>37.5||r.st.peak>75).length:'–';
 }
 function renderWarnings(){
-  if(!S.sim&&!S.hots.length&&!P.data){$('warnList').innerHTML=`<p class="note">${T('No run yet. Press <b>Load live data</b>, or <b>Run demo</b> in Settings.','ยังไม่มีผล กด <b>โหลดข้อมูลล่าสุด</b> หรือ <b>ทดลองด้วยข้อมูลจำลอง</b> ในแท็บตั้งค่า')}</p>`;$('nearList').textContent='–';return;}
+  if(!S.sim&&!S.hots.length&&!P.data){$('warnList').innerHTML=`<p class="note">${PUBLIC?T('Loading the latest data…','กำลังโหลดข้อมูลล่าสุด…'):T('No run yet. Press <b>Load live data</b>, or <b>Run demo</b> in Settings.','ยังไม่มีผล กด <b>โหลดข้อมูลล่าสุด</b> หรือ <b>ทดลองด้วยข้อมูลจำลอง</b> ในแท็บตั้งค่า')}</p>`;$('nearList').textContent='–';return;}
   const rows=S.recep.filter(r=>r.st.peak>=1).sort((a,b)=>b.st.mean24-a.st.mean24||b.st.peak-a.st.peak).slice(0,25);
   $('warnList').innerHTML = rows.length? rows.map(r=>{const b=bandFor(r.st.mean24);
     return `<div class="alert" data-name="${esc(r.name)}"><i class="sev" style="background:${b.color}"></i>
@@ -1789,7 +1807,8 @@ function renderLegend(){
     (PUBLIC?' · ':' · CAMS + monitors + terrain. ')+'24-h values are the mean of the 24 hours ending at the slider time. Dashed box: forecast area.';
 }
 applyStaticLang(); if(!S.mode) $('modeChip').textContent=T('no data','ไม่มีข้อมูล');
-$('btnLang').onclick=()=>{ LANG=LANG==='th'?'en':'th'; store.set('hsw.lang',LANG); applyStaticLang(); if(S.mode) setMode(S.mode); else $('modeChip').textContent=T('no data','ไม่มีข้อมูล');
+$('btnLang').onclick=()=>{ LANG=LANG==='th'?'en':'th'; store.set('hsw.lang',LANG); applyStaticLang();
+  {const lb=document.querySelector('.locate-btn'); if(lb){lb.title=T('Show PM2.5 at my location','ดูค่าฝุ่นที่ตำแหน่งของฉัน'); lb.setAttribute('aria-label',lb.title);}} if(S.mode) setMode(S.mode); else $('modeChip').textContent=T('no data','ไม่มีข้อมูล');
   renderLegend(); renderAll(); renderHereBox(); drawStations?.(); redrawTime(); };
 {const v=store.get('hsw.unitSel'); if(v) $('unitSel').value=v;}
 $('unitSel').addEventListener('change',()=>{store.set('hsw.unitSel',$('unitSel').value); renderLegend(); renderAll(); redrawTime();});

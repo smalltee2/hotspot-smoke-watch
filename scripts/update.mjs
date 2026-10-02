@@ -22,7 +22,8 @@ const CFG = {
   gridBbox: [92.0, 5.5, 110.0, 24.0],  // covers every region in the page's drop-down
   gridStep: 0.5,                 // deg; keeps Open-Meteo calls inside the free tier
   camsRefreshH: 12,              // CAMS is issued twice a day; with the met pulls this stays under Open-Meteo's 10k/day free limit
-  met: { refreshH: 6, grids: [ { name: 'north', bbox: [96.5, 14.5, 102.5, 21.5], step: 0.25 }, { name: 'domain', bbox: [92, 5, 110, 25], step: 1.0 } ] },
+  met: { refreshH: 12,   // ECMWF HRES full runs are 00/12 UTC; 12 h keeps Open-Meteo use under the free daily limit
+          grids: [ { name: 'north', bbox: [96.5, 14.5, 102.5, 21.5], step: 0.25 }, { name: 'domain', bbox: [92, 5, 110, 25], step: 1.0 } ] },
   stationRefreshH: 24,
   maxStations: 300,
   obsMaxAgeH: 3,                 // ignore station values older than this
@@ -64,6 +65,7 @@ async function get(url, opt = {}, tries = 3, waitMs = 2000) {
       if (e.cause?.code && !e.message.includes(e.cause.code)) e.message += ` (${e.cause.code})`;   // e.g. ECONNRESET, UND_ERR_CONNECT_TIMEOUT
       if (i === tries - 1) throw e; await sleep(waitMs * (i + 1)); }
   }
+  throw new Error(`HTTP 429 (rate limited) after ${tries} tries: ${url.split('?')[0]}`);
 }
 function km(a, b, c, d) { const p = Math.PI / 180, dl = (c - a) * p, dn = (d - b) * p;
   const h = Math.sin(dl / 2) ** 2 + Math.cos(a * p) * Math.cos(c * p) * Math.sin(dn / 2) ** 2; return 12742 * Math.asin(Math.sqrt(h)); }
@@ -131,7 +133,7 @@ async function oaqLatest(stations) {
 async function firmsHotspots() {
   const key = (process.env.FIRMS_MAP_KEY || '').trim();
   if (!key) { log('FIRMS_MAP_KEY missing, skipping hotspots'); return []; }
-  const rows = [];
+  const rows = []; firmsHotspots.ok = false;
   for (const src of CFG.firmsSources) {
     try {
       // FIRMS sometimes drops connections from cloud runners: 5 tries, 10–50 s apart
@@ -146,7 +148,7 @@ async function firmsHotspots() {
         rows.push([+(+v[ix('latitude')]).toFixed(4), +(+v[ix('longitude')]).toFixed(4), r1(+v[ix('frp')] || 0), t,
           (v[ix('confidence')] || 'n').toLowerCase()[0], src.split('_')[1]]);
       }
-      log(`FIRMS ${src}: ${lines.length - 1}`);
+      log(`FIRMS ${src}: ${lines.length - 1}`); firmsHotspots.ok = true;
     } catch (e) { log(`FIRMS ${src} failed: ${e.message}`); }
   }
   return rows;
@@ -192,14 +194,22 @@ async function main() {
 
   // 1. station list (daily)
   if (!state.stations || state.stationsCap !== CFG.maxStations || now - (state.stationsAt || 0) > CFG.stationRefreshH * HOUR) {
-    const all = await oaqStations();
-    const fresh = all.filter(s => now - s.last < 7 * 24 * HOUR);
-    fresh.sort((a, b) => (b.monitor - a.monitor) || (b.last - a.last));
-    state.stations = fresh.slice(0, CFG.maxStations);
-    state.stationsAt = now; state.stationsCap = CFG.maxStations;
-    log(`stations: ${all.length} with pm25 in area, ${fresh.length} active, keeping ${state.stations.length}`);
+    try {
+      const all = await oaqStations();
+      const fresh = all.filter(s => now - s.last < 7 * 24 * HOUR);
+      fresh.sort((a, b) => (b.monitor - a.monitor) || (b.last - a.last));
+      if (state.stations) state.prevStations = state.stations;
+      state.stations = fresh.slice(0, CFG.maxStations);
+      state.stationsAt = now; state.stationsCap = CFG.maxStations;
+      log(`stations: ${all.length} with pm25 in area, ${fresh.length} active, keeping ${state.stations.length}`);
+    } catch (e) {
+      if (!state.stations) throw e;
+      log(`station list refresh failed (${e.message}); keeping the previous list`);
+    }
   }
-  const stations = state.stations;
+  // readings are attached fresh each run, so a station that stops reporting does not keep an old value
+  for (const s of state.stations) delete s.obs;
+  let stations = state.stations;
 
   // 2. CAMS forecast at stations + grid (every few hours)
   const g = CFG.gridBbox, step = CFG.gridStep;
@@ -215,8 +225,12 @@ async function main() {
       log(`CAMS refreshed: ${pts.length} points × ${times.length} h`);
     } catch (e) {
       log(`CAMS refresh failed: ${e.message}`);
-      if (!state.cams || state.cams.stIds !== stIds || state.cams.gridKey !== gridKey) throw e;   // cannot continue without a forecast for these stations
-      log('using the previous CAMS forecast');
+      const prevOK = state.cams && state.cams.gridKey === gridKey;
+      if (prevOK && state.cams.stIds !== stIds && state.prevStations && state.prevStations.map(s => s.id).join(',') === state.cams.stIds) {
+        stations = state.stations = state.prevStations; state.stationsAt = 0;   // go back to the list the old forecast matches; retry next run
+        log('using the previous CAMS forecast and the previous station list');
+      } else if (!prevOK || state.cams.stIds !== stIds) throw e;   // cannot continue without a forecast for these stations
+      else log('using the previous CAMS forecast');
     }
   }
   const C = state.cams;
@@ -240,11 +254,12 @@ async function main() {
   });
   log(`Kalman updated at ${obsRows.length} stations`);
 
-  // 24-h mean of observations ending at the latest hour; valid with ≥ 18 of 24 hourly values (75 %)
+  for (const id of Object.keys(state.obsHist)) { state.obsHist[id] = state.obsHist[id].filter(([t]) => t > now - 30 * HOUR); if (!state.obsHist[id].length) delete state.obsHist[id]; }
+  // 24-h mean of observations ending at the latest hour; valid with ≥ 18 of 24 hourly values (75 %) and a recent last value
   function obs24(id) {
     const H = state.obsHist[id] || []; if (!H.length) return null;
     const tEnd = Math.max(...H.map(([t]) => t)), w = H.filter(([t]) => t > tEnd - 24 * HOUR);
-    return { v: r1(w.reduce((a, [, v]) => a + v, 0) / w.length), n: w.length, tEnd, valid: w.length >= 18 };
+    return { v: r1(w.reduce((a, [, v]) => a + v, 0) / w.length), n: w.length, tEnd, valid: w.length >= 18 && now - tEnd <= CFG.obsMaxAgeH * HOUR };
   }
 
   // 4. corrected forecasts at stations
@@ -312,11 +327,11 @@ async function main() {
   const gridRaw = hours.map((t, j) => gridPts.map((_, p) => { const v = C.grid[p][i0 + j]; return v == null ? -1 : r1(v); }));
 
   // 6. hotspots
-  let hot = await firmsHotspots();
+  let hot = await firmsHotspots(); let hotReused = false;
   if (!hot.length) {   // FIRMS unreachable or empty: keep the last good set (≤ 12 h old) rather than blanking the map
     const prev = await readJSON(path.join(DATA, 'latest.json'), null);
     const rows = prev?.hotspots?.rows || [], age = now - (prev?.hotspots?.fetched || prev?.generated || 0);
-    if (rows.length && age < 12 * HOUR) { hot = rows; log(`FIRMS returned nothing; reusing ${rows.length} hotspots from ${Math.round(age / 6e4)} min ago`); }
+    if (rows.length && age < 12 * HOUR) { hot = rows; hotReused = true; log(`FIRMS returned nothing; reusing ${rows.length} hotspots from ${Math.round(age / 6e4)} min ago`); }
   }
   // 6b. MODIS IGBP land cover at each detection (per-fire fuel type, as in FINN); map cached, refreshed for a new year
   let LC = null;
@@ -324,14 +339,14 @@ async function main() {
   const yNow = new Date(now).getUTCFullYear();
   if (!LC || (LC.year < yNow - 1 && now - (LC.built || 0) > 30 * 864e5)) {
     try { const nl = await buildLandcover(CFG.bbox, { get, log, year: yNow }); nl.built = now; LC = nl; await fs.writeFile(path.join(DATA, 'landcover.bin'), packLandcover(LC)); }
-    catch (e) { log(`land cover unavailable: ${e.message}${LC ? ' (keeping previous map)' : ''}`); }
+    catch (e) { log(`land cover unavailable: ${e.message}${LC ? ' (keeping previous map)' : ''}`); if (LC) { LC.built = now; await fs.writeFile(path.join(DATA, 'landcover.bin'), packLandcover(LC)); } }
   }
   if (LC) {
     hot = hot.map(r => [...r.slice(0, 6), landcoverAt(LC, r[0], r[1])]);
     const cnt = {}; for (const r of hot) cnt[r[6]] = (cnt[r[6]] || 0) + 1;
     log(`land cover at hotspots (IGBP ${LC.year}): ${Object.entries(cnt).sort((a, b) => b[1] - a[1]).map(([k, v]) => `${k}:${v}`).join(' ')}`);
   }
-  const hotFetched = RUNLOG.some(l => l.startsWith('FIRMS') && !l.includes('failed') && !l.includes('reusing')) ? now : null;
+  const hotFetched = firmsHotspots.ok && !hotReused ? now : null;   // only a real FIRMS reply resets the age of the hotspot set
 
   // 7. outputs
   await writeJSON(path.join(DATA, 'latest.json'), {
@@ -350,7 +365,9 @@ async function main() {
   const fRows = [];
   for (const s of outStations) if (s.monitor) for (const L of CFG.logLeads) { const j = jNow + L; if (j < hours.length && s.raw[j] != null)
     fRows.push([new Date(now).toISOString().slice(0, 13) + ':00Z', new Date(hours[j]).toISOString().slice(0, 13) + ':00Z', s.id, L, s.raw[j], s.corr[j]]); }
-  await appendCSV(path.join(hdir, `fcst-${stamp}.csv`), 'issued_utc,valid_utc,station_id,lead_h,cams_raw,corrected', fRows);
+  const fcstFile = path.join(hdir, `fcst-${stamp}.csv`);   // one file per issue hour: a second run in the same hour must not double-count it
+  if (await fs.access(fcstFile).then(() => false, () => true)) await appendCSV(fcstFile, 'issued_utc,valid_utc,station_id,lead_h,cams_raw,corrected', fRows);
+  else log(`forecast log for ${stamp} already written this hour`);
   await writeJSON(path.join(DATA, 'state.json'), state);
   log(`done: ${outStations.length} stations, ${hot.length} hotspots, grid ${nx}×${ny}×${hours.length}`);
 }

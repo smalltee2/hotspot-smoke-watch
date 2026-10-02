@@ -5,7 +5,7 @@ import zlib from 'node:zlib';
 import { decodePNG } from './dem.mjs';
 
 export const LC_LAYER = 'MODIS_Combined_L3_IGBP_Land_Cover_Type_Annual';
-// GIBS colour → IGBP class (0 = water, 255 = unclassified)
+// GIBS colour → IGBP class (17 = water; the colour map also gives water for source value 0; 255 = unclassified)
 const RGB2IGBP = new Map(Object.entries({
   '33,138,33': 1, '49,204,49': 2, '152,204,49': 3, '150,250,150': 4, '141,186,141': 5, '186,141,141': 6, '245,222,179': 7,
   '218,235,157': 8, '255,213,0': 9, '240,185,103': 10, '71,131,181': 11, '250,239,115': 12, '255,0,0': 13, '153,147,86': 14,

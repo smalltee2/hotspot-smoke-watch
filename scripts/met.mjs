@@ -54,10 +54,11 @@ export async function fetchMet(grids, { get, sleep, log, pastDays = 2, forecastD
             return Math.min(6e-4, Math.max(0, 9.81 / (0.5 * (th8 + th7)) * (th7 - th8) / (z7 - z8))); }); }
       }
     } catch (e) { n2ok = false; log(`met ${gs.name}: N² (850–700 hPa) unavailable, using ${N2_DEFAULT} s⁻²: ${e.message}`); }
+    await sleep(12000);   // keep under Open-Meteo's per-minute limit before the next grid
     // keep the useful time window
     const T = out.times, a = Math.max(0, T.findIndex(t => t >= keepFrom)), b = keepTo ? Math.max(a + 1, T.findLastIndex(t => t <= keepTo) + 1) : T.length, nt = b - a;
     const N = nt * nx * ny, d = { u: new Array(N), v: new Array(N), blh: new Array(N), cls: new Array(N), pr: new Array(N), n2: new Array(N) };
-    let missBLH = 0;
+    let missBLH = 0, n2miss = 0;
     for (let p = 0; p < pts.length; p++) {
       const h = per[p];
       for (let k = 0; k < nt; k++) {
@@ -70,11 +71,12 @@ export async function fetchMet(grids, { get, sleep, log, pastDays = 2, forecastD
         d.cls[i] = Math.round(pgClass(h.wind_speed_10m?.[t] ?? ws * 0.7, sw, h.cloud_cover?.[t] ?? 50) * 2);
         d.pr[i] = Math.round((h.precipitation?.[t] ?? 0) * 10) / 10;
         const n2 = n2ok && n2At[p] ? n2At[p](T[t]) : null;
+        if (n2 == null) n2miss++;
         d.n2[i] = Math.round((n2 ?? N2_DEFAULT) * 1e6) / 1e6;
       }
     }
     out.times = T; out.grids.push({ lon0: gs.bbox[0], lat0: gs.bbox[1], step: gs.step, nx, ny, a, nt, data: d });
-    log(`met ${gs.name}: ${pts.length} points × ${nt} h at ${gs.step}° (${MET_MODEL})${missBLH ? `, BLH missing in ${missBLH} values (filled)` : ''}`);
+    log(`met ${gs.name}: ${pts.length} points × ${nt} h at ${gs.step}° (${MET_MODEL})${missBLH ? `, BLH missing in ${missBLH} values (filled)` : ''}${n2miss ? `, N² default in ${n2miss} of ${N} values` : ''}`);
   }
   // all grids share one time axis window: use the first grid's
   const g0 = out.grids[0]; out.times = out.times.slice(g0.a, g0.a + g0.nt);

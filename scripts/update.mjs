@@ -42,7 +42,8 @@ const CFG = {
   // intermediates (scripts/certs/air4thai-chain.pem, chaining to ISRG Root X1) through NODE_EXTRA_CA_CERTS.
   // If Air4Thai cannot be reached when the station list is rebuilt, the OpenAQ copies are used as before.
   a4t: { list: 'https://air4thai.pcd.go.th/services/getNewAQI_JSON.php', hist: 'https://air4thai.pcd.go.th/webV2/history/api/data.php',
-         dedupKm: 1.0, chunk: 40, retryH: 3 },
+         dedupKm: 1.0, chunk: 40, retryH: 3, types: ['GROUND', 'BKK'] },   // BKK = Bangkok Metropolitan Administration network; MOBILE units left out
+  stationListVer: 2,             // bump to force a rebuild of the station list on the next run
   blendW: 0.5,                   // station 24-h forecast = w·persistence + (1−w)·corrected CAMS (provisional; to be fitted by lead from the hindcast)
 };
 const PM25_ID = 2; // OpenAQ parameter id for pm25
@@ -144,10 +145,10 @@ const thaiTime = s => Date.parse(String(s).trim().replace(' ', 'T') + '+07:00');
 const thaiDate = t => new Date(t + 7 * HOUR).toISOString().slice(0, 10);
 async function a4tStations() {
   const js = await (await get(CFG.a4t.list, {}, 3, 3000)).json();
-  return (js.stations || []).filter(x => (x.stationType || 'GROUND') === 'GROUND').map(x => {
+  return (js.stations || []).filter(x => CFG.a4t.types.includes(x.stationType || 'GROUND')).map(x => {
     const L = x.AQILast || {}, pm = +(L.PM25?.value ?? -1);
     return { id: 'a4t:' + x.stationID, code: x.stationID, name: x.nameEN || x.nameTH || x.stationID, nameTH: x.nameTH || '', lat: +x.lat, lon: +x.long,
-      monitor: true, provider: 'Air4Thai', hourly: true, country: 'TH', last: pm >= 0 && L.date ? thaiTime(`${L.date} ${L.time || '00:00'}:00`) : 0 };
+      monitor: true, provider: x.stationType === 'BKK' ? 'Air4Thai · Bangkok (BMA)' : 'Air4Thai', hourly: true, country: 'TH', last: pm >= 0 && L.date ? thaiTime(`${L.date} ${L.time || '00:00'}:00`) : 0 };
   }).filter(s => isFinite(s.lat) && isFinite(s.lon) && inBox(s.lat, s.lon, CFG.bbox));
 }
 // hourly PM2.5 (µg/m³) for many stations between two Thai dates. Each value is the mean of the hour ENDING at its time stamp
@@ -238,7 +239,7 @@ async function main() {
 
   // 1. station list (daily)
   const a4tRetry = state.stations && !state.stations.some(s => s.hourly) && now - (state.a4tTried || 0) > CFG.a4t.retryH * HOUR;
-  if (!state.stations || state.stationsCap !== CFG.maxStations || now - (state.stationsAt || 0) > CFG.stationRefreshH * HOUR || a4tRetry) {
+  if (!state.stations || state.stationsCap !== CFG.maxStations || state.stationListVer !== CFG.stationListVer || now - (state.stationsAt || 0) > CFG.stationRefreshH * HOUR || a4tRetry) {
     try {
       const all = await oaqStations();
       let fresh = all.filter(s => now - s.last < 7 * 24 * HOUR);
@@ -255,7 +256,7 @@ async function main() {
       fresh.sort((a, b) => (b.monitor - a.monitor) || ((b.hourly ? 1 : 0) - (a.hourly ? 1 : 0)) || (b.last - a.last));
       if (state.stations) state.prevStations = state.stations;
       state.stations = fresh.slice(0, CFG.maxStations);
-      state.stationsAt = now; state.stationsCap = CFG.maxStations;
+      state.stationsAt = now; state.stationsCap = CFG.maxStations; state.stationListVer = CFG.stationListVer;
       log(`stations: ${all.length} with pm25 in area, ${fresh.length} active, keeping ${state.stations.length}`);
     } catch (e) {
       if (!state.stations) throw e;

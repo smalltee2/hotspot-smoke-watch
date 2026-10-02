@@ -36,12 +36,14 @@ for (const f of files.filter(f => path.basename(f).startsWith('obs-'))) for (con
   obs.set(`${r.station_id}|${new Date(Math.round(t / 3600e3) * 3600e3).toISOString().slice(0, 13)}`, +r.obs_pm25);
 }
 const byLead = new Map();
-for (const f of files.filter(f => path.basename(f).startsWith('fcst-'))) for (const r of await readCSV(path.join(HIST, f))) {
+for (const f of files.filter(f => path.basename(f).startsWith('fcst-'))) { const seen = new Set(); for (const r of await readCSV(path.join(HIST, f))) {
+  // several runs in one hour (manual or overlapping triggers) appended to the same file before 2 Oct 2026: keep the first forecast per station and lead
+  const key = `${r.station_id}|${r.lead_h}|${r.valid_utc}`; if (seen.has(key)) continue; seen.add(key);
   if (Date.parse(r.valid_utc) < cutoff) continue;
   const o = obs.get(`${r.station_id}|${r.valid_utc.slice(0, 13)}`); if (o == null) continue;
   const L = +r.lead_h; if (!byLead.has(L)) byLead.set(L, { raw: [], cor: [] });
   byLead.get(L).raw.push([+r.cams_raw, o]); byLead.get(L).cor.push([+r.corrected, o]);
-}
+} }
 const leads = [...byLead.entries()].sort((a, b) => a[0] - b[0])
   .map(([L, v]) => ({ lead_h: L, n: v.raw.length, raw: score(v.raw), corrected: score(v.cor) }));
 await fs.writeFile(path.join(ROOT, 'data', 'verify.json'), JSON.stringify({ updated: Date.now(), window_days: WINDOW_DAYS, leads }));

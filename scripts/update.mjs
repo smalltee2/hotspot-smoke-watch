@@ -36,14 +36,15 @@ const CFG = {
   logLeads: [1, 3, 6, 12, 24, 48],
   // Air4Thai stations on OpenAQ report PM2.5 as a 24-h running mean, not hourly values (verified on Jan–Apr 2026: flat daily cycle,
   // mean hour-to-hour change 0.4 µg/m3); their correction and kriging therefore compare like with like (24-h means)
-  avg24Providers: ['Air4Thai'],
+  avg24Providers: ['Air4Thai', 'Air4Thai · Bangkok (BMA)'],
   // Thailand: hourly PM2.5 straight from the Pollution Control Department (Air4Thai); these replace the OpenAQ copies of the
   // same monitors (24-h means). Their server sends an incomplete certificate chain, so the workflow adds Let's Encrypt's
   // intermediates (scripts/certs/air4thai-chain.pem, chaining to ISRG Root X1) through NODE_EXTRA_CA_CERTS.
   // If Air4Thai cannot be reached when the station list is rebuilt, the OpenAQ copies are used as before.
   a4t: { list: 'https://air4thai.pcd.go.th/services/getNewAQI_JSON.php', hist: 'https://air4thai.pcd.go.th/webV2/history/api/data.php',
-         dedupKm: 1.0, chunk: 40, retryH: 3, types: ['GROUND', 'BKK'] },   // BKK = Bangkok Metropolitan Administration network; MOBILE units left out
-  stationListVer: 2,             // bump to force a rebuild of the station list on the next run
+         dedupKm: 1.0, chunk: 40, retryH: 3, types: ['GROUND', 'BKK'] },   // BKK = Bangkok Metropolitan Administration network (not in the hourly history service: read from the
+  // live feed, which gives the 24-h mean used for the AQI, so they are handled like the 24-h-mean stations); MOBILE units left out
+  stationListVer: 3,             // bump to force a rebuild of the station list on the next run
   blendW: 0.5,                   // station 24-h forecast = w·persistence + (1−w)·corrected CAMS (provisional; to be fitted by lead from the hindcast)
 };
 const PM25_ID = 2; // OpenAQ parameter id for pm25
@@ -146,9 +147,9 @@ const thaiDate = t => new Date(t + 7 * HOUR).toISOString().slice(0, 10);
 async function a4tStations() {
   const js = await (await get(CFG.a4t.list, {}, 3, 3000)).json();
   return (js.stations || []).filter(x => CFG.a4t.types.includes(x.stationType || 'GROUND')).map(x => {
-    const L = x.AQILast || {}, pm = +(L.PM25?.value ?? -1);
+    const L = x.AQILast || {}, pm = +(L.PM25?.value ?? -1), bkk = x.stationType === 'BKK', last = pm >= 0 && L.date ? thaiTime(`${L.date} ${L.time || '00:00'}:00`) : 0;
     return { id: 'a4t:' + x.stationID, code: x.stationID, name: x.nameEN || x.nameTH || x.stationID, nameTH: x.nameTH || '', lat: +x.lat, lon: +x.long,
-      monitor: true, provider: x.stationType === 'BKK' ? 'Air4Thai · Bangkok (BMA)' : 'Air4Thai', hourly: true, country: 'TH', last: pm >= 0 && L.date ? thaiTime(`${L.date} ${L.time || '00:00'}:00`) : 0 };
+      monitor: true, provider: bkk ? 'Air4Thai · Bangkok (BMA)' : 'Air4Thai', ...(bkk ? { feed24: true } : { hourly: true }), country: 'TH', last, pm: pm >= 0 ? pm : null };
   }).filter(s => isFinite(s.lat) && isFinite(s.lon) && inBox(s.lat, s.lon, CFG.bbox));
 }
 // hourly PM2.5 (µg/m³) for many stations between two Thai dates. Each value is the mean of the hour ENDING at its time stamp
@@ -238,7 +239,7 @@ async function main() {
   state.kf ||= {}; state.obsHist ||= {};
 
   // 1. station list (daily)
-  const a4tRetry = state.stations && !state.stations.some(s => s.hourly) && now - (state.a4tTried || 0) > CFG.a4t.retryH * HOUR;
+  const a4tRetry = state.stations && !state.stations.some(s => s.hourly || s.feed24) && now - (state.a4tTried || 0) > CFG.a4t.retryH * HOUR;
   if (!state.stations || state.stationsCap !== CFG.maxStations || state.stationListVer !== CFG.stationListVer || now - (state.stationsAt || 0) > CFG.stationRefreshH * HOUR || a4tRetry) {
     try {
       const all = await oaqStations();
@@ -292,10 +293,15 @@ async function main() {
   const C = state.cams;
 
   // 3. observations + Kalman update
-  const obs = await oaqLatest(stations.filter(s => !s.hourly));
+  const obs = await oaqLatest(stations.filter(s => !s.hourly && !s.feed24));
   const obsRows = [];
   // Air4Thai direct: the last ~2 days of hourly values in one or a few requests; also kept as a daily archive (one file per Thai day)
   const a4tSt = stations.filter(s => s.hourly), a4tH = new Map();
+  if (stations.some(s => s.feed24)) {   // Bangkok (BMA) stations: latest 24-h mean from the live feed
+    try { const cur = new Map((await a4tStations()).map(x => [x.id, x]));
+      let n = 0; for (const s of stations) if (s.feed24) { const x = cur.get(s.id); if (x && x.pm != null && x.last) { obs.set(s.id, { t: x.last, v: x.pm }); n++; } }
+      log(`Air4Thai Bangkok (BMA) feed: ${n} stations`); } catch (e) { log(`Air4Thai live feed unavailable: ${e.message}`); }
+  }
   if (a4tSt.length) {
     try {
       const got = await a4tHourly(a4tSt.map(s => s.code), thaiDate(now - 24 * HOUR), thaiDate(now));

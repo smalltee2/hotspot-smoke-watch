@@ -37,6 +37,12 @@ const CFG = {
   // Air4Thai stations on OpenAQ report PM2.5 as a 24-h running mean, not hourly values (verified on Jan–Apr 2026: flat daily cycle,
   // mean hour-to-hour change 0.4 µg/m3); their correction and kriging therefore compare like with like (24-h means)
   avg24Providers: ['Air4Thai'],
+  // Thailand: hourly PM2.5 straight from the Pollution Control Department (Air4Thai); these replace the OpenAQ copies of the
+  // same monitors (24-h means). Their server sends an incomplete certificate chain, so the workflow adds Let's Encrypt's
+  // intermediates (scripts/certs/air4thai-chain.pem, chaining to ISRG Root X1) through NODE_EXTRA_CA_CERTS.
+  // If Air4Thai cannot be reached when the station list is rebuilt, the OpenAQ copies are used as before.
+  a4t: { list: 'https://air4thai.pcd.go.th/services/getNewAQI_JSON.php', hist: 'https://air4thai.pcd.go.th/webV2/history/api/data.php',
+         dedupKm: 1.0, chunk: 40, retryH: 3 },
   blendW: 0.5,                   // station 24-h forecast = w·persistence + (1−w)·corrected CAMS (provisional; to be fitted by lead from the hindcast)
 };
 const PM25_ID = 2; // OpenAQ parameter id for pm25
@@ -133,6 +139,36 @@ async function oaqLatest(stations) {
   return vals;
 }
 
+// ------------------------------------------------------------------ Air4Thai (Pollution Control Department, Thailand)
+const thaiTime = s => Date.parse(String(s).trim().replace(' ', 'T') + '+07:00');   // their times are Thai local time (UTC+7)
+const thaiDate = t => new Date(t + 7 * HOUR).toISOString().slice(0, 10);
+async function a4tStations() {
+  const js = await (await get(CFG.a4t.list, {}, 3, 3000)).json();
+  return (js.stations || []).filter(x => (x.stationType || 'GROUND') === 'GROUND').map(x => {
+    const L = x.AQILast || {}, pm = +(L.PM25?.value ?? -1);
+    return { id: 'a4t:' + x.stationID, code: x.stationID, name: x.nameEN || x.nameTH || x.stationID, nameTH: x.nameTH || '', lat: +x.lat, lon: +x.long,
+      monitor: true, provider: 'Air4Thai', hourly: true, country: 'TH', last: pm >= 0 && L.date ? thaiTime(`${L.date} ${L.time || '00:00'}:00`) : 0 };
+  }).filter(s => isFinite(s.lat) && isFinite(s.lon) && inBox(s.lat, s.lon, CFG.bbox));
+}
+// hourly PM2.5 (µg/m³) for many stations between two Thai dates. Each value is the mean of the hour ENDING at its time stamp
+// (the latest hour appears about 20 min after it closes). Returns Map code → [[t_utc_ms, value], …]
+async function a4tHourly(codes, d0, d1) {
+  const out = new Map();
+  for (let i = 0; i < codes.length; i += CFG.a4t.chunk) {
+    const q = `stationID=${codes.slice(i, i + CFG.a4t.chunk).join(',')}&param=PM25&type=hr&sdate=${d0}&edate=${d1}&stime=00&etime=23`;
+    const js = await (await get(`${CFG.a4t.hist}?${q}`, {}, 3, 3000)).json();
+    if (js.result && js.result !== 'OK') throw new Error(`Air4Thai history: ${js.error || js.result}`);
+    for (const st of js.stations || []) {
+      const rows = [];
+      for (const d of st.data || []) { const v = d.PM25 == null || d.PM25 === '' ? NaN : +d.PM25, t = thaiTime(d.DATETIMEDATA);
+        if (isFinite(v) && v >= 0 && v < 1500 && isFinite(t) && t <= now + HOUR) rows.push([t, v]); }
+      out.set(st.stationID, rows.sort((a, b) => a[0] - b[0]));
+    }
+    if (i + CFG.a4t.chunk < codes.length) await sleep(800);
+  }
+  return out;
+}
+
 // ------------------------------------------------------------------ FIRMS
 async function firmsHotspots() {
   const key = (process.env.FIRMS_MAP_KEY || '').trim();
@@ -192,7 +228,7 @@ function interpT(times, arr, t) {
 
 // 24-h mean of an hourly series ending at time t (≥ 18 of 24 hours)
 function mean24T(times, arr, t) { let s = 0, n = 0; for (let h = 0; h < 24; h++) { const v = interpT(times, arr, t - h * HOUR); if (v != null) { s += v; n++; } } return n >= 18 ? s / n : null; }
-const isAvg24 = s => CFG.avg24Providers.includes(s.provider);
+const isAvg24 = s => !s.hourly && CFG.avg24Providers.includes(s.provider);   // OpenAQ copies of Air4Thai: 24-h running means
 
 // ------------------------------------------------------------------ main
 async function main() {
@@ -201,11 +237,22 @@ async function main() {
   state.kf ||= {}; state.obsHist ||= {};
 
   // 1. station list (daily)
-  if (!state.stations || state.stationsCap !== CFG.maxStations || now - (state.stationsAt || 0) > CFG.stationRefreshH * HOUR) {
+  const a4tRetry = state.stations && !state.stations.some(s => s.hourly) && now - (state.a4tTried || 0) > CFG.a4t.retryH * HOUR;
+  if (!state.stations || state.stationsCap !== CFG.maxStations || now - (state.stationsAt || 0) > CFG.stationRefreshH * HOUR || a4tRetry) {
     try {
       const all = await oaqStations();
-      const fresh = all.filter(s => now - s.last < 7 * 24 * HOUR);
-      fresh.sort((a, b) => (b.monitor - a.monitor) || (b.last - a.last));
+      let fresh = all.filter(s => now - s.last < 7 * 24 * HOUR);
+      state.a4tTried = now;
+      try {
+        const a4 = (await a4tStations()).filter(s => now - s.last < 7 * 24 * HOUR);
+        if (a4.length < 20) throw new Error(`only ${a4.length} active stations`);
+        // drop OpenAQ copies of the same monitors (any OpenAQ site within dedupKm of an Air4Thai station)
+        const before = fresh.length;
+        fresh = fresh.filter(o => !a4.some(a => km(o.lat, o.lon, a.lat, a.lon) <= CFG.a4t.dedupKm));
+        log(`Air4Thai direct: ${a4.length} active stations; replaced ${before - fresh.length} OpenAQ copies`);
+        fresh = a4.concat(fresh);
+      } catch (e) { log(`Air4Thai station list unavailable (${e.message}); using OpenAQ copies of Thai monitors`); }
+      fresh.sort((a, b) => (b.monitor - a.monitor) || ((b.hourly ? 1 : 0) - (a.hourly ? 1 : 0)) || (b.last - a.last));
       if (state.stations) state.prevStations = state.stations;
       state.stations = fresh.slice(0, CFG.maxStations);
       state.stationsAt = now; state.stationsCap = CFG.maxStations;
@@ -244,10 +291,36 @@ async function main() {
   const C = state.cams;
 
   // 3. observations + Kalman update
-  const obs = await oaqLatest(stations);
+  const obs = await oaqLatest(stations.filter(s => !s.hourly));
   const obsRows = [];
+  // Air4Thai direct: the last ~2 days of hourly values in one or a few requests; also kept as a daily archive (one file per Thai day)
+  const a4tSt = stations.filter(s => s.hourly), a4tH = new Map();
+  if (a4tSt.length) {
+    try {
+      const got = await a4tHourly(a4tSt.map(s => s.code), thaiDate(now - 24 * HOUR), thaiDate(now));
+      for (const s of a4tSt) { const rows = got.get(s.code) || []; a4tH.set(s.id, rows); const last = rows[rows.length - 1]; if (last) obs.set(s.id, { t: last[0], v: last[1] }); }
+      log(`Air4Thai hourly: ${[...a4tH.values()].filter(r => r.length).length}/${a4tSt.length} stations, latest hour ${new Date(Math.max(0, ...[...obs.entries()].filter(([k]) => String(k).startsWith('a4t:')).map(([, o]) => o.t))).toISOString().slice(0, 16)}Z`);
+      const yday = thaiDate(now - 24 * HOUR), arch = path.join(DATA, 'history', yday.slice(0, 7), `a4t-${yday.replace(/-/g, '')}.csv`);
+      const dayRows = []; for (const s of a4tSt) for (const [t, v] of a4tH.get(s.id) || []) if (thaiDate(t - HOUR) === yday) dayRows.push([new Date(t).toISOString().slice(0, 16) + 'Z', s.id, v]);
+      if (dayRows.length > a4tSt.length * 12 && await fs.access(arch).then(() => false, () => true)) {
+        await appendCSV(arch, 'hour_end_utc,station_id,pm25', dayRows); log(`Air4Thai archive ${path.basename(arch)}: ${dayRows.length} hourly values`); }
+    } catch (e) { log(`Air4Thai hourly unavailable: ${e.message}`); }
+  }
   stations.forEach((s, i) => {
     const o = obs.get(s.id); if (!o || now - o.t > CFG.obsMaxAgeH * HOUR || o.v < 0 || o.v > 1500) return;
+    if (s.hourly) {
+      // hourly monitor: full recent history from the source; every hour not yet used updates the filter, in time order.
+      // The value is the mean of the hour ending at t, so it is compared with CAMS at the middle of that hour (t − 30 min).
+      s.obs = o;
+      state.obsHist[s.id] = (a4tH.get(s.id) || []).filter(([t]) => t > now - 30 * HOUR).map(([t, v]) => [t, r1(v)]);
+      for (const [t, v] of (a4tH.get(s.id) || []).filter(([t]) => t > now - 12 * HOUR)) {
+        const k = state.kf[s.id]; if (k && t <= k.t) continue;
+        const raw = interpT(C.times, C.st[i], t - HOUR / 2); if (raw == null) continue;
+        state.kf[s.id] = kfStep(k, Math.log(v + 1) - Math.log(raw + 1), t);
+        obsRows.push([new Date(t).toISOString(), s.id, r1(v), r1(raw)]);
+      }
+      return;
+    }
     s.obs = o;
     // keep the last 30 h of hourly observations per station for standard 24-h means (AQI)
     const hk = Math.round(o.t / HOUR) * HOUR, H = (state.obsHist[s.id] ||= []);
@@ -260,7 +333,7 @@ async function main() {
     state.kf[s.id] = kfStep(k, y, o.t);
     obsRows.push([new Date(o.t).toISOString(), s.id, r1(o.v), r1(raw)]);
   });
-  log(`Kalman updated at ${obsRows.length} stations`);
+  log(`Kalman updated at ${new Set(obsRows.map(r => r[1])).size} stations (${obsRows.length} hourly values)`);
 
   for (const id of Object.keys(state.obsHist)) { state.obsHist[id] = state.obsHist[id].filter(([t]) => t > now - 30 * HOUR); if (!state.obsHist[id].length) delete state.obsHist[id]; }
   // 24-h mean of observations ending at the latest hour; valid with ≥ 18 of 24 hourly values (75 %) and a recent last value
@@ -284,6 +357,17 @@ async function main() {
     // 24-h-mean stations: forecast of the 24-h mean ending at each future hour = blend of persistence and corrected CAMS (no fade);
     // past hours carry the observed 24-h means
     let fc24 = null;
+    const o24n = !a24 ? obs24(s.id, s) : null;
+    if (!a24 && o24n && o24n.valid) {
+      // hourly monitors: 24-h mean ending at each hour = observed hours up to now, corrected CAMS after; future hours are blended
+      // with persistence of the current observed 24-h mean (same weight as for the 24-h-mean stations)
+      const hist = new Map((state.obsHist[s.id] || []).map(([t, v]) => [t, v]));
+      const val = hours.map((t, j) => j <= jNow ? (hist.has(t) ? hist.get(t) : null) : corr[j]);
+      fc24 = hours.map((t, j) => {
+        let su = 0, n = 0; for (let q = j - 23; q <= j; q++) { const v = q >= 0 ? val[q] : null; if (v != null) { su += v; n++; } }
+        if (n < 18) return null; const m = su / n; return r1(j <= jNow ? m : CFG.blendW * o24n.v + (1 - CFG.blendW) * m);
+      });
+    }
     if (a24) {
       const hist = new Map((state.obsHist[s.id] || []).map(([t, v]) => [t, v])), nf = raw.map(v => v == null ? null : Math.max(0, (v + 1) * Math.exp(b) - 1));
       const o0 = s.obs && now - s.obs.t <= CFG.obsMaxAgeH * HOUR ? s.obs.v : null;
@@ -293,7 +377,7 @@ async function main() {
         if (n < 18) return null; const m = su / n; return r1(o0 != null ? CFG.blendW * o0 + (1 - CFG.blendW) * m : m);
       });
     }
-    return { id: s.id, name: s.name, lat: s.lat, lon: s.lon, monitor: s.monitor, provider: s.provider, cc: s.country, avg24: a24,
+    return { id: s.id, name: s.name, lat: s.lat, lon: s.lon, monitor: s.monitor, provider: s.provider, cc: s.country, avg24: a24, hourly: !!s.hourly, ...(s.nameTH ? { nameTH: s.nameTH } : {}),
       obs: s.obs ? { t: s.obs.t, v: r1(s.obs.v) } : null, obs24: obs24(s.id, s), bias: k ? +b.toFixed(3) : null, nUpd: k?.n || 0, raw, corr, fc24 };
   });
 
@@ -410,9 +494,9 @@ async function main() {
   const m24 = (arr, j) => { let su = 0, n = 0; for (let q = j - 23; q <= j; q++) { const v = q >= 0 ? arr[q] : null; if (v != null) { su += v; n++; } } return n >= 18 ? r1(su / n) : ''; };
   for (const s of outStations) if (s.monitor) for (const L of CFG.logLeads) { const j = jNow + L; if (j < hours.length && s.raw[j] != null)
     fRows.push([new Date(now).toISOString().slice(0, 13) + ':00Z', new Date(hours[j]).toISOString().slice(0, 13) + ':00Z', s.id, L, s.raw[j], s.corr[j],
-      s.avg24 ? m24(s.raw, j) : '', s.avg24 ? m24(s.corr, j) : '', s.avg24 && s.fc24?.[j] != null ? s.fc24[j] : '']); }
+      s.fc24 ? m24(s.raw, j) : '', s.fc24 ? m24(s.corr, j) : '', s.fc24?.[j] != null ? s.fc24[j] : '', s.avg24 ? '24' : 'h']); }
   const fcstFile = path.join(hdir, `fcst-${stamp}.csv`);   // one file per issue hour: a second run in the same hour must not double-count it
-  if (await fs.access(fcstFile).then(() => false, () => true)) await appendCSV(fcstFile, 'issued_utc,valid_utc,station_id,lead_h,cams_raw,corrected,cams24,corr24,blend24', fRows);
+  if (await fs.access(fcstFile).then(() => false, () => true)) await appendCSV(fcstFile, 'issued_utc,valid_utc,station_id,lead_h,cams_raw,corrected,cams24,corr24,blend24,obs_basis', fRows);
   else log(`forecast log for ${stamp} already written this hour`);
   await writeJSON(path.join(DATA, 'state.json'), state);
   log(`done: ${outStations.length} stations, ${hot.length} hotspots, grid ${nx}×${ny}×${hours.length}`);

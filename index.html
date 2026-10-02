@@ -420,7 +420,7 @@ td.num{text-align:right;font-family:var(--font-data);font-variant-numeric:tabula
         <li data-th="ค่าทางการดูได้ที่ Air4Thai ของกรมควบคุมมลพิษ (air4thai.pcd.go.th)">For official readings, see the Pollution Control Department's Air4Thai (air4thai.pcd.go.th).</li>
       </ul>
       <h3 data-th="ข้อมูลจาก">Data from</h3>
-      <p class="note" data-th="จุดไฟ: NASA FIRMS (ดาวเทียม VIIRS) · ฝุ่นพยากรณ์: Copernicus CAMS · ลมและสภาพอากาศ: ECMWF ผ่าน Open-Meteo · ค่าสถานี: กรมควบคุมมลพิษและเครือข่ายอื่นผ่าน OpenAQ · การใช้ที่ดิน: NASA MODIS · เขตแดนประเทศและจังหวัด: World Bank Official Boundaries (เขตแดน สี และชื่อบนแผนที่ไม่ได้แสดงการรับรองสถานะทางกฎหมายของดินแดนใด)">Fires: NASA FIRMS (VIIRS satellites) · PM<sub>2.5</sub> forecast: Copernicus CAMS · Wind and weather: ECMWF via Open-Meteo · Stations: Pollution Control Department and others via OpenAQ · Land cover: NASA MODIS · Borders: World Bank Official Boundaries (borders, colours and names on the map do not imply any judgment on the legal status of any territory).</p>
+      <p class="note" data-th="จุดไฟ: NASA FIRMS (ดาวเทียม VIIRS) · ฝุ่นพยากรณ์: Copernicus CAMS · ลมและสภาพอากาศ: ECMWF ผ่าน Open-Meteo · ค่าสถานี: กรมควบคุมมลพิษ (Air4Thai รายชั่วโมง) และเครือข่ายอื่นผ่าน OpenAQ · การใช้ที่ดิน: NASA MODIS · เขตแดนประเทศและจังหวัด: World Bank Official Boundaries (เขตแดน สี และชื่อบนแผนที่ไม่ได้แสดงการรับรองสถานะทางกฎหมายของดินแดนใด)">Fires: NASA FIRMS (VIIRS satellites) · PM<sub>2.5</sub> forecast: Copernicus CAMS · Wind and weather: ECMWF via Open-Meteo · Stations: Pollution Control Department (Air4Thai, hourly) and other networks via OpenAQ · Land cover: NASA MODIS · Borders: World Bank Official Boundaries (borders, colours and names on the map do not imply any judgment on the legal status of any territory).</p>
       <p class="note"><a href="dev.html" data-th="หน้าสำหรับนักวิจัยและผู้พัฒนา (วิธีการคำนวณ ค่าตั้งค่า และผลตรวจสอบ) →">Page for researchers and developers (methods, settings and verification) →</a></p>
     </section>
 
@@ -457,6 +457,7 @@ td.num{text-align:right;font-family:var(--font-data);font-variant-numeric:tabula
       <p class="note">Every hour a GitHub Actions job pulls PM<sub>2.5</sub> from reference monitors on OpenAQ, the CAMS global PM<sub>2.5</sub> forecast through Open-Meteo, and VIIRS hotspots from NASA FIRMS. Two corrections are applied to CAMS: a Kalman filter per station for the station forecasts, and regression kriging for the map.</p>
       <h3>Station data are 24-hour averages</h3>
       <p class="note">Air4Thai stations, which are almost all the reference monitors in Thailand on OpenAQ, report PM<sub>2.5</sub> as a 24-hour running mean, not hourly values. In the January–April 2026 record of 186 stations the mean change from one hour to the next is 0.4 µg/m³ and there is no daily cycle, while CAMS varies by about 13 µg/m³ between midday and night. Since 2 October 2026 the page therefore compares like with like for these stations: the Kalman filter and the kriging use the CAMS 24-hour mean ending at the observation hour, station markers in the 24-h and AQI views show the measured 24-hour mean, and the station 24-hour forecast is a blend, w·(latest observed 24-h mean) + (1−w)·(24-h mean of the corrected CAMS), with w = 0.5 for now. In a hindcast of January–April 2026 (193 stations, 6-hourly issues, 24-h means) the blend gave RMSE 8.2 and 10.7 µg/m³ at 13–24 h and 25–48 h ahead, against 8.7 and 12.1 for persistence alone and 19.7 and 20.3 for raw CAMS; w will be fitted by lead time from that hindcast. Stations from other networks (for example Hanoi) report hourly values and are treated as hourly.</p>
+      <p class="note">From 3 October 2026 the Thai monitors are read directly from the Pollution Control Department (Air4Thai), whose history service gives true hourly PM<sub>2.5</sub> (each value is the mean of the hour ending at its time stamp). These replace the OpenAQ copies of the same monitors (any OpenAQ site within 1 km). For them the Kalman filter compares each hourly value with CAMS at the middle of that hour, the kriging uses the 24-hour mean of the hourly values (≥ 18 of 24), and the 24-hour forecast (blue line) is the running mean of measured hours up to now and corrected CAMS after, blended with persistence of the current 24-hour mean. If Air4Thai cannot be reached when the station list is rebuilt, the OpenAQ copies are used as before. Monitors outside Thailand still come from OpenAQ. Each day's hourly values are kept in data/history (a4t-YYYYMMDD.csv).</p>
       <h3>Station forecasts: Kalman filter</h3>
       <p class="note">Each monitor's log-ratio bias b = ln(obs+1) − ln(CAMS+1) is tracked with a scalar Kalman filter (random-walk state), following the predictor bias correction of Delle Monache et al. (2006). The forecast at the station is (CAMS+1)·e<sup>b·w</sup> − 1, where w = e<sup>−lead/48 h</sup> fades the correction with lead time. The noise settings (Q = 0.02, R = 0.15 per hour, in log units) and the 48 h e-folding time are starting values, not fitted ones; they will be tuned from the lead-time verification below.</p>
       <h3>Map: regression kriging with a CAMS drift</h3>
@@ -485,6 +486,7 @@ td.num{text-align:right;font-family:var(--font-data);font-variant-numeric:tabula
         <li>Pollution Control Department, Thailand: revised PM<sub>2.5</sub> AQI criteria effective 1 June 2023 (reported by Thai PBS, thaipbs.or.th/news/content/329386).</li>
         <li>US EPA (2024). PM NAAQS Air Quality Index fact sheet: revised PM<sub>2.5</sub> AQI breakpoints, effective 6 May 2024. epa.gov</li>
         <li>World Bank Official Boundaries, Admin 1 (provinces) and the countries formed from them, simplified together so shared borders match (typical shift ≈0.35 km, 90% within 1 km; islands under ≈12 km² omitted). The boundaries, colours and denominations shown do not imply any judgment on the legal status of any territory.</li>
+        <li>Pollution Control Department, Thailand: Air4Thai hourly PM<sub>2.5</sub> (history service, air4thai.pcd.go.th), read directly for Thai monitors from 3 October 2026; values are means of the hour ending at the time stamp.</li>
         <li>OpenAQ v3 API, reference-grade PM<sub>2.5</sub> monitors (Air4Thai and others). openaq.org</li>
         <li>Copernicus Atmosphere Monitoring Service (CAMS) global PM<sub>2.5</sub> forecast, via the Open-Meteo air quality API.</li>
         <li>Delle Monache, L., et al. (2006). Ozone ensemble forecasts: 2. A Kalman filter predictor bias correction. JGR Atmospheres 111, D05308.</li>
@@ -1332,7 +1334,9 @@ async function loadVerify(){
     const hb=rows.some(l=>l.blend);
     $('verifyBox').innerHTML=`<div class="tablewrap"><table><thead><tr><th>Lead</th><th class="num">n</th><th class="num">RMSE raw</th><th class="num">RMSE corr.</th>${hb?'<th class="num">RMSE blend</th>':''}<th class="num">Bias raw</th><th class="num">Bias corr.</th><th class="num">r corr.</th>${hb?'<th class="num">r blend</th>':''}</tr></thead><tbody>`+
       rows.map(l=>`<tr><td>${l.lead_h} h</td><td class="num">${l.n}</td><td class="num">${l.raw.rmse}</td><td class="num">${l.corrected.rmse}</td>${hb?`<td class="num">${l.blend?.rmse??'–'}</td>`:''}<td class="num">${l.raw.mb}</td><td class="num">${l.corrected.mb}</td><td class="num">${l.corrected.r??'–'}</td>${hb?`<td class="num">${l.blend?.r??'–'}</td>`:''}</tr>`).join('')+
-      `</tbody></table></div><p class="note">Last ${v.window_days} days, µg/m³. ${v.basis==='24h'?'24-h means ending at the valid hour at Air4Thai monitors (which report 24-h running means): CAMS, corrected CAMS and the blend with persistence.':'Older log: hourly CAMS against the stations’ 24-h running means, so these scores are not like for like.'} Updated ${fmtT(v.updated)}.</p>`;
+      `</tbody></table></div><p class="note">Last ${v.window_days} days, µg/m³. ${v.basis==='24h'?'24-h means ending at the valid hour at Air4Thai monitors (which report 24-h running means): CAMS, corrected CAMS and the blend with persistence.':'Older log: hourly CAMS against the stations’ 24-h running means, so these scores are not like for like.'} Updated ${fmtT(v.updated)}.</p>`+
+      ((v.hourly||[]).filter(l=>l.raw&&l.corrected).length?`<p class="note"><b>Hourly</b>, Air4Thai monitors read directly (true 1-h values, from 3 Oct 2026):</p><div class="tablewrap"><table><thead><tr><th>Lead</th><th class="num">n</th><th class="num">RMSE raw</th><th class="num">RMSE corr.</th><th class="num">Bias raw</th><th class="num">Bias corr.</th><th class="num">r corr.</th></tr></thead><tbody>`+
+        v.hourly.filter(l=>l.raw&&l.corrected).map(l=>`<tr><td>${l.lead_h} h</td><td class="num">${l.n}</td><td class="num">${l.raw.rmse}</td><td class="num">${l.corrected.rmse}</td><td class="num">${l.raw.mb}</td><td class="num">${l.corrected.mb}</td><td class="num">${l.corrected.r??'–'}</td></tr>`).join('')+'</tbody></table></div>':'');
   }catch(e){}
 }
 
@@ -1508,7 +1512,7 @@ function hereHTML(lat,lon,acc){
       ${mean24!=null?`<tr><th>${T('Next 24 h','24 ชม. ข้างหน้า')}</th><td class="num">${T('mean','เฉลี่ย')} ${fmtN(mean24)}, ${T('max','สูงสุด')} ${fmtN(peak)} ${T('at','เวลา')} ${hm(tPeak)}</td></tr>`:''}
       ${vSl!=null?`<tr><th>${T('At slider time','ณ เวลาที่เลือก')}</th><td class="num">${fmtN(vSl)} µg/m³</td></tr>`:''}
       <tr><th>${T('Fire smoke now','ควันไฟขณะนี้')}</th><td class="num">${fire>=0.1?fmtN(fire)+' µg/m³':T('none modelled','ไม่พบในแบบจำลอง')}</td></tr>
-      <tr><th>${T('Nearest monitor','สถานีใกล้ที่สุด')}</th><td>${st?`${esc(st.name)}<br>${fmtN(st.obs.v)} µg/m³${st.avg24?T(' (24-h avg)',' (เฉลี่ย 24 ชม.)'):''}, ${dSt.toFixed(0)} ${T('km','กม.')}`:'–'}</td></tr>
+      <tr><th>${T('Nearest monitor','สถานีใกล้ที่สุด')}</th><td>${st?`${esc(stName(st))}<br>${fmtN(st.obs.v)} µg/m³${st.avg24?T(' (24-h avg)',' (เฉลี่ย 24 ชม.)'):''}, ${dSt.toFixed(0)} ${T('km','กม.')}`:'–'}</td></tr>
       <tr><th>${T('Hotspots','จุดความร้อน')}</th><td class="num">${nHot} ${T('within 20 km','ในรัศมี 20 กม.')}${dHot<1e9?`, ${T('nearest','ใกล้สุด')} ${dHot.toFixed(1)} ${T('km','กม.')}`:''}</td></tr>
     </tbody></table>
     ${hereTrend(lat,lon)}
@@ -1562,42 +1566,43 @@ function drawStations(){
     // Air4Thai stations report a 24-h running mean: in the hourly view they show the hourly forecast, in 24-h views the measured
     // 24-h mean now and the blended 24-h forecast later
     let v=live&&s.obs&&!s.avg24?s.obs.v:f;
-    if(avg24()&&s.avg24){ const i=gIdx(t); v=live&&s.obs24&&s.obs24.valid?s.obs24.v:(i>=0&&s.fc24?s.fc24[i]:null); }
+    if(avg24()&&s.fc24){ const i=gIdx(t); v=live&&s.obs24&&s.obs24.valid?s.obs24.v:(i>=0?s.fc24[i]:null); }
     else if(avg24()){ if(live&&s.obs24&&s.obs24.valid) v=s.obs24.v; else { const i=gIdx(t); if(i>=17){let a=0,n=0; for(let k=Math.max(0,i-23);k<=i;k++){const c=s.corr[k]; if(c!=null){a+=c;n++;}} v=n>=18?a/n:null;} else v=null; } }
     if(v==null) continue;
     const icon=L.divIcon({className:'',html:`<div class="stmark" style="background:${pcdColor(v)};${s.monitor?'':'opacity:.6'}"></div>`,iconSize:[12,12],iconAnchor:[6,6]});
-    L.marker([s.lat,s.lon],{icon,keyboard:false}).bindTooltip(()=>`<b>${esc(s.name)}</b>${s.provider?` · ${esc(s.provider)}`:''}<br>`+
+    L.marker([s.lat,s.lon],{icon,keyboard:false}).bindTooltip(()=>`<b>${esc(stName(s))}</b>${s.provider?` · ${esc(s.provider)}${s.hourly?T(' (hourly)',' (รายชั่วโมง)'):''}`:''}<br>`+
       (s.obs?`${s.avg24?T('Measured 24-h average','ค่าเฉลี่ย 24 ชม. ที่วัดได้'):T('Measured','ค่าตรวจวัด')} ${fmtN(s.obs.v)} µg/m³ ${T('at','เมื่อ')} ${fmtT(s.obs.t)}<br>`:T('No recent reading','ไม่มีค่าตรวจวัดล่าสุด')+'<br>')+(s.obs24?`${T('24-h mean','เฉลี่ย 24 ชม.')} ${fmtN(s.obs24.v)} µg/m³ (${s.obs24.n}/24 ${T('h','ชม.')}${s.obs24.valid?'':T(', incomplete',', ไม่ครบ')}) · ${T('Thai AQI','AQI ไทย')} ${aqiTH(s.obs24.v)} · ${T('US AQI','AQI สหรัฐฯ')} ${aqiUS(s.obs24.v)}<br>`:'')+
       (f!=null?`${T('Forecast','พยากรณ์')} ${fmtN(f)} µg/m³ ${T('at slider time','ณ เวลาที่เลือก')}`:'')+(s.bias!=null&&!PUBLIC?`<br>CAMS ×${Math.exp(s.bias).toFixed(2)} ${T('at this station','ที่สถานีนี้')}`:''))
       .on('click',()=>focusStation(s.id)).addTo(stationLayer);
   }
 }
+const stName=s=>LANG==='th'&&s.nameTH?s.nameTH:s.name;
 function renderStations(){
   if(!P.data){$('stList').innerHTML=T('Station data appear here when the page runs from the hosted site.','ข้อมูลสถานีจะแสดงเมื่อเปิดหน้าเว็บจากเว็บไซต์ที่โฮสต์');return;}
   const now=Date.now(), b=REGIONS[$('region').value].bbox;
   const inReg=P.data.stations.filter(s=>inRegion(s.lat,s.lon)), ref=inReg.filter(s=>s.monitor), lowN=inReg.length-ref.length;
   // Air4Thai stations: highest 24-h mean comes from their blended 24-h forecast (persistence + corrected CAMS)
-  const st24=s=>{const st=seriesStats(s.corr,P.data.hours,now); if(!(s.avg24&&s.fc24)) return st;
+  const st24=s=>{const st=seriesStats(s.corr,P.data.hours,now); if(!s.fc24) return st;
     let best=0,tB=null; P.data.hours.forEach((t,i)=>{const v=s.fc24[i]; if(t>now&&v!=null&&v>best){best=v;tB=t;}}); return best>0?{...st,mean24:best,tMean:tB}:st;};
   const rows=(ref.length?ref:inReg).map(s=>({s,st:st24(s)}))
     .sort((a,b)=>b.st.mean24-a.st.mean24).slice(0,15);
   $('stList').innerHTML=rows.length?rows.map(({s,st})=>{const bd=bandFor(st.mean24);
     return `<div class="alert" data-sid="${s.id}"><i class="sev" style="background:${bd.color}"></i>
-      <div><div class="name">${esc(s.name)} <span class="note">${esc(s.cc||'')}${s.monitor?'':T(' · low-cost sensor',' · เซนเซอร์ราคาประหยัด')}</span></div>
+      <div><div class="name">${esc(stName(s))} <span class="note">${esc(s.cc||'')}${s.monitor?'':T(' · low-cost sensor',' · เซนเซอร์ราคาประหยัด')}</span></div>
       <div class="sub">${pill(st.mean24)} ${s.obs?`${s.avg24?T('24-h avg now','เฉลี่ย 24 ชม. ขณะนี้'):T('now','ขณะนี้')} ${fmtN(s.obs.v)} µg/m³`:T('no recent reading','ไม่มีค่าล่าสุด')}${s.obs24&&s.obs24.valid&&!s.avg24&&unitMode()!=='ug'?` · ${T('measured 24-h','วัดได้ 24 ชม.')} ${fmtVal(s.obs24.v)}`:''}</div></div>
       <div class="val">${valNum(st.mean24)}<small>${T('max 24-h','สูงสุด 24 ชม.')} ${unitShort()}</small>${fmtN(st.peak)}<small>${T('1-h max','สูงสุด 1 ชม.')} µg/m³</small></div></div>`;}).join('')
     :T('No reporting stations in this region.','ไม่มีสถานีที่รายงานข้อมูลในพื้นที่นี้');
   if(ref.length&&lowN) $('stList').insertAdjacentHTML('beforeend',`<p class="note">${T(`Reference monitors only. ${lowN} low-cost sensors are on the map (faded) but not ranked here.`,`จัดอันดับเฉพาะสถานีมาตรฐาน มีเซนเซอร์ราคาประหยัด ${lowN} จุดแสดงบนแผนที่ (สีจาง) แต่ไม่นำมาจัดอันดับ`)}</p>`);
-  $('stList').querySelectorAll('.alert').forEach(el=>el.onclick=()=>focusStation(+el.dataset.sid));
+  $('stList').querySelectorAll('.alert').forEach(el=>el.onclick=()=>focusStation(el.dataset.sid));
 }
 function focusStation(id){
-  const s=P.data?.stations.find(x=>x.id===id); if(!s) return; map.flyTo([s.lat,s.lon],9); showTab('warn'); showMapOnPhone();
-  const H=P.data.hours, c=s.corr.map(v=>v??0), r=s.raw.map(v=>v??0), f24=s.avg24&&s.fc24?s.fc24:null, max=Math.max(37.5,...c,...r,...(f24||[]).map(v=>v??0),s.obs?.v||0)*1.1, W=320,Ht=120,pad=26;
+  const s=P.data?.stations.find(x=>String(x.id)===String(id)); if(!s) return; map.flyTo([s.lat,s.lon],9); showTab('warn'); showMapOnPhone();
+  const H=P.data.hours, c=s.corr.map(v=>v??0), r=s.raw.map(v=>v??0), f24=s.fc24||null, max=Math.max(37.5,...c,...r,...(f24||[]).map(v=>v??0),s.obs?.v||0)*1.1, W=320,Ht=120,pad=26;
   const X=i=>pad+i*(W-pad-6)/(H.length-1||1), Y=v=>Ht-18-(v/max)*(Ht-28);
   const line=a=>a.map((v,i)=>`${i?'L':'M'}${X(i).toFixed(1)},${Y(v).toFixed(1)}`).join('');
   const lines=[15,25,37.5,75].filter(l=>l<max).map((l,k)=>`<line x1="${pad}" x2="${W-6}" y1="${Y(l)}" y2="${Y(l)}" stroke="var(--${PCD[k].key})" stroke-dasharray="3 3"/><text x="${pad-4}" y="${Y(l)+3}" text-anchor="end" font-size="8" fill="var(--muted)">${l}</text>`).join('');
   const oi=s.obs?idxIn(H,Math.round(s.obs.t/HR)*HR):-1;
-  $('townDetail').innerHTML=`<h3>${esc(s.name)}: ${T('PM₂.₅ forecast','พยากรณ์ PM₂.₅')}</h3><div class="tablewrap"><svg viewBox="0 0 ${W} ${Ht}" width="100%" role="img" aria-label="PM2.5 forecast at ${esc(s.name)}">
+  $('townDetail').innerHTML=`<h3>${esc(stName(s))}: ${T('PM₂.₅ forecast','พยากรณ์ PM₂.₅')}</h3><div class="tablewrap"><svg viewBox="0 0 ${W} ${Ht}" width="100%" role="img" aria-label="PM2.5 forecast at ${esc(s.name)}">
     <rect width="${W}" height="${Ht}" fill="var(--panel)"/>${lines}
     ${PUBLIC?'':`<path d="${line(r)}" fill="none" stroke="var(--muted)" stroke-width="1.2" stroke-dasharray="2 2"/>`}
     <path d="${line(c)}" fill="none" stroke="var(--ember)" stroke-width="1.8"/>
@@ -1605,7 +1610,7 @@ function focusStation(id){
     ${oi>=0?`<circle cx="${X(oi)}" cy="${Y(s.obs.v)}" r="3.5" fill="var(--fg)"/>`:''}
     <text x="${pad}" y="${Ht-4}" font-size="8" fill="var(--muted)">${fmtT(H[0])}</text>
     <text x="${W-6}" y="${Ht-4}" font-size="8" fill="var(--muted)" text-anchor="end">${fmtT(H[H.length-1])}</text></svg></div>
-    ${f24?`<p class="note">${T('Blue: 24-h average — measured up to now, then forecast (this station reports 24-h averages). Orange: hourly forecast.','เส้นน้ำเงิน: ค่าเฉลี่ย 24 ชม. — ค่าที่วัดได้จนถึงตอนนี้ ต่อด้วยค่าพยากรณ์ (สถานีนี้รายงานค่าเฉลี่ย 24 ชม.) เส้นส้ม: ค่าพยากรณ์รายชั่วโมง')}</p>`:''}
+    ${f24?`<p class="note">${s.avg24?T('Blue: 24-h average — measured up to now, then forecast (this station reports 24-h averages). Orange: hourly forecast.','เส้นน้ำเงิน: ค่าเฉลี่ย 24 ชม. — ค่าที่วัดได้จนถึงตอนนี้ ต่อด้วยค่าพยากรณ์ (สถานีนี้รายงานค่าเฉลี่ย 24 ชม.) เส้นส้ม: ค่าพยากรณ์รายชั่วโมง'):T('Blue: 24-h average (basis of the Thai AQI) — from measured hourly values up to now, then forecast. Orange: hourly forecast.','เส้นน้ำเงิน: ค่าเฉลี่ย 24 ชม. (ใช้คำนวณ AQI) — จากค่ารายชั่วโมงที่วัดได้จนถึงตอนนี้ ต่อด้วยค่าพยากรณ์ เส้นส้ม: ค่าพยากรณ์รายชั่วโมง')}</p>`:''}
     <p class="note">${PUBLIC?T('Solid line: forecast for this station. Dot: latest measurement','เส้นทึบ: ค่าพยากรณ์ของสถานีนี้ จุด: ค่าที่วัดได้ล่าสุด'):T('Solid: corrected forecast. Dashed grey: raw CAMS. Dot: latest measurement','เส้นทึบ: พยากรณ์ที่ปรับแก้แล้ว เส้นประสีเทา: CAMS ดิบ จุด: ค่าตรวจวัดล่าสุด')}${s.obs?` (${fmtN(s.obs.v)} µg/m³)`:''}. ${PUBLIC?'':s.bias!=null?T(`This station currently reads ×${Math.exp(s.bias).toFixed(2)} of CAMS, from ${s.nUpd} hourly updates.`,`สถานีนี้วัดได้ประมาณ ×${Math.exp(s.bias).toFixed(2)} ของ CAMS จากการปรับ ${s.nUpd} ชั่วโมง`):T('No correction yet at this station.','ยังไม่มีการปรับแก้ที่สถานีนี้')}</p>`;
 }
 

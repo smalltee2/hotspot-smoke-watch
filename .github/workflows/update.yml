@@ -49,6 +49,7 @@ jobs:
         env:
           OPENAQ_API_KEY: ${{ secrets.OPENAQ_API_KEY }}
           FIRMS_MAP_KEY: ${{ secrets.FIRMS_MAP_KEY }}
+          NODE_EXTRA_CA_CERTS: scripts/certs/air4thai-chain.pem   # Let's Encrypt intermediates the Air4Thai server fails to send
         run: node scripts/update.mjs && node scripts/verify.mjs
 
       - name: Save working state for the next run

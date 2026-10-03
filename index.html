@@ -151,6 +151,7 @@ td.num{text-align:right;font-family:var(--font-data);font-variant-numeric:tabula
 .here .act{margin-top:6px;display:flex;gap:6px}
 .stmark{width:12px;height:12px;border-radius:2px;border:1.5px solid var(--fg);box-sizing:border-box}
 .windarrow{pointer-events:auto}
+#windCanvas{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:420}
 .windarrow svg{display:block;overflow:visible}
 .a4tmark{width:12px;height:12px;border-radius:50%;box-sizing:border-box;border:1px solid var(--fg)}
 .legend .keys span{display:flex;gap:6px;align-items:center}
@@ -569,13 +570,13 @@ td.num{text-align:right;font-family:var(--font-data);font-variant-numeric:tabula
       <div class="keys">
         <span><i class="dot" style="background:var(--ember)"></i><span data-th="จุดความร้อน (ขนาด = FRP)">Hotspot (size = FRP)</span></span>
         <span><i class="dot" style="border:2px solid var(--fg)"></i><span data-th="เมือง / จุดรับ">Town / receptor</span></span>
-        <span><i style="display:inline-block;width:14px;height:10px;vertical-align:-1px"><svg viewBox="0 0 14 10" width="14" height="10"><path d="M0 5h10M7 1l4 4-4 4" fill="none" stroke="var(--fg)" stroke-width="1.6"/></svg></i><span data-th="ลูกศรลม: ชี้ทิศที่ลมพัดไป ยาว/เข้ม = แรง">Wind arrow: points where the wind blows to; longer and darker = stronger</span></span>
+        <span><i style="display:inline-block;width:14px;height:10px;vertical-align:-1px"><svg viewBox="0 0 14 10" width="14" height="10"><path d="M0 5h10M7 1l4 4-4 4" fill="none" stroke="var(--fg)" stroke-width="1.6"/></svg></i><span data-th="ลม: อนุภาคเคลื่อนไปตามทิศที่ลมพัด (เร็ว/สว่าง = แรง) ลูกศรบอกทิศ ชี้ลูกศรดูค่า">Wind: particles drift the way the wind blows (faster and brighter = stronger); arrows mark the direction; hover an arrow for values</span></span>
         <span><i class="dot" style="background:var(--aq2);box-shadow:0 0 0 3px var(--aq4);border:1px solid var(--fg)"></i><span data-th="Air4Thai: ด้านใน = ค่าตรวจวัด, วงนอก = แบบจำลอง">Air4Thai: inside = measured, ring = model</span></span>
         <span><i class="dot" style="border-radius:2px;border:1.5px solid var(--fg);background:var(--aq2)"></i><span data-th="สถานีตรวจวัด (ค่าปัจจุบัน)">Monitor (measured now)</span></span>
       </div>
       <div class="showpick"><strong data-th="แสดงบนแผนที่">Show on map</strong>
         <label><input type="checkbox" id="shContour" checked> <span data-th="เส้นแบ่งระดับ">Contour lines</span></label>
-        <label><input type="checkbox" id="shWind"> <span data-th="ลูกศรลม (10 ม.)">Wind arrows (10 m)</span></label>
+        <label><input type="checkbox" id="shWind"> <span data-th="ลม 10 ม. (อนุภาคเคลื่อนที่ + ลูกศร)">Wind, 10 m (moving particles + arrows)</span></label>
         <label><input type="checkbox" id="shProv"> <span data-th="เขตและชื่อจังหวัด">Province borders and names</span></label>
         <label><input type="checkbox" id="shA4t" checked> <span data-th="Air4Thai: ค่าตรวจวัดเทียบแบบจำลอง">Air4Thai: measured vs model</span></label>
         <div id="a4tStat" class="note" style="font-size:.68rem;margin:-2px 0 4px 22px"></div>
@@ -1520,14 +1521,44 @@ function drawWx(){
   gridLayer=L.layerGroup([L.imageOverlay(url,[[so,w],[n,e]],{interactive:false})]).addTo(map);
 }
 let windLayer=L.layerGroup().addTo(map);
+// moving particles like Windy: each particle drifts with the 10-m wind at the slider time, leaving a fading trail;
+// drawn on a canvas over the map (restarted on pan/zoom), with sparse arrows for direction and the tooltip readout
+const WP={canvas:null,ctx:null,parts:[],raf:0,t:null};
+function windParticles(on){
+  if(!on){ if(WP.raf) cancelAnimationFrame(WP.raf); WP.raf=0; if(WP.canvas){WP.canvas.remove(); WP.canvas=null;} WP.parts=[]; return; }
+  if(!MET) return; const t=curT(); if(t==null) return; WP.t=t;
+  if(!WP.canvas){ const c=document.createElement('canvas'); c.id='windCanvas'; map.getContainer().appendChild(c); WP.canvas=c; WP.ctx=c.getContext('2d'); }
+  const sz=map.getSize(), dpr=Math.min(2,window.devicePixelRatio||1); WP.canvas.width=sz.x*dpr; WP.canvas.height=sz.y*dpr; WP.ctx.setTransform(dpr,0,0,dpr,0,0);
+  const b=map.getBounds(), R=regionShape(), B=REGIONS.msea.bbox;
+  const la0=Math.max(b.getSouth(),B[1],R?R.bbox[1]:-90), la1=Math.min(b.getNorth(),B[3],R?R.bbox[3]:90), lo0=Math.max(b.getWest(),B[0],R?R.bbox[0]:-180), lo1=Math.min(b.getEast(),B[2],R?R.bbox[2]:180);
+  if(!(la1>la0&&lo1>lo0)){WP.parts=[];return;}
+  const N=Math.min(2500,Math.round(sz.x*sz.y/450)); const spawn=p=>{for(let k=0;k<20;k++){p.lat=la0+Math.random()*(la1-la0); p.lon=lo0+Math.random()*(lo1-lo0); if(!R||inRegion(p.lat,p.lon)) break;} p.age=Math.floor(Math.random()*80); return p;};
+  WP.parts=Array.from({length:N},()=>spawn({}));
+  const z=map.getZoom(), k=0.0022*Math.pow(2,7-z);   // degrees per frame per (m/s): the same ground speed looks the same at every zoom
+  const ctx=WP.ctx, col=getComputedStyle(document.documentElement).colorScheme==='dark'||document.documentElement.dataset.theme==='dark'?'rgba(235,240,255,':'rgba(20,40,80,';
+  if(WP.raf) cancelAnimationFrame(WP.raf);
+  const frame=()=>{ if(!WP.canvas||!shown('shWind')) return;
+    ctx.globalCompositeOperation='destination-in'; ctx.fillStyle='rgba(0,0,0,0.93)'; ctx.fillRect(0,0,sz.x,sz.y); ctx.globalCompositeOperation='source-over';
+    ctx.lineWidth=1.2;
+    for(const p of WP.parts){ const m=sampleMet(MET,p.lat,p.lon,WP.t), u=m.u10??m.u, v=m.v10??m.v, sp=Math.hypot(u,v);
+      const q0=map.latLngToContainerPoint([p.lat,p.lon]); const nlat=p.lat+v*k, nlon=p.lon+u*k/Math.cos(p.lat*DEG);
+      const q1=map.latLngToContainerPoint([nlat,nlon]);
+      ctx.strokeStyle=col+(Math.min(1,0.35+sp/8))+')'; ctx.beginPath(); ctx.moveTo(q0.x,q0.y); ctx.lineTo(q1.x,q1.y); ctx.stroke();
+      p.lat=nlat; p.lon=nlon; p.age++;
+      if(p.age>90||p.lat<la0||p.lat>la1||p.lon<lo0||p.lon>lo1||(R&&!inRegion(p.lat,p.lon))||sp<0.1) spawn(p); }
+    WP.raf=requestAnimationFrame(frame); };
+  WP.raf=requestAnimationFrame(frame);
+}
+map.on('movestart zoomstart',()=>{ if(WP.raf){cancelAnimationFrame(WP.raf); WP.raf=0;} if(WP.ctx){WP.ctx.clearRect(0,0,1e5,1e5);} });
+document.addEventListener('visibilitychange',()=>{ if(document.hidden){ if(WP.raf){cancelAnimationFrame(WP.raf); WP.raf=0;} } else if(shown('shWind')) windParticles(true); });
 function drawWind(){
-  windLayer.clearLayers(); if(!MET||!shown('shWind')) return; const t=curT(); if(t==null) return;
-  const z=map.getZoom(), step=z<=5?1.5:z<=6?1:z<=7?0.5:z<=8?0.3:0.2, b=map.getBounds(), R=regionShape(), B=REGIONS.msea.bbox;
+  windLayer.clearLayers(); windParticles(!!MET&&shown('shWind')); if(!MET||!shown('shWind')) return; const t=curT(); if(t==null) return;
+  const z=map.getZoom(), step=z<=5?3:z<=6?2:z<=7?1:z<=8?0.6:0.4, b=map.getBounds(), R=regionShape(), B=REGIONS.msea.bbox;
   const la0=Math.max(b.getSouth(),B[1],R?R.bbox[1]:-90), la1=Math.min(b.getNorth(),B[3],R?R.bbox[3]:90), lo0=Math.max(b.getWest(),B[0],R?R.bbox[0]:-180), lo1=Math.min(b.getEast(),B[2],R?R.bbox[2]:180);
   for(let la=Math.ceil(la0/step)*step; la<=la1; la+=step) for(let lo=Math.ceil(lo0/step)*step; lo<=lo1; lo+=step){
     if(R&&!inRegion(la,lo)) continue; const m=sampleMet(MET,la,lo,t), u=m.u10??m.u, v=m.v10??m.v, sp=Math.hypot(u,v);
     const bearing=(Math.atan2(u,v)/DEG+360)%360;   // direction the wind blows TO, clockwise from north
-    const len=10+Math.min(22,sp*3.5), col=sp<2?'#8aa0b4':sp<4?'#4f6f91':sp<7?'#1f4e79':'#8b1a1a', sz=2*len+6;
+    const len=8+Math.min(16,sp*2.5), col=sp<2?'#8aa0b4':sp<4?'#4f6f91':sp<7?'#1f4e79':'#8b1a1a', sz=2*len+6;
     const html=`<svg viewBox="${-len-3} ${-len-3} ${sz} ${sz}" width="${sz}" height="${sz}" style="transform:rotate(${bearing}deg)"><path d="M0 ${len} L0 ${-len} M-5 ${-len+6} L0 ${-len} L5 ${-len+6}" fill="none" stroke="${col}" stroke-width="${sp<2?1.4:2}" stroke-linecap="round"/></svg>`;
     L.marker([la,lo],{icon:L.divIcon({className:'windarrow',html,iconSize:[sz,sz],iconAnchor:[sz/2,sz/2]}),keyboard:false,interactive:true})
       .bindTooltip(()=>`${T('Wind (10 m)','ลม (10 ม.)')} ${sp.toFixed(1)} m/s ${T('from','จาก')} ${compass(windFrom(u,v))} (${Math.round(windFrom(u,v))}°)${!PUBLIC?`<br>100 m: ${m.ws.toFixed(1)} m/s ${T('from','จาก')} ${compass(windFrom(m.u,m.v))} · BLH ${Math.round(m.blh)} m`:''}<br>${T('Temp.','อุณหภูมิ')} ${m.t2!=null?m.t2.toFixed(1):'–'} °C · ${T('rain','ฝน')} ${m.pr>=0.05?m.pr.toFixed(1)+' mm/h':T('none','ไม่มี')}`).addTo(windLayer);

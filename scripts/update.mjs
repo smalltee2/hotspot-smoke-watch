@@ -36,7 +36,7 @@ const CFG = {
   // slow station bias (long memory, ~ weeks): removed from the innovations of the fire-emission assimilation so that only the
   // episodic, fire-driven part of the CAMS error is attributed to fires
   kfSlow: { Q: 0.002, R: 0.15, P0: 0.5, maxGapH: 168 },
-  assimilate: true,              // fire-emission assimilation; the public page shows the forecast without it, the developer page with it (switch)
+  assimilate: true,              // fire-emission assimilation; both pages forecast with it (the developer page can switch it off)
   biasLeadEfoldH: 48,            // bias correction fades with lead time
   rk: { residStep: 0.1, demStep: 0.05, minStations: 15, K: 16, declusterDeg: 0.25 },   // cell declustering of the regression (0.25° ≈ 28 km cells)  // regression kriging; residual grid and DEM resolution
   logLeads: [1, 3, 6, 12, 24, 48],

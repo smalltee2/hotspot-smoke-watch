@@ -385,7 +385,9 @@ async function main() {
       });
     }
     return { id: s.id, name: s.name, lat: s.lat, lon: s.lon, monitor: s.monitor, provider: s.provider, cc: s.country, avg24: a24, hourly: !!s.hourly, ...(s.nameTH ? { nameTH: s.nameTH } : {}),
-      obs: s.obs ? { t: s.obs.t, v: r1(s.obs.v) } : null, obs24: obs24(s.id, s), bias: k ? +b.toFixed(3) : null, nUpd: k?.n || 0, raw, corr, fc24 };
+      obs: s.obs ? { t: s.obs.t, v: r1(s.obs.v) } : null, obs24: obs24(s.id, s), bias: k ? +b.toFixed(3) : null, nUpd: k?.n || 0, raw, corr, fc24,
+      // measured values on the page's hour axis up to now (hourly values, or the reported 24-h means for 24-h stations), for the map comparison layer
+      obsSeries: (() => { const h = new Map((state.obsHist[s.id] || []).map(([t, v]) => [t, v])); const a = hours.slice(0, jNow + 1).map(t => h.has(t) ? h.get(t) : null); return a.some(v => v != null) ? a : null; })() };
   });
 
   // 4b. meteorology (fixed model, nested grids), refreshed every few hours

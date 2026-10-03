@@ -150,6 +150,7 @@ td.num{text-align:right;font-family:var(--font-data);font-variant-numeric:tabula
 .here .pill{white-space:nowrap}
 .here .act{margin-top:6px;display:flex;gap:6px}
 .stmark{width:12px;height:12px;border-radius:2px;border:1.5px solid var(--fg);box-sizing:border-box}
+.a4tmark{width:12px;height:12px;border-radius:50%;box-sizing:border-box;border:1px solid var(--fg)}
 .legend .keys span{display:flex;gap:6px;align-items:center}
 .dot{width:10px;height:10px;border-radius:50%;display:inline-block;flex:none}
 .basemap-switch{position:absolute;left:50px;top:10px;z-index:500}
@@ -543,11 +544,14 @@ td.num{text-align:right;font-family:var(--font-data);font-variant-numeric:tabula
       <div class="keys">
         <span><i class="dot" style="background:var(--ember)"></i><span data-th="จุดความร้อน (ขนาด = FRP)">Hotspot (size = FRP)</span></span>
         <span><i class="dot" style="border:2px solid var(--fg)"></i><span data-th="เมือง / จุดรับ">Town / receptor</span></span>
+        <span><i class="dot" style="background:var(--aq2);box-shadow:0 0 0 3px var(--aq4);border:1px solid var(--fg)"></i><span data-th="Air4Thai: ด้านใน = ค่าตรวจวัด, วงนอก = แบบจำลอง">Air4Thai: inside = measured, ring = model</span></span>
         <span><i class="dot" style="border-radius:2px;border:1.5px solid var(--fg);background:var(--aq2)"></i><span data-th="สถานีตรวจวัด (ค่าปัจจุบัน)">Monitor (measured now)</span></span>
       </div>
       <div class="showpick"><strong data-th="แสดงบนแผนที่">Show on map</strong>
         <label><input type="checkbox" id="shContour" checked> <span data-th="เส้นแบ่งระดับ">Contour lines</span></label>
         <label><input type="checkbox" id="shProv"> <span data-th="เขตและชื่อจังหวัด">Province borders and names</span></label>
+        <label><input type="checkbox" id="shA4t" checked> <span data-th="Air4Thai: ค่าตรวจวัดเทียบแบบจำลอง">Air4Thai: measured vs model</span></label>
+        <div id="a4tStat" class="note" style="font-size:.68rem;margin:-2px 0 4px 22px"></div>
         <label><input type="checkbox" id="shSt" checked> <span data-th="สถานี OpenAQ">OpenAQ stations</span></label>
         <label><input type="checkbox" id="shHot" checked> <span data-th="จุดความร้อน">Hotspots</span></label>
         <label><input type="checkbox" id="shTown" checked> <span data-th="เมือง">Towns</span></label>
@@ -1347,7 +1351,7 @@ async function loadVerify(){
 }
 
 // ---- total PM2.5 grid layer and station markers
-let gridLayer=null; const stationLayer=L.layerGroup().addTo(map);
+let gridLayer=null; const stationLayer=L.layerGroup().addTo(map), a4tLayer=L.layerGroup().addTo(map);
 const layerMode=()=>$('lyUnc').checked?'unc':$('lyFire').checked?'fire':$('lyFine').checked?'fine':'total';
 const gridMode=()=>layerMode()==='total'||layerMode()==='fine';
 const unitMode=()=>$('unitSel').value;   // 'ug' | 'ug24' | 'th' | 'us'
@@ -1476,16 +1480,45 @@ function drawContours(){
   contourLayer.addTo(map);
 }
 function applyVisibility(){
-  for(const [id,layers] of [['shHot',[hotLayer,trajLayer]],['shTown',[townLayer]],['shSt',[stationLayer]]])
+  for(const [id,layers] of [['shHot',[hotLayer,trajLayer]],['shTown',[townLayer]],['shSt',[stationLayer]],['shA4t',[a4tLayer]]])
     for(const l of layers){ if(shown(id)) map.addLayer(l); else map.removeLayer(l); }
   drawContours();
 }
 document.getElementById('shProv').addEventListener('change',e=>{store.set('hsw.shProv',e.target.checked?'1':'0');styleBase();});
-for(const id of ['shContour','shSt','shHot','shTown']){
+for(const id of ['shContour','shSt','shA4t','shHot','shTown']){
   const v=store.get('hsw.'+id); if(v!=null) $(id).checked=v==='1';
   $(id).addEventListener('change',()=>{store.set('hsw.'+id,$(id).checked?'1':'0');applyVisibility();});
 }
 function stationNow(s,t){const i=gIdx(t);return i>=0?s.corr[i]:null;}
+// ---- Air4Thai layer: measured value (inside) against the model at the same place and hour (ring). Both on the same basis:
+// hourly view → 1-h values (Bangkok BMA stations only report 24-h means, so for them both sides are 24-h means); 24-h/AQI views → 24-h means.
+const isA4t=s=>String(s.id).startsWith('a4t:');
+function meanBack(f,i){let a=0,n=0; for(let k=i-23;k<=i;k++){if(k<0) continue; const v=f(k); if(v!=null){a+=v;n++;}} return n>=18?a/n:null;}
+function a4tPair(s,i){
+  const O=s.obsSeries; if(!O||i<0||i>=O.length) return null;
+  const want24=avg24()||!s.hourly, H=P.data.hours;
+  const meas=want24?(s.hourly?meanBack(k=>O[k]??null,i):O[i]):O[i]; if(meas==null) return null;
+  const mapAt=k=>totalAt(s.lat,s.lon,H[k]), rawAt=k=>{const c=camsAt(s.lat,s.lon,k); return c<0?null:c;};
+  const model=want24?meanBack(mapAt,i):mapAt(i), raw=want24?meanBack(rawAt,i):rawAt(i); if(model==null) return null;
+  return {meas,model,raw,basis:want24?'24':'1'};
+}
+function drawA4t(){
+  a4tLayer.clearLayers(); const box=$('a4tStat'); if(box) box.textContent='';
+  if(!P.data) return; const t=curT(), i=gIdx(t); let n=0,sd=0,se=0,sr=0,ser=0,nr=0;
+  for(const s of P.data.stations){ if(!isA4t(s)||!inRegion(s.lat,s.lon)) continue;
+    const q=a4tPair(s,i); if(!q) continue;
+    n++; sd+=q.model-q.meas; se+=(q.model-q.meas)**2; if(q.raw!=null){nr++; sr+=q.raw-q.meas; ser+=(q.raw-q.meas)**2;}
+    const icon=L.divIcon({className:'',html:`<div class="a4tmark" style="background:${pcdColor(q.meas)};box-shadow:0 0 0 3px ${pcdColor(q.model)}"></div>`,iconSize:[12,12],iconAnchor:[6,6]});
+    L.marker([s.lat,s.lon],{icon,keyboard:false}).bindTooltip(()=>`<b>${esc(stName(s))}</b> · ${esc(s.provider)}<br>${fmtT(t)} · ${q.basis==='1'?T('1-h values','ค่า 1 ชม.'):T('24-h means','ค่าเฉลี่ย 24 ชม.')}<br>`+
+      `${T('Measured','ค่าตรวจวัด')} <b>${fmtN(q.meas)}</b> µg/m³<br>${T('Our map','แผนที่ของเรา')} ${fmtN(q.model)} µg/m³ (${q.model>=q.meas?'+':''}${fmtN(q.model-q.meas)})`+
+      (q.raw!=null&&!PUBLIC?`<br>CAMS ${T('raw','ดิบ')} ${fmtN(q.raw)} µg/m³ (${q.raw>=q.meas?'+':''}${fmtN(q.raw-q.meas)})`:''))
+      .on('click',()=>focusStation(s.id)).addTo(a4tLayer);
+  }
+  if(box&&n) box.innerHTML=T(`${n} stations at this hour · map − measured: mean ${fmtN(sd/n)}, RMSE ${fmtN(Math.sqrt(se/n))} µg/m³`,`${n} สถานี ณ ชั่วโมงนี้ · แผนที่ − ค่าวัด: เฉลี่ย ${fmtN(sd/n)}, RMSE ${fmtN(Math.sqrt(se/n))} µg/m³`)+
+    (!PUBLIC&&nr?T(` · raw CAMS: mean ${fmtN(sr/nr)}, RMSE ${fmtN(Math.sqrt(ser/nr))}`,` · CAMS ดิบ: เฉลี่ย ${fmtN(sr/nr)}, RMSE ${fmtN(Math.sqrt(ser/nr))}`):'')+
+    (!PUBLIC?T(' (the map is fitted to these stations at the analysis hour, so raw CAMS is the independent check)',' (แผนที่ปรับด้วยสถานีเหล่านี้ ณ ชั่วโมงวิเคราะห์ จึงใช้ CAMS ดิบเป็นตัวเทียบอิสระ)'):'');
+  else if(box&&i>=0&&P.data.hours[i]>Date.now()) box.textContent=T('Measurements appear for past hours; move the slider back.','ค่าตรวจวัดแสดงเฉพาะเวลาที่ผ่านมา เลื่อนแถบเวลาย้อนกลับ');
+}
 
 // ---- "my location": PM2.5 and nearby fires at the viewer's position (stays in the browser)
 function camsAt(lat,lon,i){const G=P.data.grid, vals=G.values[i]; const fx=(lon-G.lon0)/G.step, fy=(lat-G.lat0)/G.step;
@@ -1566,8 +1599,8 @@ const LocateCtl=L.Control.extend({options:{position:'topleft'},onAdd(){
   return b;}});
 new LocateCtl().addTo(map);
 function drawStations(){
-  stationLayer.clearLayers(); if(!P.data) return; const t=curT(), live=Math.abs(t-Date.now())<HR;
-  for(const s of P.data.stations){ if(!inRegion(s.lat,s.lon)) continue;
+  stationLayer.clearLayers(); drawA4t(); if(!P.data) return; const t=curT(), live=Math.abs(t-Date.now())<HR;
+  for(const s of P.data.stations){ if(!inRegion(s.lat,s.lon)||isA4t(s)) continue;
     const f=stationNow(s,t);
     // Air4Thai stations report a 24-h running mean: in the hourly view they show the hourly forecast, in 24-h views the measured
     // 24-h mean now and the blended 24-h forecast later

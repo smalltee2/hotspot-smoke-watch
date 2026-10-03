@@ -314,7 +314,8 @@ async function main() {
       log(`Air4Thai hourly: ${[...a4tH.values()].filter(r => r.length).length}/${a4tSt.length} stations, latest hour ${new Date(Math.max(0, ...[...obs.entries()].filter(([k]) => String(k).startsWith('a4t:')).map(([, o]) => o.t))).toISOString().slice(0, 16)}Z`);
       const yday = thaiDate(now - 24 * HOUR), arch = path.join(DATA, 'history', yday.slice(0, 7), `a4t-${yday.replace(/-/g, '')}.csv`);
       const dayRows = []; for (const s of a4tSt) for (const [t, v] of a4tH.get(s.id) || []) if (thaiDate(t - HOUR) === yday) dayRows.push([new Date(t).toISOString().slice(0, 16) + 'Z', s.id, v]);
-      if (dayRows.length > a4tSt.length * 12 && await fs.access(arch).then(() => false, () => true)) {
+      // written once, from 03:00 Thai time, so the last hours of the day (published ~20 min late) are complete
+      if (new Date(now + 7 * HOUR).getUTCHours() >= 3 && dayRows.length > a4tSt.length * 12 && await fs.access(arch).then(() => false, () => true)) {
         await appendCSV(arch, 'hour_end_utc,station_id,pm25', dayRows); log(`Air4Thai archive ${path.basename(arch)}: ${dayRows.length} hourly values`); }
     } catch (e) { log(`Air4Thai hourly unavailable: ${e.message}`); }
   }

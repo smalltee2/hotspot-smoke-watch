@@ -50,7 +50,8 @@ function splat(snap, G, out, w) {
 //   'hm' = mean of the hour ending at t, 'h' = at t, '24' = mean of the 24 hours ending at t (≥ 18 snapshots)
 function simValue(sim, lat, lon, t, kind) {
   if (!sim) return 0; const k = Math.round((t - sim.hours[0]) / 3600e3);
-  if (kind === '24') { let s = 0, n = 0; for (let q = k - 23; q <= k; q++) if (q >= 0 && q < sim.snaps.length) { s += concAt(sim.snaps[q], lat, lon); n++; } return n >= 18 ? s / n : 0; }
+  // 24-h mean: hours before the simulation start hold no smoke (zero), hours past its end are missing; ≥ 18 of 24 must exist
+  if (kind === '24') { let s = 0, n = 0; for (let q = k - 23; q <= k; q++) { if (q >= sim.snaps.length) continue; n++; if (q >= 0) s += concAt(sim.snaps[q], lat, lon); } return n >= 18 ? s / 24 : 0; }
   if (k < 0 || k >= sim.snaps.length) return 0;
   return kind === 'hm' && k > 0 ? 0.5 * (concAt(sim.snaps[k - 1], lat, lon) + concAt(sim.snaps[k], lat, lon)) : concAt(sim.snaps[k], lat, lon);
 }
@@ -76,7 +77,7 @@ export function assimilateFires({ M, hots, W, obs, now, kappa = ASSIM.kappa0, cf
     if (o.t > now || o.t < tMin + (o.kind === '24' ? 23 * 3600e3 : 0)) continue;
     const k = Math.round((o.t - H0) / 3600e3); if (k < 0 || k >= prior.snaps.length) continue;
     const F = new Float64Array(nG);
-    if (o.kind === '24') { let n = 0; for (let q = k - 23; q <= k; q++) if (q >= 0) n++; for (let q = k - 23; q <= k; q++) if (q >= 0) addContrib(prior.snaps[q], o.lat, o.lon, F, 1 / n, srcG); }
+    if (o.kind === '24') { for (let q = k - 23; q <= k; q++) if (q >= 0) addContrib(prior.snaps[q], o.lat, o.lon, F, 1 / 24, srcG); }   // hours before the run start: zero
     else if (o.kind === 'hm' && k > 0) { addContrib(prior.snaps[k - 1], o.lat, o.lon, F, 0.5, srcG); addContrib(prior.snaps[k], o.lat, o.lon, F, 0.5, srcG); }
     else addContrib(prior.snaps[k], o.lat, o.lon, F, 1, srcG);
     let Fs = 0; const nz = []; for (let g = 0; g < nG; g++) if (F[g] > 1e-6) { Fs += F[g]; nz.push(g); }
@@ -121,8 +122,8 @@ export function assimilateFires({ M, hots, W, obs, now, kappa = ASSIM.kappa0, cf
     inc, incAt: (lat, lon, t, kind = 'h') => simValue(inc, lat, lon, t, kind),
     // 24-h mean increment ending at tEnd24 on a regular grid {lon0, lat0, step, nx, ny}
     incGrid24: (G, tEnd24) => { if (!inc) return null; const outG = new Float64Array(G.nx * G.ny), k = Math.round((tEnd24 - inc.hours[0]) / 3600e3); let n = 0;
-      for (let q = k - 23; q <= k; q++) if (q >= 0 && q < inc.snaps.length) n++;
-      if (n < 18) return null; for (let q = k - 23; q <= k; q++) if (q >= 0 && q < inc.snaps.length) splat(inc.snaps[q], G, outG, 1 / n); return outG; } };
+      for (let q = k - 23; q <= k; q++) if (q < inc.snaps.length) n++;
+      if (n < 18) return null; for (let q = k - 23; q <= k; q++) if (q >= 0 && q < inc.snaps.length) splat(inc.snaps[q], G, outG, 1 / 24); return outG; } };
   out.ms = Date.now() - t0;
   log(`fire assimilation: ${out.nObs} obs at ${out.nStations} stations, ${nG} fire groups (${incSrc.length} sources rescaled), DOFS ${out.dofs}, χ²/m ${out.chi2} (κ ${kappa.toFixed(2)} → ${out.kappaNext}), innovation RMSE ${out.innovRmse.before} → ${out.innovRmse.after} µg/m³, ${it} iterations, ${out.ms} ms`);
   return out;

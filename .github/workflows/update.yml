@@ -47,15 +47,18 @@ jobs:
           key: pipeline-state-${{ github.run_id }}-${{ github.run_attempt }}
           restore-keys: pipeline-state-
 
-      - name: Restore forecast history (branch "history")
+      - name: Restore forecast history (branch "history") and ML training store (branch "mltrain")
+        id: restore
         run: |
-          mkdir -p data/history
-          if git fetch -q --depth=1 origin history 2>/dev/null; then git archive FETCH_HEAD data/history | tar -x; fi
-          echo "history files: $(find data/history -type f | wc -l)"
-          # long-term ML training store (branch "mltrain": one subsample file per verified day, kept 2 years)
-          mkdir -p data/mltrain
-          if git fetch -q --depth=1 origin mltrain 2>/dev/null; then git archive FETCH_HEAD data/mltrain | tar -x; fi
-          echo "mltrain files: $(find data/mltrain -type f | wc -l)"
+          set -e
+          # a branch that exists but cannot be fetched fails the job: the push steps below must never replace it with an empty tree
+          restore() { local br=$1 dir=$2; mkdir -p "$dir"
+            rc=0; git ls-remote --exit-code --heads origin "$br" >/dev/null 2>&1 || rc=$?
+            if [ $rc = 0 ]; then git fetch -q --depth=1 origin "$br" && git archive FETCH_HEAD "$dir" | tar -x
+            elif [ $rc != 2 ]; then echo "cannot reach origin to check branch $br"; exit 1; fi
+            echo "$br files: $(find "$dir" -type f | wc -l)"; }
+          restore history data/history
+          restore mltrain data/mltrain
 
       - name: Fetch data, correct forecast, write JSON
         env:
@@ -77,7 +80,7 @@ jobs:
           key: pipeline-state-${{ github.run_id }}-${{ github.run_attempt }}
 
       - name: Commit static files (main) and forecast history (branch "history", last 35 days)
-        if: always()
+        if: always() && steps.restore.outcome == 'success'
         run: |
           git config user.name "hotspot-bot"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -103,7 +106,7 @@ jobs:
           fi
 
       - name: Save ML training store (branch "mltrain", last 2 years)
-        if: always()
+        if: always() && steps.restore.outcome == 'success'
         run: |
           [ -d data/mltrain ] || exit 0
           node -e 'const fs=require("fs"),p=require("path"),cut=new Date(Date.now()-730*864e5).toISOString().slice(0,10).replace(/-/g,"");

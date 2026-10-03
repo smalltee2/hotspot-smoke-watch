@@ -16,7 +16,7 @@ import { fetchMet, sampleMet, packMet, MET_MODEL } from './met.mjs';
 import { buildLandcover, landcoverAt, packLandcover, unpackLandcover } from './landcover.mjs';
 import { loadModel } from './model.mjs';
 import { assimilateFires, assimSummary } from './assim.mjs';
-import { loadDataset, dailyLearn, mlCorrection, mlActive, FEAT_COLS, storeDay, loadSeasonRows } from './ml.mjs';
+import { loadDataset, dailyLearn, mlCorrection, mlActive, FEAT_COLS, storeDay, loadSeasonRows, MLCFG } from './ml.mjs';
 import zlib from 'node:zlib';
 
 // ------------------------------------------------------------------ config
@@ -210,7 +210,7 @@ async function camsSeries(points) {
   for (let i = 0; i < points.length; i += 100) {
     const c = points.slice(i, i + 100);
     const url = `https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${c.map(p => p[0].toFixed(3)).join(',')}` +
-      `&longitude=${c.map(p => p[1].toFixed(3)).join(',')}&hourly=pm2_5&timeformat=unixtime&timezone=GMT&past_days=1&forecast_days=4`;
+      `&longitude=${c.map(p => p[1].toFixed(3)).join(',')}&hourly=pm2_5&timeformat=unixtime&timezone=GMT&past_days=2&forecast_days=4`;
     let js = await (await get(url)).json(); if (!Array.isArray(js)) js = [js];
     for (const o of js) { if (!times) times = o.hourly.time.map(s => s * 1000); out.push(o.hourly.pm2_5.map(v => v == null ? null : r1(v))); }
     if (i + 100 < points.length) await sleep(12000); // ≤ 500 locations/min (free tier allows 600)
@@ -263,7 +263,7 @@ async function main() {
         fresh = a4.concat(fresh);
       } catch (e) { log(`Air4Thai station list unavailable (${e.message}); using OpenAQ copies of Thai monitors`); }
       fresh.sort((a, b) => (b.monitor - a.monitor) || ((b.hourly ? 1 : 0) - (a.hourly ? 1 : 0)) || (b.last - a.last));
-      if (state.stations) state.prevStations = state.stations;
+      if (state.stations) { for (const s of state.stations) delete s.obs; state.prevStations = state.stations; }
       state.stations = fresh.slice(0, CFG.maxStations);
       state.stationsAt = now; state.stationsCap = CFG.maxStations; state.stationListVer = CFG.stationListVer;
       log(`stations: ${all.length} with pm25 in area, ${fresh.length} active, keeping ${state.stations.length}`);
@@ -299,6 +299,7 @@ async function main() {
     }
   }
   const C = state.cams;
+  if (C.times[C.times.length - 1] < Math.floor(now / HOUR) * HOUR + 24 * HOUR) throw new Error(`CAMS forecast too old (ends ${new Date(C.times[C.times.length - 1]).toISOString()})`);
 
   // 3a. observations (no correction yet: the fire assimilation runs first, and the corrections are then fitted to what it leaves)
   const obs = await oaqLatest(stations.filter(s => !s.hourly && !s.feed24));
@@ -311,7 +312,7 @@ async function main() {
   }
   if (a4tSt.length) {
     try {
-      const got = await a4tHourly(a4tSt.map(s => s.code), thaiDate(now - 24 * HOUR), thaiDate(now));
+      const got = await a4tHourly(a4tSt.map(s => s.code), thaiDate(now - 48 * HOUR), thaiDate(now));   // ≥ 48 h for the assimilation window
       for (const s of a4tSt) { const rows = got.get(s.code) || []; a4tH.set(s.id, rows); const last = rows[rows.length - 1]; if (last) obs.set(s.id, { t: last[0], v: last[1] }); }
       log(`Air4Thai hourly: ${[...a4tH.values()].filter(r => r.length).length}/${a4tSt.length} stations, latest hour ${new Date(Math.max(0, ...[...obs.entries()].filter(([k]) => String(k).startsWith('a4t:')).map(([, o]) => o.t))).toISOString().slice(0, 16)}Z`);
       const yday = thaiDate(now - 24 * HOUR), arch = path.join(DATA, 'history', yday.slice(0, 7), `a4t-${yday.replace(/-/g, '')}.csv`);
@@ -403,14 +404,18 @@ async function main() {
   //     kf   — bias of CAMS (public forecast, unchanged method)
   //     kfA  — bias of CAMS + assimilation increment (corrects only what the assimilation leaves; no double counting)
   //     kfSlow — slow bias of CAMS, updated only at hours with < 1 µg/m³ of modelled fire smoke
-  state.kfA ||= {};
+  state.kfA ||= {}; state.incFc ||= {};
+  // the increment used to update kfA is the one FORECAST for that hour by an earlier run (stored in state.incFc), not this
+  // run's posterior, which was fitted to the same observations; this run's value is the fallback when none was stored
+  const incPrev = (s, t, kind) => { const v = state.incFc[s.id]?.[kind === '24' ? 'm' : 'h']?.[t]; return v != null ? v : incAt(s, t, kind); };
   const obsRows = [];
+  const kf24 = { ...CFG.kf, R: CFG.kf.R * 24 }, kfSlow24 = { ...CFG.kfSlow, R: CFG.kfSlow.R * 24 };   // 24-h running means updated hourly overlap 23/24: one hour carries 1/24 of the information
   const updateAll = (s, t, v, raw, kind) => {
-    const inc = incAt(s, t, kind), rawA = Math.max(0, raw + inc);
+    const inc = incPrev(s, t, kind), rawA = Math.max(0, raw + inc), par = kind === '24' ? kf24 : CFG.kf, parS = kind === '24' ? kfSlow24 : CFG.kfSlow;
     const y = Math.log(v + 1) - Math.log(raw + 1), yA = Math.log(v + 1) - Math.log(rawA + 1);
-    if (!(state.kf[s.id] && t <= state.kf[s.id].t)) state.kf[s.id] = kfStep(state.kf[s.id], y, t);
-    if (!(state.kfA[s.id] && t <= state.kfA[s.id].t)) state.kfA[s.id] = kfStep(state.kfA[s.id], yA, t);
-    if (!(state.kfSlow[s.id] && t <= state.kfSlow[s.id].t) && fireAt(s, t, kind) < 1) state.kfSlow[s.id] = kfStep(state.kfSlow[s.id], y, t, CFG.kfSlow);
+    if (!(state.kf[s.id] && t <= state.kf[s.id].t)) state.kf[s.id] = kfStep(state.kf[s.id], y, t, par);
+    if (!(state.kfA[s.id] && t <= state.kfA[s.id].t)) state.kfA[s.id] = kfStep(state.kfA[s.id], yA, t, par);
+    if (!(state.kfSlow[s.id] && t <= state.kfSlow[s.id].t) && fireAt(s, t, kind) < 1) state.kfSlow[s.id] = kfStep(state.kfSlow[s.id], y, t, parS);
     obsRows.push([new Date(t).toISOString(), s.id, r1(v), r1(raw), r1(rawA)]);
   };
   stations.forEach((s, i) => {
@@ -428,6 +433,10 @@ async function main() {
     updateAll(s, o.t, o.v, raw, kind);   // 24-h-mean stations: observed 24-h mean vs CAMS (+ increment) 24-h mean
   });
   log(`Kalman updated at ${new Set(obsRows.map(r => r[1])).size} stations (${obsRows.length} values)`);
+  { const ids = new Set(stations.map(s => s.id)); let pruned = 0;   // filters of stations that left the list and went quiet
+    for (const K of [state.kf, state.kfA, state.kfSlow]) for (const id of Object.keys(K)) if (!ids.has(isNaN(+id) ? id : +id) && !ids.has(id) && now - K[id].t > 14 * 864e5) { delete K[id]; pruned++; }
+    for (const id of Object.keys(state.incFc)) if (!ids.has(isNaN(+id) ? id : +id) && !ids.has(id)) delete state.incFc[id];
+    if (pruned) log(`pruned ${pruned} stale filter states`); }
 
   // 4. corrected forecasts at stations: without (corr, fc24) and with (corrA, fc24A) the fire assimilation
   const t0 = Math.floor(now / HOUR) * HOUR;
@@ -462,11 +471,17 @@ async function main() {
   }
   const anyInc = !!assim?.inc;
   const outStations = stations.map((s, i) => {
-    const k = state.kf[s.id], raw = C.st[i].slice(i0), F = stationForecast(s, raw, k);
+    // hourly (hour-ending mean) stations are compared with, and corrected on, the CAMS mean of the same hour: (C[t−1] + C[t])/2
+    const inst = C.st[i].slice(i0), raw = s.hourly ? inst.map((v, j) => { const p = i0 + j - 1 >= 0 ? C.st[i][i0 + j - 1] : null; return v == null ? null : p == null ? v : (p + v) / 2; }) : inst;
+    const k = state.kf[s.id], F = stationForecast(s, raw, k), kind = kindOf(s);
     let A = null, incS = null;
-    if (anyInc) { incS = hours.map(t => r1(incAt(s, t, 'h'))); const rawA = raw.map((v, j) => v == null ? null : Math.max(0, v + incS[j]));
+    if (anyInc) { incS = hours.map(t => r1(incAt(s, t, kind === '24' ? 'h' : kind))); const rawA = raw.map((v, j) => v == null ? null : Math.max(0, v + incS[j]));
       A = stationForecast(s, rawA, state.kfA[s.id]); }
     else { const kA = state.kfA[s.id]; A = stationForecast(s, raw, kA); }   // no increment: same as CAMS, but with its own filter state
+    // remember the increment forecast for the next 12 h (hourly basis, and 24-h basis for 24-h stations): the next runs' kfA updates use it
+    { const F_ = (state.incFc[s.id] ||= { h: {}, m: {} });
+      for (const key of ['h', 'm']) for (const t of Object.keys(F_[key])) if (+t < now - 50 * HOUR) delete F_[key][t];
+      hours.forEach((t, j) => { if (j > jNow && j <= jNow + 12) { F_.h[t] = anyInc ? r1(incAt(s, t, s.hourly ? 'hm' : 'h')) : 0; F_.m[t] = anyInc ? r1(incAt(s, t, '24')) : 0; } }); }
     return { id: s.id, name: s.name, lat: s.lat, lon: s.lon, monitor: s.monitor, provider: s.provider, cc: s.country, avg24: isAvg24(s), hourly: !!s.hourly, ...(s.nameTH ? { nameTH: s.nameTH } : {}),
       obs: s.obs ? { t: s.obs.t, v: r1(s.obs.v) } : null, obs24: obs24(s.id, s), bias: k ? +F.b.toFixed(3) : null, nUpd: k?.n || 0, raw, corr: F.corr, fc24: F.fc24,
       corrA: A.corr, fc24A: A.fc24, ...(incS && incS.some(v => Math.abs(v) >= 0.1) ? { inc: incS } : {}),
@@ -506,7 +521,7 @@ async function main() {
     let nAdj = 0;
     outStations.forEach((o, i) => {
       const s = stations[i]; if (isAvg24(s) || !o.corrA) return;
-      const corrM = o.corrA.map((v, j) => { if (v == null || j <= jNow) return v;
+      const corrM = o.corrA.map((v, j) => { if (v == null || j <= jNow || (hours[j] - t0) / HOUR > MLCFG.maxLeadH) return v;
         const f = feats(s, i, j), q = mlCorrection(state, { ...f, lead: (hours[j] - t0) / HOUR, F: v, cams: o.raw[j], lat: s.lat, lon: s.lon, x: null }, season);
         return r1(Math.max(0, (v + 1) * Math.exp(q) - 1)); });
       // 24-h means for the AQI: measured hours up to now, ML-corrected forecast after, blended with persistence as before
@@ -543,7 +558,7 @@ async function main() {
       if (!s.monitor || !s.obs || now - s.obs.t > CFG.obsMaxAgeH * HOUR) return;
       const o24 = obs24(s.id, s); if (!o24 || !o24.valid) return;
       let c = mean24T(C.times, C.st[i], s.obs.t); if (c == null) return;
-      if (withInc) c = Math.max(0, c + incAt(s, s.obs.t, '24'));
+      if (withInc) c = Math.max(0, c + incPrev(s, s.obs.t, '24'));   // the increment forecast for this hour by an earlier run (out of sample)
       const x = [Math.log(c + 1)]; if (dem) { const e = sampleGrid(dem, s.lat, s.lon); if (e == null) return; x.push(e / 1000); }
       if (met) { const m = sampleMet(met, s.lat, s.lon, s.obs.t); x.push(Math.log(Math.max(m.blh, 50) / 1000), m.ws); }
       rkObs.push({ lat: s.lat, lon: s.lon, y: Math.log(o24.v + 1), x, obs: o24.v, cams: c, t: s.obs.t, cc: s.country });

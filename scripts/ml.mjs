@@ -21,7 +21,8 @@
 import fs from 'node:fs/promises'; import path from 'node:path';
 import { solve } from './rk.mjs';
 
-export const MLCFG = { windows: { day: 3, week: 7, month: 30 }, minDays: { day: 1, week: 7, month: 30 }, shrinkK: 20, ridgeLambda: 3,
+export const MLCFG = { maxLeadH: 48,   // forecasts are logged (and the experts trained) for leads up to 48 h; no extrapolation beyond
+  windows: { day: 3, week: 7, month: 30 }, minDays: { day: 1, week: 7, month: 30 }, shrinkK: 20, ridgeLambda: 3,
   gbm: { nTrees: 150, depth: 3, lr: 0.08, minLeaf: 40, bins: 32, subsample: 0.8, lambda: 1, maxRows: 120000 },
   eta: 2, share: 0.05, clip: Math.LN2, minRowsDay: 300 };
 export const EXPERTS = ['base', 'day', 'week', 'month', 'season'];
@@ -180,6 +181,7 @@ export function predictExpert(m, r) {
 // ---------------------------------------------------------------- daily learning step
 // state.ml = { weights, models, lastDay, history }; dataset = loadDataset(...) over the history kept on GitHub (35 days)
 export function dailyLearn(state, rows, { now, dayStart, dayEnd, season = null, seasonRows = null, log = () => {} }) {
+  if (!rows.length) throw new Error('no verified rows (forecast history missing?)');
   const ml = state.ml ||= { weights: { base: 1 }, models: {}, lastDay: null };
   // 1. score yesterday's models on the newly verified day (out of sample) and update the weights
   const test = rows.filter(r => r.tValid >= dayStart && r.tValid < dayEnd);
@@ -204,7 +206,8 @@ export function dailyLearn(state, rows, { now, dayStart, dayEnd, season = null, 
   if (seasonRows && seasonRows.days >= STORE.minDaysSeason) { const m = trainGBM(seasonRows.rows.filter(r => r.tValid < dayEnd), MLCFG.gbm, 'season'); m.season = seasonRows.season; newModels.season = m; }
   for (const e in newModels) { info[e] = { n: newModels[e].n, ...(newModels[e].importance ? { importance: newModels[e].importance } : {}) };
     if (ml.weights[e] == null) ml.weights[e] = 0; }   // a new expert enters with weight 0; the fixed share gives it a start next day
-  ml.models = newModels; ml.lastDay = new Date(dayStart + 7 * HOUR).toISOString().slice(0, 10);
+  // an expert whose window could not be retrained today keeps its last model (e.g. after a data gap), rather than vanishing
+  ml.models = { ...ml.models, ...newModels }; ml.lastDay = new Date(dayStart + 7 * HOUR).toISOString().slice(0, 10);
   const rec = { day: ml.lastDay, at: now, verifiedDays: days, nTest: test.length, loss: Object.fromEntries(Object.entries(loss).map(([k, v]) => [k, +v.toFixed(5)])),
     weights: Object.fromEntries(Object.entries(ml.weights).map(([k, v]) => [k, +v.toFixed(4)])), trained: info, seasonStore: seasonRows ? { season: seasonRows.season, days: seasonRows.days } : null };
   log(`ML: day ${rec.day}, ${days} verified days, scored ${test.length} rows; loss ${JSON.stringify(rec.loss)}; weights ${JSON.stringify(rec.weights)}; trained ${Object.keys(info).join(', ') || 'none yet'}`);

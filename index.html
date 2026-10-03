@@ -311,9 +311,9 @@ td.num{text-align:right;font-family:var(--font-data);font-variant-numeric:tabula
       <h3 data-th="แนวโน้ม PM&lt;sub&gt;2.5&lt;/sub&gt; รายพื้นที่">PM<sub>2.5</sub> trend by area</h3>
       <p class="note" data-th="ค่าพยากรณ์ PM&lt;sub&gt;2.5&lt;/sub&gt; (ทุกแหล่ง) เฉลี่ยทั้งพื้นที่ทุกชั่วโมง ย้อนหลัง 1 วันและล่วงหน้าถึง 4 วัน เลือกจังหวัดหรือกดชื่อในตาราง">Forecast PM<sub>2.5</sub> (all sources) averaged over the area, hour by hour, from yesterday to 4 days ahead. Pick a province, or tap one in the table.</p>
       <div id="areaTrend" class="note">–</div>
-      <h3 data-th="พยากรณ์ควันไฟรายเมือง">Smoke forecast at towns</h3>
-      <p class="note dev-only" data-th="PM&lt;sub&gt;2.5&lt;/sub&gt; ที่เพิ่มจากไฟ ใช้ค่าเฉลี่ย 24 ชม. สูงสุดในช่วงพยากรณ์ แบ่งระดับตามเกณฑ์กรมควบคุมมลพิษ คลิกชื่อเมืองเพื่อดูตำแหน่งบนแผนที่และกราฟรายชั่วโมง">Fire-added PM<sub>2.5</sub>, highest 24-h mean in the forecast window, banded on Thailand's PCD scale. Click a town to fly there and show its time series.</p>
-      <p class="note pub-only" data-th="ควันจากไฟป่าและการเผาที่คาดว่าจะมาถึงแต่ละเมือง (ค่าเฉลี่ย 24 ชม. สูงสุดในอีก 2 วันข้างหน้า) กดชื่อเมืองเพื่อดูกราฟรายชั่วโมง">Smoke from fires expected to reach each town (highest 24-hour average in the next two days). Tap a town for its hourly chart.</p>
+      <h3 data-th="พยากรณ์ PM&lt;sub&gt;2.5&lt;/sub&gt; รายเมือง">PM<sub>2.5</sub> forecast at towns</h3>
+      <p class="note dev-only" data-th="PM&lt;sub&gt;2.5&lt;/sub&gt; รวมทุกแหล่ง (แผนที่ที่ปรับแก้แล้ว) ค่าเฉลี่ย 24 ชม. สูงสุดในช่วงพยากรณ์ แบ่งระดับตามเกณฑ์กรมควบคุมมลพิษ พร้อมส่วนที่มาจากไฟ คลิกชื่อเมืองเพื่อดูตำแหน่งและกราฟรายชั่วโมง">Total PM<sub>2.5</sub> from all sources (the corrected map), highest 24-h mean in the forecast window, banded on Thailand's PCD scale, with the part that comes from fires. Click a town to fly there and show its time series.</p>
+      <p class="note pub-only" data-th="ค่าฝุ่น PM&lt;sub&gt;2.5&lt;/sub&gt; ที่คาดว่าจะสูงที่สุดในแต่ละเมืองใน 2 วันข้างหน้า (ค่าเฉลี่ย 24 ชม.) และส่วนที่มาจากควันไฟ กดชื่อเมืองเพื่อดูกราฟรายชั่วโมง">The highest PM<sub>2.5</sub> expected at each town in the next two days (24-hour average), and how much of it is smoke from fires. Tap a town for its hourly chart.</p>
       <div id="warnList"></div>
       <h3 data-th="สถานีตรวจวัด: 48 ชม. ข้างหน้า">Monitoring stations: next 48 h</h3>
       <p class="note pub-only" data-th="ค่าฝุ่นที่วัดได้จริงตอนนี้ และค่าพยากรณ์ 2 วันข้างหน้าที่ปรับให้ตรงกับสถานีนั้น">PM<sub>2.5</sub> measured now, and the forecast for the next two days adjusted to each station.</p>
@@ -1766,10 +1766,23 @@ async function runModel(hotsRaw,mode,windOverride,quiet){
   drawHotspots(); drawTraj(); renderAll(); redrawTime();
   if(!quiet) fitRegion();
 }
+// increment of the fire assimilation at a point from per-hour 0.25° fields (cached; same fields as the area trends)
+function incGridAt(lat,lon,t){ if(!S.simInc) return 0; const k=idxIn(S.simInc.hours,t); if(k<0) return 0;
+  const B=REGIONS.msea.bbox, inx=Math.round((B[2]-B[0])/0.25), iny=Math.round((B[3]-B[1])/0.25);
+  if(INC_FIELDS.sim!==S.simInc){INC_FIELDS.sim=S.simInc; INC_FIELDS.map=new Map();}
+  if(!INC_FIELDS.map.has(k)) INC_FIELDS.map.set(k, S.simInc.snaps[k].n?puffField(S.simInc.snaps[k],B[0],B[1],inx,iny,0.25):null);
+  const I=INC_FIELDS.map.get(k); if(!I) return 0;
+  const ix=Math.min(inx-1,Math.max(0,Math.floor((lon-B[0])/0.25))), iy=Math.min(iny-1,Math.max(0,Math.floor((lat-B[1])/0.25))); return I[iy*inx+ix]; }
+// total PM2.5 at a point and hour, as on the map, with the increment from the cached fields (fast enough for many points × hours)
+function totalAtFast(lat,lon,t){ const i=gIdx(t); if(!P.data||i<0) return null; const c=camsAt(lat,lon,i); if(c<0) return null;
+  let v=rkValue(Math.max(0,c+incGridAt(lat,lon,t)),lat,lon,t); const m=mlAt(lat,lon,t); return m&&v>=0?(v+1)*Math.exp(m)-1:v; }
 function computeReceptors(){
-  const pts=allReceptors();
+  const pts=allReceptors(), now=Date.now();
   if(!S.sim){S.recep=pts.map(p=>({...p,series:[],st:{now:0,peak:0,mean24:0}}));}
-  else{const now=Date.now(); S.recep=receptorSeries(S.sim,pts).map(r=>({...r,st:seriesStats(r.series,S.sim.hours,now)}));}
+  else{S.recep=receptorSeries(S.sim,pts).map(r=>({...r,st:seriesStats(r.series,S.sim.hours,now)}));}
+  // total PM2.5 (all sources, corrected map) at each town: the warning is based on this; the fire part is shown next to it
+  if(P.data&&P.data.grid){const H=P.data.hours; for(const r of S.recep){ r.tot=H.map(t=>totalAtFast(r.lat,r.lon,t)); r.stT=r.tot.some(v=>v!=null)?seriesStats(r.tot,H,now):null; }}
+  else for(const r of S.recep){ r.tot=null; r.stT=null; }
   const km=+$('warnkm').value;
   for(const r of S.recep){let n=0,f=0,d=1e9;for(const h of S.hots){const k=haversineKm(r.lat,r.lon,h.lat,h.lon);if(k<=km){n++;f+=h.frp;}d=Math.min(d,k);}r.near=n;r.nearFrp=f;r.nearest=d;}
 }
@@ -1784,17 +1797,19 @@ function renderSummary(){
   const cells=new Map(); for(const c of sr){const k=Math.floor(c.lat/0.1)+':'+Math.floor(c.lon/0.1); cells.set(k,Math.max(cells.get(k)||0,c.frp));}
   $('sHot').textContent=hr.length.toLocaleString(); $('sSrc').textContent=cells.size.toLocaleString();
   $('sFrp').textContent=Math.round([...cells.values()].reduce((a,v)=>a+v,0)).toLocaleString();
-  $('sWarn').textContent=S.sim?S.recep.filter(r=>r.st.mean24>37.5||r.st.peak>75).length:'–';
+  $('sWarn').textContent=S.recep.some(r=>r.stT)?S.recep.filter(r=>r.stT&&(r.stT.mean24>37.5||r.stT.peak>75)).length:S.sim?S.recep.filter(r=>r.st.mean24>37.5||r.st.peak>75).length:'–';
 }
 function renderWarnings(){
   if(!S.sim&&!S.hots.length&&!P.data){$('warnList').innerHTML=`<p class="note">${PUBLIC?T('Loading the latest data…','กำลังโหลดข้อมูลล่าสุด…'):T('No run yet. Press <b>Load live data</b>, or <b>Run demo</b> in Settings.','ยังไม่มีผล กด <b>โหลดข้อมูลล่าสุด</b> หรือ <b>ทดลองด้วยข้อมูลจำลอง</b> ในแท็บตั้งค่า')}</p>`;$('nearList').textContent='–';return;}
-  const rows=S.recep.filter(r=>r.st.peak>=1).sort((a,b)=>b.st.mean24-a.st.mean24||b.st.peak-a.st.peak).slice(0,25);
-  $('warnList').innerHTML = rows.length? rows.map(r=>{const b=bandFor(r.st.mean24);
+  const total=S.recep.some(r=>r.stT);   // live data: rank by total PM2.5; demo / no map data: fire smoke only (as before)
+  const rows=total?S.recep.filter(r=>r.stT).sort((a,b)=>b.stT.mean24-a.stT.mean24||b.stT.peak-a.stT.peak).slice(0,25)
+                  :S.recep.filter(r=>r.st.peak>=1).sort((a,b)=>b.st.mean24-a.st.mean24||b.st.peak-a.st.peak).slice(0,25);
+  $('warnList').innerHTML = rows.length? rows.map(r=>{const st=total?r.stT:r.st, b=bandFor(st.mean24), fire=r.st.mean24;
     return `<div class="alert" data-name="${esc(r.name)}"><i class="sev" style="background:${b.color}"></i>
       <div><div class="name">${esc(townName(r))} <span class="note">${esc(r.cc)}</span></div>
-      <div class="sub">${pill(r.st.mean24)} ${T('24-h peak','สูงสุด 24 ชม.')} ${fmtT(r.st.tMean)}${r.cams!=null&&!PUBLIC?` · ${T('CAMS total now','CAMS รวมขณะนี้')} ${fmtN(r.cams)}`:''}</div></div>
-      <div class="val">${valNum(r.st.mean24)}<small>${T('max 24-h','สูงสุด 24 ชม.')} ${unitShort()}</small>${fmtN(r.st.peak)}<small>${T('1-h max','สูงสุด 1 ชม.')} µg/m³</small></div></div>`;}).join('')
-    : `<p class="note">${T('No town gets more than 1 µg/m³ of fire smoke in the forecast window.','ไม่มีเมืองใดได้รับควันไฟเกิน 1 µg/m³ ในช่วงพยากรณ์')}</p>`;
+      <div class="sub">${pill(st.mean24)} ${T('24-h peak','สูงสุด 24 ชม.')} ${fmtT(st.tMean)}${total?` · ${T('from fires','จากไฟ')} ${fire>=0.5?fmtN(fire)+' µg/m³':T('< 0.5 µg/m³','< 0.5 µg/m³')}`:''}</div></div>
+      <div class="val">${valNum(st.mean24)}<small>${T('max 24-h','สูงสุด 24 ชม.')} ${unitShort()}</small>${fmtN(st.peak)}<small>${T('1-h max','สูงสุด 1 ชม.')} µg/m³</small></div></div>`;}).join('')
+    : `<p class="note">${total?T('No forecast at the towns of this region yet.','ยังไม่มีค่าพยากรณ์ที่เมืองในพื้นที่นี้'):T('No town gets more than 1 µg/m³ of fire smoke in the forecast window (fire smoke only; for total PM₂.₅ see the map and the stations).','ไม่มีเมืองใดได้รับควันไฟเกิน 1 µg/m³ ในช่วงพยากรณ์ (เฉพาะควันไฟ ดูค่าฝุ่นรวมได้จากแผนที่และสถานี)')}</p>`;
   $('warnList').querySelectorAll('.alert').forEach(el=>el.onclick=()=>focusTown(el.dataset.name));
   const km=+$('warnkm').value;
   const near=S.recep.filter(r=>r.near>0).sort((a,b)=>b.near-a.near);
@@ -1890,6 +1905,12 @@ function showMapOnPhone(){ if(matchMedia('(max-width:820px)').matches) document.
 function focusTown(name){
   const r=S.recep.find(x=>x.name===name)||allReceptors().find(x=>x.name===name); if(!r) return;
   map.flyTo([r.lat,r.lon],9); showTab('warn'); showMapOnPhone();
+  if(r.tot&&r.stT){   // live data: total PM2.5 trend at the town (same chart as the area trends), with the fire part dashed
+    const H=P.data.hours, fire=S.sim?H.map(t=>{const k=idxIn(S.sim.hours,t); const v=k>=0?r.series[k]:null; return v!=null&&v>0?v:null;}):null;
+    $('townDetail').innerHTML=`<h3>${esc(townName(r))}: ${T('PM₂.₅ forecast','พยากรณ์ PM₂.₅')}</h3><div class="trend">${trendBlock(H,r.tot,{fire:fire&&fire.some(v=>v!=null&&v>=0.5)?fire:null,label:'PM2.5 trend at '+r.name})}</div>
+      <p class="note">${T(`Highest 24-h mean ${fmtN(r.stT.mean24)} µg/m³ at ${fmtT(r.stT.tMean)}; peak hour ${fmtN(r.stT.peak)} µg/m³. Fire smoke in our model: highest 24-h mean ${fmtN(r.st.mean24)} µg/m³.`,`ค่าเฉลี่ย 24 ชม. สูงสุด ${fmtN(r.stT.mean24)} µg/m³ เมื่อ ${fmtT(r.stT.tMean)} ค่าสูงสุดรายชั่วโมง ${fmtN(r.stT.peak)} µg/m³ ควันไฟตามแบบจำลอง: ค่าเฉลี่ย 24 ชม. สูงสุด ${fmtN(r.st.mean24)} µg/m³`)}</p>`;
+    return;
+  }
   if(!r.series||!r.series.length){$('townDetail').innerHTML='';return;}
   const H=S.sim.hours, v=r.series, max=Math.max(37.5,...v)*1.1, W=320,Ht=110,pad=26;
   const X=i=>pad+i*(W-pad-6)/(v.length-1||1), Y=c=>Ht-18-(c/max)*(Ht-28);
@@ -1961,13 +1982,7 @@ function areaSeries(){
   // value of every point at every hour (CAMS → bias-corrected map), then mean and 10th/90th percentile per area
   // same quantity as the map (assimilation increment and learned correction included); the increment is taken from a 0.25° field
   // per hour (one puffField per hour instead of a puff sum per point), which keeps this fast in the burning season
-  const B=REGIONS.msea.bbox, inx=Math.round((B[2]-B[0])/0.25), iny=Math.round((B[3]-B[1])/0.25);
-  if(INC_FIELDS.sim!==S.simInc){INC_FIELDS.sim=S.simInc; INC_FIELDS.map=new Map();}   // per-hour increment fields, shared by all regions
-  const incField=k=>{ if(!INC_FIELDS.map.has(k)) INC_FIELDS.map.set(k, S.simInc.snaps[k].n?puffField(S.simInc.snaps[k],B[0],B[1],inx,iny,0.25):null); return INC_FIELDS.map.get(k); };
-  const val=H.map((t,i)=>{ let I=null; if(S.simInc){const k=idxIn(S.simInc.hours,t); if(k>=0) I=incField(k);}
-    return pts.map(q=>{ let c=camsAt(q.la,q.lo,i); if(c<0) return null;
-      if(I){const ix=Math.min(inx-1,Math.max(0,Math.floor((q.lo-B[0])/0.25))), iy=Math.min(iny-1,Math.max(0,Math.floor((q.la-B[1])/0.25))); c=Math.max(0,c+I[iy*inx+ix]);}
-      let v=rkValue(c,q.la,q.lo,t); const m=mlAt(q.la,q.lo,t); return m&&v>=0?(v+1)*Math.exp(m)-1:v; }); });
+  const val=H.map(t=>pts.map(q=>totalAtFast(q.la,q.lo,t)));
   for(const g of groups.values()){g.mean=[];g.lo=[];g.hi=[];
     H.forEach((_,i)=>{const a=g.idx.map(j=>val[i][j]).filter(x=>x!=null).sort((x,y)=>x-y);
       if(a.length<Math.max(1,0.5*g.idx.length)){g.mean.push(null);g.lo.push(null);g.hi.push(null);return;}

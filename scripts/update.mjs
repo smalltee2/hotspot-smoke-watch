@@ -11,7 +11,7 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { buildDEM, sampleGrid } from './dem.mjs';
-import { regressionKriging, krigeField } from './rk.mjs';
+import { regressionKriging, krigeField, clampAux } from './rk.mjs';
 import { fetchMet, sampleMet, packMet, MET_MODEL } from './met.mjs';
 import { buildLandcover, landcoverAt, packLandcover, unpackLandcover } from './landcover.mjs';
 import { loadModel } from './model.mjs';
@@ -616,7 +616,8 @@ async function main() {
     const byArea = {}; rkObs.forEach((r, i) => { const a = areaOf(r); (byArea[a] ||= []).push(i); });
     const areaCV = Object.fromEntries(Object.entries(byArea).map(([a, ix]) => [a, { n: ix.length, cams: err(ix.map(i => rkObs[i].cams), ix.map(i => rkObs[i].obs)), rk: err(ix.map(i => out.cv[i]), ix.map(i => rkObs[i].obs)) }]));
     const o = rkObs.map(r => r.obs), tSorted = rkObs.map(r => r.t).sort((a, b) => a - b);
-    const rk = { t: tSorted[Math.floor(tSorted.length / 2)], n: rkObs.length, withAssim: withInc, beta: out.beta.map(b => +b.toFixed(4)), predictors: ['ln(CAMS+1)', ...(dem ? ['elevation_km'] : []), ...(met ? ['ln(BLH_km)', 'wind100_ms'] : [])],
+    const rk = { t: tSorted[Math.floor(tSorted.length / 2)], n: rkObs.length, withAssim: withInc, beta: out.beta.map(b => +b.toFixed(4)), predictors: ['ln(CAMS+1)', ...(dem ? ['elevation_km'] : []), ...(met ? ['ln(BLH_km)', 'wind100_ms'] : [])].slice(0, out.nPred),
+      xRange: out.xRange.map(r => r.map(v => +v.toFixed(4))), maxLogCorr: +out.maxLogCorr.toFixed(4),
       vario: { ...out.vario, c0: +out.vario.c0.toFixed(4), c1: +out.vario.c1.toFixed(4) }, maxKm: out.maxKm, leadEfoldH: CFG.biasLeadEfoldH,
       cv: { n: o.length, cams: err(rkObs.map(r => r.cams), o), rk: err(out.cv, o), cover1s: out.cvCover1s, sdMedian: out.cvSdMedian,
         declustered: { cams: werr(rkObs.map(r => r.cams), o), rk: werr(out.cv, o) }, byArea: areaCV },
@@ -630,20 +631,24 @@ async function main() {
       const P = [[y0 * gnx + x0, (1 - ax) * (1 - ay)], [y0 * gnx + x0 + 1, ax * (1 - ay)], [(y0 + 1) * gnx + x0, (1 - ax) * ay], [(y0 + 1) * gnx + x0 + 1, ax * ay]];
       let su = 0, n = 0; for (let h = 0; h < 24; h++) { let v = 0, ok = true; for (const [p, w] of P) { const q = interpT(C.times, cg[p], rk.t - h * HOUR); if (q == null) { ok = false; break; } v += w * q; } if (ok) { su += v; n++; } }
       return n >= 18 ? su / n : null; };
-    const { s2n, xbar, covSlope } = out.regCov;
+    const { s2n, xbar, covSlope } = out.regCov; let nClamp = 0, nBound = 0;
     for (let iy = 0; iy < R.ny; iy++) for (let ix = 0; ix < R.nx; ix++) {
       const lat = R.lat0 + iy * R.step, lon = R.lon0 + ix * R.step, q = iy * R.nx + ix; let c24 = cams24At(lat, lon);
       if (c24 == null) { B[q] = 0; SD[q] = null; continue; }
       if (inc24) c24 = Math.max(0, c24 + inc24[q]);
-      const x = [Math.log(c24 + 1)]; if (dem) x.push((sampleGrid(dem, lat, lon) ?? 0) / 1000);
-      if (met) { const m = sampleMet(met, lat, lon, rk.t); x.push(Math.log(Math.max(m.blh, 50) / 1000), m.ws); }
-      const reg = out.beta[0] + x.reduce((a, v, j) => a + out.beta[j + 1] * v, 0);
-      B[q] = Math.round((reg - x[0] + R.values[q]) * 1000) / 1000;
+      const xr = [Math.log(c24 + 1)]; if (dem) xr.push((sampleGrid(dem, lat, lon) ?? 0) / 1000);
+      if (met) { const m = sampleMet(met, lat, lon, rk.t); xr.push(Math.log(Math.max(m.blh, 50) / 1000), m.ws); }
+      const xs = xr.slice(0, out.nPred), x = clampAux(xs, out.xRange); if (x.some((v, j) => v !== xs[j])) nClamp++;   // no extrapolation beyond the monitors
+      const reg = out.beta[0] + x.reduce((a, v, j) => a + out.beta[j + 1] * v, 0), b0 = reg - x[0] + R.values[q];
+      const b1 = Math.max(-out.maxLogCorr, Math.min(out.maxLogCorr, b0)); if (b1 !== b0) nBound++;
+      B[q] = Math.round(b1 * 1000) / 1000;
       let rv = s2n; if (covSlope) for (let a = 0; a < x.length; a++) for (let b2 = 0; b2 < x.length; b2++) rv += (x[a] - xbar[a]) * covSlope[a][b2] * (x[b2] - xbar[b2]);
       SD[q] = Math.round(Math.sqrt((R.sd[q] ?? 0) ** 2 + Math.max(0, rv)) * 100) / 100;
     }
     rk.basis = '24h'; rk.bias = { lon0: R.lon0, lat0: R.lat0, step: R.step, nx: R.nx, ny: R.ny, values: B, sd: SD };
+    rk.guards = { nPred: out.nPred, clampedCells: nClamp, boundedCells: nBound, cells: R.nx * R.ny };
     rk.decluster = { cellDeg: out.declusterDeg, weightRange: out.weightRange };
+    log(`${label} guards: ${out.nPred} of ${1 + (dem ? 1 : 0) + (met ? 2 : 0)} predictors, aux predictors clamped to the monitors' range in ${nClamp} of ${R.nx * R.ny} cells, correction bounded to ±${out.maxLogCorr.toFixed(2)} in ${nBound}`);
     log(`${label}: ${rk.n} monitors (declustered, ${out.declusterDeg}° cells, weights ${out.weightRange.join('–')}), beta=[${rk.beta.join(', ')}], range ${rk.vario.a_km} km, LOO RMSE model ${rk.cv.cams.rmse} → RK ${rk.cv.rk.rmse} µg/m³ (declustered ${rk.cv.declustered.cams.rmse} → ${rk.cv.declustered.rk.rmse}), ±1σ coverage ${rk.cv.cover1s}`);
     log(`${label} LOO by area (model → RK, µg/m³): ` + Object.entries(areaCV).map(([a, v]) => `${a} n=${v.n} ${v.cams.rmse}→${v.rk.rmse}`).join(' · '));
     return rk;

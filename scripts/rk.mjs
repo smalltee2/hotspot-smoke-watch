@@ -84,7 +84,19 @@ export function declusterWeights(pts, cellDeg) {
   return w.map(v => v * pts.length / sw);
 }
 // Full analysis. obs: [{lat, lon, y, x: [predictors]}]; grid: {lon0, lat0, step, nx, ny}; predictorsAt not needed (residual only).
+// Guards against extrapolation (found in the 2024–26 hindcast: with few monitors, a monitor at the edge of the predictor range
+// could swing the coefficients, and the log-space correction then exploded where the predictors lay outside the monitors' range):
+//  · fewer predictors when there are few monitors (≥ minPerPredictor monitors per coefficient; predictors are dropped from the end,
+//    so ln(CAMS+1) is always kept),
+//  · the auxiliary predictors (all but ln(CAMS+1)) are clamped to the range the monitors span, at the grid and in the cross-validation,
+//  · the final correction ln(PM+1) − ln(CAMS+1) is bounded to ±maxLogCorr (default ln 3: at most ×3 or ÷3 of CAMS).
+export const clampAux = (x, R) => x.map((v, j) => j === 0 || !R[j] ? v : Math.min(R[j][1], Math.max(R[j][0], v)));
+const xRangeOf = rows => rows[0].x.map((_, j) => { let lo = Infinity, hi = -Infinity; for (const r of rows) { const v = r.x[j]; if (v < lo) lo = v; if (v > hi) hi = v; } return [lo, hi]; });
 export function regressionKriging(obs, gridSpec, opt = {}) {
+  const BMAX = opt.maxLogCorr ?? Math.log(3), minPer = opt.minPerPredictor ?? 10, p0 = obs[0].x.length;
+  let nPred = p0; while (nPred > 1 && obs.length < minPer * (nPred + 1)) nPred--;
+  if (nPred < p0) obs = obs.map(o => ({ ...o, x: o.x.slice(0, nPred) }));
+  const xRange = xRangeOf(obs);
   const X = obs.map(o => o.x), y = obs.map(o => o.y), pts = obs.map(o => [o.lat, o.lon]);
   const W = declusterWeights(pts, opt.declusterDeg || 0);
   const beta = ols(X, y, W); if (!beta) return null;
@@ -119,8 +131,9 @@ export function regressionKriging(obs, gridSpec, opt = {}) {
     const rp = rest.map(r => [r.lat, r.lon]), rr = rest.map(r => r.y - pr(r)), vi = fitVariogram(rp, rr, { w: opt.declusterDeg ? wr : null });
     const mk = Math.min(400, Math.max(150, 3 * vi.a)), fd = d => d <= mk / 2 ? 1 : d >= mk ? 0 : 1 - (d - mk / 2) / (mk / 2);
     const k = krige(rp, rr, vi, o.lat, o.lon, { K, maxKm: mk }), f = fd(k.dmin), sl = vi.c0 + vi.c1;
-    const yhat = pr(o) + k.est * f;
-    cvSd.push(Math.sqrt(Math.max(0, sl - (2 * f - f * f) * (sl - k.varOK)) + regVar(o.x)));
+    const xc = clampAux(o.x, xRangeOf(rest));   // the left-out monitor is predicted as a grid point would be: clamped and bounded
+    const yhat = o.x[0] + Math.max(-BMAX, Math.min(BMAX, pr({ x: xc }) + k.est * f - o.x[0]));
+    cvSd.push(Math.sqrt(Math.max(0, sl - (2 * f - f * f) * (sl - k.varOK)) + regVar(xc)));
     return { yhat, c: Math.exp(yhat) - 1 }; });
   // calibration check: share of monitors whose left-out value falls inside ±1σ (log space); ≈ 0.68 if σ is right
   const cover = cv.filter((c, i) => Math.abs(obs[i].y - c.yhat) <= cvSd[i]).length / obs.length;
@@ -130,7 +143,7 @@ export function regressionKriging(obs, gridSpec, opt = {}) {
     values[iy * nx + ix] = Math.round(k.est * fade(k.dmin) * 1000) / 1000;
     sd[iy * nx + ix] = Math.round(Math.sqrt(residVar(k)) * 100) / 100;   // residual part only; the page adds the regression part
   }
-  return { beta, weights: W, declusterDeg: opt.declusterDeg || 0, weightRange: [Math.min(...W), Math.max(...W)].map(v => +v.toFixed(3)), regCov: { s2n: s2 / n, xbar, covSlope }, vario: { c0: vario.c0, c1: vario.c1, a_km: vario.a, nbins: vario.bins.length, fallback: !!vario.fallback }, maxKm,
+  return { beta, nPred, xRange, maxLogCorr: BMAX, weights: W, declusterDeg: opt.declusterDeg || 0, weightRange: [Math.min(...W), Math.max(...W)].map(v => +v.toFixed(3)), regCov: { s2n: s2 / n, xbar, covSlope }, vario: { c0: vario.c0, c1: vario.c1, a_km: vario.a, nbins: vario.bins.length, fallback: !!vario.fallback }, maxKm,
     cv: cv.map(c => c.c), cvCover1s: Math.round(cover * 100) / 100, cvSdMedian: Math.round([...cvSd].sort((a, b) => a - b)[cvSd.length >> 1] * 1000) / 1000,
     resid: { lon0, lat0, step, nx, ny, values, sd } };
 }

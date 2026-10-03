@@ -32,7 +32,7 @@ const CFG = {
   // Kalman filter on log-ratio bias b = ln(obs+1) - ln(raw+1)
   kf: { Q: 0.02, R: 0.15, P0: 0.5, maxGapH: 48 },
   biasLeadEfoldH: 48,            // bias correction fades with lead time
-  rk: { residStep: 0.1, demStep: 0.05, minStations: 15, K: 16 },  // regression kriging; residual grid and DEM resolution
+  rk: { residStep: 0.1, demStep: 0.05, minStations: 15, K: 16, declusterDeg: 0.25 },   // cell declustering of the regression (0.25° ≈ 28 km cells)  // regression kriging; residual grid and DEM resolution
   logLeads: [1, 3, 6, 12, 24, 48],
   // Air4Thai stations on OpenAQ report PM2.5 as a 24-h running mean, not hourly values (verified on Jan–Apr 2026: flat daily cycle,
   // mean hour-to-hour change 0.4 µg/m3); their correction and kriging therefore compare like with like (24-h means)
@@ -428,7 +428,7 @@ async function main() {
   });
   if (rkObs.length >= CFG.rk.minStations) {
     const rs = CFG.rk.residStep, rnx = Math.round((g[2] - g[0]) / rs) + 1, rny = Math.round((g[3] - g[1]) / rs) + 1;
-    const out = regressionKriging(rkObs, { lon0: g[0], lat0: g[1], step: rs, nx: rnx, ny: rny }, { K: CFG.rk.K });
+    const out = regressionKriging(rkObs, { lon0: g[0], lat0: g[1], step: rs, nx: rnx, ny: rny }, { K: CFG.rk.K, declusterDeg: CFG.rk.declusterDeg });
     if (out) {
       const err = (a, b) => ({ rmse: +Math.sqrt(a.reduce((s, v, i) => s + (v - b[i]) ** 2, 0) / a.length).toFixed(2), mb: +(a.reduce((s, v, i) => s + v - b[i], 0) / a.length).toFixed(2) });
       const o = rkObs.map(r => r.obs), tSorted = rkObs.map(r => r.t).sort((a, b) => a - b);
@@ -456,7 +456,8 @@ async function main() {
           SD[q] = Math.round(Math.sqrt((R.sd[q] ?? 0) ** 2 + Math.max(0, rv)) * 100) / 100;
         }
         rk.basis = '24h'; rk.bias = { lon0: R.lon0, lat0: R.lat0, step: R.step, nx: R.nx, ny: R.ny, values: B, sd: SD }; delete rk.resid; }
-      log(`RK: ${rk.n} monitors, beta=[${rk.beta.join(', ')}], range ${rk.vario.a_km} km, LOO RMSE CAMS ${rk.cv.cams.rmse} → RK ${rk.cv.rk.rmse} µg/m³, ±1σ coverage ${rk.cv.cover1s}`);
+      rk.decluster = { cellDeg: out.declusterDeg, weightRange: out.weightRange };
+      log(`RK: ${rk.n} monitors (declustered, ${out.declusterDeg}° cells, weights ${out.weightRange.join('–')}), beta=[${rk.beta.join(', ')}], range ${rk.vario.a_km} km, LOO RMSE CAMS ${rk.cv.cams.rmse} → RK ${rk.cv.rk.rmse} µg/m³, ±1σ coverage ${rk.cv.cover1s}`);
     }
   } else log(`RK skipped: only ${rkObs.length} monitors with fresh data`);
   const gridRaw = hours.map((t, j) => gridPts.map((_, p) => { const v = C.grid[p][i0 + j]; return v == null ? -1 : r1(v); }));

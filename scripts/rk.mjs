@@ -5,11 +5,11 @@
 const R_EARTH = 6371;
 const kmFast = (la1, lo1, la2, lo2) => { const x = (lo2 - lo1) * Math.cos((la1 + la2) * Math.PI / 360), y = la2 - la1; return Math.sqrt(x * x + y * y) * Math.PI / 180 * R_EARTH; };
 
-// ordinary least squares with intercept; X rows without the 1. Small ridge keeps it stable.
-export function ols(X, y) {
+// (weighted) least squares with intercept; X rows without the 1; w = weights (default 1). Small ridge keeps it stable.
+export function ols(X, y, w = null) {
   const p = X[0].length + 1, A = Array.from({ length: p }, () => new Float64Array(p)), b = new Float64Array(p);
-  for (let i = 0; i < y.length; i++) { const r = [1, ...X[i]];
-    for (let j = 0; j < p; j++) { b[j] += r[j] * y[i]; for (let k = 0; k < p; k++) A[j][k] += r[j] * r[k]; } }
+  for (let i = 0; i < y.length; i++) { const r = [1, ...X[i]], wi = w ? w[i] : 1;
+    for (let j = 0; j < p; j++) { b[j] += wi * r[j] * y[i]; for (let k = 0; k < p; k++) A[j][k] += wi * r[j] * r[k]; } }
   for (let j = 1; j < p; j++) A[j][j] += 1e-6 * y.length;
   return solve(A.map(r => Array.from(r)), Array.from(b));
 }
@@ -71,20 +71,32 @@ export function krige(pts, res, v, lat, lon, { K = 16, maxKm = 400, skip = -1 } 
   return { est, dmin: nn[0][0], varOK: Math.min(Math.max(varOK, 0), v.c0 + v.c1) };
 }
 
+// Cell declustering (Deutsch 1989, DECLUS; Isaaks & Srivastava 1989): each monitor gets weight 1/(number of monitors in its
+// cell), scaled so the weights sum to n. Dense networks (e.g. 65 Bangkok sites) then count roughly as much as the area they cover
+// in the regression, instead of pulling the region-wide coefficients toward one city. cellDeg <= 0 → equal weights.
+export function declusterWeights(pts, cellDeg) {
+  if (!(cellDeg > 0)) return pts.map(() => 1);
+  const key = ([la, lo]) => `${Math.floor(la / cellDeg)}:${Math.floor(lo / cellDeg)}`, cnt = new Map();
+  for (const q of pts) cnt.set(key(q), (cnt.get(key(q)) || 0) + 1);
+  const w = pts.map(q => 1 / cnt.get(key(q))), sw = w.reduce((a, v) => a + v, 0);
+  return w.map(v => v * pts.length / sw);
+}
 // Full analysis. obs: [{lat, lon, y, x: [predictors]}]; grid: {lon0, lat0, step, nx, ny}; predictorsAt not needed (residual only).
 export function regressionKriging(obs, gridSpec, opt = {}) {
-  const X = obs.map(o => o.x), y = obs.map(o => o.y);
-  const beta = ols(X, y); if (!beta) return null;
+  const X = obs.map(o => o.x), y = obs.map(o => o.y), pts = obs.map(o => [o.lat, o.lon]);
+  const W = declusterWeights(pts, opt.declusterDeg || 0);
+  const beta = ols(X, y, W); if (!beta) return null;
   const pred = o => beta[0] + o.x.reduce((s, v, j) => s + beta[j + 1] * v, 0);
-  const res = obs.map(o => o.y - pred(o)), pts = obs.map(o => [o.lat, o.lon]);
+  const res = obs.map(o => o.y - pred(o));
   // variance of the regression part at x₀, written in centred form for numerical stability (predictors can be
   // nearly collinear): Var(x₀ᵀβ̂) = s²/n + (x₀ − x̄)ᵀ s²(X_cᵀX_c)⁻¹ (x₀ − x̄), X_c = centred predictors
+  // weighted least squares: weights sum to n, so with equal weights these reduce to the ordinary formulas
   const p = beta.length - 1, n = obs.length, xbar = new Array(p).fill(0);
-  for (const o of obs) for (let j = 0; j < p; j++) xbar[j] += o.x[j] / n;
+  obs.forEach((o, i) => { for (let j = 0; j < p; j++) xbar[j] += W[i] * o.x[j] / n; });
   const XtX = Array.from({ length: p }, () => new Array(p).fill(0));
-  for (const o of obs) for (let j = 0; j < p; j++) for (let k = 0; k < p; k++) XtX[j][k] += (o.x[j] - xbar[j]) * (o.x[k] - xbar[k]);
+  obs.forEach((o, i) => { for (let j = 0; j < p; j++) for (let k = 0; k < p; k++) XtX[j][k] += W[i] * (o.x[j] - xbar[j]) * (o.x[k] - xbar[k]); });
   for (let j = 0; j < p; j++) XtX[j][j] += 1e-6 * n;   // same small ridge as ols()
-  const s2 = res.reduce((a, e) => a + e * e, 0) / Math.max(1, n - p - 1);
+  const s2 = res.reduce((a, e, i) => a + W[i] * e * e, 0) / Math.max(1, n - p - 1);
   const inv = Array.from({ length: p }, (_, j) => solve(XtX.map(r => r.slice()), Array.from({ length: p }, (_, k) => +(k === j))));
   const covSlope = inv.every(Boolean) ? inv.map(col => col.map(x => s2 * x)) : null;   // symmetric, so columns = rows
   const regVar = x => { let q = s2 / n; if (covSlope) for (let j = 0; j < p; j++) for (let k = 0; k < p; k++) q += (x[j] - xbar[j]) * covSlope[j][k] * (x[k] - xbar[k]); return Math.max(0, q); };
@@ -99,7 +111,8 @@ export function regressionKriging(obs, gridSpec, opt = {}) {
   const residVar = k => { const f = fade(k.dmin); return Math.max(0, sill - (2 * f - f * f) * (sill - k.varOK)); };
   // leave-one-out: refit the regression and the variogram without the left-out monitor, so the score is not optimistic
   const cvSd = [], cv = obs.map((o, i) => {
-    const rest = obs.filter((_, j) => j !== i), b = ols(rest.map(r => r.x), rest.map(r => r.y)) || beta;
+    const rest = obs.filter((_, j) => j !== i), wr = declusterWeights(rest.map(r => [r.lat, r.lon]), opt.declusterDeg || 0);
+    const b = ols(rest.map(r => r.x), rest.map(r => r.y), wr) || beta;
     const pr = r => b[0] + r.x.reduce((s, v, j) => s + b[j + 1] * v, 0);
     const rp = rest.map(r => [r.lat, r.lon]), rr = rest.map(r => r.y - pr(r)), vi = fitVariogram(rp, rr);
     const mk = Math.min(400, Math.max(150, 3 * vi.a)), fd = d => d <= mk / 2 ? 1 : d >= mk ? 0 : 1 - (d - mk / 2) / (mk / 2);
@@ -115,7 +128,7 @@ export function regressionKriging(obs, gridSpec, opt = {}) {
     values[iy * nx + ix] = Math.round(k.est * fade(k.dmin) * 1000) / 1000;
     sd[iy * nx + ix] = Math.round(Math.sqrt(residVar(k)) * 100) / 100;   // residual part only; the page adds the regression part
   }
-  return { beta, regCov: { s2n: s2 / n, xbar, covSlope }, vario: { c0: vario.c0, c1: vario.c1, a_km: vario.a, nbins: vario.bins.length, fallback: !!vario.fallback }, maxKm,
+  return { beta, declusterDeg: opt.declusterDeg || 0, weightRange: [Math.min(...W), Math.max(...W)].map(v => +v.toFixed(3)), regCov: { s2n: s2 / n, xbar, covSlope }, vario: { c0: vario.c0, c1: vario.c1, a_km: vario.a, nbins: vario.bins.length, fallback: !!vario.fallback }, maxKm,
     cv: cv.map(c => c.c), cvCover1s: Math.round(cover * 100) / 100, cvSdMedian: Math.round([...cvSd].sort((a, b) => a - b)[cvSd.length >> 1] * 1000) / 1000,
     resid: { lon0, lat0, step, nx, ny, values, sd } };
 }

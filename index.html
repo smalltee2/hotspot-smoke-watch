@@ -1495,12 +1495,15 @@ function stationNow(s,t){const i=gIdx(t);return i>=0?s.corr[i]:null;}
 const isA4t=s=>String(s.id).startsWith('a4t:');
 function meanBack(f,i){let a=0,n=0; for(let k=i-23;k<=i;k++){if(k<0) continue; const v=f(k); if(v!=null){a+=v;n++;}} return n>=18?a/n:null;}
 function a4tPair(s,i){
-  const O=s.obsSeries; if(!O||i<0||i>=O.length) return null;
+  const O=s.obsSeries; if(!O||i<0) return null;
+  // the latest hour is published about 20 min after it closes, so at "now" the newest value is usually 1–2 h old:
+  // use the most recent measured hour up to 2 h before the slider time, and compare the model at that same hour
+  let k=Math.min(i,O.length-1); while(k>=0&&k>i-3&&O[k]==null) k--; if(k<0||k<=i-3||O[k]==null) return null; i=k;
   const want24=avg24()||!s.hourly, H=P.data.hours;
   const meas=want24?(s.hourly?meanBack(k=>O[k]??null,i):O[i]):O[i]; if(meas==null) return null;
   const mapAt=k=>totalAt(s.lat,s.lon,H[k]), rawAt=k=>{const c=camsAt(s.lat,s.lon,k); return c<0?null:c;};
   const model=want24?meanBack(mapAt,i):mapAt(i), raw=want24?meanBack(rawAt,i):rawAt(i); if(model==null) return null;
-  return {meas,model,raw,basis:want24?'24':'1'};
+  return {meas,model,raw,basis:want24?'24':'1',t:H[i]};
 }
 function drawA4t(){
   a4tLayer.clearLayers(); const box=$('a4tStat'); if(box) box.textContent='';
@@ -1509,7 +1512,7 @@ function drawA4t(){
     const q=a4tPair(s,i); if(!q) continue;
     n++; sd+=q.model-q.meas; se+=(q.model-q.meas)**2; if(q.raw!=null){nr++; sr+=q.raw-q.meas; ser+=(q.raw-q.meas)**2;}
     const icon=L.divIcon({className:'',html:`<div class="a4tmark" style="background:${pcdColor(q.meas)};box-shadow:0 0 0 3px ${pcdColor(q.model)}"></div>`,iconSize:[12,12],iconAnchor:[6,6]});
-    L.marker([s.lat,s.lon],{icon,keyboard:false}).bindTooltip(()=>`<b>${esc(stName(s))}</b> · ${esc(s.provider)}<br>${fmtT(t)} · ${q.basis==='1'?T('1-h values','ค่า 1 ชม.'):T('24-h means','ค่าเฉลี่ย 24 ชม.')}<br>`+
+    L.marker([s.lat,s.lon],{icon,keyboard:false}).bindTooltip(()=>`<b>${esc(stName(s))}</b> · ${esc(s.provider)}<br>${fmtT(q.t)} · ${q.basis==='1'?T('1-h values','ค่า 1 ชม.'):T('24-h means','ค่าเฉลี่ย 24 ชม.')}<br>`+
       `${T('Measured','ค่าตรวจวัด')} <b>${fmtN(q.meas)}</b> µg/m³<br>${T('Our map','แผนที่ของเรา')} ${fmtN(q.model)} µg/m³ (${q.model>=q.meas?'+':''}${fmtN(q.model-q.meas)})`+
       (q.raw!=null&&!PUBLIC?`<br>CAMS ${T('raw','ดิบ')} ${fmtN(q.raw)} µg/m³ (${q.raw>=q.meas?'+':''}${fmtN(q.raw-q.meas)})`:''))
       .on('click',()=>focusStation(s.id)).addTo(a4tLayer);

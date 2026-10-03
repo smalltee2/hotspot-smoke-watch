@@ -472,7 +472,7 @@ td.num{text-align:right;font-family:var(--font-data);font-variant-numeric:tabula
       <p class="note"><strong>Uncertainty layer.</strong> The regression-kriging prediction variance (Hengl et al., 2007) is the kriging variance of the residual plus the variance of the regression part: σ² = σ²<sub>OK</sub> + s²/n + (x₀−x̄)ᵀ·Cov(β<sub>slopes</sub>)·(x₀−x̄) (the regression variance in centred form), with σ²<sub>OK</sub> = Σλᵢγ(xᵢ,x₀) + μ from the ordinary-kriging system and Cov(β<sub>slopes</sub>) = s²(X<sub>c</sub>ᵀX<sub>c</sub>)⁻¹ from the regression on centred predictors (an ordinary-least-squares stand-in for the generalised-least-squares term). Where the kriged residual is faded out, σ² rises toward the variogram sill. Because the model is in log space, the 68% range is (PM+1)·e<sup>±σ</sup> − 1, and the map shows e<sup>σ</sup> − 1 as a percentage. σ is checked hourly by leave-one-out: about 68% of left-out monitors should fall inside ±1σ. It covers the analysis hour only; forecast error grows with lead time (table below).</p>
       <div id="rkBox" class="note"></div>
       <h3>Fire-emission assimilation (test, shadow mode)</h3>
-      <p class="note">Each hour the pipeline compares the last ~48 h of hourly measurements with CAMS (after removing each station's slow, weeks-long bias) and attributes what is left to errors in the emissions of each fire group (0.5° cell × local day) in our puff model. It solves the linear Bayesian problem exactly (synthesis inversion; for a model linear in emissions this equals 4D-Var): x̂ = (HᵀR⁻¹H + B⁻¹)⁻¹HᵀR⁻¹d, with prior factor 1 ± 1 (fire emissions are uncertain by about a factor of two), observation error max(3 µg/m³, 30 %) inflated ×4 for correlated hourly errors, and only station-hours that our model says receive ≥ 1 µg/m³ of fire smoke. The incremental form means CAMS's own fire smoke is not counted twice: with no information every factor stays 1. Factors are published but not used in the public forecast; tick “Fire-emission assimilation” in Settings to rerun the smoke model with them. Twin test (known factors ×2 and ×0.5, synthetic stations): well-observed groups recovered as 1.80 and 0.50; groups seen by few stations stay near 1, as they should. DOFS = degrees of freedom for signal (how many independent factors the stations constrain; Rodgers, 2000).</p>
+      <p class="note">Each hour the pipeline compares the last ~48 h of hourly measurements with CAMS (after removing each station's slow, weeks-long bias) and attributes what is left to errors in the emissions of each fire group (0.5° cell × local day) in our puff model. It solves the linear Bayesian problem exactly (synthesis inversion; for a model linear in emissions this equals 4D-Var): x̂ = (HᵀR⁻¹H + B⁻¹)⁻¹HᵀR⁻¹d, with prior factor 1 ± 1 (fire emissions are uncertain by about a factor of two), observation error max(3 µg/m³, 30 %) inflated ×4 for correlated hourly errors, and only station-hours that our model says receive ≥ 1 µg/m³ of fire smoke. The incremental form means CAMS's own fire smoke is not counted twice: with no information every factor stays 1. On this developer page the factors are applied by default (Settings → “Fire-emission assimilation”): the smoke model reruns with the rescaled emissions, and the total map adds the increment Σ(s<sub>g</sub>−1)·F<sub>g</sub> (one extra run with only the rescaled fires, since the model is linear in emissions), so the correction moves with the forecast wind. The public page does not use them yet. Station forecasts (Kalman filter) are not changed. Twin test (known factors ×2 and ×0.5, synthetic stations): well-observed groups recovered as 1.80 and 0.50; groups seen by few stations stay near 1, as they should. DOFS = degrees of freedom for signal (how many independent factors the stations constrain; Rodgers, 2000).</p>
       <div id="assimBox" class="note"></div>
       <h3>Fine total PM<sub>2.5</sub></h3>
       <p class="note">The fine layer adds sub-grid structure from the fire-smoke model to the regression-kriging map: C<sub>fine</sub> = C<sub>RK</sub> + α·(C<sub>fire</sub> − ⟨C<sub>fire</sub>⟩<sub>0.5°</sub>), where ⟨·⟩<sub>0.5°</sub> is the mean over a CAMS-sized box, computed at 0.025° (coarser for large regions and 24-h views). The ≈0.5° moving average stays approximately equal to the map below it (exactly, except where the sum is clipped at zero), so fire smoke already in CAMS (GFAS) is not counted twice. This follows the idea of sub-grid dispersion without double counting in uEMEP (Denby et al., 2020); here a box-mean high-pass replaces uEMEP's local-fraction bookkeeping, which CAMS does not provide. α is set in Settings and will be calibrated against monitors in the burning season.</p>
@@ -523,6 +523,7 @@ td.num{text-align:right;font-family:var(--font-data);font-variant-numeric:tabula
         <label class="dev-only"><input type="radio" name="layer" id="lyFine" value="fine"> <span data-th="PM&lt;sub&gt;2.5&lt;/sub&gt; รวม ละเอียด (เห็นรายละเอียดไฟ)">Total PM<sub>2.5</sub>, fine (fire detail)</span></label>
         <label><input type="radio" name="layer" id="lyFire" value="fire"> <span data-th="เฉพาะควันไฟ">Fire smoke only</span></label>
         <label class="dev-only"><input type="radio" name="layer" id="lyUnc" value="unc"> <span data-th="ความไม่แน่นอนของแผนที่ (±1σ)">Map uncertainty (±1σ)</span></label>
+        <div id="assimNote" class="note dev-only" style="font-size:.68rem;color:var(--focus)" hidden></div>
       </div>
       <div class="field" style="margin:4px 0 6px"><label for="unitSel" style="font-size:.7rem" data-th="แสดงเป็น">Show as</label>
         <select id="unitSel" style="font-size:.75rem;padding:3px 4px">
@@ -1056,7 +1057,8 @@ for(const id of PUBLIC?['region','warnkm']:['region','mapkey','days','minconf','
   $(id).addEventListener('change',()=>store.set('hsw.'+id,$(id).value));
 }
 {const v=PUBLIC?null:store.get('hsw.fuelLC'); if(v!=null) $('fuelLC').checked=v==='1'; $('fuelLC').addEventListener('change',()=>store.set('hsw.fuelLC',$('fuelLC').checked?'1':'0'));}
-$('useAssim').addEventListener('change',()=>runAuto(true));
+{const v=PUBLIC?null:store.get('hsw.useAssim'); $('useAssim').checked=v==null?true:v==='1';}
+$('useAssim').addEventListener('change',()=>{store.set('hsw.useAssim',$('useAssim').checked?'1':'0'); FIELD_CACHE.clear(); runAuto(true);});
 {const v=PUBLIC?null:store.get('hsw.plume'); if(v!=null) $('plume').checked=v==='1'; $('plume').addEventListener('change',()=>store.set('hsw.plume',$('plume').checked?'1':'0'));}
 if(store.get('hsw.v')!=='2'){$('mapkey').value='';store.set('hsw.mapkey','');store.set('hsw.v','2');}
 
@@ -1390,7 +1392,7 @@ function hexRGB(h){h=h.replace('#','');if(h.length===3)h=h.split('').map(c=>c+c)
 const FIELD_CACHE=new Map();
 function hourField(i,so,w,fx,fy,cell,fine){
   const G=P.data.grid, alpha=Math.max(0,+$('alpha').value||0);
-  const key=[P.data.generated,i,so.toFixed(3),w.toFixed(3),fx,fy,cell,fine?alpha:'-',S.sim?S.sim.tStart:0,!!DEM,!!MET].join('|');
+  const key=[P.data.generated,i,so.toFixed(3),w.toFixed(3),fx,fy,cell,fine?alpha:'-',S.sim?S.sim.tStart:0,!!DEM,!!MET,S.simInc?S.assimApplied:0].join('|');
   if(FIELD_CACHE.has(key)) return FIELD_CACHE.get(key);
   const vals=G.values[i], t=P.data.hours[i];
   const base=(lat,lon)=>{const fxx=(lon-G.lon0)/G.step, fyy=(lat-G.lat0)/G.step; if(fxx<0||fyy<0||fxx>G.nx-1||fyy>G.ny-1) return -1;
@@ -1401,9 +1403,10 @@ function hourField(i,so,w,fx,fy,cell,fine){
   let P_=null, A_=null;
   if(fine&&alpha>0&&S.sim){const si=simIdx(t), snap=si>=0?S.sim.snaps[si]:null;
     if(snap&&snap.n){P_=puffField(snap,w,so,fx,fy,cell); A_=boxMean(P_,fx,fy,Math.max(1,Math.round(G.step/2/cell)));}}
+  let I_=null; if(S.simInc){const k=idxIn(S.simInc.hours,t), sn=k>=0?S.simInc.snaps[k]:null; if(sn&&sn.n) I_=puffField(sn,w,so,fx,fy,cell);}
   const F=new Float32Array(fx*fy);
   for(let y=0;y<fy;y++) for(let x=0;x<fx;x++){const la=so+(y+.5)*cell, lo=w+(x+.5)*cell, b=rkValue(base(la,lo),la,lo,t);
-    F[y*fx+x]=b<0?NaN:Math.max(0,b+(P_?alpha*(P_[y*fx+x]-A_[y*fx+x]):0));}
+    F[y*fx+x]=b<0?NaN:Math.max(0,b+(P_?alpha*(P_[y*fx+x]-A_[y*fx+x]):0)+(I_?I_[y*fx+x]:0));}
   FIELD_CACHE.set(key,F); if(FIELD_CACHE.size>60) FIELD_CACHE.delete(FIELD_CACHE.keys().next().value);
   return F;
 }
@@ -1548,7 +1551,8 @@ function camsAt(lat,lon,i){const G=P.data.grid, vals=G.values[i]; const fx=(lon-
   const x0=Math.min(Math.floor(fx),G.nx-2), y0=Math.min(Math.floor(fy),G.ny-2), ax=fx-x0, ay=fy-y0;
   const a=vals[y0*G.nx+x0], b=vals[y0*G.nx+x0+1], c=vals[(y0+1)*G.nx+x0], d=vals[(y0+1)*G.nx+x0+1];
   return (a<0||b<0||c<0||d<0)?-1:(1-ax)*(1-ay)*a+ax*(1-ay)*b+(1-ax)*ay*c+ax*ay*d;}
-function totalAt(lat,lon,t){const i=gIdx(t); if(!P.data||i<0) return null; const c=camsAt(lat,lon,i); return c<0?null:rkValue(c,lat,lon,t);}
+function totalAt(lat,lon,t){const i=gIdx(t); if(!P.data||i<0) return null; const c=camsAt(lat,lon,i); if(c<0) return null;
+  let v=rkValue(c,lat,lon,t); if(S.simInc){const k=idxIn(S.simInc.hours,t); if(k>=0) v=Math.max(0,v+concAt(S.simInc.snaps[k],lat,lon));} return v;}
 function fireAt(lat,lon,t){const si=simIdx(t); if(si<0||!S.sim) return 0; return concAt(S.sim.snaps[si],lat,lon);}
 let hereLayer=null, hereLL=null;
 function hereHTML(lat,lon,acc){
@@ -1688,7 +1692,7 @@ async function runModel(hotsRaw,mode,windOverride,quiet){
   S.hots=hotsRaw.filter(h=>confOK(h,minc));
   S.sources=clusterSources(S.hots,0.1,+$('fuel').value,$('fuelLC').checked,$('fireProf').value!=='const');
   const now=Date.now(), horizon=+$('horizon').value;
-  if(!S.sources.length){busy(null);setMode(mode);S.sim=null;clearPlume();setTimeline();drawHotspots();drawTraj();computeReceptors();renderAll();redrawTime();
+  if(!S.sources.length){busy(null);setMode(mode);S.sim=null;S.simInc=null;S.assimApplied=0;clearPlume();setTimeline();drawHotspots();drawTraj();computeReceptors();renderAll();redrawTime();
     if(!quiet) banner(T(`No hotspots in ${esc(REGIONS[$('region').value].name)} right now. Outside the burning season (roughly January–April in the north) this is normal.${PUBLIC?'':' Try “Run demo” in Settings to see how the page works.'}`,`ขณะนี้ไม่มีจุดความร้อนในพื้นที่ที่เลือก นอกฤดูเผา (ภาคเหนือประมาณมกราคม–เมษายน) ถือเป็นเรื่องปกติ${PUBLIC?'':' ลองกด “ทดลองด้วยข้อมูลจำลอง” ในแท็บตั้งค่าเพื่อดูการทำงานของหน้าเว็บ'}`),'info');return;}
   const reg=REGIONS.msea.bbox;
   const spec=windGridSpec(S.sources,reg);
@@ -1704,8 +1708,16 @@ async function runModel(hotsRaw,mode,windOverride,quiet){
   S.assimApplied=0; const A=P.data&&P.data.assim;
   if(!PUBLIC&&$('useAssim').checked&&A&&A.status==='ok'){ const gd=A.cfg.groupDeg, f=new Map(A.groups.map(g=>[`${g.lat0.toFixed(2)}:${g.lon0.toFixed(2)}:${g.day}`,g.s]));
     for(const s of top){ const ld=Math.round((s.d0+s.lon/15*3600e3)/864e5), k=`${(Math.floor(s.lat/gd)*gd).toFixed(2)}:${(Math.floor(s.lon/gd)*gd).toFixed(2)}:${new Date(ld*864e5).toISOString().slice(0,10)}`;
-      const g=f.get(k); if(g!=null&&g!==1){ s.ef=(s.ef??+$('fuel').value)*g; S.assimApplied++; } } }
+      const g=f.get(k); if(g!=null&&g!==1){ s.assimF=g; s.ef=(s.ef??+$('fuel').value)*g; S.assimApplied++; } } }
   S.sim=simulate(top,W,{ef:+$('fuel').value,durH:+$('dur').value,profile:$('fireProf').value,plumeRise:$('plume').checked,tEnd:now+horizon*3600e3});
+  // total-PM2.5 increment from the assimilation: the model is linear in emissions, so Σ(s_g−1)·F_g is one more run with only the
+  // rescaled sources, each emitting (s−1)/s of its (already rescaled) amount; it is added to the total map (CAMS already holds the prior fire smoke)
+  S.simInc=null;
+  if(S.assimApplied){ const inc=top.filter(s=>s.assimF).map(s=>({...s,ef:s.ef*(s.assimF-1)/s.assimF}));
+    S.simInc=simulate(inc,W,{ef:+$('fuel').value,durH:+$('dur').value,profile:$('fireProf').value,plumeRise:$('plume').checked,tEnd:now+horizon*3600e3}); }
+  { const n=$('assimNote'); if(n){ const A=P.data&&P.data.assim, on=!PUBLIC&&$('useAssim').checked;
+      n.hidden=!on; n.textContent=!on?'':S.assimApplied?`Fire-emission assimilation ON (test): ${S.assimApplied} fire sources rescaled; fire smoke and total maps include it.`:
+        `Fire-emission assimilation ON (test): no factors to apply this hour${A&&A.status&&A.status!=='ok'?` (${A.status})`:''}.`; } }
   computeReceptors();
   if(mode==='live'&&!P.data){const cams=await fetchCams(S.recep); if(cams) S.recep.forEach((r,i)=>r.cams=cams[i]);}
   setMode(mode); busy(null);
@@ -1899,7 +1911,7 @@ function trendBlock(H,v,opt={}){
 }
 const AREA_CACHE={key:null};
 function areaSeries(){
-  const k=$('region').value, key=k+'|'+(P.data?P.data.generated:'');
+  const k=$('region').value, key=k+'|'+(P.data?P.data.generated:'')+'|'+(S.simInc?S.assimApplied:0);
   if(AREA_CACHE.key===key) return AREA_CACHE;
   // provinces: 0.1° lattice inside Thai provinces. Area average: the same points, or on the whole-domain map a 0.25° lattice
   // over everything (so Thailand's denser lattice does not dominate the domain mean)

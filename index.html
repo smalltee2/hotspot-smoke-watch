@@ -570,13 +570,14 @@ td.num{text-align:right;font-family:var(--font-data);font-variant-numeric:tabula
       <div class="keys">
         <span><i class="dot" style="background:var(--ember)"></i><span data-th="จุดความร้อน (ขนาด = FRP)">Hotspot (size = FRP)</span></span>
         <span><i class="dot" style="border:2px solid var(--fg)"></i><span data-th="เมือง / จุดรับ">Town / receptor</span></span>
-        <span><i style="display:inline-block;width:14px;height:10px;vertical-align:-1px"><svg viewBox="0 0 14 10" width="14" height="10"><path d="M0 5h10M7 1l4 4-4 4" fill="none" stroke="var(--fg)" stroke-width="1.6"/></svg></i><span data-th="ลม: อนุภาคเคลื่อนไปตามทิศที่ลมพัด (เร็ว/สว่าง = แรง) ลูกศรบอกทิศ ชี้ลูกศรดูค่า">Wind: particles drift the way the wind blows (faster and brighter = stronger); arrows mark the direction; hover an arrow for values</span></span>
+        <span><i style="display:inline-block;width:14px;height:10px;vertical-align:-1px"><svg viewBox="0 0 14 10" width="14" height="10"><path d="M0 5h10M7 1l4 4-4 4" fill="none" stroke="var(--fg)" stroke-width="1.6"/></svg></i><span data-th="ลม: อนุภาคเคลื่อนไปตามทิศที่ลมพัด (เร็ว/สว่าง = แรง) ดูค่าลมได้ที่ตำแหน่งของฉันและเมือง">Wind: particles drift the way the wind blows (faster and brighter = stronger); wind values are shown under “my location” and each town</span></span>
         <span><i class="dot" style="background:var(--aq2);box-shadow:0 0 0 3px var(--aq4);border:1px solid var(--fg)"></i><span data-th="Air4Thai: ด้านใน = ค่าตรวจวัด, วงนอก = แบบจำลอง">Air4Thai: inside = measured, ring = model</span></span>
         <span><i class="dot" style="border-radius:2px;border:1.5px solid var(--fg);background:var(--aq2)"></i><span data-th="สถานีตรวจวัด (ค่าปัจจุบัน)">Monitor (measured now)</span></span>
       </div>
       <div class="showpick"><strong data-th="แสดงบนแผนที่">Show on map</strong>
         <label><input type="checkbox" id="shContour" checked> <span data-th="เส้นแบ่งระดับ">Contour lines</span></label>
-        <label><input type="checkbox" id="shWind"> <span data-th="ลม 10 ม. (อนุภาคเคลื่อนที่ + ลูกศร)">Wind, 10 m (moving particles + arrows)</span></label>
+        <label><input type="checkbox" id="shWind"> <span data-th="ลม 10 ม. (อนุภาคเคลื่อนที่)">Wind, 10 m (moving particles)</span></label>
+        <label class="dev-only"><input type="checkbox" id="shWindArr"> <span data-th="ลูกศรลมพร้อมค่า (ชี้ดู)">Wind arrows with values (hover)</span></label>
         <label><input type="checkbox" id="shProv"> <span data-th="เขตและชื่อจังหวัด">Province borders and names</span></label>
         <label><input type="checkbox" id="shA4t" checked> <span data-th="Air4Thai: ค่าตรวจวัดเทียบแบบจำลอง">Air4Thai: measured vs model</span></label>
         <div id="a4tStat" class="note" style="font-size:.68rem;margin:-2px 0 4px 22px"></div>
@@ -1532,27 +1533,27 @@ function windParticles(on){
   const b=map.getBounds(), R=regionShape(), B=REGIONS.msea.bbox;
   const la0=Math.max(b.getSouth(),B[1],R?R.bbox[1]:-90), la1=Math.min(b.getNorth(),B[3],R?R.bbox[3]:90), lo0=Math.max(b.getWest(),B[0],R?R.bbox[0]:-180), lo1=Math.min(b.getEast(),B[2],R?R.bbox[2]:180);
   if(!(la1>la0&&lo1>lo0)){WP.parts=[];return;}
-  const N=Math.min(2500,Math.round(sz.x*sz.y/450)); const spawn=p=>{for(let k=0;k<20;k++){p.lat=la0+Math.random()*(la1-la0); p.lon=lo0+Math.random()*(lo1-lo0); if(!R||inRegion(p.lat,p.lon)) break;} p.age=Math.floor(Math.random()*80); return p;};
+  const N=Math.min(2500,Math.round(sz.x*sz.y/450)); const spawn=p=>{for(let k=0;k<20;k++){p.lat=la0+Math.random()*(la1-la0); p.lon=lo0+Math.random()*(lo1-lo0); if(!R||inRegion(p.lat,p.lon)) break;} p.age=Math.floor(Math.random()*120); return p;};
   WP.parts=Array.from({length:N},()=>spawn({}));
-  const z=map.getZoom(), k=0.0022*Math.pow(2,7-z);   // degrees per frame per (m/s): the same ground speed looks the same at every zoom
+  const z=map.getZoom(), k=0.0032*Math.pow(2,7-z);   // degrees per frame per (m/s): the same ground speed looks the same at every zoom
   const ctx=WP.ctx, col=getComputedStyle(document.documentElement).colorScheme==='dark'||document.documentElement.dataset.theme==='dark'?'rgba(235,240,255,':'rgba(20,40,80,';
   if(WP.raf) cancelAnimationFrame(WP.raf);
   const frame=()=>{ if(!WP.canvas||!shown('shWind')) return;
-    ctx.globalCompositeOperation='destination-in'; ctx.fillStyle='rgba(0,0,0,0.93)'; ctx.fillRect(0,0,sz.x,sz.y); ctx.globalCompositeOperation='source-over';
-    ctx.lineWidth=1.2;
+    ctx.globalCompositeOperation='destination-in'; ctx.fillStyle='rgba(0,0,0,0.965)'; ctx.fillRect(0,0,sz.x,sz.y); ctx.globalCompositeOperation='source-over';
+    ctx.lineWidth=1.5; ctx.lineCap='round';
     for(const p of WP.parts){ const m=sampleMet(MET,p.lat,p.lon,WP.t), u=m.u10??m.u, v=m.v10??m.v, sp=Math.hypot(u,v);
       const q0=map.latLngToContainerPoint([p.lat,p.lon]); const nlat=p.lat+v*k, nlon=p.lon+u*k/Math.cos(p.lat*DEG);
       const q1=map.latLngToContainerPoint([nlat,nlon]);
       ctx.strokeStyle=col+(Math.min(1,0.35+sp/8))+')'; ctx.beginPath(); ctx.moveTo(q0.x,q0.y); ctx.lineTo(q1.x,q1.y); ctx.stroke();
       p.lat=nlat; p.lon=nlon; p.age++;
-      if(p.age>90||p.lat<la0||p.lat>la1||p.lon<lo0||p.lon>lo1||(R&&!inRegion(p.lat,p.lon))||sp<0.1) spawn(p); }
+      if(p.age>140||p.lat<la0||p.lat>la1||p.lon<lo0||p.lon>lo1||(R&&!inRegion(p.lat,p.lon))||sp<0.1) spawn(p); }
     WP.raf=requestAnimationFrame(frame); };
   WP.raf=requestAnimationFrame(frame);
 }
 map.on('movestart zoomstart',()=>{ if(WP.raf){cancelAnimationFrame(WP.raf); WP.raf=0;} if(WP.ctx){WP.ctx.clearRect(0,0,1e5,1e5);} });
 document.addEventListener('visibilitychange',()=>{ if(document.hidden){ if(WP.raf){cancelAnimationFrame(WP.raf); WP.raf=0;} } else if(shown('shWind')) windParticles(true); });
 function drawWind(){
-  windLayer.clearLayers(); windParticles(!!MET&&shown('shWind')); if(!MET||!shown('shWind')) return; const t=curT(); if(t==null) return;
+  windLayer.clearLayers(); windParticles(!!MET&&shown('shWind')); if(!MET||!shown('shWind')||!shown('shWindArr')) return; const t=curT(); if(t==null) return;
   const z=map.getZoom(), step=z<=5?3:z<=6?2:z<=7?1:z<=8?0.6:0.4, b=map.getBounds(), R=regionShape(), B=REGIONS.msea.bbox;
   const la0=Math.max(b.getSouth(),B[1],R?R.bbox[1]:-90), la1=Math.min(b.getNorth(),B[3],R?R.bbox[3]:90), lo0=Math.max(b.getWest(),B[0],R?R.bbox[0]:-180), lo1=Math.min(b.getEast(),B[2],R?R.bbox[2]:180);
   for(let la=Math.ceil(la0/step)*step; la<=la1; la+=step) for(let lo=Math.ceil(lo0/step)*step; lo<=lo1; lo+=step){
@@ -1628,7 +1629,7 @@ function applyVisibility(){
   drawContours(); drawWind();
 }
 document.getElementById('shProv').addEventListener('change',e=>{store.set('hsw.shProv',e.target.checked?'1':'0');styleBase();});
-for(const id of ['shContour','shSt','shA4t','shHot','shTown','shWind']){
+for(const id of ['shContour','shSt','shA4t','shHot','shTown','shWind','shWindArr']){
   const v=store.get('hsw.'+id); if(v!=null) $(id).checked=v==='1';
   $(id).addEventListener('change',()=>{store.set('hsw.'+id,$(id).checked?'1':'0');applyVisibility();});
 }

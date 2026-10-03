@@ -21,7 +21,8 @@
 import fs from 'node:fs/promises'; import path from 'node:path';
 import { solve } from './rk.mjs';
 
-export const MLCFG = { maxLeadH: 48,   // forecasts are logged (and the experts trained) for leads up to 48 h; no extrapolation beyond
+export const MLCFG = { applyMaxLeadH: 24,   // applied to leads ≤ 24 h only: in the 2024–26 hindcast the learned correction helped at 24 h but not at 48 h
+  maxLeadH: 48,   // forecasts are logged (and the experts trained) for leads up to 48 h; no extrapolation beyond
   windows: { day: 3, week: 7, month: 30 }, minDays: { day: 1, week: 7, month: 30 }, shrinkK: 20, ridgeLambda: 3,
   gbm: { nTrees: 150, depth: 3, lr: 0.08, minLeaf: 40, bins: 32, subsample: 0.8, lambda: 1, maxRows: 120000 },
   eta: 2, share: 0.05, clip: Math.LN2, minRowsDay: 300 };

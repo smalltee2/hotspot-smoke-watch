@@ -54,9 +54,15 @@ const CFG = {
          dedupKm: 1.0, chunk: 40, retryH: 3, types: ['GROUND', 'BKK'] },   // BKK = Bangkok Metropolitan Administration network (not in the hourly history service: read from the
   // live feed, which gives the 24-h mean used for the AQI, so they are handled like the 24-h-mean stations); MOBILE units left out
   stationListVer: 3,             // bump to force a rebuild of the station list on the next run
-  blendW: 0.5,                   // station 24-h forecast = w·persistence + (1−w)·corrected CAMS (provisional; to be fitted by lead from the hindcast)
+  // station 24-h forecast = w(L)·persistence + (1−w(L))·corrected forecast, L = lead in hours. Least-squares weights fitted on the
+  // 2024–26 hindcast replay (all monitors, 24-h means; replay/fit_blend.py) and checked by leave-one-season-out: 1 h 0.97, 3 h 0.94,
+  // 6 h 0.89, 12 h 0.78, 24 h 0.68; at 48 h the fitted 0.59 did not beat 0.5 out of season, so 0.5 is kept from 48 h on.
+  // Linear in ln(L) between the fitted leads.
+  blendByLead: [[1, 0.97], [3, 0.94], [6, 0.89], [12, 0.78], [24, 0.68], [48, 0.5]],
 };
 const PM25_ID = 2; // OpenAQ parameter id for pm25
+const blendW = L => { const T = CFG.blendByLead; if (L <= T[0][0]) return T[0][1]; if (L >= T[T.length - 1][0]) return T[T.length - 1][1];
+  let k = 0; while (T[k + 1][0] < L) k++; const a = (Math.log(L) - Math.log(T[k][0])) / (Math.log(T[k + 1][0]) - Math.log(T[k][0])); return T[k][1] + a * (T[k + 1][1] - T[k][1]); };
 const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
 const DATA = path.join(ROOT, 'data');
 const now = Date.now();
@@ -470,7 +476,7 @@ async function main() {
       const val = hours.map((t, j) => j <= jNow ? (hist.has(t) ? hist.get(t) : null) : corr[j]);
       fc24 = hours.map((t, j) => {
         let su = 0, n = 0; for (let q = j - 23; q <= j; q++) { const v = q >= 0 ? val[q] : null; if (v != null) { su += v; n++; } }
-        if (n < 18) return null; const m = su / n; return r1(j <= jNow ? m : CFG.blendW * o24n.v + (1 - CFG.blendW) * m);
+        if (n < 18) return null; const m = su / n, w = blendW(j - jNow); return r1(j <= jNow ? m : w * o24n.v + (1 - w) * m);
       });
     }
     if (a24) {   // 24-h-mean stations: past hours carry the observed 24-h means; future = blend of persistence and corrected forecast (no fade)
@@ -479,7 +485,7 @@ async function main() {
       fc24 = hours.map((t, j) => {
         if (j <= jNow) return hist.has(t) ? hist.get(t) : null;
         let su = 0, n = 0; for (let q = j - 23; q <= j; q++) { const v = q >= 0 ? nf[q] : null; if (v != null) { su += v; n++; } }
-        if (n < 18) return null; const m = su / n; return r1(o0 != null ? CFG.blendW * o0 + (1 - CFG.blendW) * m : m);
+        if (n < 18) return null; const m = su / n, w = blendW(j - jNow); return r1(o0 != null ? w * o0 + (1 - w) * m : m);
       });
     }
     return { b, corr, fc24 };
@@ -540,7 +546,7 @@ async function main() {
     let nAdj = 0;
     outStations.forEach((o, i) => {
       const s = stations[i]; if (isAvg24(s) || !o.corrA) return;
-      const corrM = o.corrA.map((v, j) => { if (v == null || j <= jNow || (hours[j] - t0) / HOUR > MLCFG.maxLeadH) return v;
+      const corrM = o.corrA.map((v, j) => { if (v == null || j <= jNow || (hours[j] - t0) / HOUR > MLCFG.applyMaxLeadH) return v;
         const f = feats(s, i, j), q = mlCorrection(state, { ...f, lead: (hours[j] - t0) / HOUR, F: v, cams: o.raw[j], lat: s.lat, lon: s.lon, x: null }, season);
         return r1(Math.max(0, (v + 1) * Math.exp(q) - 1)); });
       // 24-h means for the AQI: measured hours up to now, ML-corrected forecast after, blended with persistence as before
@@ -548,7 +554,7 @@ async function main() {
       if (o24n && o24n.valid) { const hist = new Map((state.obsHist[s.id] || []).map(([t, v]) => [t, v]));
         const val = hours.map((t, j) => j <= jNow ? (hist.has(t) ? hist.get(t) : null) : corrM[j]);
         fc24M = hours.map((t, j) => { let su = 0, n = 0; for (let q = j - 23; q <= j; q++) { const v = q >= 0 ? val[q] : null; if (v != null) { su += v; n++; } }
-          if (n < 18) return null; const m = su / n; return r1(j <= jNow ? m : CFG.blendW * o24n.v + (1 - CFG.blendW) * m); }); }
+          if (n < 18) return null; const m = su / n, w = blendW(j - jNow); return r1(j <= jNow ? m : w * o24n.v + (1 - w) * m); }); }
       o.corrM = corrM; o.fc24M = fc24M; nAdj++;
     });
     log(`ML correction applied at ${nAdj} hourly stations (weights ${JSON.stringify(state.ml.weights)})`);
@@ -556,7 +562,7 @@ async function main() {
     // the page interpolates in space and time and applies (C+1)·e^r̂ − 1 on top of the assimilated, kriged map
     try {
       const fs_ = CFG.mlField, fnx = Math.round((g[2] - g[0]) / fs_) + 1, fny = Math.round((g[3] - g[1]) / fs_) + 1, leads = [], fields = [];
-      for (let L = 3; L <= MLCFG.maxLeadH; L += 3) { const j = jNow + L; if (j >= hours.length) break;
+      for (let L = 3; L <= MLCFG.applyMaxLeadH; L += 3) { const j = jNow + L; if (j >= hours.length) break;
         const pts = []; outStations.forEach((o, i) => { if (!o.corrM || o.corrM[j] == null || o.corrA[j] == null) return; pts.push({ lat: o.lat, lon: o.lon, y: Math.log((o.corrM[j] + 1) / (o.corrA[j] + 1)) }); });
         const f = krigeField(pts, { lon0: g[0], lat0: g[1], step: fs_, nx: fnx, ny: fny }, { K: CFG.rk.K, declusterDeg: CFG.rk.declusterDeg }); if (!f) continue;
         leads.push(L); fields.push(f.values); if (L === 24) log(`ML map field at +24 h: ${pts.length} stations, mean ${f.mean}, range ${f.vario.a_km} km`); }

@@ -16,6 +16,7 @@ import { fetchMet, sampleMet, packMet, MET_MODEL } from './met.mjs';
 import { buildLandcover, landcoverAt, packLandcover, unpackLandcover } from './landcover.mjs';
 import { loadModel } from './model.mjs';
 import { assimilateFires, assimSummary } from './assim.mjs';
+import { loadDataset, dailyLearn, mlCorrection, mlActive, FEAT_COLS } from './ml.mjs';
 
 // ------------------------------------------------------------------ config
 const CFG = {
@@ -472,6 +473,48 @@ async function main() {
       obsSeries: (() => { const h = new Map((state.obsHist[s.id] || []).map(([t, v]) => [t, v])); const a = hours.slice(0, jNow + 1).map(t => h.has(t) ? h.get(t) : null); return a.some(v => v != null) ? a : null; })() };
   });
 
+  // 4c. self-learning post-processing (scripts/ml.mjs): once a day, score yesterday's experts on the newly verified day and
+  //     retrain them; every hour, apply the weighted correction to the hourly stations' forecasts (only once an expert has
+  //     earned weight). Features are the values known now, also written to the forecast log for training.
+  const season = await readJSON(path.join(DATA, 'ml', 'season.json'), null);
+  const thaiHour = new Date(now + 7 * HOUR).getUTCHours(), yday = thaiDate(now - 24 * HOUR);
+  let mlRec = null;
+  if (thaiHour >= 4 && state.ml?.lastDay !== yday) {
+    try {
+      const meta = new Map(stations.map(s => [String(s.id), { lat: s.lat, lon: s.lon }]));
+      const dayStart = Date.parse(yday + 'T00:00:00+07:00'), dayEnd = dayStart + 864e5;
+      const rows = await loadDataset(path.join(DATA, 'history'), meta, { from: dayEnd - 36 * 864e5, to: dayEnd });
+      mlRec = dailyLearn(state, rows, { now, dayStart, dayEnd, season, log });
+      await writeJSON(path.join(DATA, 'history', yday.slice(0, 7), `ml-${yday.replace(/-/g, '')}.json`), mlRec);
+    } catch (e) { log(`ML daily learning failed: ${e.message}`); }
+  }
+  const mlOn = mlActive(state, season);
+  const featAt = (s, i, j) => {   // features of station s for output hour j (known at issue time)
+    const t = hours[j], m = met ? sampleMet(met, s.lat, s.lon, t) : null, o24 = obs24(s.id, s);
+    return { inc: incAt(s, t, 'h'), fire: fireAt(s, t, 'h'), blh: m ? m.blh : '', ws: m ? m.ws : '', pr: m ? m.pr : '',
+      obs_last: s.obs && !isAvg24(s) ? s.obs.v : '', obs24_last: o24 && o24.valid ? o24.v : '', kfAb: state.kfA[s.id]?.b ?? 0,
+      hloc: new Date(t + 7 * HOUR).getUTCHours(), doy: Math.floor((t - Date.UTC(new Date(t).getUTCFullYear(), 0, 1)) / 864e5) + 1 };
+  };
+  const featCache = new Map();
+  const feats = (s, i, j) => { const k = `${i}|${j}`; if (!featCache.has(k)) featCache.set(k, featAt(s, i, j)); return featCache.get(k); };
+  if (mlOn) {
+    let nAdj = 0;
+    outStations.forEach((o, i) => {
+      const s = stations[i]; if (isAvg24(s) || !o.corrA) return;
+      const corrM = o.corrA.map((v, j) => { if (v == null || j <= jNow) return v;
+        const f = feats(s, i, j), q = mlCorrection(state, { ...f, lead: (hours[j] - t0) / HOUR, F: v, cams: o.raw[j], lat: s.lat, lon: s.lon, x: null }, season);
+        return r1(Math.max(0, (v + 1) * Math.exp(q) - 1)); });
+      // 24-h means for the AQI: measured hours up to now, ML-corrected forecast after, blended with persistence as before
+      const o24n = obs24(s.id, s); let fc24M = o.fc24A;
+      if (o24n && o24n.valid) { const hist = new Map((state.obsHist[s.id] || []).map(([t, v]) => [t, v]));
+        const val = hours.map((t, j) => j <= jNow ? (hist.has(t) ? hist.get(t) : null) : corrM[j]);
+        fc24M = hours.map((t, j) => { let su = 0, n = 0; for (let q = j - 23; q <= j; q++) { const v = q >= 0 ? val[q] : null; if (v != null) { su += v; n++; } }
+          if (n < 18) return null; const m = su / n; return r1(j <= jNow ? m : CFG.blendW * o24n.v + (1 - CFG.blendW) * m); }); }
+      o.corrM = corrM; o.fc24M = fc24M; nAdj++;
+    });
+    log(`ML correction applied at ${nAdj} hourly stations (weights ${JSON.stringify(state.ml.weights)})`);
+  }
+
   // 5. regression kriging (RIMM-type) at the analysis hour, in log space:
   //    ln(obs+1) = b0 + b1 ln(C+1) + b2 elev_km + b3 ln(BLH/1000) + b4 wind100 + residual;  residual → ordinary kriging on a 0.1° grid.
   //    Two versions: C = CAMS (rk, public) and C = CAMS + assimilation increment (rkA): the kriging then corrects only what the
@@ -549,7 +592,7 @@ async function main() {
   await writeJSON(path.join(DATA, 'latest.json'), {
     generated: now, camsIssued: C.at, bbox: CFG.bbox, runlog: RUNLOG,
     method: { kf: CFG.kf, biasLeadEfoldH: CFG.biasLeadEfoldH, rk: CFG.rk },
-    rk, rkA, assim: assimSummary(assim), dem: dem ? { file: 'data/static/elev.json', step: dem.step, source: dem.source } : null,
+    rk, rkA, assim: assimSummary(assim), ml: state.ml ? { active: mlOn, weights: state.ml.weights, lastDay: state.ml.lastDay, experts: Object.keys(state.ml.models || {}).concat(season ? ['season'] : []), last: mlRec } : null, dem: dem ? { file: 'data/static/elev.json', step: dem.step, source: dem.source } : null,
     met: met ? { file: 'data/met-web.json', model: met.model, fetched: met.fetched, grids: met.grids.map(g => ({ step: g.step, bbox: [g.lon0, g.lat0, g.lon0 + (g.nx - 1) * g.step, g.lat0 + (g.ny - 1) * g.step] })) } : null,
     hours, stations: outStations,
     grid: { lon0: g[0], lat0: g[1], step, nx, ny, values: gridRaw },  // raw CAMS; the page applies rk
@@ -560,14 +603,15 @@ async function main() {
   const hdir = path.join(DATA, 'history', ym);
   await appendCSV(path.join(hdir, `obs-${stamp}.csv`), 'time_utc,station_id,obs_pm25,cams_raw,cams_plus_inc', obsRows);
   // forecast log: without and with the fire assimilation (corrA, blend24A), so verify.mjs scores both on the same rows
-  const fRows = [];
+  const fRows = [], stIndex = new Map(stations.map((s, i) => [s.id, i]));
   const m24 = (arr, j) => { if (!arr) return ''; let su = 0, n = 0; for (let q = j - 23; q <= j; q++) { const v = q >= 0 ? arr[q] : null; if (v != null) { su += v; n++; } } return n >= 18 ? r1(su / n) : ''; };
   for (const s of outStations) if (s.monitor) for (const L of CFG.logLeads) { const j = jNow + L; if (j < hours.length && s.raw[j] != null)
     fRows.push([new Date(now).toISOString().slice(0, 13) + ':00Z', new Date(hours[j]).toISOString().slice(0, 13) + ':00Z', s.id, L, s.raw[j], s.corr[j],
       s.fc24 ? m24(s.raw, j) : '', s.fc24 ? m24(s.corr, j) : '', s.fc24?.[j] != null ? s.fc24[j] : '', s.avg24 ? '24' : 'h',
-      s.corrA?.[j] ?? '', s.fc24A?.[j] != null ? s.fc24A[j] : '']); }
+      s.corrA?.[j] ?? '', s.fc24A?.[j] != null ? s.fc24A[j] : '', s.corrM?.[j] ?? '', s.fc24M?.[j] != null ? s.fc24M[j] : '',
+      ...(() => { const i = stIndex.get(s.id), f = feats(stations[i], i, j); return FEAT_COLS.map(k => f[k] === '' || f[k] == null ? '' : (typeof f[k] === 'number' ? +f[k].toFixed(3) : f[k])); })()]); }
   const fcstFile = path.join(hdir, `fcst-${stamp}.csv`);   // one file per issue hour: a second run in the same hour must not double-count it
-  if (await fs.access(fcstFile).then(() => false, () => true)) await appendCSV(fcstFile, 'issued_utc,valid_utc,station_id,lead_h,cams_raw,corrected,cams24,corr24,blend24,obs_basis,correctedA,blend24A', fRows);
+  if (await fs.access(fcstFile).then(() => false, () => true)) await appendCSV(fcstFile, 'issued_utc,valid_utc,station_id,lead_h,cams_raw,corrected,cams24,corr24,blend24,obs_basis,correctedA,blend24A,correctedML,blend24ML,' + FEAT_COLS.join(','), fRows);
   else log(`forecast log for ${stamp} already written this hour`);
   await writeJSON(path.join(DATA, 'state.json'), state);
   log(`done: ${outStations.length} stations, ${hot.length} hotspots, grid ${nx}×${ny}×${hours.length}`);

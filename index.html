@@ -474,6 +474,9 @@ td.num{text-align:right;font-family:var(--font-data);font-variant-numeric:tabula
       <h3>Fire-emission assimilation (test, shadow mode)</h3>
       <p class="note">Each hour the pipeline runs our puff model for the fires of the last two days and estimates one emission factor s per fire group (0.5° cell × local solar day) from the station measurements of the last ~48 h: hourly Air4Thai values (mean of the hour), hourly OpenAQ values, and 24-h means (compared with the model's 24-h mean). The innovation is measured − CAMS with each station's slow bias removed; that slow bias (a Kalman filter with a memory of weeks) is learned only from hours with &lt; 1 µg/m³ of modelled fire smoke, so persistent burning-season smoke is not absorbed into it. Only observations with ≥ 1 µg/m³ of modelled fire smoke are used. The factors are log-normal (s = e<sup>x</sup>, prior x ~ N(0, ln 2²), i.e. a factor of two at 1σ), found by Gauss–Newton minimisation of J = ½(d−h(x))ᵀR⁻¹(d−h(x)) + ½xᵀB⁻¹x (Rodgers, 2000). The observation error R = κ·[max(3 µg/m³, 0.3·y)² + (0.5·F)²] includes transport-model error growing with the modelled fire smoke F; κ is tuned online from the χ² test (2J/m ≈ 1 when the errors are right). The rescaled fires are run once more as an increment Σ(s−1)·F (the model is linear in emissions), which moves with the forecast wind. <b>The corrections are then fitted in sequence</b>: the station Kalman filters (kfA) and the regression kriging (rkA) are fitted to measured − (CAMS + increment) and applied to CAMS + increment, so the same error is never corrected twice. Since 3 Oct 2026 both the public page and this page forecast with the assimilation chain (this page can switch it off in Settings for comparison). Both are logged every hour and scored on the same rows in the verification table. Twin test (known factors ×2 and ×0.5): recovered as 1.80 and 0.50 where well observed.</p>
       <div id="assimBox" class="note"></div>
+      <h3>Self-learning correction (adaptive ensemble)</h3>
+      <p class="note">Every day the pipeline learns the error that remains after the whole chain (CAMS + fire assimilation + Kalman filter) at the hourly stations, r = ln(obs+1) − ln(F+1), from features known at issue time: lead time, hour of day, day of year, the forecast and CAMS, the fire increment and modelled fire smoke, boundary-layer height, wind, rain, the latest measured value and 24-h mean, the station's Kalman bias, and position. Several experts learn on different windows: <b>day</b> (mean error by lead time and time of day over the last 3 days, shrunk toward zero with n/(n+20)), <b>week</b> (ridge regression, 7 days), <b>month</b> (gradient-boosted trees, 30 days) and <b>season</b> (trees trained on the same season of earlier years, added when that model exists), plus <b>base</b> (no correction). Each expert starts once its window has enough verified data. Every day each expert is scored on the newest verified day with the model it had before that day (out of sample), and the weights follow those scores (exponentially weighted average with fixed share; Littlestone and Warmuth, 1994; Herbster and Warmuth, 1998): skilful experts gain weight, and the weights move back to the plain forecast when the learned experts stop helping. The combined correction is limited to a factor of two. In a synthetic test with a regime change on day 21, the experts started on days 2, 8 and 31 as their windows filled, the weights followed the change within one to two days, and the out-of-sample error fell from 0.41 to 0.09 (log units).</p>
+      <div id="mlBox" class="note"></div>
       <h3>Fine total PM<sub>2.5</sub></h3>
       <p class="note">The fine layer adds sub-grid structure from the fire-smoke model to the regression-kriging map: C<sub>fine</sub> = C<sub>RK</sub> + α·(C<sub>fire</sub> − ⟨C<sub>fire</sub>⟩<sub>0.5°</sub>), where ⟨·⟩<sub>0.5°</sub> is the mean over a CAMS-sized box, computed at 0.025° (coarser for large regions and 24-h views). The ≈0.5° moving average stays approximately equal to the map below it (exactly, except where the sum is clipped at zero), so fire smoke already in CAMS (GFAS) is not counted twice. This follows the idea of sub-grid dispersion without double counting in uEMEP (Denby et al., 2020); here a box-mean high-pass replaces uEMEP's local-fraction bookkeeping, which CAMS does not provide. α is set in Settings and will be calibrated against monitors in the burning season.</p>
       <h3>How well it has done</h3>
@@ -509,6 +512,8 @@ td.num{text-align:right;font-family:var(--font-data);font-variant-numeric:tabula
         <li>Deutsch, C. V. (1989). DECLUS: a Fortran 77 program for determining optimum spatial declustering weights. Computers &amp; Geosciences 15(3), 325–332.</li>
         <li>Isaaks, E. H., Srivastava, R. M. (1989). An Introduction to Applied Geostatistics. Oxford University Press, New York.</li>
         <li>Rodgers, C. D. (2000). Inverse Methods for Atmospheric Sounding: Theory and Practice. World Scientific, Singapore.</li>
+        <li>Littlestone, N., Warmuth, M. K. (1994). The weighted majority algorithm. Information and Computation 108, 212–261.</li>
+        <li>Herbster, M., Warmuth, M. K. (1998). Tracking the best expert. Machine Learning 32, 151–178.</li>
         <li>Hengl, T., Heuvelink, G. B. M., Rossiter, D. G. (2007). About regression-kriging: From equations to case studies. Computers &amp; Geosciences 33(10), 1301–1315. doi:10.1016/j.cageo.2007.05.001</li>
         <li>Terrain: AWS Terrain Tiles (Terrarium encoding), open data on AWS.</li>
       </ol>
@@ -1267,7 +1272,7 @@ async function runAuto(quiet){ try{ await runAuto_(quiet); }catch(e){ busy(null)
 async function runAuto_(quiet){
   if(!quiet) busy(T('Loading the latest hourly data…','กำลังโหลดข้อมูลรายชั่วโมงล่าสุด…'));
   const d=await loadPipeline();
-  if(d){P.data=d; busy(T('Loading meteorology…','กำลังโหลดข้อมูลอุตุนิยมวิทยา…')); await Promise.all([loadDEM(),loadMet()]); await runModel(pipelineHotspots(d),'live',null,quiet); showFreshness(); loadVerify(); renderRK(); renderAssim();}
+  if(d){P.data=d; busy(T('Loading meteorology…','กำลังโหลดข้อมูลอุตุนิยมวิทยา…')); await Promise.all([loadDEM(),loadMet()]); await runModel(pipelineHotspots(d),'live',null,quiet); showFreshness(); loadVerify(); renderRK(); renderAssim(); renderML();}
   else if(!quiet){P.data=null; await runLive();}
 }
 let DEM=null, MET=null;
@@ -1298,7 +1303,8 @@ function sampleRegular(Gr,lat,lon){
 // with the fire assimilation switched on (developer page), the corrections fitted after it are used: rkA and the stations' corrA/fc24A
 const useA=()=>!!$('useAssim')&&$('useAssim').checked&&!!(P.data&&P.data.assim&&P.data.assim.status==='ok');
 const curRK=()=>P.data?(useA()&&P.data.rkA?P.data.rkA:P.data.rk):null;
-const sCorr=s=>useA()&&s.corrA?s.corrA:s.corr, sFc24=s=>useA()&&s.corrA?s.fc24A:s.fc24;
+// the self-learning correction (corrM/fc24M) is present only once a learned expert has earned weight; it sits on top of the assimilated chain
+const sCorr=s=>useA()&&s.corrM?s.corrM:useA()&&s.corrA?s.corrA:s.corr, sFc24=s=>useA()&&s.corrM?s.fc24M:useA()&&s.corrA?s.fc24A:s.fc24;
 function rkX(c,lat,lon,t){
   const rk=curRK(), names=rk.predictors||['ln(CAMS+1)'];
   if(names.includes('elevation_km')&&!DEM) return null; if(names.includes('ln(BLH_km)')&&!MET) return null;
@@ -1343,6 +1349,16 @@ function renderAssim(){
     ${S.assimApplied?`<tr><th>Applied in this page run</th><td>${S.assimApplied} fire sources rescaled</td></tr>`:''}</tbody></table></div>`+
     (g.length?`<div class="tablewrap"><table><thead><tr><th>Group (0.5° cell, day)</th><th class="num">FRP MW</th><th class="num">Factor</th><th class="num">1σ range</th><th class="num">Station-hours</th></tr></thead><tbody>${g.map(x=>`<tr><td>${x.lat0}°N ${x.lon0}°E · ${x.day}</td><td class="num">${x.frp}</td><td class="num">${x.s}</td><td class="num">${x.lo}–${x.hi}</td><td class="num">${x.seen}</td></tr>`).join('')}</tbody></table></div>`:'');
 }
+function renderML(){
+  const M=P.data&&P.data.ml, box=$('mlBox'); if(!box) return;
+  if(!M){box.textContent='Waiting for the first verified day of forecasts with logged features.';return;}
+  const w=Object.entries(M.weights||{}).map(([k,v])=>`${k} ${(v*100).toFixed(0)}%`).join(' · '), L=M.last;
+  box.innerHTML=`<div class="tablewrap"><table><tbody>
+    <tr><th>Status</th><td>${M.active?'<b>active</b>: forecasts at hourly stations include the learned correction':'learning: no learned expert has earned weight yet (forecast unchanged)'}</td></tr>
+    <tr><th>Weights</th><td>${w||'–'}</td></tr><tr><th>Experts trained</th><td>${(M.experts||[]).join(', ')||'none yet'} (last learning day ${M.lastDay||'–'})</td></tr>
+    ${L&&L.loss&&Object.keys(L.loss).length?`<tr><th>Out-of-sample error on ${L.day}</th><td>${Object.entries(L.loss).map(([k,v])=>`${k} ${v}`).join(' · ')} (mean squared log error, n=${L.nTest})</td></tr>`:''}
+    ${L&&L.trained&&L.trained.month&&L.trained.month.importance?`<tr><th>Most important features (month)</th><td>${Object.entries(L.trained.month.importance).map(([k,v])=>`${k} ${v}`).join(' · ')}</td></tr>`:''}</tbody></table></div>`;
+}
 function renderRK(){
   const rk=curRK(); if(!rk){$('rkBox').textContent='Regression kriging has not run yet (needs at least 15 monitors with fresh data).';return;}
   const b=rk.beta.map(x=>x.toFixed(3));
@@ -1371,9 +1387,10 @@ async function loadVerify(){
     const hb=rows.some(l=>l.blend);
     $('verifyBox').innerHTML=`<div class="tablewrap"><table><thead><tr><th>Lead</th><th class="num">n</th><th class="num">RMSE raw</th><th class="num">RMSE corr.</th>${hb?'<th class="num">RMSE blend</th>':''}<th class="num">Bias raw</th><th class="num">Bias corr.</th><th class="num">r corr.</th>${hb?'<th class="num">r blend</th>':''}</tr></thead><tbody>`+
       rows.map(l=>`<tr><td>${l.lead_h} h</td><td class="num">${l.n}</td><td class="num">${l.raw.rmse}</td><td class="num">${l.corrected.rmse}</td>${hb?`<td class="num">${l.blend?.rmse??'–'}</td>`:''}<td class="num">${l.raw.mb}</td><td class="num">${l.corrected.mb}</td><td class="num">${l.corrected.r??'–'}</td>${hb?`<td class="num">${l.blend?.r??'–'}</td>`:''}</tr>`).join('')+
-      `</tbody></table></div>`+(rows.some(l=>l.blendA)?`<p class="note"><b>With the fire assimilation</b> (24-h blend, same rows with and without): ${rows.filter(l=>l.blendA).map(l=>`${l.lead_h} h: RMSE ${l.blendNoA.rmse} → ${l.blendA.rmse} (n=${l.nA})`).join(' · ')}</p>`:'')+`<p class="note">Last ${v.window_days} days, µg/m³. ${v.basis==='24h'?'24-h means ending at the valid hour at Air4Thai monitors (which report 24-h running means): CAMS, corrected CAMS and the blend with persistence.':'Older log: hourly CAMS against the stations’ 24-h running means, so these scores are not like for like.'} Updated ${fmtT(v.updated)}.</p>`+
+      `</tbody></table></div>`+(rows.some(l=>l.blendML)?`<p class="note"><b>With the self-learning correction</b> (24-h blend, same rows, vs the assimilated chain): ${rows.filter(l=>l.blendML).map(l=>`${l.lead_h} h: RMSE ${l.blendNoML.rmse} → ${l.blendML.rmse} (n=${l.nML})`).join(' · ')}</p>`:'')+(rows.some(l=>l.blendA)?`<p class="note"><b>With the fire assimilation</b> (24-h blend, same rows with and without): ${rows.filter(l=>l.blendA).map(l=>`${l.lead_h} h: RMSE ${l.blendNoA.rmse} → ${l.blendA.rmse} (n=${l.nA})`).join(' · ')}</p>`:'')+`<p class="note">Last ${v.window_days} days, µg/m³. ${v.basis==='24h'?'24-h means ending at the valid hour at Air4Thai monitors (which report 24-h running means): CAMS, corrected CAMS and the blend with persistence.':'Older log: hourly CAMS against the stations’ 24-h running means, so these scores are not like for like.'} Updated ${fmtT(v.updated)}.</p>`+
       ((v.hourly||[]).filter(l=>l.raw&&l.corrected).length?`<p class="note"><b>Hourly</b>, Air4Thai monitors read directly (true 1-h values, from 3 Oct 2026):</p><div class="tablewrap"><table><thead><tr><th>Lead</th><th class="num">n</th><th class="num">RMSE raw</th><th class="num">RMSE corr.</th><th class="num">Bias raw</th><th class="num">Bias corr.</th><th class="num">r corr.</th></tr></thead><tbody>`+
         v.hourly.filter(l=>l.raw&&l.corrected).map(l=>`<tr><td>${l.lead_h} h</td><td class="num">${l.n}</td><td class="num">${l.raw.rmse}</td><td class="num">${l.corrected.rmse}</td><td class="num">${l.raw.mb}</td><td class="num">${l.corrected.mb}</td><td class="num">${l.corrected.r??'–'}</td></tr>`).join('')+'</tbody></table></div>'+
+        (v.hourly.some(l=>l.correctedML)?`<p class="note"><b>Hourly, with the self-learning correction</b> (same rows): ${v.hourly.filter(l=>l.correctedML).map(l=>`${l.lead_h} h: RMSE ${l.correctedNoML.rmse} → ${l.correctedML.rmse} (n=${l.nML})`).join(' · ')}</p>`:'')+
         (v.hourly.some(l=>l.correctedA)?`<p class="note"><b>Hourly, with the fire assimilation</b> (same rows): ${v.hourly.filter(l=>l.correctedA).map(l=>`${l.lead_h} h: RMSE ${l.correctedNoA.rmse} → ${l.correctedA.rmse} (n=${l.nA})`).join(' · ')}</p>`:''):'');
   }catch(e){}
 }

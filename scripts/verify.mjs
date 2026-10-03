@@ -52,17 +52,23 @@ for (const f of files.filter(f => path.basename(f).startsWith('fcst-'))) { const
   if (Date.parse(r.valid_utc) < cutoff) continue;
   const L = +r.lead_h, hourlyObs = r.obs_basis === 'h';
   const oH = obs.get(`${r.station_id}|${r.valid_utc.slice(0, 13)}`);
-  if (hourlyObs && oH != null) { if (!hourly.has(L)) hourly.set(L, { raw: [], cor: [] }); hourly.get(L).raw.push([+r.cams_raw, oH]); hourly.get(L).cor.push([+r.corrected, oH]); }
+  const hasA = r.correctedA !== undefined && r.correctedA !== '';
+  if (hourlyObs && oH != null) { if (!hourly.has(L)) hourly.set(L, { raw: [], cor: [], corA: [] }); const Hh = hourly.get(L);
+    Hh.raw.push([+r.cams_raw, oH]); Hh.cor.push([+r.corrected, oH]); if (hasA) Hh.corA.push([+r.correctedA, oH, +r.corrected]); }
   // 24-h comparisons: stations reporting 24-h means use their value as is; hourly stations use the mean of their hourly values
   const o = hourlyObs ? obs24From(r.station_id, r.valid_utc.slice(0, 13)) : oH; if (o == null) continue;
   if (r.cams24 !== undefined && r.cams24 !== '' && r.blend24 !== '') {
-    if (!byLead.has(L)) byLead.set(L, { raw: [], cor: [], blend: [], per: [] });
+    if (!byLead.has(L)) byLead.set(L, { raw: [], cor: [], blend: [], blendA: [] });
     const B = byLead.get(L); B.raw.push([+r.cams24, o]); B.cor.push([+r.corr24, o]); B.blend.push([+r.blend24, o]);
+    if (r.blend24A !== undefined && r.blend24A !== '') B.blendA.push([+r.blend24A, o, +r.blend24]);
   } else if (!hourlyObs) { if (!legacy.has(L)) legacy.set(L, { raw: [], cor: [] }); legacy.get(L).raw.push([+r.cams_raw, o]); legacy.get(L).cor.push([+r.corrected, o]); }
 } }
 const useNew = byLead.size > 0, src = useNew ? byLead : legacy;
 const leads = [...src.entries()].sort((a, b) => a[0] - b[0])
-  .map(([L, v]) => ({ lead_h: L, n: v.raw.length, raw: score(v.raw), corrected: score(v.cor), blend: v.blend ? score(v.blend) : null }));
-const hourlyLeads = [...hourly.entries()].sort((a, b) => a[0] - b[0]).map(([L, v]) => ({ lead_h: L, n: v.raw.length, raw: score(v.raw), corrected: score(v.cor) }));
+  .map(([L, v]) => ({ lead_h: L, n: v.raw.length, raw: score(v.raw), corrected: score(v.cor), blend: v.blend ? score(v.blend) : null,
+    // with the fire assimilation, scored on the rows that have it, next to the same rows without it (paired comparison)
+    ...(v.blendA && v.blendA.length >= 5 ? { nA: v.blendA.length, blendA: score(v.blendA), blendNoA: score(v.blendA.map(([, o, b]) => [b, o])) } : {}) }));
+const hourlyLeads = [...hourly.entries()].sort((a, b) => a[0] - b[0]).map(([L, v]) => ({ lead_h: L, n: v.raw.length, raw: score(v.raw), corrected: score(v.cor),
+  ...(v.corA.length >= 5 ? { nA: v.corA.length, correctedA: score(v.corA), correctedNoA: score(v.corA.map(([, o, c]) => [c, o])) } : {}) }));
 await fs.writeFile(path.join(ROOT, 'data', 'verify.json'), JSON.stringify({ updated: Date.now(), window_days: WINDOW_DAYS, basis: useNew ? '24h' : 'legacy-hourly', leads, hourly: hourlyLeads }));
 console.log('verify:', leads.map(l => `${l.lead_h}h n=${l.n}`).join(' '));

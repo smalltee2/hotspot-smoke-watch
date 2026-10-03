@@ -472,7 +472,7 @@ td.num{text-align:right;font-family:var(--font-data);font-variant-numeric:tabula
       <p class="note"><strong>Uncertainty layer.</strong> The regression-kriging prediction variance (Hengl et al., 2007) is the kriging variance of the residual plus the variance of the regression part: σ² = σ²<sub>OK</sub> + s²/n + (x₀−x̄)ᵀ·Cov(β<sub>slopes</sub>)·(x₀−x̄) (the regression variance in centred form), with σ²<sub>OK</sub> = Σλᵢγ(xᵢ,x₀) + μ from the ordinary-kriging system and Cov(β<sub>slopes</sub>) = s²(X<sub>c</sub>ᵀX<sub>c</sub>)⁻¹ from the regression on centred predictors (an ordinary-least-squares stand-in for the generalised-least-squares term). Where the kriged residual is faded out, σ² rises toward the variogram sill. Because the model is in log space, the 68% range is (PM+1)·e<sup>±σ</sup> − 1, and the map shows e<sup>σ</sup> − 1 as a percentage. σ is checked hourly by leave-one-out: about 68% of left-out monitors should fall inside ±1σ. It covers the analysis hour only; forecast error grows with lead time (table below).</p>
       <div id="rkBox" class="note"></div>
       <h3>Fire-emission assimilation (test, shadow mode)</h3>
-      <p class="note">Each hour the pipeline compares the last ~48 h of hourly measurements with CAMS (after removing each station's slow, weeks-long bias) and attributes what is left to errors in the emissions of each fire group (0.5° cell × local day) in our puff model. It solves the linear Bayesian problem exactly (synthesis inversion; for a model linear in emissions this equals 4D-Var): x̂ = (HᵀR⁻¹H + B⁻¹)⁻¹HᵀR⁻¹d, with prior factor 1 ± 1 (fire emissions are uncertain by about a factor of two), observation error max(3 µg/m³, 30 %) inflated ×4 for correlated hourly errors, and only station-hours that our model says receive ≥ 1 µg/m³ of fire smoke. The incremental form means CAMS's own fire smoke is not counted twice: with no information every factor stays 1. On this developer page the factors are applied by default (Settings → “Fire-emission assimilation”): the smoke model reruns with the rescaled emissions, and the total map adds the increment Σ(s<sub>g</sub>−1)·F<sub>g</sub> (one extra run with only the rescaled fires, since the model is linear in emissions), so the correction moves with the forecast wind. The public page does not use them yet. Station forecasts (Kalman filter) are not changed. Twin test (known factors ×2 and ×0.5, synthetic stations): well-observed groups recovered as 1.80 and 0.50; groups seen by few stations stay near 1, as they should. DOFS = degrees of freedom for signal (how many independent factors the stations constrain; Rodgers, 2000).</p>
+      <p class="note">Each hour the pipeline runs our puff model for the fires of the last two days and estimates one emission factor s per fire group (0.5° cell × local solar day) from the station measurements of the last ~48 h: hourly Air4Thai values (mean of the hour), hourly OpenAQ values, and 24-h means (compared with the model's 24-h mean). The innovation is measured − CAMS with each station's slow bias removed; that slow bias (a Kalman filter with a memory of weeks) is learned only from hours with &lt; 1 µg/m³ of modelled fire smoke, so persistent burning-season smoke is not absorbed into it. Only observations with ≥ 1 µg/m³ of modelled fire smoke are used. The factors are log-normal (s = e<sup>x</sup>, prior x ~ N(0, ln 2²), i.e. a factor of two at 1σ), found by Gauss–Newton minimisation of J = ½(d−h(x))ᵀR⁻¹(d−h(x)) + ½xᵀB⁻¹x (Rodgers, 2000). The observation error R = κ·[max(3 µg/m³, 0.3·y)² + (0.5·F)²] includes transport-model error growing with the modelled fire smoke F; κ is tuned online from the χ² test (2J/m ≈ 1 when the errors are right). The rescaled fires are run once more as an increment Σ(s−1)·F (the model is linear in emissions), which moves with the forecast wind. <b>The corrections are then fitted in sequence</b>: the station Kalman filters (kfA) and the regression kriging (rkA) are fitted to measured − (CAMS + increment) and applied to CAMS + increment, so the same error is never corrected twice. The public forecast uses the chain without the assimilation; this page uses the chain with it (Settings switch). Both are logged every hour and scored on the same rows in the verification table. Twin test (known factors ×2 and ×0.5): recovered as 1.80 and 0.50 where well observed.</p>
       <div id="assimBox" class="note"></div>
       <h3>Fine total PM<sub>2.5</sub></h3>
       <p class="note">The fine layer adds sub-grid structure from the fire-smoke model to the regression-kriging map: C<sub>fine</sub> = C<sub>RK</sub> + α·(C<sub>fire</sub> − ⟨C<sub>fire</sub>⟩<sub>0.5°</sub>), where ⟨·⟩<sub>0.5°</sub> is the mean over a CAMS-sized box, computed at 0.025° (coarser for large regions and 24-h views). The ≈0.5° moving average stays approximately equal to the map below it (exactly, except where the sum is clipped at zero), so fire smoke already in CAMS (GFAS) is not counted twice. This follows the idea of sub-grid dispersion without double counting in uEMEP (Denby et al., 2020); here a box-mean high-pass replaces uEMEP's local-fraction bookkeeping, which CAMS does not provide. α is set in Settings and will be calibrated against monitors in the burning season.</p>
@@ -1295,14 +1295,18 @@ function sampleRegular(Gr,lat,lon){
 }
 // regression-kriging map value from raw CAMS c at (lat,lon) for valid time t
 // predictor vector at (lat,lon,t) in the order of rk.predictors; null if a needed input has not loaded
+// with the fire assimilation switched on (developer page), the corrections fitted after it are used: rkA and the stations' corrA/fc24A
+const useA=()=>!PUBLIC&&!!$('useAssim')&&$('useAssim').checked&&!!(P.data&&P.data.assim&&P.data.assim.status==='ok');
+const curRK=()=>P.data?(useA()&&P.data.rkA?P.data.rkA:P.data.rk):null;
+const sCorr=s=>useA()&&s.corrA?s.corrA:s.corr, sFc24=s=>useA()&&s.corrA?s.fc24A:s.fc24;
 function rkX(c,lat,lon,t){
-  const rk=P.data&&P.data.rk, names=rk.predictors||['ln(CAMS+1)'];
+  const rk=curRK(), names=rk.predictors||['ln(CAMS+1)'];
   if(names.includes('elevation_km')&&!DEM) return null; if(names.includes('ln(BLH_km)')&&!MET) return null;
   const m=MET&&names.includes('ln(BLH_km)')?sampleMet(MET,lat,lon,t):null;
   return names.map(nm=>nm==='ln(CAMS+1)'?Math.log(c+1):nm==='elevation_km'?(sampleRegular(DEM,lat,lon)??0)/1000:nm==='ln(BLH_km)'?Math.log(Math.max(m.blh,50)/1000):nm==='wind100_ms'?m.ws:0);
 }
 function rkValue(c,lat,lon,t){
-  const rk=P.data&&P.data.rk; if(!rk||c<0) return c;
+  const rk=curRK(); if(!rk||c<0) return c;
   if(rk.bias){ // 24-h basis (from 2 Oct 2026): bias field B = ln(PM24+1) − ln(CAMS24+1) at the analysis hour, applied to hourly CAMS
     const B=sampleRegular(rk.bias,lat,lon); if(B==null) return c;
     const w=Math.exp(-Math.max(0,(t-rk.t)/36e5)/(rk.leadEfoldH||48)); return Math.max(0,(c+1)*Math.exp(w*B)-1); }
@@ -1315,7 +1319,7 @@ function rkValue(c,lat,lon,t){
 // regression-kriging standard deviation in log space at the analysis hour (Hengl et al., 2007):
 // kriged-residual variance (from the pipeline grid) + regression part x₀ᵀ Cov(β) x₀
 function rkSigma(c,lat,lon){
-  const rk=P.data&&P.data.rk; if(!rk||c<0) return null;
+  const rk=curRK(); if(!rk||c<0) return null;
   if(rk.bias) return rk.bias.sd?sampleRegular({...rk.bias,values:rk.bias.sd.map(v=>v??NaN)},lat,lon):null;   // total σ computed in the pipeline
   if(!rk.resid||!rk.resid.sd) return null;
   const sr=sampleRegular({...rk.resid,values:rk.resid.sd},lat,lon); if(sr==null) return null;
@@ -1332,16 +1336,18 @@ function renderAssim(){
   const g=A.groups.filter(x=>x.seen>0).sort((a,b)=>b.seen-a.seen).slice(0,15);
   box.innerHTML=`<div class="tablewrap"><table><tbody>
     <tr><th>Run</th><td>${fmtT(A.at)}</td></tr><tr><th>Observations used</th><td>${A.nObs} station-hours at ${A.nStations} stations</td></tr>
-    <tr><th>Fire groups</th><td>${A.nGroups} (DOFS ${A.dofs})</td></tr>
+    <tr><th>Fire groups</th><td>${A.nGroups} (DOFS ${A.dofs}); ${A.nRescaled||0} fire sources rescaled</td></tr>
+    <tr><th>χ² test</th><td>2J/m = ${A.chi2} (≈ 1 if the error settings are right); κ ${A.kappa} → ${A.kappaNext} for the next run</td></tr>
     <tr><th>Innovation RMSE (in-sample)</th><td>${A.innovRmse.before} → ${A.innovRmse.after} µg/m³</td></tr>
     <tr><th>Fire smoke at those stations</th><td>${A.fireMean.prior} → ${A.fireMean.posterior} µg/m³ (prior → posterior)</td></tr>
     ${S.assimApplied?`<tr><th>Applied in this page run</th><td>${S.assimApplied} fire sources rescaled</td></tr>`:''}</tbody></table></div>`+
-    (g.length?`<div class="tablewrap"><table><thead><tr><th>Group (0.5° cell, day)</th><th class="num">FRP MW</th><th class="num">Factor</th><th class="num">± (1σ)</th><th class="num">Station-hours</th></tr></thead><tbody>${g.map(x=>`<tr><td>${x.lat0}°N ${x.lon0}°E · ${x.day}</td><td class="num">${x.frp}</td><td class="num">${x.s}</td><td class="num">${x.sd}</td><td class="num">${x.seen}</td></tr>`).join('')}</tbody></table></div>`:'');
+    (g.length?`<div class="tablewrap"><table><thead><tr><th>Group (0.5° cell, day)</th><th class="num">FRP MW</th><th class="num">Factor</th><th class="num">1σ range</th><th class="num">Station-hours</th></tr></thead><tbody>${g.map(x=>`<tr><td>${x.lat0}°N ${x.lon0}°E · ${x.day}</td><td class="num">${x.frp}</td><td class="num">${x.s}</td><td class="num">${x.lo}–${x.hi}</td><td class="num">${x.seen}</td></tr>`).join('')}</tbody></table></div>`:'');
 }
 function renderRK(){
-  const rk=P.data&&P.data.rk; if(!rk){$('rkBox').textContent='Regression kriging has not run yet (needs at least 15 monitors with fresh data).';return;}
+  const rk=curRK(); if(!rk){$('rkBox').textContent='Regression kriging has not run yet (needs at least 15 monitors with fresh data).';return;}
   const b=rk.beta.map(x=>x.toFixed(3));
   $('rkBox').innerHTML=`<div class="tablewrap"><table><tbody>
+    <tr><th>Version</th><td>${rk.withAssim?'fitted to CAMS + fire-assimilation increment (corrects only what the assimilation leaves)':'fitted to CAMS (public forecast)'}</td></tr>
     <tr><th>Analysis hour</th><td>${fmtT(rk.t)}</td></tr>
     <tr><th>Monitors used</th><td class="num">${rk.n}</td></tr>
     <tr><th>Coefficients</th><td>${['intercept',...(rk.predictors||[])].map((nm,j)=>`${esc(nm)} ${b[j]}`).join('<br>')}</td></tr>
@@ -1365,9 +1371,10 @@ async function loadVerify(){
     const hb=rows.some(l=>l.blend);
     $('verifyBox').innerHTML=`<div class="tablewrap"><table><thead><tr><th>Lead</th><th class="num">n</th><th class="num">RMSE raw</th><th class="num">RMSE corr.</th>${hb?'<th class="num">RMSE blend</th>':''}<th class="num">Bias raw</th><th class="num">Bias corr.</th><th class="num">r corr.</th>${hb?'<th class="num">r blend</th>':''}</tr></thead><tbody>`+
       rows.map(l=>`<tr><td>${l.lead_h} h</td><td class="num">${l.n}</td><td class="num">${l.raw.rmse}</td><td class="num">${l.corrected.rmse}</td>${hb?`<td class="num">${l.blend?.rmse??'–'}</td>`:''}<td class="num">${l.raw.mb}</td><td class="num">${l.corrected.mb}</td><td class="num">${l.corrected.r??'–'}</td>${hb?`<td class="num">${l.blend?.r??'–'}</td>`:''}</tr>`).join('')+
-      `</tbody></table></div><p class="note">Last ${v.window_days} days, µg/m³. ${v.basis==='24h'?'24-h means ending at the valid hour at Air4Thai monitors (which report 24-h running means): CAMS, corrected CAMS and the blend with persistence.':'Older log: hourly CAMS against the stations’ 24-h running means, so these scores are not like for like.'} Updated ${fmtT(v.updated)}.</p>`+
+      `</tbody></table></div>`+(rows.some(l=>l.blendA)?`<p class="note"><b>With the fire assimilation</b> (24-h blend, same rows with and without): ${rows.filter(l=>l.blendA).map(l=>`${l.lead_h} h: RMSE ${l.blendNoA.rmse} → ${l.blendA.rmse} (n=${l.nA})`).join(' · ')}</p>`:'')+`<p class="note">Last ${v.window_days} days, µg/m³. ${v.basis==='24h'?'24-h means ending at the valid hour at Air4Thai monitors (which report 24-h running means): CAMS, corrected CAMS and the blend with persistence.':'Older log: hourly CAMS against the stations’ 24-h running means, so these scores are not like for like.'} Updated ${fmtT(v.updated)}.</p>`+
       ((v.hourly||[]).filter(l=>l.raw&&l.corrected).length?`<p class="note"><b>Hourly</b>, Air4Thai monitors read directly (true 1-h values, from 3 Oct 2026):</p><div class="tablewrap"><table><thead><tr><th>Lead</th><th class="num">n</th><th class="num">RMSE raw</th><th class="num">RMSE corr.</th><th class="num">Bias raw</th><th class="num">Bias corr.</th><th class="num">r corr.</th></tr></thead><tbody>`+
-        v.hourly.filter(l=>l.raw&&l.corrected).map(l=>`<tr><td>${l.lead_h} h</td><td class="num">${l.n}</td><td class="num">${l.raw.rmse}</td><td class="num">${l.corrected.rmse}</td><td class="num">${l.raw.mb}</td><td class="num">${l.corrected.mb}</td><td class="num">${l.corrected.r??'–'}</td></tr>`).join('')+'</tbody></table></div>':'');
+        v.hourly.filter(l=>l.raw&&l.corrected).map(l=>`<tr><td>${l.lead_h} h</td><td class="num">${l.n}</td><td class="num">${l.raw.rmse}</td><td class="num">${l.corrected.rmse}</td><td class="num">${l.raw.mb}</td><td class="num">${l.corrected.mb}</td><td class="num">${l.corrected.r??'–'}</td></tr>`).join('')+'</tbody></table></div>'+
+        (v.hourly.some(l=>l.correctedA)?`<p class="note"><b>Hourly, with the fire assimilation</b> (same rows): ${v.hourly.filter(l=>l.correctedA).map(l=>`${l.lead_h} h: RMSE ${l.correctedNoA.rmse} → ${l.correctedA.rmse} (n=${l.nA})`).join(' · ')}</p>`:''):'');
   }catch(e){}
 }
 
@@ -1405,8 +1412,9 @@ function hourField(i,so,w,fx,fy,cell,fine){
     if(snap&&snap.n){P_=puffField(snap,w,so,fx,fy,cell); A_=boxMean(P_,fx,fy,Math.max(1,Math.round(G.step/2/cell)));}}
   let I_=null; if(S.simInc){const k=idxIn(S.simInc.hours,t), sn=k>=0?S.simInc.snaps[k]:null; if(sn&&sn.n) I_=puffField(sn,w,so,fx,fy,cell);}
   const F=new Float32Array(fx*fy);
-  for(let y=0;y<fy;y++) for(let x=0;x<fx;x++){const la=so+(y+.5)*cell, lo=w+(x+.5)*cell, b=rkValue(base(la,lo),la,lo,t);
-    F[y*fx+x]=b<0?NaN:Math.max(0,b+(P_?alpha*(P_[y*fx+x]-A_[y*fx+x]):0)+(I_?I_[y*fx+x]:0));}
+  // with the assimilation: the correction (fitted to CAMS + increment) is applied to CAMS + increment, so nothing is corrected twice
+  for(let y=0;y<fy;y++) for(let x=0;x<fx;x++){const la=so+(y+.5)*cell, lo=w+(x+.5)*cell; let c0=base(la,lo); if(c0>=0&&I_) c0=Math.max(0,c0+I_[y*fx+x]); const b=rkValue(c0,la,lo,t);
+    F[y*fx+x]=b<0?NaN:Math.max(0,b+(P_?alpha*(P_[y*fx+x]-A_[y*fx+x]):0));}
   FIELD_CACHE.set(key,F); if(FIELD_CACHE.size>60) FIELD_CACHE.delete(FIELD_CACHE.keys().next().value);
   return F;
 }
@@ -1446,7 +1454,7 @@ function drawGrid(){
 }
 // uncertainty layer: relative half-width of the 68% range, (e^σ − 1)·100 %, at the analysis hour
 function drawUnc(){
-  const rk=P.data.rk; if(!rk||!((rk.bias&&rk.bias.sd)||(rk.resid&&rk.resid.sd))){S.fieldInfo='Uncertainty appears after the next pipeline run.'; return;}
+  const rk=curRK(); if(!rk||!((rk.bias&&rk.bias.sd)||(rk.resid&&rk.resid.sd))){S.fieldInfo='Uncertainty appears after the next pipeline run.'; return;}
   const G=P.data.grid, i=gIdx(rk.t); if(i<0) return; const R=regionShape();
   let so=G.lat0, w=G.lon0, n=G.lat0+(G.ny-1)*G.step, e=G.lon0+(G.nx-1)*G.step;
   if(R){so=Math.max(so,R.bbox[1]-.2); w=Math.max(w,R.bbox[0]-.2); n=Math.min(n,R.bbox[3]+.2); e=Math.min(e,R.bbox[2]+.2);}
@@ -1511,7 +1519,7 @@ for(const id of ['shContour','shSt','shA4t','shHot','shTown']){
   const v=store.get('hsw.'+id); if(v!=null) $(id).checked=v==='1';
   $(id).addEventListener('change',()=>{store.set('hsw.'+id,$(id).checked?'1':'0');applyVisibility();});
 }
-function stationNow(s,t){const i=gIdx(t);return i>=0?s.corr[i]:null;}
+function stationNow(s,t){const i=gIdx(t);return i>=0?sCorr(s)[i]:null;}
 // ---- Air4Thai layer: measured value (inside) against the model at the same place and hour (ring). Both on the same basis:
 // hourly view → 1-h values (Bangkok BMA stations only report 24-h means, so for them both sides are 24-h means); 24-h/AQI views → 24-h means.
 const isA4t=s=>String(s.id).startsWith('a4t:');
@@ -1552,7 +1560,7 @@ function camsAt(lat,lon,i){const G=P.data.grid, vals=G.values[i]; const fx=(lon-
   const a=vals[y0*G.nx+x0], b=vals[y0*G.nx+x0+1], c=vals[(y0+1)*G.nx+x0], d=vals[(y0+1)*G.nx+x0+1];
   return (a<0||b<0||c<0||d<0)?-1:(1-ax)*(1-ay)*a+ax*(1-ay)*b+(1-ax)*ay*c+ax*ay*d;}
 function totalAt(lat,lon,t){const i=gIdx(t); if(!P.data||i<0) return null; const c=camsAt(lat,lon,i); if(c<0) return null;
-  let v=rkValue(c,lat,lon,t); if(S.simInc){const k=idxIn(S.simInc.hours,t); if(k>=0) v=Math.max(0,v+concAt(S.simInc.snaps[k],lat,lon));} return v;}
+  let c1=c; if(S.simInc){const k=idxIn(S.simInc.hours,t); if(k>=0) c1=Math.max(0,c+concAt(S.simInc.snaps[k],lat,lon));} return rkValue(c1,lat,lon,t);}
 function fireAt(lat,lon,t){const si=simIdx(t); if(si<0||!S.sim) return 0; return concAt(S.sim.snaps[si],lat,lon);}
 let hereLayer=null, hereLL=null;
 function hereHTML(lat,lon,acc){
@@ -1566,8 +1574,8 @@ function hereHTML(lat,lon,acc){
   let st=null,dSt=1e9; if(P.data) for(const x of P.data.stations){ if(!x.monitor||!x.obs) continue; const d=haversineKm(lat,lon,x.lat,x.lon); if(d<dSt){dSt=d;st=x;} }
   let nHot=0,dHot=1e9; for(const h of S.hots){const d=haversineKm(lat,lon,h.lat,h.lon); if(d<=20) nHot++; if(d<dHot) dHot=d;}
   const pv=provinceOf(lat,lon);
-  let rangeRow=''; {const iA=P.data&&P.data.rk?gIdx(P.data.rk.t):-1, sg=iA>=0?rkSigma(camsAt(lat,lon,iA),lat,lon):null, vA=iA>=0?totalAt(lat,lon,P.data.rk.t):null;
-    if(sg!=null&&vA!=null) rangeRow=`<tr><th>${T('Likely range at','ช่วงที่น่าจะเป็น เวลา')} ${hm(P.data.rk.t)} (68%)</th><td class="num">${fmtN(Math.max(0,(vA+1)*Math.exp(-sg)-1))}–${fmtN((vA+1)*Math.exp(sg)-1)} µg/m³</td></tr>`;}
+  let rangeRow=''; {const RK_=curRK(), iA=RK_?gIdx(RK_.t):-1, sg=iA>=0?rkSigma(camsAt(lat,lon,iA),lat,lon):null, vA=iA>=0?totalAt(lat,lon,RK_.t):null;
+    if(sg!=null&&vA!=null) rangeRow=`<tr><th>${T('Likely range at','ช่วงที่น่าจะเป็น เวลา')} ${hm(RK_.t)} (68%)</th><td class="num">${fmtN(Math.max(0,(vA+1)*Math.exp(-sg)-1))}–${fmtN((vA+1)*Math.exp(sg)-1)} µg/m³</td></tr>`;}
   return `<div class="here"><div class="note">${pv?esc(provName(pv))+(LANG!=='th'&&pv.th?' · '+esc(pv.th):''):T('Your location','ตำแหน่งของคุณ')}${acc?` · ±${acc<1000?Math.round(acc)+T(' m',' ม.'):(acc/1000).toFixed(1)+T(' km',' กม.')}`:''}</div>
     ${vNow!=null?`<div class="big">${fmtN(vNow)} <small style="font-size:.7rem">µg/m³</small></div>${pill(vNow)} <span class="note">${T('PM₂.₅ now (forecast map)','PM₂.₅ ขณะนี้ (จากแผนที่พยากรณ์)')}</span>`:`<p class="note">${T('No forecast here yet.','ยังไม่มีค่าพยากรณ์ที่ตำแหน่งนี้')}</p>`}
     <table><tbody>
@@ -1631,8 +1639,8 @@ function drawStations(){
     // Air4Thai stations report a 24-h running mean: in the hourly view they show the hourly forecast, in 24-h views the measured
     // 24-h mean now and the blended 24-h forecast later
     let v=live&&s.obs&&!s.avg24?s.obs.v:f;
-    if(avg24()&&s.fc24){ const i=gIdx(t); v=live&&s.obs24&&s.obs24.valid?s.obs24.v:(i>=0?s.fc24[i]:null); }
-    else if(avg24()){ if(live&&s.obs24&&s.obs24.valid) v=s.obs24.v; else { const i=gIdx(t); if(i>=17){let a=0,n=0; for(let k=Math.max(0,i-23);k<=i;k++){const c=s.corr[k]; if(c!=null){a+=c;n++;}} v=n>=18?a/n:null;} else v=null; } }
+    if(avg24()&&sFc24(s)){ const i=gIdx(t); v=live&&s.obs24&&s.obs24.valid?s.obs24.v:(i>=0?sFc24(s)[i]:null); }
+    else if(avg24()){ if(live&&s.obs24&&s.obs24.valid) v=s.obs24.v; else { const i=gIdx(t); if(i>=17){let a=0,n=0; for(let k=Math.max(0,i-23);k<=i;k++){const c=sCorr(s)[k]; if(c!=null){a+=c;n++;}} v=n>=18?a/n:null;} else v=null; } }
     if(v==null) continue;
     const icon=L.divIcon({className:'',html:`<div class="stmark" style="background:${pcdColor(v)};${s.monitor?'':'opacity:.6'}"></div>`,iconSize:[12,12],iconAnchor:[6,6]});
     L.marker([s.lat,s.lon],{icon,keyboard:false}).bindTooltip(()=>`<b>${esc(stName(s))}</b>${s.provider?` · ${esc(s.provider)}${s.hourly?T(' (hourly)',' (รายชั่วโมง)'):''}`:''}<br>`+
@@ -1647,8 +1655,8 @@ function renderStations(){
   const now=Date.now(), b=REGIONS[$('region').value].bbox;
   const inReg=P.data.stations.filter(s=>inRegion(s.lat,s.lon)), ref=inReg.filter(s=>s.monitor), lowN=inReg.length-ref.length;
   // Air4Thai stations: highest 24-h mean comes from their blended 24-h forecast (persistence + corrected CAMS)
-  const st24=s=>{const st=seriesStats(s.corr,P.data.hours,now); if(!s.fc24) return st;
-    let best=0,tB=null; P.data.hours.forEach((t,i)=>{const v=s.fc24[i]; if(t>now&&v!=null&&v>best){best=v;tB=t;}}); return best>0?{...st,mean24:best,tMean:tB}:st;};
+  const st24=s=>{const st=seriesStats(sCorr(s),P.data.hours,now), F=sFc24(s); if(!F) return st;
+    let best=0,tB=null; P.data.hours.forEach((t,i)=>{const v=F[i]; if(t>now&&v!=null&&v>best){best=v;tB=t;}}); return best>0?{...st,mean24:best,tMean:tB}:st;};
   const rows=(ref.length?ref:inReg).map(s=>({s,st:st24(s)}))
     .sort((a,b)=>b.st.mean24-a.st.mean24).slice(0,15);
   $('stList').innerHTML=rows.length?rows.map(({s,st})=>{const bd=bandFor(st.mean24);
@@ -1662,7 +1670,7 @@ function renderStations(){
 }
 function focusStation(id){
   const s=P.data?.stations.find(x=>String(x.id)===String(id)); if(!s) return; map.flyTo([s.lat,s.lon],9); showTab('warn'); showMapOnPhone();
-  const H=P.data.hours, c=s.corr.map(v=>v??0), r=s.raw.map(v=>v??0), f24=s.fc24||null, max=Math.max(37.5,...c,...r,...(f24||[]).map(v=>v??0),s.obs?.v||0)*1.1, W=320,Ht=120,pad=26;
+  const H=P.data.hours, c=sCorr(s).map(v=>v??0), r=s.raw.map(v=>v??0), f24=sFc24(s)||null, max=Math.max(37.5,...c,...r,...(f24||[]).map(v=>v??0),s.obs?.v||0)*1.1, W=320,Ht=120,pad=26;
   const X=i=>pad+i*(W-pad-6)/(H.length-1||1), Y=v=>Ht-18-(v/max)*(Ht-28);
   const line=a=>a.map((v,i)=>`${i?'L':'M'}${X(i).toFixed(1)},${Y(v).toFixed(1)}`).join('');
   const lines=[15,25,37.5,75].filter(l=>l<max).map((l,k)=>`<line x1="${pad}" x2="${W-6}" y1="${Y(l)}" y2="${Y(l)}" stroke="var(--${PCD[k].key})" stroke-dasharray="3 3"/><text x="${pad-4}" y="${Y(l)+3}" text-anchor="end" font-size="8" fill="var(--muted)">${l}</text>`).join('');

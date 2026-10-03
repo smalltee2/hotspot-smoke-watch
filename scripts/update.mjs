@@ -15,7 +15,7 @@ import { regressionKriging } from './rk.mjs';
 import { fetchMet, sampleMet, packMet, MET_MODEL } from './met.mjs';
 import { buildLandcover, landcoverAt, packLandcover, unpackLandcover } from './landcover.mjs';
 import { loadModel } from './model.mjs';
-import { assimilateFires } from './assim.mjs';
+import { assimilateFires, assimSummary } from './assim.mjs';
 
 // ------------------------------------------------------------------ config
 const CFG = {
@@ -36,7 +36,7 @@ const CFG = {
   // slow station bias (long memory, ~ weeks): removed from the innovations of the fire-emission assimilation so that only the
   // episodic, fire-driven part of the CAMS error is attributed to fires
   kfSlow: { Q: 0.002, R: 0.15, P0: 0.5, maxGapH: 168 },
-  assimilate: true,              // fire-emission assimilation (shadow mode: factors computed and published; the page applies them on request)
+  assimilate: true,              // fire-emission assimilation; the public page shows the forecast without it, the developer page with it (switch)
   biasLeadEfoldH: 48,            // bias correction fades with lead time
   rk: { residStep: 0.1, demStep: 0.05, minStations: 15, K: 16, declusterDeg: 0.25 },   // cell declustering of the regression (0.25° ≈ 28 km cells)  // regression kriging; residual grid and DEM resolution
   logLeads: [1, 3, 6, 12, 24, 48],
@@ -298,9 +298,8 @@ async function main() {
   }
   const C = state.cams;
 
-  // 3. observations + Kalman update
+  // 3a. observations (no correction yet: the fire assimilation runs first, and the corrections are then fitted to what it leaves)
   const obs = await oaqLatest(stations.filter(s => !s.hourly && !s.feed24));
-  const obsRows = [];
   // Air4Thai direct: the last ~2 days of hourly values in one or a few requests; also kept as a daily archive (one file per Thai day)
   const a4tSt = stations.filter(s => s.hourly), a4tH = new Map();
   if (stations.some(s => s.feed24)) {   // Bangkok (BMA) stations: latest 24-h mean from the live feed
@@ -319,37 +318,13 @@ async function main() {
         await appendCSV(arch, 'hour_end_utc,station_id,pm25', dayRows); log(`Air4Thai archive ${path.basename(arch)}: ${dayRows.length} hourly values`); }
     } catch (e) { log(`Air4Thai hourly unavailable: ${e.message}`); }
   }
-  stations.forEach((s, i) => {
+  stations.forEach(s => {
     const o = obs.get(s.id); if (!o || now - o.t > CFG.obsMaxAgeH * HOUR || o.v < 0 || o.v > 1500) return;
-    if (s.hourly) {
-      // hourly monitor: full recent history from the source; every hour not yet used updates the filter, in time order.
-      // The value is the mean of the hour ending at t, so it is compared with CAMS at the middle of that hour (t − 30 min).
-      s.obs = o;
-      state.obsHist[s.id] = (a4tH.get(s.id) || []).filter(([t]) => t > now - 50 * HOUR).map(([t, v]) => [t, r1(v)]);
-      for (const [t, v] of (a4tH.get(s.id) || []).filter(([t]) => t > now - 12 * HOUR)) {
-        const k = state.kf[s.id]; if (k && t <= k.t) continue;
-        const raw = interpT(C.times, C.st[i], t - HOUR / 2); if (raw == null) continue;
-        state.kf[s.id] = kfStep(k, Math.log(v + 1) - Math.log(raw + 1), t);
-        state.kfSlow[s.id] = kfStep(state.kfSlow[s.id], Math.log(v + 1) - Math.log(raw + 1), t, CFG.kfSlow);
-        obsRows.push([new Date(t).toISOString(), s.id, r1(v), r1(raw)]);
-      }
-      return;
-    }
     s.obs = o;
-    // keep the last 30 h of hourly observations per station for standard 24-h means (AQI)
+    if (s.hourly) { state.obsHist[s.id] = (a4tH.get(s.id) || []).filter(([t]) => t > now - 50 * HOUR).map(([t, v]) => [t, r1(v)]); return; }
     const hk = Math.round(o.t / HOUR) * HOUR, H = (state.obsHist[s.id] ||= []);
     if (!H.some(([t]) => t === hk)) H.push([hk, r1(o.v)]);
-    state.obsHist[s.id] = H.filter(([t]) => t > now - 50 * HOUR);
-    const k = state.kf[s.id];
-    if (k && o.t <= k.t) return;            // already used this hour
-    const raw = isAvg24(s) ? mean24T(C.times, C.st[i], o.t) : interpT(C.times, C.st[i], o.t); if (raw == null) return;
-    const y = Math.log(o.v + 1) - Math.log(raw + 1);   // 24-h-mean stations: observed 24-h mean vs CAMS 24-h mean
-    state.kf[s.id] = kfStep(k, y, o.t);
-    state.kfSlow[s.id] = kfStep(state.kfSlow[s.id], y, o.t, CFG.kfSlow);
-    obsRows.push([new Date(o.t).toISOString(), s.id, r1(o.v), r1(raw)]);
   });
-  log(`Kalman updated at ${new Set(obsRows.map(r => r[1])).size} stations (${obsRows.length} hourly values)`);
-
   for (const id of Object.keys(state.obsHist)) { state.obsHist[id] = state.obsHist[id].filter(([t]) => t > now - 50 * HOUR); if (!state.obsHist[id].length) delete state.obsHist[id]; }
   // 24-h mean of observations ending at the latest hour; valid with ≥ 18 of 24 hourly values (75 %) and a recent last value
   function obs24(id, s) {
@@ -358,47 +333,10 @@ async function main() {
     const tEnd = Math.max(...H.map(([t]) => t)), w = H.filter(([t]) => t > tEnd - 24 * HOUR);
     return { v: r1(w.reduce((a, [, v]) => a + v, 0) / w.length), n: w.length, tEnd, valid: w.length >= 18 && now - tEnd <= CFG.obsMaxAgeH * HOUR };
   }
+  // kind of a station's values: 'hm' = mean of the hour ending at t (Air4Thai direct), '24' = 24-h mean ending at t, 'h' = hourly (OpenAQ)
+  const kindOf = s => s.hourly ? 'hm' : isAvg24(s) ? '24' : 'h';
 
-  // 4. corrected forecasts at stations
-  const t0 = Math.floor(now / HOUR) * HOUR;
-  const iNow = Math.max(0, C.times.findIndex(t => t >= t0));
-  const i0 = Math.max(0, iNow - 24);        // output starts 24 h back so 24-h running means are complete
-  const hours = C.times.slice(i0), jNow = iNow - i0;
-  const outStations = stations.map((s, i) => {
-    const k = state.kf[s.id]; const b = k && now - k.t < CFG.kf.maxGapH * HOUR ? k.b : 0;
-    const raw = C.st[i].slice(i0);
-    const corr = raw.map((v, j) => v == null ? null : r1(correct(v, b, (hours[j] - (k?.t || now)) / HOUR)));
-    const a24 = isAvg24(s);
-    // 24-h-mean stations: forecast of the 24-h mean ending at each future hour = blend of persistence and corrected CAMS (no fade);
-    // past hours carry the observed 24-h means
-    let fc24 = null;
-    const o24n = !a24 ? obs24(s.id, s) : null;
-    if (!a24 && o24n && o24n.valid) {
-      // hourly monitors: 24-h mean ending at each hour = observed hours up to now, corrected CAMS after; future hours are blended
-      // with persistence of the current observed 24-h mean (same weight as for the 24-h-mean stations)
-      const hist = new Map((state.obsHist[s.id] || []).map(([t, v]) => [t, v]));
-      const val = hours.map((t, j) => j <= jNow ? (hist.has(t) ? hist.get(t) : null) : corr[j]);
-      fc24 = hours.map((t, j) => {
-        let su = 0, n = 0; for (let q = j - 23; q <= j; q++) { const v = q >= 0 ? val[q] : null; if (v != null) { su += v; n++; } }
-        if (n < 18) return null; const m = su / n; return r1(j <= jNow ? m : CFG.blendW * o24n.v + (1 - CFG.blendW) * m);
-      });
-    }
-    if (a24) {
-      const hist = new Map((state.obsHist[s.id] || []).map(([t, v]) => [t, v])), nf = raw.map(v => v == null ? null : Math.max(0, (v + 1) * Math.exp(b) - 1));
-      const o0 = s.obs && now - s.obs.t <= CFG.obsMaxAgeH * HOUR ? s.obs.v : null;
-      fc24 = hours.map((t, j) => {
-        if (j <= jNow) return hist.has(t) ? hist.get(t) : null;
-        let su = 0, n = 0; for (let q = j - 23; q <= j; q++) { const v = q >= 0 ? nf[q] : null; if (v != null) { su += v; n++; } }
-        if (n < 18) return null; const m = su / n; return r1(o0 != null ? CFG.blendW * o0 + (1 - CFG.blendW) * m : m);
-      });
-    }
-    return { id: s.id, name: s.name, lat: s.lat, lon: s.lon, monitor: s.monitor, provider: s.provider, cc: s.country, avg24: a24, hourly: !!s.hourly, ...(s.nameTH ? { nameTH: s.nameTH } : {}),
-      obs: s.obs ? { t: s.obs.t, v: r1(s.obs.v) } : null, obs24: obs24(s.id, s), bias: k ? +b.toFixed(3) : null, nUpd: k?.n || 0, raw, corr, fc24,
-      // measured values on the page's hour axis up to now (hourly values, or the reported 24-h means for 24-h stations), for the map comparison layer
-      obsSeries: (() => { const h = new Map((state.obsHist[s.id] || []).map(([t, v]) => [t, v])); const a = hours.slice(0, jNow + 1).map(t => h.has(t) ? h.get(t) : null); return a.some(v => v != null) ? a : null; })() };
-  });
-
-  // 4b. meteorology (fixed model, nested grids), refreshed every few hours
+  // 3b. meteorology (fixed model, nested grids), refreshed every few hours
   let met = await readJSON(path.join(DATA, 'met.json'), null);
   const metKey = JSON.stringify(CFG.met.grids) + MET_MODEL + '|n2';
   if (!met || met.key !== metKey || now - met.fetched > CFG.met.refreshH * HOUR) {
@@ -407,86 +345,18 @@ async function main() {
       met.key = metKey; await writeJSON(path.join(DATA, 'met.json'), met);
     } catch (e) { log(`met refresh failed: ${e.message}${met ? ' (keeping previous)' : ''}`); }
   }
-
   // compact copy for the page: 36 h back (dispersion spin-up) to 75 h ahead (longest forecast option + interpolation)
   if (met) { const web = packMet(met, now - 36 * HOUR, now + 75 * HOUR); await writeJSON(path.join(DATA, 'met-web.json'), web);
     log(`met-web: ${web.times.length} h, ${(JSON.stringify(web).length / 1024).toFixed(0)} KB (full ${(JSON.stringify(met).length / 1024).toFixed(0)} KB)`); }
 
-  // 5. regression kriging (RIMM-type) at the analysis hour, in log space:
-  //    ln(obs+1) = b0 + b1 ln(CAMS+1) + b2 elev_km + b3 ln(BLH/1000) + b4 wind100 + residual;  residual → ordinary kriging on a 0.1° grid.
-  //    The page applies it to every forecast hour, fading the correction with lead time (biasLeadEfoldH).
-  let dem = await readJSON(path.join(DATA, 'static', 'elev.json'), null);
-  const demKey = `${g.join(',')}|${CFG.rk.demStep}`;
-  if (!dem || dem.key !== demKey) {
-    try {
-      dem = await buildDEM(g, CFG.rk.demStep, { log, fetchTile: async (z, x, y) =>
-        Buffer.from(await (await get(`https://s3.amazonaws.com/elevation-tiles-prod/terrarium/${z}/${x}/${y}.png`)).arrayBuffer()) });
-      dem.key = demKey;
-      await writeJSON(path.join(DATA, 'static', 'elev.json'), dem);
-    } catch (e) { log(`DEM unavailable, regression without elevation: ${e.message}`); dem = null; }
-  }
-  let rk = null;
-  const rkObs = [];
-  // the kriging works on 24-h means (what Air4Thai reports and what the AQI uses): observed 24-h mean vs CAMS 24-h mean
-  stations.forEach((s, i) => {
-    if (!s.monitor || !s.obs || now - s.obs.t > CFG.obsMaxAgeH * HOUR) return;
-    const o24 = obs24(s.id, s); if (!o24 || !o24.valid) return;
-    const c = mean24T(C.times, C.st[i], s.obs.t); if (c == null) return;
-    const x = [Math.log(c + 1)]; if (dem) { const e = sampleGrid(dem, s.lat, s.lon); if (e == null) return; x.push(e / 1000); }
-    if (met) { const m = sampleMet(met, s.lat, s.lon, s.obs.t); x.push(Math.log(Math.max(m.blh, 50) / 1000), m.ws); }
-    rkObs.push({ lat: s.lat, lon: s.lon, y: Math.log(o24.v + 1), x, obs: o24.v, cams: c, t: s.obs.t, cc: s.country });
-  });
-  if (rkObs.length >= CFG.rk.minStations) {
-    const rs = CFG.rk.residStep, rnx = Math.round((g[2] - g[0]) / rs) + 1, rny = Math.round((g[3] - g[1]) / rs) + 1;
-    const out = regressionKriging(rkObs, { lon0: g[0], lat0: g[1], step: rs, nx: rnx, ny: rny }, { K: CFG.rk.K, declusterDeg: CFG.rk.declusterDeg });
-    if (out) {
-      const err = (a, b) => ({ rmse: +Math.sqrt(a.reduce((s, v, i) => s + (v - b[i]) ** 2, 0) / a.length).toFixed(2), mb: +(a.reduce((s, v, i) => s + v - b[i], 0) / a.length).toFixed(2) });
-      // leave-one-out scores that are not dominated by the dense Bangkok network: declustering-weighted, and by area
-      const W = out.weights, werr = (a, b) => { const sw = W.reduce((x, v) => x + v, 0); return { rmse: +Math.sqrt(a.reduce((s, v, i) => s + W[i] * (v - b[i]) ** 2, 0) / sw).toFixed(2), mb: +(a.reduce((s, v, i) => s + W[i] * (v - b[i]), 0) / sw).toFixed(2) }; };
-      const areaOf = r => r.cc && r.cc !== 'TH' ? 'outside Thailand' : inBox(r.lat, r.lon, [100.3, 13.45, 100.95, 14.05]) ? 'Bangkok' : inBox(r.lat, r.lon, [97.3, 16.5, 101.4, 20.5]) ? 'upper North' : 'rest of Thailand';
-      const byArea = {}; rkObs.forEach((r, i) => { const a = areaOf(r); (byArea[a] ||= []).push(i); });
-      const areaCV = Object.fromEntries(Object.entries(byArea).map(([a, ix]) => [a, { n: ix.length, cams: err(ix.map(i => rkObs[i].cams), ix.map(i => rkObs[i].obs)), rk: err(ix.map(i => out.cv[i]), ix.map(i => rkObs[i].obs)) }]));
-      const o = rkObs.map(r => r.obs), tSorted = rkObs.map(r => r.t).sort((a, b) => a - b);
-      rk = { t: tSorted[Math.floor(tSorted.length / 2)], n: rkObs.length, beta: out.beta.map(b => +b.toFixed(4)), predictors: ['ln(CAMS+1)', ...(dem ? ['elevation_km'] : []), ...(met ? ['ln(BLH_km)', 'wind100_ms'] : [])],
-        vario: { ...out.vario, c0: +out.vario.c0.toFixed(4), c1: +out.vario.c1.toFixed(4) }, maxKm: out.maxKm, leadEfoldH: CFG.biasLeadEfoldH,
-        cv: { n: o.length, cams: err(rkObs.map(r => r.cams), o), rk: err(out.cv, o), cover1s: out.cvCover1s, sdMedian: out.cvSdMedian,
-          declustered: { cams: werr(rkObs.map(r => r.cams), o), rk: werr(out.cv, o) }, byArea: areaCV },
-        regCov: { s2n: +out.regCov.s2n.toPrecision(4), xbar: out.regCov.xbar.map(x => +x.toPrecision(6)), covSlope: out.regCov.covSlope && out.regCov.covSlope.map(r => r.map(x => +x.toPrecision(6))) }, resid: out.resid };
-      // bias field for the page: B = predicted ln(PM24+1) − ln(CAMS24+1), on the residual grid; applied to hourly CAMS as (c+1)·e^(w·B) − 1.
-      // Total σ (kriged residual + regression part) on the same grid.
-      { const R = out.resid, cg = C.grid, gnx = nx, gny = ny, B = new Array(R.nx * R.ny), SD = new Array(R.nx * R.ny);
-        const cams24At = (lat, lon) => { const fx = (lon - g[0]) / step, fy = (lat - g[1]) / step; if (fx < 0 || fy < 0 || fx > gnx - 1 || fy > gny - 1) return null;
-          const x0 = Math.min(Math.floor(fx), gnx - 2), y0 = Math.min(Math.floor(fy), gny - 2), ax = fx - x0, ay = fy - y0;
-          const P = [[y0 * gnx + x0, (1 - ax) * (1 - ay)], [y0 * gnx + x0 + 1, ax * (1 - ay)], [(y0 + 1) * gnx + x0, (1 - ax) * ay], [(y0 + 1) * gnx + x0 + 1, ax * ay]];
-          let su = 0, n = 0; for (let h = 0; h < 24; h++) { let v = 0, ok = true; for (const [p, w] of P) { const q = interpT(C.times, cg[p], rk.t - h * HOUR); if (q == null) { ok = false; break; } v += w * q; } if (ok) { su += v; n++; } }
-          return n >= 18 ? su / n : null; };
-        const { s2n, xbar, covSlope } = out.regCov;
-        for (let iy = 0; iy < R.ny; iy++) for (let ix = 0; ix < R.nx; ix++) {
-          const lat = R.lat0 + iy * R.step, lon = R.lon0 + ix * R.step, q = iy * R.nx + ix, c24 = cams24At(lat, lon);
-          if (c24 == null) { B[q] = 0; SD[q] = null; continue; }
-          const x = [Math.log(c24 + 1)]; if (dem) x.push((sampleGrid(dem, lat, lon) ?? 0) / 1000);
-          if (met) { const m = sampleMet(met, lat, lon, rk.t); x.push(Math.log(Math.max(m.blh, 50) / 1000), m.ws); }
-          const reg = out.beta[0] + x.reduce((a, v, j) => a + out.beta[j + 1] * v, 0);
-          B[q] = Math.round((reg - x[0] + R.values[q]) * 1000) / 1000;
-          let rv = s2n; if (covSlope) for (let a = 0; a < x.length; a++) for (let b2 = 0; b2 < x.length; b2++) rv += (x[a] - xbar[a]) * covSlope[a][b2] * (x[b2] - xbar[b2]);
-          SD[q] = Math.round(Math.sqrt((R.sd[q] ?? 0) ** 2 + Math.max(0, rv)) * 100) / 100;
-        }
-        rk.basis = '24h'; rk.bias = { lon0: R.lon0, lat0: R.lat0, step: R.step, nx: R.nx, ny: R.ny, values: B, sd: SD }; delete rk.resid; }
-      rk.decluster = { cellDeg: out.declusterDeg, weightRange: out.weightRange };
-      log(`RK: ${rk.n} monitors (declustered, ${out.declusterDeg}° cells, weights ${out.weightRange.join('–')}), beta=[${rk.beta.join(', ')}], range ${rk.vario.a_km} km, LOO RMSE CAMS ${rk.cv.cams.rmse} → RK ${rk.cv.rk.rmse} µg/m³ (declustered ${rk.cv.declustered.cams.rmse} → ${rk.cv.declustered.rk.rmse}), ±1σ coverage ${rk.cv.cover1s}`);
-      log('RK LOO by area (CAMS → RK, µg/m³): ' + Object.entries(areaCV).map(([a, v]) => `${a} n=${v.n} ${v.cams.rmse}→${v.rk.rmse}`).join(' · '));
-    }
-  } else log(`RK skipped: only ${rkObs.length} monitors with fresh data`);
-  const gridRaw = hours.map((t, j) => gridPts.map((_, p) => { const v = C.grid[p][i0 + j]; return v == null ? -1 : r1(v); }));
-
-  // 6. hotspots
+  // 3c. hotspots
   let hot = await firmsHotspots(); let hotReused = false;
   if (!hot.length) {   // FIRMS unreachable or empty: keep the last good set (≤ 12 h old) rather than blanking the map
     const prev = await readJSON(path.join(DATA, 'latest.json'), null);
     const rows = prev?.hotspots?.rows || [], age = now - (prev?.hotspots?.fetched || prev?.generated || 0);
     if (rows.length && age < 12 * HOUR) { hot = rows; hotReused = true; log(`FIRMS returned nothing; reusing ${rows.length} hotspots from ${Math.round(age / 6e4)} min ago`); }
   }
-  // 6b. MODIS IGBP land cover at each detection (per-fire fuel type, as in FINN); map cached, refreshed for a new year
+  // MODIS IGBP land cover at each detection (per-fire fuel type, as in FINN); map cached, refreshed for a new year
   let LC = null;
   try { LC = unpackLandcover(await fs.readFile(path.join(DATA, 'landcover.bin'))); } catch { }
   const yNow = new Date(now).getUTCFullYear();
@@ -501,28 +371,184 @@ async function main() {
   }
   const hotFetched = firmsHotspots.ok && !hotReused ? now : null;   // only a real FIRMS reply resets the age of the hotspot set
 
-  // 6c. fire-emission data assimilation (shadow mode): hourly measurements of the last ~48 h correct the emissions of each
-  //     fire group (0.5° × local day) in our puff model; see scripts/assim.mjs
+  // 3d. fire-emission data assimilation (scripts/assim.mjs): the last ~48 h of measurements correct the emissions of each fire
+  //     group (0.5° × local day) in our puff model; the rescaled fires give a forecast increment that moves with the wind.
+  //     Innovations: measured − CAMS with the station's slow bias removed. The slow bias is learned only from hours with little
+  //     modelled fire smoke, so persistent burning-season smoke is not absorbed into it.
   let assim = null;
   if (CFG.assimilate && met && hot.length) {
     try {
       const M = loadModel();
       const hots = hot.map(([lat, lon, frp, t, conf, sat, igbp]) => ({ lat, lon, frp, t, igbp: igbp ?? null, sat: sat || 'VIIRS', level: conf === 'l' ? 'l' : conf === 'h' ? 'h' : 'n', pass: `${sat}|${Math.round(t / 6e5)}` }));
       const aobs = [];
-      stations.forEach((s, i) => { if (isAvg24(s)) return;   // hourly stations only (Air4Thai direct, hourly OpenAQ sites)
-        const bs = state.kfSlow[s.id]?.b || 0;
-        for (const [t, v] of state.obsHist[s.id] || []) { const raw = interpT(C.times, C.st[i], s.hourly ? t - HOUR / 2 : t); if (raw == null) continue;
-          aobs.push({ id: s.id, lat: s.lat, lon: s.lon, t, y: v, c: (raw + 1) * Math.exp(bs) - 1, hourMean: !!s.hourly }); } });
-      assim = assimilateFires({ M, hots, W: { times: met.times, sample: (la, lo, t) => sampleMet(met, la, lo, t) }, obs: aobs, now, tEnd: now, log });
-      assim.at = now; if (assim.status !== 'ok') log(`fire assimilation: ${assim.status}`);
-    } catch (e) { log(`fire assimilation failed: ${e.message}`); }
+      stations.forEach((s, i) => {
+        const kind = kindOf(s), bs = state.kfSlow[s.id]?.b || 0, H = state.obsHist[s.id] || [];
+        // 24-h-mean stations: two non-overlapping values (latest and 24 h before) to limit correlated repeats
+        const use = kind === '24' ? H.filter(([t]) => { const last = H[H.length - 1][0]; return t === last || Math.abs(t - (last - 24 * HOUR)) < HOUR / 2; }) : H;
+        for (const [t, v] of use) {
+          const raw = kind === '24' ? mean24T(C.times, C.st[i], t) : interpT(C.times, C.st[i], kind === 'hm' ? t - HOUR / 2 : t); if (raw == null) continue;
+          aobs.push({ id: s.id, lat: s.lat, lon: s.lon, t, y: v, c: (raw + 1) * Math.exp(bs) - 1, kind }); } });
+      assim = assimilateFires({ M, hots, W: { times: met.times, sample: (la, lo, t) => sampleMet(met, la, lo, t) }, obs: aobs, now, kappa: state.assimKappa || undefined, log });
+      assim.at = now;
+      if (assim.status === 'ok') state.assimKappa = assim.kappaNext; else log(`fire assimilation: ${assim.status}`);
+    } catch (e) { log(`fire assimilation failed: ${e.message}`); assim = null; }
   }
+  const incAt = (s, t, kind) => assim?.inc ? assim.incAt(s.lat, s.lon, t, kind) : 0;
+  const fireAt = (s, t, kind) => assim?.prior ? assim.fireAt(s.lat, s.lon, t, kind) : 0;
+
+  // 3e. Kalman filters, in sequence after the assimilation:
+  //     kf   — bias of CAMS (public forecast, unchanged method)
+  //     kfA  — bias of CAMS + assimilation increment (corrects only what the assimilation leaves; no double counting)
+  //     kfSlow — slow bias of CAMS, updated only at hours with < 1 µg/m³ of modelled fire smoke
+  state.kfA ||= {};
+  const obsRows = [];
+  const updateAll = (s, t, v, raw, kind) => {
+    const inc = incAt(s, t, kind), rawA = Math.max(0, raw + inc);
+    const y = Math.log(v + 1) - Math.log(raw + 1), yA = Math.log(v + 1) - Math.log(rawA + 1);
+    if (!(state.kf[s.id] && t <= state.kf[s.id].t)) state.kf[s.id] = kfStep(state.kf[s.id], y, t);
+    if (!(state.kfA[s.id] && t <= state.kfA[s.id].t)) state.kfA[s.id] = kfStep(state.kfA[s.id], yA, t);
+    if (!(state.kfSlow[s.id] && t <= state.kfSlow[s.id].t) && fireAt(s, t, kind) < 1) state.kfSlow[s.id] = kfStep(state.kfSlow[s.id], y, t, CFG.kfSlow);
+    obsRows.push([new Date(t).toISOString(), s.id, r1(v), r1(raw), r1(rawA)]);
+  };
+  stations.forEach((s, i) => {
+    if (!s.obs) return; const kind = kindOf(s);
+    if (s.hourly) {   // every hour not yet used, in time order; the hour-ending mean is compared with CAMS at mid-hour
+      for (const [t, v] of (a4tH.get(s.id) || []).filter(([t]) => t > now - 12 * HOUR)) {
+        if (state.kf[s.id] && t <= state.kf[s.id].t && state.kfA[s.id] && t <= state.kfA[s.id].t) continue;
+        const raw = interpT(C.times, C.st[i], t - HOUR / 2); if (raw == null) continue;
+        updateAll(s, t, v, raw, kind);
+      }
+      return;
+    }
+    const o = s.obs; if (state.kf[s.id] && o.t <= state.kf[s.id].t && state.kfA[s.id] && o.t <= state.kfA[s.id].t) return;   // already used
+    const raw = kind === '24' ? mean24T(C.times, C.st[i], o.t) : interpT(C.times, C.st[i], o.t); if (raw == null) return;
+    updateAll(s, o.t, o.v, raw, kind);   // 24-h-mean stations: observed 24-h mean vs CAMS (+ increment) 24-h mean
+  });
+  log(`Kalman updated at ${new Set(obsRows.map(r => r[1])).size} stations (${obsRows.length} values)`);
+
+  // 4. corrected forecasts at stations: without (corr, fc24) and with (corrA, fc24A) the fire assimilation
+  const t0 = Math.floor(now / HOUR) * HOUR;
+  const iNow = Math.max(0, C.times.findIndex(t => t >= t0));
+  const i0 = Math.max(0, iNow - 24);        // output starts 24 h back so 24-h running means are complete
+  const hours = C.times.slice(i0), jNow = iNow - i0;
+  function stationForecast(s, raw, k) {
+    const b = k && now - k.t < CFG.kf.maxGapH * HOUR ? k.b : 0, a24 = isAvg24(s);
+    const corr = raw.map((v, j) => v == null ? null : r1(correct(v, b, (hours[j] - (k?.t || now)) / HOUR)));
+    let fc24 = null;
+    const o24n = !a24 ? obs24(s.id, s) : null;
+    if (!a24 && o24n && o24n.valid) {
+      // hourly monitors: 24-h mean ending at each hour = observed hours up to now, corrected forecast after; future hours are
+      // blended with persistence of the current observed 24-h mean (same weight as for the 24-h-mean stations)
+      const hist = new Map((state.obsHist[s.id] || []).map(([t, v]) => [t, v]));
+      const val = hours.map((t, j) => j <= jNow ? (hist.has(t) ? hist.get(t) : null) : corr[j]);
+      fc24 = hours.map((t, j) => {
+        let su = 0, n = 0; for (let q = j - 23; q <= j; q++) { const v = q >= 0 ? val[q] : null; if (v != null) { su += v; n++; } }
+        if (n < 18) return null; const m = su / n; return r1(j <= jNow ? m : CFG.blendW * o24n.v + (1 - CFG.blendW) * m);
+      });
+    }
+    if (a24) {   // 24-h-mean stations: past hours carry the observed 24-h means; future = blend of persistence and corrected forecast (no fade)
+      const hist = new Map((state.obsHist[s.id] || []).map(([t, v]) => [t, v])), nf = raw.map(v => v == null ? null : Math.max(0, (v + 1) * Math.exp(b) - 1));
+      const o0 = s.obs && now - s.obs.t <= CFG.obsMaxAgeH * HOUR ? s.obs.v : null;
+      fc24 = hours.map((t, j) => {
+        if (j <= jNow) return hist.has(t) ? hist.get(t) : null;
+        let su = 0, n = 0; for (let q = j - 23; q <= j; q++) { const v = q >= 0 ? nf[q] : null; if (v != null) { su += v; n++; } }
+        if (n < 18) return null; const m = su / n; return r1(o0 != null ? CFG.blendW * o0 + (1 - CFG.blendW) * m : m);
+      });
+    }
+    return { b, corr, fc24 };
+  }
+  const anyInc = !!assim?.inc;
+  const outStations = stations.map((s, i) => {
+    const k = state.kf[s.id], raw = C.st[i].slice(i0), F = stationForecast(s, raw, k);
+    let A = null, incS = null;
+    if (anyInc) { incS = hours.map(t => r1(incAt(s, t, 'h'))); const rawA = raw.map((v, j) => v == null ? null : Math.max(0, v + incS[j]));
+      A = stationForecast(s, rawA, state.kfA[s.id]); }
+    else { const kA = state.kfA[s.id]; A = stationForecast(s, raw, kA); }   // no increment: same as CAMS, but with its own filter state
+    return { id: s.id, name: s.name, lat: s.lat, lon: s.lon, monitor: s.monitor, provider: s.provider, cc: s.country, avg24: isAvg24(s), hourly: !!s.hourly, ...(s.nameTH ? { nameTH: s.nameTH } : {}),
+      obs: s.obs ? { t: s.obs.t, v: r1(s.obs.v) } : null, obs24: obs24(s.id, s), bias: k ? +F.b.toFixed(3) : null, nUpd: k?.n || 0, raw, corr: F.corr, fc24: F.fc24,
+      corrA: A.corr, fc24A: A.fc24, ...(incS && incS.some(v => Math.abs(v) >= 0.1) ? { inc: incS } : {}),
+      // measured values on the page's hour axis up to now (hourly values, or the reported 24-h means for 24-h stations), for the map comparison layer
+      obsSeries: (() => { const h = new Map((state.obsHist[s.id] || []).map(([t, v]) => [t, v])); const a = hours.slice(0, jNow + 1).map(t => h.has(t) ? h.get(t) : null); return a.some(v => v != null) ? a : null; })() };
+  });
+
+  // 5. regression kriging (RIMM-type) at the analysis hour, in log space:
+  //    ln(obs+1) = b0 + b1 ln(C+1) + b2 elev_km + b3 ln(BLH/1000) + b4 wind100 + residual;  residual → ordinary kriging on a 0.1° grid.
+  //    Two versions: C = CAMS (rk, public) and C = CAMS + assimilation increment (rkA): the kriging then corrects only what the
+  //    assimilation leaves, so the same error is not corrected twice. The page applies B to the hourly C with a lead-time fade.
+  let dem = await readJSON(path.join(DATA, 'static', 'elev.json'), null);
+  const demKey = `${g.join(',')}|${CFG.rk.demStep}`;
+  if (!dem || dem.key !== demKey) {
+    try {
+      dem = await buildDEM(g, CFG.rk.demStep, { log, fetchTile: async (z, x, y) =>
+        Buffer.from(await (await get(`https://s3.amazonaws.com/elevation-tiles-prod/terrarium/${z}/${x}/${y}.png`)).arrayBuffer()) });
+      dem.key = demKey;
+      await writeJSON(path.join(DATA, 'static', 'elev.json'), dem);
+    } catch (e) { log(`DEM unavailable, regression without elevation: ${e.message}`); dem = null; }
+  }
+  const rs = CFG.rk.residStep, rnx = Math.round((g[2] - g[0]) / rs) + 1, rny = Math.round((g[3] - g[1]) / rs) + 1;
+  function runRK(withInc) {
+    const label = withInc ? 'RK+assim' : 'RK';
+    const rkObs = [];
+    // the kriging works on 24-h means (what Air4Thai reports and what the AQI uses): observed 24-h mean vs model 24-h mean
+    stations.forEach((s, i) => {
+      if (!s.monitor || !s.obs || now - s.obs.t > CFG.obsMaxAgeH * HOUR) return;
+      const o24 = obs24(s.id, s); if (!o24 || !o24.valid) return;
+      let c = mean24T(C.times, C.st[i], s.obs.t); if (c == null) return;
+      if (withInc) c = Math.max(0, c + incAt(s, s.obs.t, '24'));
+      const x = [Math.log(c + 1)]; if (dem) { const e = sampleGrid(dem, s.lat, s.lon); if (e == null) return; x.push(e / 1000); }
+      if (met) { const m = sampleMet(met, s.lat, s.lon, s.obs.t); x.push(Math.log(Math.max(m.blh, 50) / 1000), m.ws); }
+      rkObs.push({ lat: s.lat, lon: s.lon, y: Math.log(o24.v + 1), x, obs: o24.v, cams: c, t: s.obs.t, cc: s.country });
+    });
+    if (rkObs.length < CFG.rk.minStations) { log(`${label} skipped: only ${rkObs.length} monitors with fresh data`); return null; }
+    const out = regressionKriging(rkObs, { lon0: g[0], lat0: g[1], step: rs, nx: rnx, ny: rny }, { K: CFG.rk.K, declusterDeg: CFG.rk.declusterDeg });
+    if (!out) return null;
+    const err = (a, b) => ({ rmse: +Math.sqrt(a.reduce((s, v, i) => s + (v - b[i]) ** 2, 0) / a.length).toFixed(2), mb: +(a.reduce((s, v, i) => s + v - b[i], 0) / a.length).toFixed(2) });
+    // leave-one-out scores that are not dominated by the dense Bangkok network: declustering-weighted, and by area
+    const W = out.weights, werr = (a, b) => { const sw = W.reduce((x, v) => x + v, 0); return { rmse: +Math.sqrt(a.reduce((s, v, i) => s + W[i] * (v - b[i]) ** 2, 0) / sw).toFixed(2), mb: +(a.reduce((s, v, i) => s + W[i] * (v - b[i]), 0) / sw).toFixed(2) }; };
+    const areaOf = r => r.cc && r.cc !== 'TH' ? 'outside Thailand' : inBox(r.lat, r.lon, [100.3, 13.45, 100.95, 14.05]) ? 'Bangkok' : inBox(r.lat, r.lon, [97.3, 16.5, 101.4, 20.5]) ? 'upper North' : 'rest of Thailand';
+    const byArea = {}; rkObs.forEach((r, i) => { const a = areaOf(r); (byArea[a] ||= []).push(i); });
+    const areaCV = Object.fromEntries(Object.entries(byArea).map(([a, ix]) => [a, { n: ix.length, cams: err(ix.map(i => rkObs[i].cams), ix.map(i => rkObs[i].obs)), rk: err(ix.map(i => out.cv[i]), ix.map(i => rkObs[i].obs)) }]));
+    const o = rkObs.map(r => r.obs), tSorted = rkObs.map(r => r.t).sort((a, b) => a - b);
+    const rk = { t: tSorted[Math.floor(tSorted.length / 2)], n: rkObs.length, withAssim: withInc, beta: out.beta.map(b => +b.toFixed(4)), predictors: ['ln(CAMS+1)', ...(dem ? ['elevation_km'] : []), ...(met ? ['ln(BLH_km)', 'wind100_ms'] : [])],
+      vario: { ...out.vario, c0: +out.vario.c0.toFixed(4), c1: +out.vario.c1.toFixed(4) }, maxKm: out.maxKm, leadEfoldH: CFG.biasLeadEfoldH,
+      cv: { n: o.length, cams: err(rkObs.map(r => r.cams), o), rk: err(out.cv, o), cover1s: out.cvCover1s, sdMedian: out.cvSdMedian,
+        declustered: { cams: werr(rkObs.map(r => r.cams), o), rk: werr(out.cv, o) }, byArea: areaCV },
+      regCov: { s2n: +out.regCov.s2n.toPrecision(4), xbar: out.regCov.xbar.map(x => +x.toPrecision(6)), covSlope: out.regCov.covSlope && out.regCov.covSlope.map(r => r.map(x => +x.toPrecision(6))) } };
+    // bias field for the page: B = predicted ln(PM24+1) − ln(C24+1) on the residual grid, applied to the hourly C as (c+1)·e^(w·B) − 1;
+    // total σ (kriged residual + regression part) on the same grid
+    const R = out.resid, cg = C.grid, gnx = nx, gny = ny, B = new Array(R.nx * R.ny), SD = new Array(R.nx * R.ny);
+    const inc24 = withInc && assim?.inc ? assim.incGrid24({ lon0: R.lon0, lat0: R.lat0, step: R.step, nx: R.nx, ny: R.ny }, rk.t) : null;
+    const cams24At = (lat, lon) => { const fx = (lon - g[0]) / step, fy = (lat - g[1]) / step; if (fx < 0 || fy < 0 || fx > gnx - 1 || fy > gny - 1) return null;
+      const x0 = Math.min(Math.floor(fx), gnx - 2), y0 = Math.min(Math.floor(fy), gny - 2), ax = fx - x0, ay = fy - y0;
+      const P = [[y0 * gnx + x0, (1 - ax) * (1 - ay)], [y0 * gnx + x0 + 1, ax * (1 - ay)], [(y0 + 1) * gnx + x0, (1 - ax) * ay], [(y0 + 1) * gnx + x0 + 1, ax * ay]];
+      let su = 0, n = 0; for (let h = 0; h < 24; h++) { let v = 0, ok = true; for (const [p, w] of P) { const q = interpT(C.times, cg[p], rk.t - h * HOUR); if (q == null) { ok = false; break; } v += w * q; } if (ok) { su += v; n++; } }
+      return n >= 18 ? su / n : null; };
+    const { s2n, xbar, covSlope } = out.regCov;
+    for (let iy = 0; iy < R.ny; iy++) for (let ix = 0; ix < R.nx; ix++) {
+      const lat = R.lat0 + iy * R.step, lon = R.lon0 + ix * R.step, q = iy * R.nx + ix; let c24 = cams24At(lat, lon);
+      if (c24 == null) { B[q] = 0; SD[q] = null; continue; }
+      if (inc24) c24 = Math.max(0, c24 + inc24[q]);
+      const x = [Math.log(c24 + 1)]; if (dem) x.push((sampleGrid(dem, lat, lon) ?? 0) / 1000);
+      if (met) { const m = sampleMet(met, lat, lon, rk.t); x.push(Math.log(Math.max(m.blh, 50) / 1000), m.ws); }
+      const reg = out.beta[0] + x.reduce((a, v, j) => a + out.beta[j + 1] * v, 0);
+      B[q] = Math.round((reg - x[0] + R.values[q]) * 1000) / 1000;
+      let rv = s2n; if (covSlope) for (let a = 0; a < x.length; a++) for (let b2 = 0; b2 < x.length; b2++) rv += (x[a] - xbar[a]) * covSlope[a][b2] * (x[b2] - xbar[b2]);
+      SD[q] = Math.round(Math.sqrt((R.sd[q] ?? 0) ** 2 + Math.max(0, rv)) * 100) / 100;
+    }
+    rk.basis = '24h'; rk.bias = { lon0: R.lon0, lat0: R.lat0, step: R.step, nx: R.nx, ny: R.ny, values: B, sd: SD };
+    rk.decluster = { cellDeg: out.declusterDeg, weightRange: out.weightRange };
+    log(`${label}: ${rk.n} monitors (declustered, ${out.declusterDeg}° cells, weights ${out.weightRange.join('–')}), beta=[${rk.beta.join(', ')}], range ${rk.vario.a_km} km, LOO RMSE model ${rk.cv.cams.rmse} → RK ${rk.cv.rk.rmse} µg/m³ (declustered ${rk.cv.declustered.cams.rmse} → ${rk.cv.declustered.rk.rmse}), ±1σ coverage ${rk.cv.cover1s}`);
+    log(`${label} LOO by area (model → RK, µg/m³): ` + Object.entries(areaCV).map(([a, v]) => `${a} n=${v.n} ${v.cams.rmse}→${v.rk.rmse}`).join(' · '));
+    return rk;
+  }
+  const rk = runRK(false), rkA = anyInc ? runRK(true) : null;   // without an increment rkA would equal rk
+  const gridRaw = hours.map((t, j) => gridPts.map((_, p) => { const v = C.grid[p][i0 + j]; return v == null ? -1 : r1(v); }));
 
   // 7. outputs
   await writeJSON(path.join(DATA, 'latest.json'), {
     generated: now, camsIssued: C.at, bbox: CFG.bbox, runlog: RUNLOG,
     method: { kf: CFG.kf, biasLeadEfoldH: CFG.biasLeadEfoldH, rk: CFG.rk },
-    rk, assim, dem: dem ? { file: 'data/static/elev.json', step: dem.step, source: dem.source } : null,
+    rk, rkA, assim: assimSummary(assim), dem: dem ? { file: 'data/static/elev.json', step: dem.step, source: dem.source } : null,
     met: met ? { file: 'data/met-web.json', model: met.model, fetched: met.fetched, grids: met.grids.map(g => ({ step: g.step, bbox: [g.lon0, g.lat0, g.lon0 + (g.nx - 1) * g.step, g.lat0 + (g.ny - 1) * g.step] })) } : null,
     hours, stations: outStations,
     grid: { lon0: g[0], lat0: g[1], step, nx, ny, values: gridRaw },  // raw CAMS; the page applies rk
@@ -531,14 +557,16 @@ async function main() {
   // history: one small new file per run (never rewritten), so git stores each row once
   const iso = new Date(now).toISOString(), ym = iso.slice(0, 7), stamp = iso.slice(0, 13).replace(/[-:]/g, '');
   const hdir = path.join(DATA, 'history', ym);
-  await appendCSV(path.join(hdir, `obs-${stamp}.csv`), 'time_utc,station_id,obs_pm25,cams_raw', obsRows);
+  await appendCSV(path.join(hdir, `obs-${stamp}.csv`), 'time_utc,station_id,obs_pm25,cams_raw,cams_plus_inc', obsRows);
+  // forecast log: without and with the fire assimilation (corrA, blend24A), so verify.mjs scores both on the same rows
   const fRows = [];
-  const m24 = (arr, j) => { let su = 0, n = 0; for (let q = j - 23; q <= j; q++) { const v = q >= 0 ? arr[q] : null; if (v != null) { su += v; n++; } } return n >= 18 ? r1(su / n) : ''; };
+  const m24 = (arr, j) => { if (!arr) return ''; let su = 0, n = 0; for (let q = j - 23; q <= j; q++) { const v = q >= 0 ? arr[q] : null; if (v != null) { su += v; n++; } } return n >= 18 ? r1(su / n) : ''; };
   for (const s of outStations) if (s.monitor) for (const L of CFG.logLeads) { const j = jNow + L; if (j < hours.length && s.raw[j] != null)
     fRows.push([new Date(now).toISOString().slice(0, 13) + ':00Z', new Date(hours[j]).toISOString().slice(0, 13) + ':00Z', s.id, L, s.raw[j], s.corr[j],
-      s.fc24 ? m24(s.raw, j) : '', s.fc24 ? m24(s.corr, j) : '', s.fc24?.[j] != null ? s.fc24[j] : '', s.avg24 ? '24' : 'h']); }
+      s.fc24 ? m24(s.raw, j) : '', s.fc24 ? m24(s.corr, j) : '', s.fc24?.[j] != null ? s.fc24[j] : '', s.avg24 ? '24' : 'h',
+      s.corrA?.[j] ?? '', s.fc24A?.[j] != null ? s.fc24A[j] : '']); }
   const fcstFile = path.join(hdir, `fcst-${stamp}.csv`);   // one file per issue hour: a second run in the same hour must not double-count it
-  if (await fs.access(fcstFile).then(() => false, () => true)) await appendCSV(fcstFile, 'issued_utc,valid_utc,station_id,lead_h,cams_raw,corrected,cams24,corr24,blend24,obs_basis', fRows);
+  if (await fs.access(fcstFile).then(() => false, () => true)) await appendCSV(fcstFile, 'issued_utc,valid_utc,station_id,lead_h,cams_raw,corrected,cams24,corr24,blend24,obs_basis,correctedA,blend24A', fRows);
   else log(`forecast log for ${stamp} already written this hour`);
   await writeJSON(path.join(DATA, 'state.json'), state);
   log(`done: ${outStations.length} stations, ${hot.length} hotspots, grid ${nx}×${ny}×${hours.length}`);

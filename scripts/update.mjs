@@ -29,7 +29,7 @@ const CFG = {
   met: { refreshH: 12,   // ECMWF HRES full runs are 00/12 UTC; 12 h keeps Open-Meteo use under the free daily limit
           grids: [ { name: 'north', bbox: [96.5, 14.5, 102.5, 21.5], step: 0.25 }, { name: 'domain', bbox: [92, 5, 110, 25], step: 1.0 } ] },
   stationRefreshH: 24,
-  maxStations: 300,
+  maxStations: 700,              // reference monitors first, then low-cost sensors (the MSEA low-cost networks, e.g. AirGradient in Laos, need room)
   obsMaxAgeH: 3,                 // ignore station values older than this
   firmsSources: ['VIIRS_SNPP_NRT', 'VIIRS_NOAA20_NRT', 'VIIRS_NOAA21_NRT'],
   firmsDays: 2,
@@ -407,6 +407,7 @@ async function main() {
       const hots = hot.map(([lat, lon, frp, t, conf, sat, igbp]) => ({ lat, lon, frp, t, igbp: igbp ?? null, sat: sat || 'VIIRS', level: conf === 'l' ? 'l' : conf === 'h' ? 'h' : 'n', pass: `${sat}|${Math.round(t / 6e5)}` }));
       const aobs = [];
       stations.forEach((s, i) => {
+        if (!s.monitor) return;   // reference monitors only: uncorrected low-cost sensors (humidity growth of optical PM) would bias the emission factors
         const kind = kindOf(s), bs = state.kfSlow[s.id]?.b || 0, H = state.obsHist[s.id] || [];
         // 24-h-mean stations: two non-overlapping values (latest and 24 h before) to limit correlated repeats
         const use = kind === '24' ? H.filter(([t]) => { const last = H[H.length - 1][0]; return t === last || Math.abs(t - (last - 24 * HOUR)) < HOUR / 2; }) : H;
@@ -563,7 +564,7 @@ async function main() {
     try {
       const fs_ = CFG.mlField, fnx = Math.round((g[2] - g[0]) / fs_) + 1, fny = Math.round((g[3] - g[1]) / fs_) + 1, leads = [], fields = [];
       for (let L = 3; L <= MLCFG.applyMaxLeadH; L += 3) { const j = jNow + L; if (j >= hours.length) break;
-        const pts = []; outStations.forEach((o, i) => { if (!o.corrM || o.corrM[j] == null || o.corrA[j] == null) return; pts.push({ lat: o.lat, lon: o.lon, y: Math.log((o.corrM[j] + 1) / (o.corrA[j] + 1)) }); });
+        const pts = []; outStations.forEach((o, i) => { if (!o.monitor || !o.corrM || o.corrM[j] == null || o.corrA[j] == null) return; pts.push({ lat: o.lat, lon: o.lon, y: Math.log((o.corrM[j] + 1) / (o.corrA[j] + 1)) }); });
         const f = krigeField(pts, { lon0: g[0], lat0: g[1], step: fs_, nx: fnx, ny: fny }, { K: CFG.rk.K, declusterDeg: CFG.rk.declusterDeg }); if (!f) continue;
         leads.push(L); fields.push(f.values); if (L === 24) log(`ML map field at +24 h: ${pts.length} stations, mean ${f.mean}, range ${f.vario.a_km} km`); }
       if (leads.length) {
@@ -679,13 +680,14 @@ async function main() {
   // forecast log: without and with the fire assimilation (corrA, blend24A), so verify.mjs scores both on the same rows
   const fRows = [], stIndex = new Map(stations.map((s, i) => [s.id, i]));
   const m24 = (arr, j) => { if (!arr) return ''; let su = 0, n = 0; for (let q = j - 23; q <= j; q++) { const v = q >= 0 ? arr[q] : null; if (v != null) { su += v; n++; } } return n >= 18 ? r1(su / n) : ''; };
-  for (const s of outStations) if (s.monitor) for (const L of CFG.logLeads) { const j = jNow + L; if (j < hours.length && s.raw[j] != null)
+  // all stations; the last column tells reference monitors (1) from low-cost sensors (0)
+  for (const s of outStations) for (const L of CFG.logLeads) { const j = jNow + L; if (j < hours.length && s.raw[j] != null)
     fRows.push([new Date(now).toISOString().slice(0, 13) + ':00Z', new Date(hours[j]).toISOString().slice(0, 13) + ':00Z', s.id, L, s.raw[j], s.corr[j],
       s.fc24 ? m24(s.raw, j) : '', s.fc24 ? m24(s.corr, j) : '', s.fc24?.[j] != null ? s.fc24[j] : '', s.avg24 ? '24' : 'h',
       s.corrA?.[j] ?? '', s.fc24A?.[j] != null ? s.fc24A[j] : '', s.corrM?.[j] ?? '', s.fc24M?.[j] != null ? s.fc24M[j] : '',
-      ...(() => { const i = stIndex.get(s.id), f = feats(stations[i], i, j); return FEAT_COLS.map(k => f[k] === '' || f[k] == null ? '' : (typeof f[k] === 'number' ? +f[k].toFixed(3) : f[k])); })()]); }
+      ...(() => { const i = stIndex.get(s.id), f = feats(stations[i], i, j); return FEAT_COLS.map(k => f[k] === '' || f[k] == null ? '' : (typeof f[k] === 'number' ? +f[k].toFixed(3) : f[k])); })(), s.monitor ? 1 : 0]); }
   const fcstFile = path.join(hdir, `fcst-${stamp}.csv`);   // one file per issue hour: a second run in the same hour must not double-count it
-  if (await fs.access(fcstFile).then(() => false, () => true)) await appendCSV(fcstFile, 'issued_utc,valid_utc,station_id,lead_h,cams_raw,corrected,cams24,corr24,blend24,obs_basis,correctedA,blend24A,correctedML,blend24ML,' + FEAT_COLS.join(','), fRows);
+  if (await fs.access(fcstFile).then(() => false, () => true)) await appendCSV(fcstFile, 'issued_utc,valid_utc,station_id,lead_h,cams_raw,corrected,cams24,corr24,blend24,obs_basis,correctedA,blend24A,correctedML,blend24ML,' + FEAT_COLS.join(',') + ',monitor', fRows);
   else log(`forecast log for ${stamp} already written this hour`);
   await writeJSON(path.join(DATA, 'state.json'), state);
   log(`done: ${outStations.length} stations, ${hot.length} hotspots, grid ${nx}×${ny}×${hours.length}`);

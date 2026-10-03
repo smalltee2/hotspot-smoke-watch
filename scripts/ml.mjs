@@ -102,6 +102,7 @@ export async function loadDataset(histDir, meta, { from = 0, to = Infinity } = {
     const txt = await fs.readFile(f, 'utf8'); if (!txt.slice(0, 400).includes(',hloc')) continue;   // logs with ML features only
     for (const r of parseCSV(txt)) {
       if (r.obs_basis !== 'h' || r.correctedA === '' || r.correctedA === undefined) continue;
+      if (r.monitor === '0') continue;   // learn from reference monitors only (low-cost sensors are logged from 4 Oct 2026)
       const tV = Date.parse(r.valid_utc), tI = Date.parse(r.issued_utc); if (!(tV >= from && tV < to)) continue;
       const o = obs.get(`${r.station_id}|${tV}`); if (o == null) continue;
       const m = meta.get(r.station_id) || {};

@@ -49,6 +49,7 @@ const byLead = new Map(), legacy = new Map(), hourly = new Map();
 for (const f of files.filter(f => path.basename(f).startsWith('fcst-'))) { const seen = new Set(); for (const r of await readCSV(path.join(HIST, f))) {
   // several runs in one hour (manual or overlapping triggers) appended to the same file before 2 Oct 2026: keep the first forecast per station and lead
   const key = `${r.station_id}|${r.lead_h}|${r.valid_utc}`; if (seen.has(key)) continue; seen.add(key);
+  if (r.monitor === '0') continue;   // the page's verification table: reference monitors only
   if (Date.parse(r.valid_utc) < cutoff) continue;
   const L = +r.lead_h, hourlyObs = r.obs_basis === 'h';
   const oH = obs.get(`${r.station_id}|${r.valid_utc.slice(0, 13)}`);

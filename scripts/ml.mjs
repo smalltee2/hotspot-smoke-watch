@@ -9,8 +9,9 @@
 //            with n/(n + 20) (empirical-Bayes shrinkage; a simple model for little data)        ≥ 1 day of verified data
 //     week   ridge regression on standardized features, last 7 days                              ≥ 7 days
 //     month  gradient-boosted regression trees, last 30 days                                     ≥ 30 days
-//     season gradient-boosted trees trained offline on the same season of earlier years
-//            (hindcast + archive), file data/ml/season.json                                      when that file exists
+//     season gradient-boosted trees on the current Thai season to date plus the same season of earlier years, from our
+//            own forecasts and Air4Thai measurements (training store data/mltrain, kept for 2 years)  ≥ 30 days in the store
+//            Seasons of the Thai Meteorological Department: summer 16 Feb–15 May, rainy 16 May–15 Oct, winter 16 Oct–15 Feb
 // Combination: exponentially weighted average forecaster with fixed share (Littlestone & Warmuth 1994; Herbster & Warmuth
 // 1998): every day each expert is scored on the latest verified day with the models it had *before* that day (out of
 // sample), w_e ← w_e·exp(−η·L_e), then a fixed share α is spread over the active experts so weights can recover when
@@ -24,6 +25,41 @@ export const MLCFG = { windows: { day: 3, week: 7, month: 30 }, minDays: { day: 
   gbm: { nTrees: 150, depth: 3, lr: 0.08, minLeaf: 40, bins: 32, subsample: 0.8, lambda: 1, maxRows: 120000 },
   eta: 2, share: 0.05, clip: Math.LN2, minRowsDay: 300 };
 export const EXPERTS = ['base', 'day', 'week', 'month', 'season'];
+
+// ---------------------------------------------------------------- Thai seasons and the long-term training store
+export function seasonOf(t) {   // Thai Meteorological Department seasons, Thai calendar date
+  const d = new Date(t + 7 * HOUR), y = d.getUTCFullYear(), md = (d.getUTCMonth() + 1) * 100 + d.getUTCDate();
+  if (md >= 216 && md <= 515) return { name: 'summer', year: y, id: `summer-${y}` };
+  if (md >= 516 && md <= 1015) return { name: 'rainy', year: y, id: `rainy-${y}` };
+  const sy = md >= 1016 ? y : y - 1; return { name: 'winter', year: sy, id: `winter-${sy}` };
+}
+// one gzip CSV per verified day: a random subsample (≤ maxPerDay rows) of the day's training rows, stored under data/mltrain/<season>/
+export const STORE = { maxPerDay: 8000, keepDays: 730, minDaysSeason: 30 };
+export async function storeDay(dir, rows, dayStart, gzip) {
+  const day = rows.filter(r => r.tValid >= dayStart && r.tValid < dayStart + 864e5); if (!day.length) return 0;
+  let s = 999; const rr = () => ((s = (s * 16807) % 2147483647) / 2147483647);
+  const keep = day.length > STORE.maxPerDay ? day.filter(() => rr() < STORE.maxPerDay / day.length) : day;
+  const sea = seasonOf(dayStart + 12 * HOUR), dname = new Date(dayStart + 7 * HOUR).toISOString().slice(0, 10).replace(/-/g, '');
+  const head = ['tValid', 'id', 'lead', 'hloc', 'y', ...NAMES].join(',');
+  const lines = keep.map(r => [r.tValid, r.id, r.lead, r.hloc, +r.y.toFixed(4), ...r.x.map(v => isFinite(v) ? +v.toFixed(4) : '')].join(','));
+  await fs.mkdir(path.join(dir, sea.id), { recursive: true });
+  await fs.writeFile(path.join(dir, sea.id, `train-${dname}.csv.gz`), gzip(head + '\n' + lines.join('\n') + '\n'));
+  return keep.length;
+}
+// rows of the current season (to date) and of the same season in earlier years
+export async function loadSeasonRows(dir, t, gunzip, before = Infinity) {
+  const cur = seasonOf(t), rows = []; const days = new Set();
+  for (const e of await fs.readdir(dir, { withFileTypes: true }).catch(() => [])) {
+    if (!e.isDirectory() || !e.name.startsWith(cur.name + '-')) continue;
+    for (const f of await fs.readdir(path.join(dir, e.name))) {
+      if (!/^train-\d{8}\.csv\.gz$/.test(f)) continue;
+      const txt = gunzip(await fs.readFile(path.join(dir, e.name, f))).toString('utf8'), [head, ...lines] = txt.trim().split('\n'), h = head.split(',');
+      for (const l of lines) { const v = l.split(','), tV = +v[0]; if (!(tV < before)) continue;
+        rows.push({ tValid: tV, id: v[1], lead: +v[2], hloc: +v[3], y: +v[4], x: v.slice(5, 5 + NAMES.length).map(q => q === '' ? NaN : +q) }); days.add(f); }
+    }
+  }
+  return { rows, days: days.size, season: cur.id };
+}
 const HOUR = 3600e3;
 
 // ---------------------------------------------------------------- features
@@ -143,7 +179,7 @@ export function predictExpert(m, r) {
 
 // ---------------------------------------------------------------- daily learning step
 // state.ml = { weights, models, lastDay, history }; dataset = loadDataset(...) over the history kept on GitHub (35 days)
-export function dailyLearn(state, rows, { now, dayStart, dayEnd, season = null, log = () => {} }) {
+export function dailyLearn(state, rows, { now, dayStart, dayEnd, season = null, seasonRows = null, log = () => {} }) {
   const ml = state.ml ||= { weights: { base: 1 }, models: {}, lastDay: null };
   // 1. score yesterday's models on the newly verified day (out of sample) and update the weights
   const test = rows.filter(r => r.tValid >= dayStart && r.tValid < dayEnd);
@@ -165,11 +201,12 @@ export function dailyLearn(state, rows, { now, dayStart, dayEnd, season = null, 
   if (days >= MLCFG.minDays.day && win(MLCFG.windows.day).length >= MLCFG.minRowsDay) newModels.day = trainDay(win(MLCFG.windows.day));
   if (days >= MLCFG.minDays.week) { const m = trainRidge(win(MLCFG.windows.week)); if (m) newModels.week = m; }
   if (days >= MLCFG.minDays.month) newModels.month = trainGBM(win(MLCFG.windows.month));
+  if (seasonRows && seasonRows.days >= STORE.minDaysSeason) { const m = trainGBM(seasonRows.rows.filter(r => r.tValid < dayEnd), MLCFG.gbm, 'season'); m.season = seasonRows.season; newModels.season = m; }
   for (const e in newModels) { info[e] = { n: newModels[e].n, ...(newModels[e].importance ? { importance: newModels[e].importance } : {}) };
     if (ml.weights[e] == null) ml.weights[e] = 0; }   // a new expert enters with weight 0; the fixed share gives it a start next day
   ml.models = newModels; ml.lastDay = new Date(dayStart + 7 * HOUR).toISOString().slice(0, 10);
   const rec = { day: ml.lastDay, at: now, verifiedDays: days, nTest: test.length, loss: Object.fromEntries(Object.entries(loss).map(([k, v]) => [k, +v.toFixed(5)])),
-    weights: Object.fromEntries(Object.entries(ml.weights).map(([k, v]) => [k, +v.toFixed(4)])), trained: info, season: !!season };
+    weights: Object.fromEntries(Object.entries(ml.weights).map(([k, v]) => [k, +v.toFixed(4)])), trained: info, seasonStore: seasonRows ? { season: seasonRows.season, days: seasonRows.days } : null };
   log(`ML: day ${rec.day}, ${days} verified days, scored ${test.length} rows; loss ${JSON.stringify(rec.loss)}; weights ${JSON.stringify(rec.weights)}; trained ${Object.keys(info).join(', ') || 'none yet'}`);
   return rec;
 }
@@ -181,4 +218,4 @@ export function mlCorrection(state, r, season = null) {
   for (const [e, w] of Object.entries(ml.weights)) if (w > 0 && e !== 'base' && models[e]) s += w * predictExpert(models[e], r);
   return Math.max(-MLCFG.clip, Math.min(MLCFG.clip, s));
 }
-export const mlActive = (state, season = null) => !!state.ml && Object.entries(state.ml.weights || {}).some(([e, w]) => e !== 'base' && w > 0 && (e === 'season' ? !!season : !!state.ml.models?.[e]));
+export const mlActive = (state, season = null) => !!state.ml && Object.entries(state.ml.weights || {}).some(([e, w]) => e !== 'base' && w > 0 && (e === 'season' ? !!(season || state.ml.models?.season) : !!state.ml.models?.[e]));

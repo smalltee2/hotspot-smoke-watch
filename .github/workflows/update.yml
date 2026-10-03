@@ -52,6 +52,10 @@ jobs:
           mkdir -p data/history
           if git fetch -q --depth=1 origin history 2>/dev/null; then git archive FETCH_HEAD data/history | tar -x; fi
           echo "history files: $(find data/history -type f | wc -l)"
+          # long-term ML training store (branch "mltrain": one subsample file per verified day, kept 2 years)
+          mkdir -p data/mltrain
+          if git fetch -q --depth=1 origin mltrain 2>/dev/null; then git archive FETCH_HEAD data/mltrain | tar -x; fi
+          echo "mltrain files: $(find data/mltrain -type f | wc -l)"
 
       - name: Fetch data, correct forecast, write JSON
         env:
@@ -97,6 +101,21 @@ jobs:
           else
             git commit -qm "history: $(date -u +'%Y-%m-%d %H:%M UTC')" && git push -q origin HEAD:history || echo "::warning::history push failed"
           fi
+
+      - name: Save ML training store (branch "mltrain", last 2 years)
+        if: always()
+        run: |
+          [ -d data/mltrain ] || exit 0
+          node -e 'const fs=require("fs"),p=require("path"),cut=new Date(Date.now()-730*864e5).toISOString().slice(0,10).replace(/-/g,"");
+            const walk=d=>{for(const e of fs.readdirSync(d,{withFileTypes:true})){const f=p.join(d,e.name); if(e.isDirectory()){walk(f); if(!fs.readdirSync(f).length) fs.rmdirSync(f);} else {const m=/(\d{8})/.exec(e.name); if(m&&m[1]<cut) fs.unlinkSync(f);}}}; walk("data/mltrain");'
+          H="$RUNNER_TEMP/mlt"; rm -rf "$H"; git worktree prune
+          if git fetch -q --depth=1 origin mltrain 2>/dev/null; then git worktree add -q -B mltrain "$H" FETCH_HEAD
+          else git worktree add -q --detach "$H"; (cd "$H" && git checkout -q --orphan mltrain && git rm -rq --cached . && find . -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf {} +); fi
+          rm -rf "$H/data/mltrain" && mkdir -p "$H/data/mltrain" && cp -a data/mltrain/. "$H/data/mltrain/"
+          cd "$H" && git add -A
+          git diff --cached --quiet && exit 0
+          # one squashed commit per update: the branch holds only the kept files, so deleted ones do not stay in its history
+          git checkout -q --orphan snap && git commit -qm "ML training store $(date -u +'%Y-%m-%d %H:%M UTC') (2 years)" && git push -qf origin snap:mltrain
 
       - name: Build site
         id: build

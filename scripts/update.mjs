@@ -16,7 +16,8 @@ import { fetchMet, sampleMet, packMet, MET_MODEL } from './met.mjs';
 import { buildLandcover, landcoverAt, packLandcover, unpackLandcover } from './landcover.mjs';
 import { loadModel } from './model.mjs';
 import { assimilateFires, assimSummary } from './assim.mjs';
-import { loadDataset, dailyLearn, mlCorrection, mlActive, FEAT_COLS } from './ml.mjs';
+import { loadDataset, dailyLearn, mlCorrection, mlActive, FEAT_COLS, storeDay, loadSeasonRows } from './ml.mjs';
+import zlib from 'node:zlib';
 
 // ------------------------------------------------------------------ config
 const CFG = {
@@ -484,7 +485,11 @@ async function main() {
       const meta = new Map(stations.map(s => [String(s.id), { lat: s.lat, lon: s.lon }]));
       const dayStart = Date.parse(yday + 'T00:00:00+07:00'), dayEnd = dayStart + 864e5;
       const rows = await loadDataset(path.join(DATA, 'history'), meta, { from: dayEnd - 36 * 864e5, to: dayEnd });
-      mlRec = dailyLearn(state, rows, { now, dayStart, dayEnd, season, log });
+      // long-term training store (branch "mltrain", 2 years): the verified day's rows, then the season expert's data
+      const nStored = await storeDay(path.join(DATA, 'mltrain'), rows, dayStart, zlib.gzipSync);
+      const seasonRows = await loadSeasonRows(path.join(DATA, 'mltrain'), dayStart + 12 * HOUR, zlib.gunzipSync, dayEnd);
+      log(`ML store: ${nStored} rows for ${yday}; season ${seasonRows.season}: ${seasonRows.days} days, ${seasonRows.rows.length} rows`);
+      mlRec = dailyLearn(state, rows, { now, dayStart, dayEnd, season, seasonRows, log });
       await writeJSON(path.join(DATA, 'history', yday.slice(0, 7), `ml-${yday.replace(/-/g, '')}.json`), mlRec);
     } catch (e) { log(`ML daily learning failed: ${e.message}`); }
   }

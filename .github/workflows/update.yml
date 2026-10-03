@@ -9,8 +9,10 @@ on:
     paths: ['scripts/**', 'index.html', '.github/workflows/update.yml']   # rerun and redeploy when code or page changes
 
 # Pages is deployed from this workflow (Settings → Pages → Source: GitHub Actions).
-# Large, constantly changing files (latest/met/state JSON) go only to Pages and the Actions cache,
-# so git history grows only by the small per-run verification CSVs.
+# Large, constantly changing files (latest/met/state JSON) go only to Pages and the Actions cache.
+# The per-run forecast/observation logs and the Air4Thai archive live on the separate branch "history", which keeps only
+# the last 35 days as one squashed commit per day (older commits become unreachable and are garbage-collected), so the
+# repository does not grow; the maintainer's computer downloads them every day and keeps the full archive.
 permissions:
   contents: write
   pages: write
@@ -45,6 +47,12 @@ jobs:
           key: pipeline-state-${{ github.run_id }}-${{ github.run_attempt }}
           restore-keys: pipeline-state-
 
+      - name: Restore forecast history (branch "history")
+        run: |
+          mkdir -p data/history
+          if git fetch -q --depth=1 origin history 2>/dev/null; then git archive FETCH_HEAD data/history | tar -x; fi
+          echo "history files: $(find data/history -type f | wc -l)"
+
       - name: Fetch data, correct forecast, write JSON
         env:
           OPENAQ_API_KEY: ${{ secrets.OPENAQ_API_KEY }}
@@ -64,16 +72,31 @@ jobs:
             data/verify.json
           key: pipeline-state-${{ github.run_id }}-${{ github.run_attempt }}
 
-      - name: Commit verification history and static files only
+      - name: Commit static files (main) and forecast history (branch "history", last 35 days)
         if: always()
         run: |
           git config user.name "hotspot-bot"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data/history data/static
+          # static files (terrain grid) on main
+          git add data/static
+          if ! git diff --cached --quiet; then git commit -qm "static: $(date -u +'%Y-%m-%d %H:%M UTC')"
+            for i in 1 2 3; do git pull --rebase -q && git push -q && break; sleep 5; done; fi
+          # history: drop files older than 35 days (date in the file name), then update the branch
+          node -e 'const fs=require("fs"),p=require("path"),cut=new Date(Date.now()-35*864e5).toISOString().slice(0,10).replace(/-/g,"");
+            const walk=d=>{for(const e of fs.readdirSync(d,{withFileTypes:true})){const f=p.join(d,e.name); if(e.isDirectory()){walk(f); if(!fs.readdirSync(f).length) fs.rmdirSync(f);} else {const m=/(\d{8})/.exec(e.name); if(m&&m[1]<cut) fs.unlinkSync(f);}}}; walk("data/history");'
+          H="$RUNNER_TEMP/hist"; rm -rf "$H"; git worktree prune
+          if git fetch -q --depth=1 origin history 2>/dev/null; then git worktree add -q -B history "$H" FETCH_HEAD; NEW=0
+          else git worktree add -q --detach "$H"; (cd "$H" && git checkout -q --orphan history && git rm -rq --cached . && find . -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf {} +); NEW=1; fi
+          rm -rf "$H/data/history" && mkdir -p "$H/data/history" && cp -a data/history/. "$H/data/history/"
+          cd "$H" && git add -A
           git diff --cached --quiet && exit 0
-          git commit -m "history: $(date -u +'%Y-%m-%d %H:%M UTC')"
-          for i in 1 2 3; do git pull --rebase -q && git push -q && exit 0; sleep 5; done
-          echo "::warning::history push failed after 3 tries" 
+          LAST=$( [ "$NEW" = 0 ] && git log -1 --format=%cd --date=format:%Y-%m-%d HEAD || echo none )
+          if [ "$LAST" != "$(date -u +%F)" ]; then
+            # first update of a new UTC day: replace the branch by one commit holding only the kept files
+            git checkout -q --orphan snap && git commit -qm "history snapshot $(date -u +'%Y-%m-%d %H:%M UTC') (last 35 days)" && git push -qf origin snap:history
+          else
+            git commit -qm "history: $(date -u +'%Y-%m-%d %H:%M UTC')" && git push -q origin HEAD:history || echo "::warning::history push failed"
+          fi
 
       - name: Build site
         id: build

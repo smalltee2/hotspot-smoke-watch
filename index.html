@@ -150,6 +150,8 @@ td.num{text-align:right;font-family:var(--font-data);font-variant-numeric:tabula
 .here .pill{white-space:nowrap}
 .here .act{margin-top:6px;display:flex;gap:6px}
 .stmark{width:12px;height:12px;border-radius:2px;border:1.5px solid var(--fg);box-sizing:border-box}
+.windarrow{pointer-events:auto}
+.windarrow svg{display:block;overflow:visible}
 .a4tmark{width:12px;height:12px;border-radius:50%;box-sizing:border-box;border:1px solid var(--fg)}
 .legend .keys span{display:flex;gap:6px;align-items:center}
 .dot{width:10px;height:10px;border-radius:50%;display:inline-block;flex:none}
@@ -528,6 +530,8 @@ td.num{text-align:right;font-family:var(--font-data);font-variant-numeric:tabula
         <label class="dev-only"><input type="radio" name="layer" id="lyFine" value="fine"> <span data-th="PM&lt;sub&gt;2.5&lt;/sub&gt; รวม ละเอียด (เห็นรายละเอียดไฟ)">Total PM<sub>2.5</sub>, fine (fire detail)</span></label>
         <label><input type="radio" name="layer" id="lyFire" value="fire"> <span data-th="เฉพาะควันไฟ">Fire smoke only</span></label>
         <label class="dev-only"><input type="radio" name="layer" id="lyUnc" value="unc"> <span data-th="ความไม่แน่นอนของแผนที่ (±1σ)">Map uncertainty (±1σ)</span></label>
+        <label><input type="radio" name="layer" id="lyRain" value="rain"> <span data-th="ฝน (มม./ชม.)">Rain, mm/h</span></label>
+        <label><input type="radio" name="layer" id="lyTemp" value="temp"> <span data-th="อุณหภูมิ (°C)">Temperature, °C</span></label>
         <div id="assimNote" class="note dev-only" style="font-size:.68rem;color:var(--focus)" hidden></div>
       </div>
       <div class="field" style="margin:4px 0 6px"><label for="unitSel" style="font-size:.7rem" data-th="แสดงเป็น">Show as</label>
@@ -547,6 +551,16 @@ td.num{text-align:right;font-family:var(--font-data);font-variant-numeric:tabula
         <div class="ticks"><span>±0%</span><span>25</span><span>50</span><span>75</span><span>100</span><span>%+</span></div>
         <div class="note" style="font-size:.68rem" data-th="ครึ่งความกว้างของช่วง 68% เป็น % ของ (PM₂.₅+1) จากความแปรปรวนของ regression kriging ณ ชั่วโมงวิเคราะห์ ชั่วโมงพยากรณ์มีความคลาดเคลื่อนเพิ่มขึ้นอีก (ดูแท็บวิธีการ → How well it has done)">Half-width of the 68% range, as % of (PM₂.₅+1). Regression-kriging variance at the analysis hour; forecast hours carry extra error (see Method → How well it has done).</div>
       </div>
+      <div id="legRain" hidden>
+        <div class="pcdbar" id="rainBar" style="grid-template-columns:1fr 1fr 1fr 1fr 1fr 1fr"></div>
+        <div class="ticks"><span>0.1</span><span>0.5</span><span>1</span><span>2</span><span>5</span><span>10</span><span>mm/h</span></div>
+        <div class="note" style="font-size:.68rem" data-th="ปริมาณฝนรายชั่วโมง (ECMWF) ฝนชะล้างฝุ่นออกจากอากาศ">Hourly rain (ECMWF forecast). Rain washes particles out of the air.</div>
+      </div>
+      <div id="legTemp" hidden>
+        <div class="pcdbar" id="tempBar" style="grid-template-columns:repeat(7,1fr)"></div>
+        <div class="ticks"><span>&lt;10</span><span>15</span><span>20</span><span>25</span><span>30</span><span>35</span><span>40</span><span>°C</span></div>
+        <div class="note" style="font-size:.68rem" data-th="อุณหภูมิอากาศที่ 2 ม. (ECMWF)">Air temperature at 2 m (ECMWF forecast).</div>
+      </div>
       <div id="legFire" hidden>
         <div class="bar"></div>
         <div class="ticks"><span>1</span><span>15</span><span>37.5</span><span>75</span><span>150+</span></div>
@@ -555,11 +569,13 @@ td.num{text-align:right;font-family:var(--font-data);font-variant-numeric:tabula
       <div class="keys">
         <span><i class="dot" style="background:var(--ember)"></i><span data-th="จุดความร้อน (ขนาด = FRP)">Hotspot (size = FRP)</span></span>
         <span><i class="dot" style="border:2px solid var(--fg)"></i><span data-th="เมือง / จุดรับ">Town / receptor</span></span>
+        <span><i style="display:inline-block;width:14px;height:10px;vertical-align:-1px"><svg viewBox="0 0 14 10" width="14" height="10"><path d="M0 5h10M7 1l4 4-4 4" fill="none" stroke="var(--fg)" stroke-width="1.6"/></svg></i><span data-th="ลูกศรลม: ชี้ทิศที่ลมพัดไป ยาว/เข้ม = แรง">Wind arrow: points where the wind blows to; longer and darker = stronger</span></span>
         <span><i class="dot" style="background:var(--aq2);box-shadow:0 0 0 3px var(--aq4);border:1px solid var(--fg)"></i><span data-th="Air4Thai: ด้านใน = ค่าตรวจวัด, วงนอก = แบบจำลอง">Air4Thai: inside = measured, ring = model</span></span>
         <span><i class="dot" style="border-radius:2px;border:1.5px solid var(--fg);background:var(--aq2)"></i><span data-th="สถานีตรวจวัด (ค่าปัจจุบัน)">Monitor (measured now)</span></span>
       </div>
       <div class="showpick"><strong data-th="แสดงบนแผนที่">Show on map</strong>
         <label><input type="checkbox" id="shContour" checked> <span data-th="เส้นแบ่งระดับ">Contour lines</span></label>
+        <label><input type="checkbox" id="shWind"> <span data-th="ลูกศรลม (10 ม.)">Wind arrows (10 m)</span></label>
         <label><input type="checkbox" id="shProv"> <span data-th="เขตและชื่อจังหวัด">Province borders and names</span></label>
         <label><input type="checkbox" id="shA4t" checked> <span data-th="Air4Thai: ค่าตรวจวัดเทียบแบบจำลอง">Air4Thai: measured vs model</span></label>
         <div id="a4tStat" class="note" style="font-size:.68rem;margin:-2px 0 4px 22px"></div>
@@ -1258,7 +1274,7 @@ function setTimeline(){
   S.hour=i; sl.value=i;
 }
 function redrawTime(){if(hereLL&&!$('hereBox').hidden) renderHereBox();
-  updateTimeLabel();drawPlume();drawGrid();drawContours();drawTowns();drawStations();}
+  updateTimeLabel();drawPlume();drawGrid();drawContours();drawTowns();drawStations();drawWind();}
 
 // ---- hourly data written by the GitHub Actions pipeline (same site)
 async function loadPipeline(){
@@ -1405,7 +1421,8 @@ async function loadVerify(){
 
 // ---- total PM2.5 grid layer and station markers
 let gridLayer=null; const stationLayer=L.layerGroup().addTo(map), a4tLayer=L.layerGroup().addTo(map);
-const layerMode=()=>$('lyUnc').checked?'unc':$('lyFire').checked?'fire':$('lyFine').checked?'fine':'total';
+const layerMode=()=>$('lyUnc').checked?'unc':$('lyFire').checked?'fire':$('lyFine').checked?'fine':$('lyRain').checked?'rain':$('lyTemp').checked?'temp':'total';
+const wxMode=()=>layerMode()==='rain'||layerMode()==='temp';
 const gridMode=()=>layerMode()==='total'||layerMode()==='fine';
 const unitMode=()=>$('unitSel').value;   // 'ug' | 'ug24' | 'th' | 'us'
 const avg24=()=>unitMode()!=='ug';
@@ -1448,6 +1465,7 @@ function drawGrid(){
   if(gridLayer){map.removeLayer(gridLayer);gridLayer=null;}
   S.fine=null; S.fieldInfo='';
   if(P.data&&layerMode()==='unc') return drawUnc();
+  if(wxMode()) return drawWx();
   if(!P.data||!gridMode()) return; const G=P.data.grid, i=gIdx(curT()); if(i<0) return;
   const R=regionShape();
   const scheme=unitMode()==='us'?US_BANDS.map(b=>({max:b.max,rgb:hexRGB(b.color)})):PCD.map(b=>({max:b.max,rgb:hexRGB(cssVar('--'+b.key))}));
@@ -1478,6 +1496,44 @@ function drawGrid(){
   if(!R) parts.push(L.rectangle([[so,w],[n,e]],{color:cssVar('--muted'),weight:1,dashArray:'4 4',fill:false,interactive:false}));
   gridLayer=L.layerGroup(parts).addTo(map);
 }
+// ---- weather layers (ECMWF forecast from the pipeline): rain and 2-m temperature as shaded fields, 10-m wind as arrows
+const RAIN_SCALE=[[0.1,null],[0.5,'#c7e3f7'],[1,'#8fc3ea'],[2,'#4a97d6'],[5,'#1f63b5'],[10,'#0b3a86'],[Infinity,'#4a1a7a']];
+const TEMP_SCALE=[[10,'#3b4cc0'],[15,'#6f8fe3'],[20,'#a8c8f0'],[25,'#f2f0c8'],[30,'#f4b183'],[35,'#e0633f'],[Infinity,'#a50021']];
+function wxColor(mode,v){ const sc=mode==='rain'?RAIN_SCALE:TEMP_SCALE; for(const [mx,c] of sc) if(v<=mx) return c; return sc[sc.length-1][1]; }
+function wxAt(lat,lon,t){ if(!MET) return null; const m=sampleMet(MET,lat,lon,t); return {pr:m.pr,t2:m.t2,u10:m.u10??m.u,v10:m.v10??m.v,ws100:m.ws,u100:m.u,v100:m.v}; }
+const windFrom=(u,v)=>{ const d=(Math.atan2(-u,-v)/DEG+360)%360; return d; };   // meteorological direction the wind blows FROM (deg)
+const compass=d=>{const n=LANG==='th'?['เหนือ','ตะวันออกเฉียงเหนือ','ตะวันออก','ตะวันออกเฉียงใต้','ใต้','ตะวันตกเฉียงใต้','ตะวันตก','ตะวันตกเฉียงเหนือ']:['N','NE','E','SE','S','SW','W','NW']; return n[Math.round(d/45)%8];};
+function wxText(w){ if(!w) return ''; const sp=Math.hypot(w.u10,w.v10);
+  return `${T('Temp.','อุณหภูมิ')} ${w.t2!=null?w.t2.toFixed(1):'–'} °C · ${T('wind','ลม')} ${sp.toFixed(1)} m/s ${T('from','จาก')} ${compass(windFrom(w.u10,w.v10))} · ${T('rain','ฝน')} ${w.pr>=0.05?w.pr.toFixed(1)+' mm/h':T('none','ไม่มี')}`; }
+function drawWx(){
+  const mode=layerMode(); if(!MET){S.fieldInfo=T('Weather data not loaded.','ยังไม่ได้โหลดข้อมูลอากาศ'); return;}
+  const t=curT(); if(t==null||t<MET.times[0]||t>MET.times[MET.times.length-1]){S.fieldInfo=T('No weather forecast for this hour.','ไม่มีพยากรณ์อากาศสำหรับชั่วโมงนี้'); return;}
+  const R=regionShape(), B=REGIONS.msea.bbox; let so=B[1], w=B[0], n=B[3], e=B[2];
+  if(R){so=Math.max(so,R.bbox[1]-.2); w=Math.max(w,R.bbox[0]-.2); n=Math.min(n,R.bbox[3]+.2); e=Math.min(e,R.bbox[2]+.2);}
+  let cell=0.1; while(((e-w)/cell)*((n-so)/cell)>60000) cell*=1.25;
+  const fx=Math.ceil((e-w)/cell), fy=Math.ceil((n-so)/cell), F=new Float32Array(fx*fy);
+  for(let y=0;y<fy;y++) for(let x=0;x<fx;x++){const m=sampleMet(MET,so+(y+.5)*cell,w+(x+.5)*cell,t); F[y*fx+x]=mode==='rain'?m.pr:(m.t2??NaN);}
+  S.fine={F,w,so,nx:fx,ny:fy,cell}; S.fieldInfo=mode==='rain'?T('Rain, mm/h (ECMWF)','ฝน มม./ชม. (ECMWF)'):T('Temperature at 2 m, °C (ECMWF)','อุณหภูมิ 2 ม. °C (ECMWF)');
+  const W=Math.min(1100,Math.round((e-w)*60)), H=Math.min(1100,Math.round((mercY(n)-mercY(so))/DEG*60));
+  const url=regionCanvas(so,w,n,e,W,H,(lat,lon)=>{const x=Math.floor((lon-w)/cell), y=Math.floor((lat-so)/cell); if(x<0||y<0||x>=fx||y>=fy) return null;
+    const v=F[y*fx+x]; if(v!==v) return null; const c=wxColor(mode,v); if(!c) return null; const rgb=hexRGB(c); return [rgb[0],rgb[1],rgb[2],mode==='rain'?150:120];});
+  gridLayer=L.layerGroup([L.imageOverlay(url,[[so,w],[n,e]],{interactive:false})]).addTo(map);
+}
+let windLayer=L.layerGroup().addTo(map);
+function drawWind(){
+  windLayer.clearLayers(); if(!MET||!shown('shWind')) return; const t=curT(); if(t==null) return;
+  const z=map.getZoom(), step=z<=5?1.5:z<=6?1:z<=7?0.5:z<=8?0.3:0.2, b=map.getBounds(), R=regionShape(), B=REGIONS.msea.bbox;
+  const la0=Math.max(b.getSouth(),B[1],R?R.bbox[1]:-90), la1=Math.min(b.getNorth(),B[3],R?R.bbox[3]:90), lo0=Math.max(b.getWest(),B[0],R?R.bbox[0]:-180), lo1=Math.min(b.getEast(),B[2],R?R.bbox[2]:180);
+  for(let la=Math.ceil(la0/step)*step; la<=la1; la+=step) for(let lo=Math.ceil(lo0/step)*step; lo<=lo1; lo+=step){
+    if(R&&!inRegion(la,lo)) continue; const m=sampleMet(MET,la,lo,t), u=m.u10??m.u, v=m.v10??m.v, sp=Math.hypot(u,v);
+    const bearing=(Math.atan2(u,v)/DEG+360)%360;   // direction the wind blows TO, clockwise from north
+    const len=10+Math.min(22,sp*3.5), col=sp<2?'#8aa0b4':sp<4?'#4f6f91':sp<7?'#1f4e79':'#8b1a1a', sz=2*len+6;
+    const html=`<svg viewBox="${-len-3} ${-len-3} ${sz} ${sz}" width="${sz}" height="${sz}" style="transform:rotate(${bearing}deg)"><path d="M0 ${len} L0 ${-len} M-5 ${-len+6} L0 ${-len} L5 ${-len+6}" fill="none" stroke="${col}" stroke-width="${sp<2?1.4:2}" stroke-linecap="round"/></svg>`;
+    L.marker([la,lo],{icon:L.divIcon({className:'windarrow',html,iconSize:[sz,sz],iconAnchor:[sz/2,sz/2]}),keyboard:false,interactive:true})
+      .bindTooltip(()=>`${T('Wind (10 m)','ลม (10 ม.)')} ${sp.toFixed(1)} m/s ${T('from','จาก')} ${compass(windFrom(u,v))} (${Math.round(windFrom(u,v))}°)${!PUBLIC?`<br>100 m: ${m.ws.toFixed(1)} m/s ${T('from','จาก')} ${compass(windFrom(m.u,m.v))} · BLH ${Math.round(m.blh)} m`:''}<br>${T('Temp.','อุณหภูมิ')} ${m.t2!=null?m.t2.toFixed(1):'–'} °C · ${T('rain','ฝน')} ${m.pr>=0.05?m.pr.toFixed(1)+' mm/h':T('none','ไม่มี')}`).addTo(windLayer);
+  }
+}
+map.on('zoomend moveend',()=>{ if(shown('shWind')) drawWind(); });
 // uncertainty layer: relative half-width of the 68% range, (e^σ − 1)·100 %, at the analysis hour
 function drawUnc(){
   const rk=curRK(); if(!rk||!((rk.bias&&rk.bias.sd)||(rk.resid&&rk.resid.sd))){S.fieldInfo='Uncertainty appears after the next pipeline run.'; return;}
@@ -1538,10 +1594,10 @@ function drawContours(){
 function applyVisibility(){
   for(const [id,layers] of [['shHot',[hotLayer,trajLayer]],['shTown',[townLayer]],['shSt',[stationLayer]],['shA4t',[a4tLayer]]])
     for(const l of layers){ if(shown(id)) map.addLayer(l); else map.removeLayer(l); }
-  drawContours();
+  drawContours(); drawWind();
 }
 document.getElementById('shProv').addEventListener('change',e=>{store.set('hsw.shProv',e.target.checked?'1':'0');styleBase();});
-for(const id of ['shContour','shSt','shA4t','shHot','shTown']){
+for(const id of ['shContour','shSt','shA4t','shHot','shTown','shWind']){
   const v=store.get('hsw.'+id); if(v!=null) $(id).checked=v==='1';
   $(id).addEventListener('change',()=>{store.set('hsw.'+id,$(id).checked?'1':'0');applyVisibility();});
 }
@@ -1613,6 +1669,7 @@ function hereHTML(lat,lon,acc){
       ${past24!=null?`<tr><th>${T('AQI now (24-h mean','AQI ขณะนี้ (เฉลี่ย 24 ชม.')} ${fmtN(past24)})</th><td>${T('Thai','ไทย')} ${aqiTH(past24)} · ${T('US','สหรัฐฯ')} ${aqiUS(past24)}</td></tr>`:''}
       ${mean24!=null?`<tr><th>${T('Next 24 h','24 ชม. ข้างหน้า')}</th><td class="num">${T('mean','เฉลี่ย')} ${fmtN(mean24)}, ${T('max','สูงสุด')} ${fmtN(peak)} ${T('at','เวลา')} ${hm(tPeak)}</td></tr>`:''}
       ${vSl!=null?`<tr><th>${T('At slider time','ณ เวลาที่เลือก')}</th><td class="num">${fmtN(vSl)} µg/m³</td></tr>`:''}
+      ${(()=>{const w=wxAt(lat,lon,tNow); return w?`<tr><th>${T('Weather now','อากาศขณะนี้')}</th><td>${wxText(w)}</td></tr>`:'';})()}
       <tr><th>${T('Fire smoke now','ควันไฟขณะนี้')}</th><td class="num">${fire>=0.1?fmtN(fire)+' µg/m³':T('none modelled','ไม่พบในแบบจำลอง')}</td></tr>
       <tr><th>${T('Nearest monitor','สถานีใกล้ที่สุด')}</th><td>${st?`${esc(stName(st))}<br>${fmtN(st.obs.v)} µg/m³${st.avg24?T(' (24-h avg)',' (เฉลี่ย 24 ชม.)'):''}, ${dSt.toFixed(0)} ${T('km','กม.')}`:'–'}</td></tr>
       <tr><th>${T('Hotspots','จุดความร้อน')}</th><td class="num">${nHot} ${T('within 20 km','ในรัศมี 20 กม.')}${dHot<1e9?`, ${T('nearest','ใกล้สุด')} ${dHot.toFixed(1)} ${T('km','กม.')}`:''}</td></tr>
@@ -1908,6 +1965,7 @@ function focusTown(name){
   if(r.tot&&r.stT){   // live data: total PM2.5 trend at the town (same chart as the area trends), with the fire part dashed
     const H=P.data.hours, fire=S.sim?H.map(t=>{const k=idxIn(S.sim.hours,t); const v=k>=0?r.series[k]:null; return v!=null&&v>0?v:null;}):null;
     $('townDetail').innerHTML=`<h3>${esc(townName(r))}: ${T('PM₂.₅ forecast','พยากรณ์ PM₂.₅')}</h3><div class="trend">${trendBlock(H,r.tot,{fire:fire&&fire.some(v=>v!=null&&v>=0.5)?fire:null,label:'PM2.5 trend at '+r.name})}</div>
+      ${(()=>{const w=wxAt(r.lat,r.lon,Math.floor(Date.now()/HR)*HR); return w?`<p class="note">${T('Weather now','อากาศขณะนี้')}: ${wxText(w)}</p>`:'';})()}
       <p class="note">${T(`Highest 24-h mean ${fmtN(r.stT.mean24)} µg/m³ at ${fmtT(r.stT.tMean)}; peak hour ${fmtN(r.stT.peak)} µg/m³. Fire smoke in our model: highest 24-h mean ${fmtN(r.st.mean24)} µg/m³.`,`ค่าเฉลี่ย 24 ชม. สูงสุด ${fmtN(r.stT.mean24)} µg/m³ เมื่อ ${fmtT(r.stT.tMean)} ค่าสูงสุดรายชั่วโมง ${fmtN(r.stT.peak)} µg/m³ ควันไฟตามแบบจำลอง: ค่าเฉลี่ย 24 ชม. สูงสุด ${fmtN(r.st.mean24)} µg/m³`)}</p>`;
     return;
   }
@@ -2069,7 +2127,8 @@ $('btnLang').onclick=()=>{ LANG=LANG==='th'?'en':'th'; store.set('hsw.lang',LANG
 $('unitSel').addEventListener('change',()=>{store.set('hsw.unitSel',$('unitSel').value); renderLegend(); renderAll(); redrawTime();});
 renderLegend();
 for(const el of document.querySelectorAll('input[name=layer]')) el.addEventListener('change',()=>{
-  $('legTotal').hidden=!gridMode(); $('legFire').hidden=layerMode()!=='fire'; $('legUnc').hidden=layerMode()!=='unc'; redrawTime();});
+  $('legTotal').hidden=!gridMode(); $('legFire').hidden=layerMode()!=='fire'; $('legUnc').hidden=layerMode()!=='unc'; $('legRain').hidden=layerMode()!=='rain'; $('legTemp').hidden=layerMode()!=='temp'; redrawTime();});
+$('rainBar').innerHTML=RAIN_SCALE.slice(1).map(([,c])=>`<i style="background:${c}"></i>`).join(''); $('tempBar').innerHTML=TEMP_SCALE.map(([,c])=>`<i style="background:${c}"></i>`).join('');
 $('uncBar').innerHTML=UNC_COL.map(c=>`<i style="background:${c}"></i>`).join('');
 $('alpha').addEventListener('change',()=>{FIELD_CACHE.clear(); redrawTime();});
 // first paint, then refresh every 30 minutes while the tab is open

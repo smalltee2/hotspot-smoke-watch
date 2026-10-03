@@ -11,7 +11,7 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { buildDEM, sampleGrid } from './dem.mjs';
-import { regressionKriging } from './rk.mjs';
+import { regressionKriging, krigeField } from './rk.mjs';
 import { fetchMet, sampleMet, packMet, MET_MODEL } from './met.mjs';
 import { buildLandcover, landcoverAt, packLandcover, unpackLandcover } from './landcover.mjs';
 import { loadModel } from './model.mjs';
@@ -40,7 +40,8 @@ const CFG = {
   kfSlow: { Q: 0.002, R: 0.15, P0: 0.5, maxGapH: 168 },
   assimilate: true,              // fire-emission assimilation; both pages forecast with it (the developer page can switch it off)
   biasLeadEfoldH: 48,            // bias correction fades with lead time
-  rk: { residStep: 0.1, demStep: 0.05, minStations: 15, K: 16, declusterDeg: 0.25 },   // cell declustering of the regression (0.25° ≈ 28 km cells)  // regression kriging; residual grid and DEM resolution
+  rk: { residStep: 0.1, demStep: 0.05, minStations: 15, K: 16, declusterDeg: 0.25 },
+  mlField: 0.5,                  // deg; grid of the learned map correction (kriged station corrections, every 3 h to 48 h)   // cell declustering of the regression (0.25° ≈ 28 km cells)  // regression kriging; residual grid and DEM resolution
   logLeads: [1, 3, 6, 12, 24, 48],
   // Air4Thai stations on OpenAQ report PM2.5 as a 24-h running mean, not hourly values (verified on Jan–Apr 2026: flat daily cycle,
   // mean hour-to-hour change 0.4 µg/m3); their correction and kriging therefore compare like with like (24-h means)
@@ -508,7 +509,7 @@ async function main() {
       await writeJSON(path.join(DATA, 'history', yday.slice(0, 7), `ml-${yday.replace(/-/g, '')}.json`), mlRec);
     } catch (e) { log(`ML daily learning failed: ${e.message}`); }
   }
-  const mlOn = mlActive(state, season);
+  const mlOn = mlActive(state, season); let mlField = null;
   const featAt = (s, i, j) => {   // features of station s for output hour j (known at issue time)
     const t = hours[j], m = met ? sampleMet(met, s.lat, s.lon, t) : null, o24 = obs24(s.id, s);
     return { inc: incAt(s, t, 'h'), fire: fireAt(s, t, 'h'), blh: m ? m.blh : '', ws: m ? m.ws : '', pr: m ? m.pr : '',
@@ -533,6 +534,16 @@ async function main() {
       o.corrM = corrM; o.fc24M = fc24M; nAdj++;
     });
     log(`ML correction applied at ${nAdj} hourly stations (weights ${JSON.stringify(state.ml.weights)})`);
+    // map: the stations' learned log-corrections r̂ = ln((corrM+1)/(corrA+1)) kriged to a 0.5° grid every 3 h out to 48 h;
+    // the page interpolates in space and time and applies (C+1)·e^r̂ − 1 on top of the assimilated, kriged map
+    try {
+      const fs_ = CFG.mlField, fnx = Math.round((g[2] - g[0]) / fs_) + 1, fny = Math.round((g[3] - g[1]) / fs_) + 1, leads = [], fields = [];
+      for (let L = 3; L <= MLCFG.maxLeadH; L += 3) { const j = jNow + L; if (j >= hours.length) break;
+        const pts = []; outStations.forEach((o, i) => { if (!o.corrM || o.corrM[j] == null || o.corrA[j] == null) return; pts.push({ lat: o.lat, lon: o.lon, y: Math.log((o.corrM[j] + 1) / (o.corrA[j] + 1)) }); });
+        const f = krigeField(pts, { lon0: g[0], lat0: g[1], step: fs_, nx: fnx, ny: fny }, { K: CFG.rk.K, declusterDeg: CFG.rk.declusterDeg }); if (!f) continue;
+        leads.push(L); fields.push(f.values); if (L === 24) log(`ML map field at +24 h: ${pts.length} stations, mean ${f.mean}, range ${f.vario.a_km} km`); }
+      if (leads.length) mlField = { t0, lon0: g[0], lat0: g[1], step: fs_, nx: fnx, ny: fny, leads, values: fields };
+    } catch (e) { log(`ML map field failed: ${e.message}`); }
   }
 
   // 5. regression kriging (RIMM-type) at the analysis hour, in log space:
@@ -612,7 +623,7 @@ async function main() {
   await writeJSON(path.join(DATA, 'latest.json'), {
     generated: now, camsIssued: C.at, bbox: CFG.bbox, runlog: RUNLOG,
     method: { kf: CFG.kf, biasLeadEfoldH: CFG.biasLeadEfoldH, rk: CFG.rk },
-    rk, rkA, assim: assimSummary(assim), ml: state.ml ? { active: mlOn, weights: state.ml.weights, lastDay: state.ml.lastDay, experts: Object.keys(state.ml.models || {}).concat(season ? ['season'] : []), last: mlRec } : null, dem: dem ? { file: 'data/static/elev.json', step: dem.step, source: dem.source } : null,
+    rk, rkA, assim: assimSummary(assim), ml: state.ml ? { active: mlOn, weights: state.ml.weights, lastDay: state.ml.lastDay, experts: Object.keys(state.ml.models || {}).concat(season ? ['season'] : []), last: mlRec, field: mlField } : null, dem: dem ? { file: 'data/static/elev.json', step: dem.step, source: dem.source } : null,
     met: met ? { file: 'data/met-web.json', model: met.model, fetched: met.fetched, grids: met.grids.map(g => ({ step: g.step, bbox: [g.lon0, g.lat0, g.lon0 + (g.nx - 1) * g.step, g.lat0 + (g.ny - 1) * g.step] })) } : null,
     hours, stations: outStations,
     grid: { lon0: g[0], lat0: g[1], step, nx, ny, values: gridRaw },  // raw CAMS; the page applies rk

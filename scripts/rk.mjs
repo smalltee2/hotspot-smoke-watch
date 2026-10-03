@@ -134,3 +134,23 @@ export function regressionKriging(obs, gridSpec, opt = {}) {
     cv: cv.map(c => c.c), cvCover1s: Math.round(cover * 100) / 100, cvSdMedian: Math.round([...cvSd].sort((a, b) => a - b)[cvSd.length >> 1] * 1000) / 1000,
     resid: { lon0, lat0, step, nx, ny, values, sd } };
 }
+
+// Ordinary kriging of a station field (e.g. the learned log-correction) to a grid: variogram fitted to the values themselves,
+// kriged residual faded to 0 beyond the correlation range as in regressionKriging. obs: [{lat, lon, y}]
+export function krigeField(obs, gridSpec, { K = 16, declusterDeg = 0 } = {}) {
+  if (obs.length < 5) return null;
+  const pts = obs.map(o => [o.lat, o.lon]), W = declusterWeights(pts, declusterDeg);
+  const mean = obs.reduce((a, o, i) => a + W[i] * o.y, 0) / W.reduce((a, v) => a + v, 0), res = obs.map(o => o.y - mean);
+  const vario = fitVariogram(pts, res, { w: declusterDeg ? W : null });
+  const maxKm = Math.min(400, Math.max(150, 3 * vario.a)), fade = d => d <= maxKm / 2 ? 1 : d >= maxKm ? 0 : 1 - (d - maxKm / 2) / (maxKm / 2);
+  const { lon0, lat0, step, nx, ny } = gridSpec, values = new Array(nx * ny);
+  for (let iy = 0; iy < ny; iy++) for (let ix = 0; ix < nx; ix++) {
+    const la = lat0 + iy * step, lo = lon0 + ix * step, k = krige(pts, res, vario, la, lo, { K, maxKm });
+    if (!isFinite(k.dmin)) {   // fewer than 3 monitors within range (isolated monitor): nearest monitor's value, faded with distance
+      let best = -1, dmin = Infinity; for (let i = 0; i < pts.length; i++) { const d = kmFast(la, lo, pts[i][0], pts[i][1]); if (d < dmin) { dmin = d; best = i; } }
+      k.est = best >= 0 ? res[best] : 0; k.dmin = dmin; }
+    const f = fade(k.dmin);
+    values[iy * nx + ix] = Math.round((f * (mean + k.est)) * 1000) / 1000;   // far from every monitor the correction goes to 0, not to the mean
+  }
+  return { values, mean: +mean.toFixed(4), vario: { c0: +vario.c0.toFixed(4), c1: +vario.c1.toFixed(4), a_km: vario.a }, maxKm };
+}

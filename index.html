@@ -1946,7 +1946,7 @@ function trendBlock(H,v,opt={}){
     ${days.length?`<div class="chips">${days.map(o=>`<div class="chip">${esc(dayLabel(o.t-HR))}<b>${fmtVal(o.mean)}</b>${pill(o.mean)}</div>`).join('')}</div>`:''}
     <p class="note" style="font-size:.7rem">${T('Orange: hourly. Blue: 24-hour average (the basis of the Thai AQI).','เส้นส้ม: รายชั่วโมง เส้นน้ำเงิน: ค่าเฉลี่ย 24 ชม. (ใช้คำนวณ AQI ของไทย)')}${opt.lo?T(' Shading: range across the area (most of the area lies inside it).',' แถบสี: ช่วงค่าภายในพื้นที่ (พื้นที่ส่วนใหญ่อยู่ในช่วงนี้)'):''}${opt.fire?T(' Dashed: smoke from fires in our model.',' เส้นประ: ควันจากไฟตามแบบจำลองของเรา'):''} ${T('Day boxes: daily average from midnight to midnight.','กล่องรายวัน: ค่าเฉลี่ยรายวัน (เที่ยงคืนถึงเที่ยงคืน)')}</p>`;
 }
-const AREA_CACHE={key:null};
+const AREA_CACHE={key:null}, INC_FIELDS={sim:null,map:new Map()};
 function areaSeries(){
   const k=$('region').value, key=k+'|'+(P.data?P.data.generated:'')+'|'+(S.simInc?S.assimApplied:0)+'|'+(useA()?'A':'-');
   if(AREA_CACHE.key===key) return AREA_CACHE;
@@ -1959,7 +1959,15 @@ function areaSeries(){
     const j=pts.push({la,lo})-1; addProv(j,pv); if(R) groups.get('__all').idx.push(j);});
   if(!R) grid(REGIONS.msea.bbox,0.25,(la,lo)=>{groups.get('__all').idx.push(pts.push({la,lo})-1);});
   // value of every point at every hour (CAMS → bias-corrected map), then mean and 10th/90th percentile per area
-  const val=H.map(t=>pts.map(q=>totalAt(q.la,q.lo,t)));   // same quantity as the map (assimilation increment and learned correction included)
+  // same quantity as the map (assimilation increment and learned correction included); the increment is taken from a 0.25° field
+  // per hour (one puffField per hour instead of a puff sum per point), which keeps this fast in the burning season
+  const B=REGIONS.msea.bbox, inx=Math.round((B[2]-B[0])/0.25), iny=Math.round((B[3]-B[1])/0.25);
+  if(INC_FIELDS.sim!==S.simInc){INC_FIELDS.sim=S.simInc; INC_FIELDS.map=new Map();}   // per-hour increment fields, shared by all regions
+  const incField=k=>{ if(!INC_FIELDS.map.has(k)) INC_FIELDS.map.set(k, S.simInc.snaps[k].n?puffField(S.simInc.snaps[k],B[0],B[1],inx,iny,0.25):null); return INC_FIELDS.map.get(k); };
+  const val=H.map((t,i)=>{ let I=null; if(S.simInc){const k=idxIn(S.simInc.hours,t); if(k>=0) I=incField(k);}
+    return pts.map(q=>{ let c=camsAt(q.la,q.lo,i); if(c<0) return null;
+      if(I){const ix=Math.min(inx-1,Math.max(0,Math.floor((q.lo-B[0])/0.25))), iy=Math.min(iny-1,Math.max(0,Math.floor((q.la-B[1])/0.25))); c=Math.max(0,c+I[iy*inx+ix]);}
+      let v=rkValue(c,q.la,q.lo,t); const m=mlAt(q.la,q.lo,t); return m&&v>=0?(v+1)*Math.exp(m)-1:v; }); });
   for(const g of groups.values()){g.mean=[];g.lo=[];g.hi=[];
     H.forEach((_,i)=>{const a=g.idx.map(j=>val[i][j]).filter(x=>x!=null).sort((x,y)=>x-y);
       if(a.length<Math.max(1,0.5*g.idx.length)){g.mean.push(null);g.lo.push(null);g.hi.push(null);return;}

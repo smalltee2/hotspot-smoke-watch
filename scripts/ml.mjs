@@ -55,8 +55,9 @@ export async function loadSeasonRows(dir, t, gunzip, before = Infinity) {
     for (const f of await fs.readdir(path.join(dir, e.name))) {
       if (!/^train-\d{8}\.csv\.gz$/.test(f)) continue;
       const txt = gunzip(await fs.readFile(path.join(dir, e.name, f))).toString('utf8'), [head, ...lines] = txt.trim().split('\n'), h = head.split(',');
+      const col = NAMES.map(nm => h.indexOf(nm));   // by name: files written before a feature was added give NaN for it
       for (const l of lines) { const v = l.split(','), tV = +v[0]; if (!(tV < before)) continue;
-        rows.push({ tValid: tV, id: v[1], lead: +v[2], hloc: +v[3], y: +v[4], x: v.slice(5, 5 + NAMES.length).map(q => q === '' ? NaN : +q) }); days.add(f); }
+        rows.push({ tValid: tV, id: v[1], lead: +v[2], hloc: +v[3], y: +v[4], x: col.map(c => c < 0 || v[c] === '' || v[c] === undefined ? NaN : +v[c]) }); days.add(f); }
     }
   }
   return { rows, days: days.size, season: cur.id };
@@ -65,15 +66,16 @@ const HOUR = 3600e3;
 
 // ---------------------------------------------------------------- features
 // raw columns written to the forecast log every hour (fcst-*.csv) and used here
-export const FEAT_COLS = ['inc', 'fire', 'blh', 'ws', 'pr', 'obs_last', 'obs24_last', 'kfAb', 'hloc', 'doy'];
-const NAMES = ['lead', 'lnF', 'lnCams', 'lnInc', 'lnFire', 'lnBlh', 'ws', 'pr', 'lnObsLast', 'lnObs24', 'kfAb', 'hsin', 'hcos', 'dsin', 'dcos', 'lat', 'lon'];
+export const FEAT_COLS = ['inc', 'fire', 'blh', 'ws', 'pr', 'obs_last', 'obs24_last', 'kfAb', 'hloc', 'doy', 't2', 'rh', 'ws10', 'wd'];   // wd = 100-m wind direction the wind blows from (deg)
+const NAMES = ['lead', 'lnF', 'lnCams', 'lnInc', 'lnFire', 'lnBlh', 'ws', 'pr', 'lnObsLast', 'lnObs24', 'kfAb', 'hsin', 'hcos', 'dsin', 'dcos', 'lat', 'lon', 't2', 'rh', 'ws10', 'wdsin', 'wdcos'];   // the last five were added on 3 Oct 2026; older rows carry NaN there
 const ln1 = v => Math.log(Math.max(0, v) + 1);
 export function featureVector(r) {   // r: {lead, F, cams, inc, fire, blh, ws, pr, obs_last, obs24_last, kfAb, hloc, doy, lat, lon}
   const n = v => (v == null || v === '' || !isFinite(+v) ? NaN : +v);
   const h = n(r.hloc), d = n(r.doy);
   return [n(r.lead), ln1(n(r.F)), ln1(n(r.cams)), Math.sign(n(r.inc) || 0) * ln1(Math.abs(n(r.inc) || 0)), ln1(n(r.fire) || 0), Math.log(Math.max(50, n(r.blh) || 500) / 1000),
     n(r.ws), n(r.pr) || 0, isFinite(n(r.obs_last)) ? ln1(n(r.obs_last)) : NaN, isFinite(n(r.obs24_last)) ? ln1(n(r.obs24_last)) : NaN, n(r.kfAb) || 0,
-    Math.sin(2 * Math.PI * h / 24), Math.cos(2 * Math.PI * h / 24), Math.sin(2 * Math.PI * d / 365.25), Math.cos(2 * Math.PI * d / 365.25), n(r.lat), n(r.lon)];
+    Math.sin(2 * Math.PI * h / 24), Math.cos(2 * Math.PI * h / 24), Math.sin(2 * Math.PI * d / 365.25), Math.cos(2 * Math.PI * d / 365.25), n(r.lat), n(r.lon),
+    n(r.t2), n(r.rh), n(r.ws10), isFinite(n(r.wd)) ? Math.sin(n(r.wd) * Math.PI / 180) : NaN, isFinite(n(r.wd)) ? Math.cos(n(r.wd) * Math.PI / 180) : NaN];
 }
 const leadClass = L => L <= 3 ? 0 : L <= 6 ? 1 : L <= 12 ? 2 : L <= 24 ? 3 : 4;
 const hourBlock = h => Math.floor(((+h % 24) + 24) % 24 / 6);
@@ -101,7 +103,7 @@ export async function loadDataset(histDir, meta, { from = 0, to = Infinity } = {
       const o = obs.get(`${r.station_id}|${tV}`); if (o == null) continue;
       const m = meta.get(r.station_id) || {};
       rows.push({ tIssue: tI, tValid: tV, id: r.station_id, lead: +r.lead_h, F: +r.correctedA, cams: +r.cams_raw, inc: r.inc, fire: r.fire, blh: r.blh, ws: r.ws, pr: r.pr,
-        obs_last: r.obs_last, obs24_last: r.obs24_last, kfAb: r.kfAb, hloc: r.hloc, doy: r.doy, lat: m.lat, lon: m.lon, obs: o });
+        obs_last: r.obs_last, obs24_last: r.obs24_last, kfAb: r.kfAb, hloc: r.hloc, doy: r.doy, lat: m.lat, lon: m.lon, obs: o, t2: r.t2, rh: r.rh, ws10: r.ws10, wd: r.wd });
     }
   }
   for (const r of rows) { r.x = featureVector(r); r.y = ln1(r.obs) - ln1(r.F); }

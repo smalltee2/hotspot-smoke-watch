@@ -8,7 +8,7 @@
 export const MET_MODEL = 'ecmwf_ifs';
 const PL_VARS = 'temperature_850hPa,temperature_700hPa,geopotential_height_850hPa,geopotential_height_700hPa';
 export const N2_DEFAULT = 1e-4;   // used if the pressure-level request fails
-const VARS = 'wind_speed_10m,wind_direction_10m,wind_speed_100m,wind_direction_100m,boundary_layer_height,shortwave_radiation,cloud_cover,precipitation,temperature_2m';
+const VARS = 'wind_speed_10m,wind_direction_10m,wind_speed_100m,wind_direction_100m,boundary_layer_height,shortwave_radiation,cloud_cover,precipitation,temperature_2m,relative_humidity_2m';
 const DEG = Math.PI / 180;
 
 // Pasquill–Gifford class (1=A … 6=F) from 10 m wind, insolation and cloud, after Turner (1970). Same as the page.
@@ -24,7 +24,7 @@ export function pgClass(u, sw, cc) {
 }
 
 export async function fetchMet(grids, { get, sleep, log, pastDays = 2, forecastDays = 4, keepFrom, keepTo }) {
-  const out = { model: MET_MODEL, fetched: Date.now(), vars: ['u', 'v', 'blh', 'cls', 'pr', 'n2', 't2', 'u10', 'v10'], times: null, grids: [] };   // t2 °C, u10/v10 m/s: shown on the page (weather layers)
+  const out = { model: MET_MODEL, fetched: Date.now(), vars: ['u', 'v', 'blh', 'cls', 'pr', 'n2', 't2', 'u10', 'v10', 'rh'], times: null, grids: [] };   // t2 °C, u10/v10 m/s: shown on the page (weather layers)
   for (const gs of grids) {
     const nx = Math.round((gs.bbox[2] - gs.bbox[0]) / gs.step) + 1, ny = Math.round((gs.bbox[3] - gs.bbox[1]) / gs.step) + 1;
     const pts = []; for (let iy = 0; iy < ny; iy++) for (let ix = 0; ix < nx; ix++) pts.push([gs.bbox[1] + iy * gs.step, gs.bbox[0] + ix * gs.step]);
@@ -57,7 +57,7 @@ export async function fetchMet(grids, { get, sleep, log, pastDays = 2, forecastD
     await sleep(12000);   // keep under Open-Meteo's per-minute limit before the next grid
     // keep the useful time window
     const T = out.times, a = Math.max(0, T.findIndex(t => t >= keepFrom)), b = keepTo ? Math.max(a + 1, T.findLastIndex(t => t <= keepTo) + 1) : T.length, nt = b - a;
-    const N = nt * nx * ny, d = { u: new Array(N), v: new Array(N), blh: new Array(N), cls: new Array(N), pr: new Array(N), n2: new Array(N), t2: new Array(N), u10: new Array(N), v10: new Array(N) };
+    const N = nt * nx * ny, d = { u: new Array(N), v: new Array(N), blh: new Array(N), cls: new Array(N), pr: new Array(N), n2: new Array(N), t2: new Array(N), u10: new Array(N), v10: new Array(N), rh: new Array(N) };
     let missBLH = 0, n2miss = 0;
     for (let p = 0; p < pts.length; p++) {
       const h = per[p];
@@ -70,7 +70,7 @@ export async function fetchMet(grids, { get, sleep, log, pastDays = 2, forecastD
         d.blh[i] = Math.round((blh ?? (sw > 50 ? 1500 : 300)) / 10) * 10;
         d.cls[i] = Math.round(pgClass(h.wind_speed_10m?.[t] ?? ws * 0.7, sw, h.cloud_cover?.[t] ?? 50) * 2);
         d.pr[i] = Math.round((h.precipitation?.[t] ?? 0) * 10) / 10;
-        d.t2[i] = Math.round((h.temperature_2m?.[t] ?? 25) * 10) / 10;
+        d.t2[i] = Math.round((h.temperature_2m?.[t] ?? 25) * 10) / 10; d.rh[i] = Math.round(h.relative_humidity_2m?.[t] ?? 70);
         const ws10 = h.wind_speed_10m?.[t] ?? ws * 0.7, wd10 = (h.wind_direction_10m?.[t] ?? h.wind_direction_100m?.[t] ?? 0) * DEG;
         d.u10[i] = Math.round(-ws10 * Math.sin(wd10) * 10) / 10; d.v10[i] = Math.round(-ws10 * Math.cos(wd10) * 10) / 10;
         const n2 = n2ok && n2At[p] ? n2At[p](T[t]) : null;
@@ -109,7 +109,7 @@ export function sampleMet(M, lat, lon, t) {
 
 // Compact copy for the web page: same values (already rounded to 0.1 m/s, 10 m, 0.1 mm/h), stored as integers and
 // as differences from the previous hour at the same grid point, which gzip compresses well. Trimmed to [from, to].
-export const MET_SCALE = { u: 10, v: 10, blh: 0.1, cls: 1, pr: 10, n2: 1e6, t2: 10, u10: 10, v10: 10 };
+export const MET_SCALE = { u: 10, v: 10, blh: 0.1, cls: 1, pr: 10, n2: 1e6, t2: 10, u10: 10, v10: 10, rh: 1 };
 export function packMet(M, from, to) {
   const T = M.times, a = Math.max(0, T.findIndex(t => t >= from)), b = Math.max(a + 1, T.findLastIndex(t => t <= to) + 1), nt = b - a;
   const grids = M.grids.map(g => {

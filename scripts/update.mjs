@@ -343,7 +343,7 @@ async function main() {
 
   // 3b. meteorology (fixed model, nested grids), refreshed every few hours
   let met = await readJSON(path.join(DATA, 'met.json'), null);
-  const metKey = JSON.stringify(CFG.met.grids) + MET_MODEL + '|n2t2';
+  const metKey = JSON.stringify(CFG.met.grids) + MET_MODEL + '|n2t2rh';
   if (!met || met.key !== metKey || now - met.fetched > CFG.met.refreshH * HOUR) {
     try {
       met = await fetchMet(CFG.met.grids, { get, sleep, log, keepFrom: now - 36 * HOUR });
@@ -513,6 +513,8 @@ async function main() {
   const featAt = (s, i, j) => {   // features of station s for output hour j (known at issue time)
     const t = hours[j], m = met ? sampleMet(met, s.lat, s.lon, t) : null, o24 = obs24(s.id, s);
     return { inc: incAt(s, t, 'h'), fire: fireAt(s, t, 'h'), blh: m ? m.blh : '', ws: m ? m.ws : '', pr: m ? m.pr : '',
+      // weather known at issue time (ECMWF forecast for the valid hour): temperature, humidity, 10-m wind speed, 100-m wind direction
+      t2: m && m.t2 != null ? m.t2 : '', rh: m && m.rh != null ? m.rh : '', ws10: m && m.u10 != null ? Math.hypot(m.u10, m.v10) : '', wd: m ? (Math.atan2(-m.u, -m.v) * 180 / Math.PI + 360) % 360 : '',
       obs_last: s.obs && !isAvg24(s) ? s.obs.v : '', obs24_last: o24 && o24.valid ? o24.v : '', kfAb: state.kfA[s.id]?.b ?? 0,
       hloc: new Date(t + 7 * HOUR).getUTCHours(), doy: Math.floor((t - Date.UTC(new Date(t).getUTCFullYear(), 0, 1)) / 864e5) + 1 };
   };

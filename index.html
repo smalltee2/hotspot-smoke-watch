@@ -1500,11 +1500,11 @@ function drawGrid(){
 const RAIN_SCALE=[[0.1,null],[0.5,'#c7e3f7'],[1,'#8fc3ea'],[2,'#4a97d6'],[5,'#1f63b5'],[10,'#0b3a86'],[Infinity,'#4a1a7a']];
 const TEMP_SCALE=[[10,'#3b4cc0'],[15,'#6f8fe3'],[20,'#a8c8f0'],[25,'#f2f0c8'],[30,'#f4b183'],[35,'#e0633f'],[Infinity,'#a50021']];
 function wxColor(mode,v){ const sc=mode==='rain'?RAIN_SCALE:TEMP_SCALE; for(const [mx,c] of sc) if(v<=mx) return c; return sc[sc.length-1][1]; }
-function wxAt(lat,lon,t){ if(!MET) return null; const m=sampleMet(MET,lat,lon,t); return {pr:m.pr,t2:m.t2,u10:m.u10??m.u,v10:m.v10??m.v,ws100:m.ws,u100:m.u,v100:m.v}; }
+function wxAt(lat,lon,t){ if(!MET) return null; const m=sampleMet(MET,lat,lon,t); return {pr:m.pr,t2:m.t2,rh:m.rh,u10:m.u10??m.u,v10:m.v10??m.v,ws100:m.ws,u100:m.u,v100:m.v}; }
 const windFrom=(u,v)=>{ const d=(Math.atan2(-u,-v)/DEG+360)%360; return d; };   // meteorological direction the wind blows FROM (deg)
 const compass=d=>{const n=LANG==='th'?['เหนือ','ตะวันออกเฉียงเหนือ','ตะวันออก','ตะวันออกเฉียงใต้','ใต้','ตะวันตกเฉียงใต้','ตะวันตก','ตะวันตกเฉียงเหนือ']:['N','NE','E','SE','S','SW','W','NW']; return n[Math.round(d/45)%8];};
 function wxText(w){ if(!w) return ''; const sp=Math.hypot(w.u10,w.v10);
-  return `${T('Temp.','อุณหภูมิ')} ${w.t2!=null?w.t2.toFixed(1):'–'} °C · ${T('wind','ลม')} ${sp.toFixed(1)} m/s ${T('from','จาก')} ${compass(windFrom(w.u10,w.v10))} · ${T('rain','ฝน')} ${w.pr>=0.05?w.pr.toFixed(1)+' mm/h':T('none','ไม่มี')}`; }
+  return `${T('Temp.','อุณหภูมิ')} ${w.t2!=null?w.t2.toFixed(1):'–'} °C${w.rh!=null?` · ${T('RH','ความชื้น')} ${Math.round(w.rh)}%`:''} · ${T('wind','ลม')} ${sp.toFixed(1)} m/s ${T('from','จาก')} ${compass(windFrom(w.u10,w.v10))} · ${T('rain','ฝน')} ${w.pr>=0.05?w.pr.toFixed(1)+' mm/h':T('none','ไม่มี')}`; }
 function drawWx(){
   const mode=layerMode(); if(!MET){S.fieldInfo=T('Weather data not loaded.','ยังไม่ได้โหลดข้อมูลอากาศ'); return;}
   const t=curT(); if(t==null||t<MET.times[0]||t>MET.times[MET.times.length-1]){S.fieldInfo=T('No weather forecast for this hour.','ไม่มีพยากรณ์อากาศสำหรับชั่วโมงนี้'); return;}

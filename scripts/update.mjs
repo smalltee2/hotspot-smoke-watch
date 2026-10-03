@@ -41,7 +41,7 @@ const CFG = {
   assimilate: true,              // fire-emission assimilation; both pages forecast with it (the developer page can switch it off)
   biasLeadEfoldH: 48,            // bias correction fades with lead time
   rk: { residStep: 0.1, demStep: 0.05, minStations: 15, K: 16, declusterDeg: 0.25 },
-  mlField: 0.5,                  // deg; grid of the learned map correction (kriged station corrections, every 3 h to 48 h)   // cell declustering of the regression (0.25° ≈ 28 km cells)  // regression kriging; residual grid and DEM resolution
+  mlField: 0.1,                  // deg; grid of the learned map correction (kriged station corrections, every 3 h to 48 h); same as the rk residual grid   // cell declustering of the regression (0.25° ≈ 28 km cells)  // regression kriging; residual grid and DEM resolution
   logLeads: [1, 3, 6, 12, 24, 48],
   // Air4Thai stations on OpenAQ report PM2.5 as a 24-h running mean, not hourly values (verified on Jan–Apr 2026: flat daily cycle,
   // mean hour-to-hour change 0.4 µg/m3); their correction and kriging therefore compare like with like (24-h means)
@@ -552,7 +552,7 @@ async function main() {
       o.corrM = corrM; o.fc24M = fc24M; nAdj++;
     });
     log(`ML correction applied at ${nAdj} hourly stations (weights ${JSON.stringify(state.ml.weights)})`);
-    // map: the stations' learned log-corrections r̂ = ln((corrM+1)/(corrA+1)) kriged to a 0.5° grid every 3 h out to 48 h;
+    // map: the stations' learned log-corrections r̂ = ln((corrM+1)/(corrA+1)) kriged to a 0.1° grid every 3 h out to 48 h;
     // the page interpolates in space and time and applies (C+1)·e^r̂ − 1 on top of the assimilated, kriged map
     try {
       const fs_ = CFG.mlField, fnx = Math.round((g[2] - g[0]) / fs_) + 1, fny = Math.round((g[3] - g[1]) / fs_) + 1, leads = [], fields = [];
@@ -560,7 +560,21 @@ async function main() {
         const pts = []; outStations.forEach((o, i) => { if (!o.corrM || o.corrM[j] == null || o.corrA[j] == null) return; pts.push({ lat: o.lat, lon: o.lon, y: Math.log((o.corrM[j] + 1) / (o.corrA[j] + 1)) }); });
         const f = krigeField(pts, { lon0: g[0], lat0: g[1], step: fs_, nx: fnx, ny: fny }, { K: CFG.rk.K, declusterDeg: CFG.rk.declusterDeg }); if (!f) continue;
         leads.push(L); fields.push(f.values); if (L === 24) log(`ML map field at +24 h: ${pts.length} stations, mean ${f.mean}, range ${f.vario.a_km} km`); }
-      if (leads.length) mlField = { t0, lon0: g[0], lat0: g[1], step: fs_, nx: fnx, ny: fny, leads, values: fields };
+      if (leads.length) {
+        // crop to the cells that carry a correction in any lead (the field fades to 0 far from monitors), store as integers ×1000 (log units),
+        // each row as differences along x (the field is smooth, so most numbers are 0 or ±1); written to its own file, not latest.json
+        let x0 = fnx, x1 = -1, y0 = fny, y1 = -1;
+        for (const f of fields) for (let iy = 0; iy < fny; iy++) for (let ix = 0; ix < fnx; ix++) if (f[iy * fnx + ix] !== 0) { if (ix < x0) x0 = ix; if (ix > x1) x1 = ix; if (iy < y0) y0 = iy; if (iy > y1) y1 = iy; }
+        if (x1 >= 0) {
+          const nx = x1 - x0 + 1, ny = y1 - y0 + 1, SC = 1000;
+          const enc = fields.map(f => { const out = new Array(nx * ny); for (let iy = 0; iy < ny; iy++) { let prev = 0;
+            for (let ix = 0; ix < nx; ix++) { const q = Math.round(Math.max(-Math.LN2, Math.min(Math.LN2, f[(iy + y0) * fnx + ix + x0])) * SC); out[iy * nx + ix] = q - prev; prev = q; } } return out; });
+          const file = { t0, lon0: +(g[0] + x0 * fs_).toFixed(4), lat0: +(g[1] + y0 * fs_).toFixed(4), step: fs_, nx, ny, leads, enc: 'int-dx', scale: SC, values: enc };
+          await writeJSON(path.join(DATA, 'ml-field.json'), file);
+          mlField = { file: 'data/ml-field.json', t0, step: fs_, nx, ny, leads, bbox: [file.lon0, file.lat0, +(file.lon0 + (nx - 1) * fs_).toFixed(4), +(file.lat0 + (ny - 1) * fs_).toFixed(4)] };
+          log(`ML map field: ${leads.length} leads at ${fs_}°, ${nx}×${ny} cells, ${(JSON.stringify(file).length / 1024).toFixed(0)} KB`);
+        }
+      }
     } catch (e) { log(`ML map field failed: ${e.message}`); }
   }
 

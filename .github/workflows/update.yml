@@ -134,7 +134,7 @@ jobs:
           sed -i "s/<meta name=\"build\" content=\"dev\">/<meta name=\"build\" content=\"${BUILD}\">/" _site/index.html _site/dev.html
           grep -q "content=\"${BUILD}\"" _site/index.html && grep -q "content=\"${BUILD}\"" _site/dev.html
           echo "${BUILD}" > _site/build.txt
-          for f in latest.json met-web.json verify.json runlog.json; do [ -f "data/$f" ] && cp "data/$f" _site/data/ || true; done
+          for f in latest.json met-web.json ml-field.json verify.json runlog.json; do [ -f "data/$f" ] && cp "data/$f" _site/data/ || true; done
           [ -f data/static/elev.json ] && cp data/static/elev.json _site/data/static/ || true
           ls -la _site _site/data
 

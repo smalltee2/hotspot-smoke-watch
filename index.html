@@ -381,6 +381,7 @@ td.num{text-align:right;font-family:var(--font-data);font-variant-numeric:tabula
         <div class="field"><label for="horizon" data-th="พยากรณ์ล่วงหน้า (ชม.)">Forecast ahead (h)</label>
           <select id="horizon"><option>24</option><option selected>48</option><option>72</option></select></div>
       </div>
+      <div class="field dev-only"><label><input type="checkbox" id="useAssim"> <span data-th="ปรับการปล่อยจากไฟด้วยค่าตรวจวัด (data assimilation, ทดสอบ)">Fire-emission assimilation (test): scale each fire group by the factor estimated from the stations</span></label></div>
       <div class="field"><label><input type="checkbox" id="plume" checked> <span data-th="คำนวณความสูงควันลอยตัว (Sofiev et al. 2012)">Plume rise (Sofiev et al. 2012)</span></label></div>
       </div>
       <div class="row">
@@ -470,6 +471,9 @@ td.num{text-align:right;font-family:var(--font-data);font-variant-numeric:tabula
       <p class="note"><strong>Declustering.</strong> Monitors are unevenly spread: about a third are in Bangkok. So that one city does not set the region-wide regression, each monitor is weighted by 1/(number of monitors in its 0.25° cell), scaled so the weights sum to the number of monitors (cell declustering; Deutsch, 1989; Isaaks and Srivastava, 1989), and the regression and its variance are fitted by weighted least squares, also inside the leave-one-out check. The kriging of the residuals is unchanged, since ordinary kriging already accounts for clustered data through the covariance. In a synthetic test with 60 spread monitors (slope 0.90) and 65 clustered urban ones (slope 0.60), the unweighted fit gave 0.79 and the declustered fit 0.88. The same weights are used in the variogram fit: each pair of monitors counts w<sub>i</sub>·w<sub>j</sub>, so the thousands of short-distance pairs inside Bangkok do not set the spatial range and nugget used everywhere. Leave-one-out scores are reported overall, declustered, and by area (Bangkok, upper North, rest of Thailand, outside Thailand), because a Bangkok monitor left out is predicted almost perfectly by neighbours a few km away and would flatter an overall score.</p>
       <p class="note"><strong>Uncertainty layer.</strong> The regression-kriging prediction variance (Hengl et al., 2007) is the kriging variance of the residual plus the variance of the regression part: σ² = σ²<sub>OK</sub> + s²/n + (x₀−x̄)ᵀ·Cov(β<sub>slopes</sub>)·(x₀−x̄) (the regression variance in centred form), with σ²<sub>OK</sub> = Σλᵢγ(xᵢ,x₀) + μ from the ordinary-kriging system and Cov(β<sub>slopes</sub>) = s²(X<sub>c</sub>ᵀX<sub>c</sub>)⁻¹ from the regression on centred predictors (an ordinary-least-squares stand-in for the generalised-least-squares term). Where the kriged residual is faded out, σ² rises toward the variogram sill. Because the model is in log space, the 68% range is (PM+1)·e<sup>±σ</sup> − 1, and the map shows e<sup>σ</sup> − 1 as a percentage. σ is checked hourly by leave-one-out: about 68% of left-out monitors should fall inside ±1σ. It covers the analysis hour only; forecast error grows with lead time (table below).</p>
       <div id="rkBox" class="note"></div>
+      <h3>Fire-emission assimilation (test, shadow mode)</h3>
+      <p class="note">Each hour the pipeline compares the last ~48 h of hourly measurements with CAMS (after removing each station's slow, weeks-long bias) and attributes what is left to errors in the emissions of each fire group (0.5° cell × local day) in our puff model. It solves the linear Bayesian problem exactly (synthesis inversion; for a model linear in emissions this equals 4D-Var): x̂ = (HᵀR⁻¹H + B⁻¹)⁻¹HᵀR⁻¹d, with prior factor 1 ± 1 (fire emissions are uncertain by about a factor of two), observation error max(3 µg/m³, 30 %) inflated ×4 for correlated hourly errors, and only station-hours that our model says receive ≥ 1 µg/m³ of fire smoke. The incremental form means CAMS's own fire smoke is not counted twice: with no information every factor stays 1. Factors are published but not used in the public forecast; tick “Fire-emission assimilation” in Settings to rerun the smoke model with them. Twin test (known factors ×2 and ×0.5, synthetic stations): well-observed groups recovered as 1.80 and 0.50; groups seen by few stations stay near 1, as they should. DOFS = degrees of freedom for signal (how many independent factors the stations constrain; Rodgers, 2000).</p>
+      <div id="assimBox" class="note"></div>
       <h3>Fine total PM<sub>2.5</sub></h3>
       <p class="note">The fine layer adds sub-grid structure from the fire-smoke model to the regression-kriging map: C<sub>fine</sub> = C<sub>RK</sub> + α·(C<sub>fire</sub> − ⟨C<sub>fire</sub>⟩<sub>0.5°</sub>), where ⟨·⟩<sub>0.5°</sub> is the mean over a CAMS-sized box, computed at 0.025° (coarser for large regions and 24-h views). The ≈0.5° moving average stays approximately equal to the map below it (exactly, except where the sum is clipped at zero), so fire smoke already in CAMS (GFAS) is not counted twice. This follows the idea of sub-grid dispersion without double counting in uEMEP (Denby et al., 2020); here a box-mean high-pass replaces uEMEP's local-fraction bookkeeping, which CAMS does not provide. α is set in Settings and will be calibrated against monitors in the burning season.</p>
       <h3>How well it has done</h3>
@@ -504,6 +508,7 @@ td.num{text-align:right;font-family:var(--font-data);font-variant-numeric:tabula
         <li>Giglio, L. (2007). Characterization of the tropical diurnal fire cycle using VIRS and MODIS observations. Remote Sensing of Environment 108(4), 407–421. doi:10.1016/j.rse.2006.11.018</li>
         <li>Deutsch, C. V. (1989). DECLUS: a Fortran 77 program for determining optimum spatial declustering weights. Computers &amp; Geosciences 15(3), 325–332.</li>
         <li>Isaaks, E. H., Srivastava, R. M. (1989). An Introduction to Applied Geostatistics. Oxford University Press, New York.</li>
+        <li>Rodgers, C. D. (2000). Inverse Methods for Atmospheric Sounding: Theory and Practice. World Scientific, Singapore.</li>
         <li>Hengl, T., Heuvelink, G. B. M., Rossiter, D. G. (2007). About regression-kriging: From equations to case studies. Computers &amp; Geosciences 33(10), 1301–1315. doi:10.1016/j.cageo.2007.05.001</li>
         <li>Terrain: AWS Terrain Tiles (Terrarium encoding), open data on AWS.</li>
       </ol>
@@ -932,10 +937,10 @@ function simulate(sources, W, opts){
       if(!trajPuff.has(q.si)){trajPuff.add(q.si);p.track=true;traj[q.si].push([s.lat,s.lon]);}
       P.push(p);}
     if((t-tStart)%3600e3===0){ // hourly snapshot
-      const n=P.length, lat=new Float32Array(n),lon=new Float32Array(n),sy=new Float32Array(n),fz=new Float32Array(n),m=new Float32Array(n);
-      for(let i=0;i<n;i++){const p=P[i];lat[i]=p.lat;lon[i]=p.lon;sy[i]=p.sy;m[i]=p.m;
+      const n=P.length, lat=new Float32Array(n),lon=new Float32Array(n),sy=new Float32Array(n),fz=new Float32Array(n),m=new Float32Array(n),si=new Int32Array(n);
+      for(let i=0;i<n;i++){const p=P[i];lat[i]=p.lat;lon[i]=p.lon;sy[i]=p.sy;m[i]=p.m;si[i]=p.si;
         fz[i]= p.sz<0.8*p.h ? 2/(Math.sqrt(2*Math.PI)*p.sz) : 1/p.h;}
-      hours.push(t); snaps.push({n,lat,lon,sy,fz,m});
+      hours.push(t); snaps.push({n,lat,lon,sy,fz,m,si});   // si = source index of each puff (used by the emission assimilation)
     }
     // advect; puffs older than 6 h move in 30-min steps and older than 24 h in 60-min steps (staggered), which keeps
     // the browser fast in the burning season; near-source puffs keep the 10-min step
@@ -1051,6 +1056,7 @@ for(const id of PUBLIC?['region','warnkm']:['region','mapkey','days','minconf','
   $(id).addEventListener('change',()=>store.set('hsw.'+id,$(id).value));
 }
 {const v=PUBLIC?null:store.get('hsw.fuelLC'); if(v!=null) $('fuelLC').checked=v==='1'; $('fuelLC').addEventListener('change',()=>store.set('hsw.fuelLC',$('fuelLC').checked?'1':'0'));}
+$('useAssim').addEventListener('change',()=>runAuto(true));
 {const v=PUBLIC?null:store.get('hsw.plume'); if(v!=null) $('plume').checked=v==='1'; $('plume').addEventListener('change',()=>store.set('hsw.plume',$('plume').checked?'1':'0'));}
 if(store.get('hsw.v')!=='2'){$('mapkey').value='';store.set('hsw.mapkey','');store.set('hsw.v','2');}
 
@@ -1259,7 +1265,7 @@ async function runAuto(quiet){ try{ await runAuto_(quiet); }catch(e){ busy(null)
 async function runAuto_(quiet){
   if(!quiet) busy(T('Loading the latest hourly data…','กำลังโหลดข้อมูลรายชั่วโมงล่าสุด…'));
   const d=await loadPipeline();
-  if(d){P.data=d; busy(T('Loading meteorology…','กำลังโหลดข้อมูลอุตุนิยมวิทยา…')); await Promise.all([loadDEM(),loadMet()]); await runModel(pipelineHotspots(d),'live',null,quiet); showFreshness(); loadVerify(); renderRK();}
+  if(d){P.data=d; busy(T('Loading meteorology…','กำลังโหลดข้อมูลอุตุนิยมวิทยา…')); await Promise.all([loadDEM(),loadMet()]); await runModel(pipelineHotspots(d),'live',null,quiet); showFreshness(); loadVerify(); renderRK(); renderAssim();}
   else if(!quiet){P.data=null; await runLive();}
 }
 let DEM=null, MET=null;
@@ -1317,6 +1323,19 @@ function rkSigma(c,lat,lon){
   return Math.sqrt(sr*sr+Math.max(0,q));
 }
 const UNC_BINS=[25,50,75,100,Infinity], UNC_COL=['#ddd3f0','#b9a3e3','#9472cf','#6d47b5','#47238a'];
+function renderAssim(){
+  const A=P.data&&P.data.assim, box=$('assimBox'); if(!box) return;
+  if(!A){box.textContent='Not run yet (needs hotspots and meteorology).';return;}
+  if(A.status!=='ok'){box.textContent=`Last run: ${A.status}.`;return;}
+  const g=A.groups.filter(x=>x.seen>0).sort((a,b)=>b.seen-a.seen).slice(0,15);
+  box.innerHTML=`<div class="tablewrap"><table><tbody>
+    <tr><th>Run</th><td>${fmtT(A.at)}</td></tr><tr><th>Observations used</th><td>${A.nObs} station-hours at ${A.nStations} stations</td></tr>
+    <tr><th>Fire groups</th><td>${A.nGroups} (DOFS ${A.dofs})</td></tr>
+    <tr><th>Innovation RMSE (in-sample)</th><td>${A.innovRmse.before} → ${A.innovRmse.after} µg/m³</td></tr>
+    <tr><th>Fire smoke at those stations</th><td>${A.fireMean.prior} → ${A.fireMean.posterior} µg/m³ (prior → posterior)</td></tr>
+    ${S.assimApplied?`<tr><th>Applied in this page run</th><td>${S.assimApplied} fire sources rescaled</td></tr>`:''}</tbody></table></div>`+
+    (g.length?`<div class="tablewrap"><table><thead><tr><th>Group (0.5° cell, day)</th><th class="num">FRP MW</th><th class="num">Factor</th><th class="num">± (1σ)</th><th class="num">Station-hours</th></tr></thead><tbody>${g.map(x=>`<tr><td>${x.lat0}°N ${x.lon0}°E · ${x.day}</td><td class="num">${x.frp}</td><td class="num">${x.s}</td><td class="num">${x.sd}</td><td class="num">${x.seen}</td></tr>`).join('')}</tbody></table></div>`:'');
+}
 function renderRK(){
   const rk=P.data&&P.data.rk; if(!rk){$('rkBox').textContent='Regression kriging has not run yet (needs at least 15 monitors with fresh data).';return;}
   const b=rk.beta.map(x=>x.toFixed(3));
@@ -1681,6 +1700,11 @@ async function runModel(hotsRaw,mode,windOverride,quiet){
   busy(T('Running dispersion…','กำลังคำนวณการแพร่กระจายควัน…'));
   await new Promise(r=>setTimeout(r,20));
   const top=S.sources.slice(0,800); // strongest clusters across the whole domain; keeps the browser responsive
+  // fire-emission assimilation (developer test): multiply each source's emission by its group's posterior factor
+  S.assimApplied=0; const A=P.data&&P.data.assim;
+  if(!PUBLIC&&$('useAssim').checked&&A&&A.status==='ok'){ const gd=A.cfg.groupDeg, f=new Map(A.groups.map(g=>[`${g.lat0.toFixed(2)}:${g.lon0.toFixed(2)}:${g.day}`,g.s]));
+    for(const s of top){ const ld=Math.round((s.d0+s.lon/15*3600e3)/864e5), k=`${(Math.floor(s.lat/gd)*gd).toFixed(2)}:${(Math.floor(s.lon/gd)*gd).toFixed(2)}:${new Date(ld*864e5).toISOString().slice(0,10)}`;
+      const g=f.get(k); if(g!=null&&g!==1){ s.ef=(s.ef??+$('fuel').value)*g; S.assimApplied++; } } }
   S.sim=simulate(top,W,{ef:+$('fuel').value,durH:+$('dur').value,profile:$('fireProf').value,plumeRise:$('plume').checked,tEnd:now+horizon*3600e3});
   computeReceptors();
   if(mode==='live'&&!P.data){const cams=await fetchCams(S.recep); if(cams) S.recep.forEach((r,i)=>r.cams=cams[i]);}

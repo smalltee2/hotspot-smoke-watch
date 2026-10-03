@@ -14,6 +14,8 @@ import { buildDEM, sampleGrid } from './dem.mjs';
 import { regressionKriging } from './rk.mjs';
 import { fetchMet, sampleMet, packMet, MET_MODEL } from './met.mjs';
 import { buildLandcover, landcoverAt, packLandcover, unpackLandcover } from './landcover.mjs';
+import { loadModel } from './model.mjs';
+import { assimilateFires } from './assim.mjs';
 
 // ------------------------------------------------------------------ config
 const CFG = {
@@ -31,6 +33,10 @@ const CFG = {
   firmsDays: 2,
   // Kalman filter on log-ratio bias b = ln(obs+1) - ln(raw+1)
   kf: { Q: 0.02, R: 0.15, P0: 0.5, maxGapH: 48 },
+  // slow station bias (long memory, ~ weeks): removed from the innovations of the fire-emission assimilation so that only the
+  // episodic, fire-driven part of the CAMS error is attributed to fires
+  kfSlow: { Q: 0.002, R: 0.15, P0: 0.5, maxGapH: 168 },
+  assimilate: true,              // fire-emission assimilation (shadow mode: factors computed and published; the page applies them on request)
   biasLeadEfoldH: 48,            // bias correction fades with lead time
   rk: { residStep: 0.1, demStep: 0.05, minStations: 15, K: 16, declusterDeg: 0.25 },   // cell declustering of the regression (0.25° ≈ 28 km cells)  // regression kriging; residual grid and DEM resolution
   logLeads: [1, 3, 6, 12, 24, 48],
@@ -211,8 +217,8 @@ async function camsSeries(points) {
 }
 
 // ------------------------------------------------------------------ Kalman bias
-function kfStep(st, y, tObs) {
-  const { Q, R, P0, maxGapH } = CFG.kf;
+function kfStep(st, y, tObs, par = CFG.kf) {
+  const { Q, R, P0, maxGapH } = par;
   if (!st || (tObs - st.t) > maxGapH * HOUR) st = { b: 0, P: P0, t: tObs - HOUR };
   const steps = Math.max(1, Math.round((tObs - st.t) / HOUR));
   let P = st.P + Q * steps;                 // predict (random walk)
@@ -236,7 +242,7 @@ const isAvg24 = s => !s.hourly && CFG.avg24Providers.includes(s.provider);   // 
 async function main() {
   if (!process.env.OPENAQ_API_KEY) throw new Error('OPENAQ_API_KEY is not set');
   const state = await readJSON(path.join(DATA, 'state.json'), {});
-  state.kf ||= {}; state.obsHist ||= {};
+  state.kf ||= {}; state.kfSlow ||= {}; state.obsHist ||= {};
 
   // 1. station list (daily)
   const a4tRetry = state.stations && !state.stations.some(s => s.hourly || s.feed24) && now - (state.a4tTried || 0) > CFG.a4t.retryH * HOUR;
@@ -319,11 +325,12 @@ async function main() {
       // hourly monitor: full recent history from the source; every hour not yet used updates the filter, in time order.
       // The value is the mean of the hour ending at t, so it is compared with CAMS at the middle of that hour (t − 30 min).
       s.obs = o;
-      state.obsHist[s.id] = (a4tH.get(s.id) || []).filter(([t]) => t > now - 30 * HOUR).map(([t, v]) => [t, r1(v)]);
+      state.obsHist[s.id] = (a4tH.get(s.id) || []).filter(([t]) => t > now - 50 * HOUR).map(([t, v]) => [t, r1(v)]);
       for (const [t, v] of (a4tH.get(s.id) || []).filter(([t]) => t > now - 12 * HOUR)) {
         const k = state.kf[s.id]; if (k && t <= k.t) continue;
         const raw = interpT(C.times, C.st[i], t - HOUR / 2); if (raw == null) continue;
         state.kf[s.id] = kfStep(k, Math.log(v + 1) - Math.log(raw + 1), t);
+        state.kfSlow[s.id] = kfStep(state.kfSlow[s.id], Math.log(v + 1) - Math.log(raw + 1), t, CFG.kfSlow);
         obsRows.push([new Date(t).toISOString(), s.id, r1(v), r1(raw)]);
       }
       return;
@@ -332,17 +339,18 @@ async function main() {
     // keep the last 30 h of hourly observations per station for standard 24-h means (AQI)
     const hk = Math.round(o.t / HOUR) * HOUR, H = (state.obsHist[s.id] ||= []);
     if (!H.some(([t]) => t === hk)) H.push([hk, r1(o.v)]);
-    state.obsHist[s.id] = H.filter(([t]) => t > now - 30 * HOUR);
+    state.obsHist[s.id] = H.filter(([t]) => t > now - 50 * HOUR);
     const k = state.kf[s.id];
     if (k && o.t <= k.t) return;            // already used this hour
     const raw = isAvg24(s) ? mean24T(C.times, C.st[i], o.t) : interpT(C.times, C.st[i], o.t); if (raw == null) return;
     const y = Math.log(o.v + 1) - Math.log(raw + 1);   // 24-h-mean stations: observed 24-h mean vs CAMS 24-h mean
     state.kf[s.id] = kfStep(k, y, o.t);
+    state.kfSlow[s.id] = kfStep(state.kfSlow[s.id], y, o.t, CFG.kfSlow);
     obsRows.push([new Date(o.t).toISOString(), s.id, r1(o.v), r1(raw)]);
   });
   log(`Kalman updated at ${new Set(obsRows.map(r => r[1])).size} stations (${obsRows.length} hourly values)`);
 
-  for (const id of Object.keys(state.obsHist)) { state.obsHist[id] = state.obsHist[id].filter(([t]) => t > now - 30 * HOUR); if (!state.obsHist[id].length) delete state.obsHist[id]; }
+  for (const id of Object.keys(state.obsHist)) { state.obsHist[id] = state.obsHist[id].filter(([t]) => t > now - 50 * HOUR); if (!state.obsHist[id].length) delete state.obsHist[id]; }
   // 24-h mean of observations ending at the latest hour; valid with ≥ 18 of 24 hourly values (75 %) and a recent last value
   function obs24(id, s) {
     if (s && isAvg24(s)) return s.obs ? { v: r1(s.obs.v), n: 24, tEnd: s.obs.t, valid: now - s.obs.t <= CFG.obsMaxAgeH * HOUR, native: true } : null;   // already a 24-h mean
@@ -493,11 +501,28 @@ async function main() {
   }
   const hotFetched = firmsHotspots.ok && !hotReused ? now : null;   // only a real FIRMS reply resets the age of the hotspot set
 
+  // 6c. fire-emission data assimilation (shadow mode): hourly measurements of the last ~48 h correct the emissions of each
+  //     fire group (0.5° × local day) in our puff model; see scripts/assim.mjs
+  let assim = null;
+  if (CFG.assimilate && met && hot.length) {
+    try {
+      const M = loadModel();
+      const hots = hot.map(([lat, lon, frp, t, conf, sat, igbp]) => ({ lat, lon, frp, t, igbp: igbp ?? null, sat: sat || 'VIIRS', level: conf === 'l' ? 'l' : conf === 'h' ? 'h' : 'n', pass: `${sat}|${Math.round(t / 6e5)}` }));
+      const aobs = [];
+      stations.forEach((s, i) => { if (isAvg24(s)) return;   // hourly stations only (Air4Thai direct, hourly OpenAQ sites)
+        const bs = state.kfSlow[s.id]?.b || 0;
+        for (const [t, v] of state.obsHist[s.id] || []) { const raw = interpT(C.times, C.st[i], s.hourly ? t - HOUR / 2 : t); if (raw == null) continue;
+          aobs.push({ id: s.id, lat: s.lat, lon: s.lon, t, y: v, c: (raw + 1) * Math.exp(bs) - 1, hourMean: !!s.hourly }); } });
+      assim = assimilateFires({ M, hots, W: { times: met.times, sample: (la, lo, t) => sampleMet(met, la, lo, t) }, obs: aobs, now, tEnd: now, log });
+      assim.at = now; if (assim.status !== 'ok') log(`fire assimilation: ${assim.status}`);
+    } catch (e) { log(`fire assimilation failed: ${e.message}`); }
+  }
+
   // 7. outputs
   await writeJSON(path.join(DATA, 'latest.json'), {
     generated: now, camsIssued: C.at, bbox: CFG.bbox, runlog: RUNLOG,
     method: { kf: CFG.kf, biasLeadEfoldH: CFG.biasLeadEfoldH, rk: CFG.rk },
-    rk, dem: dem ? { file: 'data/static/elev.json', step: dem.step, source: dem.source } : null,
+    rk, assim, dem: dem ? { file: 'data/static/elev.json', step: dem.step, source: dem.source } : null,
     met: met ? { file: 'data/met-web.json', model: met.model, fetched: met.fetched, grids: met.grids.map(g => ({ step: g.step, bbox: [g.lon0, g.lat0, g.lon0 + (g.nx - 1) * g.step, g.lat0 + (g.ny - 1) * g.step] })) } : null,
     hours, stations: outStations,
     grid: { lon0: g[0], lat0: g[1], step, nx, ny, values: gridRaw },  // raw CAMS; the page applies rk

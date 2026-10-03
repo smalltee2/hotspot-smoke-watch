@@ -1274,9 +1274,11 @@ function setTimeline(){
   S.times=S.sim?S.sim.hours:(P.data?P.data.hours:[]);
   if(S.sim&&P.data&&P.data.hours.length) S.times=S.times.filter(t=>t>=P.data.hours[0]);   // emission may start at local midnight, before the map data
   const sl=$('slider'); sl.max=Math.max(0,S.times.length-1);
-  let i=keep!=null?idxIn(S.times,keep):-1;
-  if(i<0){i=S.times.findIndex(h=>h>=Date.now()-HR/2); if(i<0) i=Math.max(0,S.times.length-1);}
-  S.hour=i; sl.value=i;
+  // the hour shown as "now"; a manual refresh, or a view that was on "now", moves to the current hour; a chosen past/forecast hour is kept
+  let iNow=S.times.findIndex(h=>h>=Date.now()-HR/2); if(iNow<0) iNow=Math.max(0,S.times.length-1);
+  const wasNow=keep!=null&&keep===S.nowSel;
+  let i=S.jumpNow||wasNow||keep==null?-1:idxIn(S.times,keep); if(i<0) i=iNow;
+  S.jumpNow=false; S.nowSel=S.times[iNow]; S.hour=i; sl.value=i;
 }
 function redrawTime(){if(hereLL&&!$('hereBox').hidden) renderHereBox();
   updateTimeLabel();drawPlume();drawGrid();drawContours();drawTowns();drawStations();drawWind();}
@@ -1296,10 +1298,12 @@ const BUILD=document.querySelector('meta[name=build]')?.content||'dev';
 async function newBuild(){ if(BUILD==='dev'||location.protocol==='file:') return null;
   try{const r=await fetch('build.txt?ts='+Date.now(),{cache:'no-store'}); if(!r.ok) return null; const b=(await r.text()).trim(); return b&&b!==BUILD?b:null;}catch(e){return null;} }
 async function refreshClick(){
-  const b=await newBuild();
+  if(playT){clearInterval(playT);playT=null;$('btnPlay').textContent='▶';}
+  S.jumpNow=true; const b=await newBuild();
   if(b){ toast(T('New version of the page — reloading…','มีหน้าเว็บเวอร์ชันใหม่ — กำลังโหลดใหม่…'));
     const u=new URL(location.href); u.searchParams.set('v',b); location.replace(u.toString()); return; }   // the query bypasses the browser's cached copy of the page
   const before=P.data?P.data.generated:null; await runAuto(false);
+  if(S.jumpNow){ setTimeline(); redrawTime(); }   // the load failed before the timeline was rebuilt: still show the current hour
   if(!P.data) return; const g=P.data.generated, nxt=new Date(Math.floor(Date.now()/HR)*HR+HR+20*60e3);
   toast(g!==before&&before!=null?T(`Updated to the run of ${hm(g)}.`,`อัปเดตเป็นรอบ ${hm(g)} แล้ว`)
     :T(`Already the latest run (${hm(g)}). New runs arrive hourly, next about ${hm(nxt)}.`,`เป็นข้อมูลรอบล่าสุดแล้ว (${hm(g)}) ข้อมูลใหม่มาทุกชั่วโมง รอบถัดไปประมาณ ${hm(nxt)}`),6000);

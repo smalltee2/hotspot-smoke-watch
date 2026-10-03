@@ -166,13 +166,20 @@ async function a4tStations() {
 async function a4tHourly(codes, d0, d1) {
   const out = new Map();
   for (let i = 0; i < codes.length; i += CFG.a4t.chunk) {
-    const q = `stationID=${codes.slice(i, i + CFG.a4t.chunk).join(',')}&param=PM25&type=hr&sdate=${d0}&edate=${d1}&stime=00&etime=23`;
+    // PM2.5 plus the weather the PCD stations measure (wind 10 m, temperature, humidity); many stations report 0 / 360 / none
+    // where the sensor is missing, so those are treated as missing. Each row: [t, pm25, {ws, wd, t2, rh} | null]
+    const q = `stationID=${codes.slice(i, i + CFG.a4t.chunk).join(',')}&param=PM25,WS,WD,TEMP,RH&type=hr&sdate=${d0}&edate=${d1}&stime=00&etime=23`;
     const js = await (await get(`${CFG.a4t.hist}?${q}`, {}, 3, 3000)).json();
     if (js.result && js.result !== 'OK') throw new Error(`Air4Thai history: ${js.error || js.result}`);
+    const num = x => (x == null || x === '' ? NaN : +x);
     for (const st of js.stations || []) {
       const rows = [];
-      for (const d of st.data || []) { const v = d.PM25 == null || d.PM25 === '' ? NaN : +d.PM25, t = thaiTime(d.DATETIMEDATA);
-        if (isFinite(v) && v >= 0 && v < 1500 && isFinite(t) && t <= now + HOUR) rows.push([t, v]); }
+      for (const d of st.data || []) { const v = num(d.PM25), t = thaiTime(d.DATETIMEDATA);
+        if (!(isFinite(v) && v >= 0 && v < 1500 && isFinite(t) && t <= now + HOUR)) continue;
+        const ws = num(d.WS), wd = num(d.WD), t2 = num(d.TEMP), rh = num(d.RH);
+        const wsOK = isFinite(ws) && ws > 0 && ws < 40 && isFinite(wd) && wd >= 0 && wd <= 360, t2OK = isFinite(t2) && t2 > 5 && t2 < 50, rhOK = isFinite(rh) && rh >= 5 && rh <= 100;
+        const w = wsOK || t2OK || rhOK ? { ws: wsOK ? ws : null, wd: wsOK ? wd : null, t2: t2OK ? t2 : null, rh: rhOK ? rh : null } : null;
+        rows.push([t, v, w]); }
       out.set(st.stationID, rows.sort((a, b) => a[0] - b[0]));
     }
     if (i + CFG.a4t.chunk < codes.length) await sleep(800);
@@ -320,7 +327,14 @@ async function main() {
       const dayRows = []; for (const s of a4tSt) for (const [t, v] of a4tH.get(s.id) || []) if (thaiDate(t - HOUR) === yday) dayRows.push([new Date(t).toISOString().slice(0, 16) + 'Z', s.id, v]);
       // written once, from 03:00 Thai time, so the last hours of the day (published ~20 min late) are complete
       if (new Date(now + 7 * HOUR).getUTCHours() >= 3 && dayRows.length > a4tSt.length * 12 && await fs.access(arch).then(() => false, () => true)) {
-        await appendCSV(arch, 'hour_end_utc,station_id,pm25', dayRows); log(`Air4Thai archive ${path.basename(arch)}: ${dayRows.length} hourly values`); }
+        await appendCSV(arch, 'hour_end_utc,station_id,pm25', dayRows); log(`Air4Thai archive ${path.basename(arch)}: ${dayRows.length} hourly values`);
+        // measured weather at the same stations (wind 10 m, temperature, humidity), one file per Thai day
+        const wx = []; for (const s of a4tSt) for (const [t, , w] of a4tH.get(s.id) || []) if (w && thaiDate(t - HOUR) === yday) wx.push([new Date(t).toISOString().slice(0, 16) + 'Z', s.id, w.ws ?? '', w.wd ?? '', w.t2 ?? '', w.rh ?? '']);
+        if (wx.length) { await appendCSV(path.join(DATA, 'history', yday.slice(0, 7), `a4tw-${yday.replace(/-/g, '')}.csv`), 'hour_end_utc,station_id,ws_ms,wd_deg,temp_c,rh_pct', wx); log(`Air4Thai weather archive: ${wx.length} rows`); } }
+      // latest measured weather per station (for the ML features "observed weather at issue time")
+      state.obsWx ||= {}; let nWx = 0;
+      for (const s of a4tSt) { const rows = (a4tH.get(s.id) || []).filter(r => r[2]); const last = rows[rows.length - 1]; if (last && now - last[0] < 6 * HOUR) { state.obsWx[s.id] = { t: last[0], ...last[2] }; nWx++; } else delete state.obsWx[s.id]; }
+      log(`Air4Thai measured weather: ${nWx} stations with a value in the last 6 h`);
     } catch (e) { log(`Air4Thai hourly unavailable: ${e.message}`); }
   }
   stations.forEach(s => {
@@ -515,6 +529,8 @@ async function main() {
     return { inc: incAt(s, t, 'h'), fire: fireAt(s, t, 'h'), blh: m ? m.blh : '', ws: m ? m.ws : '', pr: m ? m.pr : '',
       // weather known at issue time (ECMWF forecast for the valid hour): temperature, humidity, 10-m wind speed, 100-m wind direction
       t2: m && m.t2 != null ? m.t2 : '', rh: m && m.rh != null ? m.rh : '', ws10: m && m.u10 != null ? Math.hypot(m.u10, m.v10) : '', wd: m ? (Math.atan2(-m.u, -m.v) * 180 / Math.PI + 360) % 360 : '',
+      // measured weather at the station at issue time (Air4Thai, last valid hour ≤ 6 h old); empty elsewhere
+      o_ws: state.obsWx?.[s.id]?.ws ?? '', o_wd: state.obsWx?.[s.id]?.wd ?? '', o_t2: state.obsWx?.[s.id]?.t2 ?? '', o_rh: state.obsWx?.[s.id]?.rh ?? '',
       obs_last: s.obs && !isAvg24(s) ? s.obs.v : '', obs24_last: o24 && o24.valid ? o24.v : '', kfAb: state.kfA[s.id]?.b ?? 0,
       hloc: new Date(t + 7 * HOUR).getUTCHours(), doy: Math.floor((t - Date.UTC(new Date(t).getUTCFullYear(), 0, 1)) / 864e5) + 1 };
   };

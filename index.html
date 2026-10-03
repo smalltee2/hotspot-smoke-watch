@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
+<meta name="build" content="dev">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Hotspot Smoke Watch</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -131,6 +132,8 @@ td.num{text-align:right;font-family:var(--font-data);font-variant-numeric:tabula
 .locate-btn[aria-busy="true"] svg{animation:spin 1s linear infinite}
 .locate-btn.on{color:var(--focus)}
 @keyframes spin{to{transform:rotate(360deg)}}
+#toast{position:fixed;left:50%;top:64px;transform:translateX(-50%);z-index:3000;max-width:min(92vw,520px);padding:9px 14px;border-radius:6px;background:var(--ink,#1d2733);color:#fff;font-size:.85rem;line-height:1.35;box-shadow:0 4px 16px rgba(0,0,0,.25);opacity:0;pointer-events:none;transition:opacity .25s}
+#toast.on{opacity:.96}
 .trend .chips{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 4px}
 .trend .chip{text-transform:none;border:1px solid var(--line);padding:4px 6px;font:500 .72rem/1.3 var(--font-data);min-width:64px}
 .trend .chip b{display:block;font-weight:600}
@@ -286,7 +289,7 @@ td.num{text-align:right;font-family:var(--font-data);font-variant-numeric:tabula
   </div>
   <div class="status">
     <span id="modeChip" class="chip">no data</span>
-    <span id="updated" class="note"></span>
+    <span id="updated" class="note"></span><div id="toast" role="status" aria-live="polite"></div>
     <button id="btnLang" class="btn" type="button" lang="th" title="ภาษาไทย / English">ไทย</button>
     <button id="btnRun" class="btn primary" type="button" title="Reload the latest data"><span class="lbl-long" data-th="โหลดข้อมูลล่าสุด">Load live data</span><span class="lbl-short" data-th="รีเฟรช">Refresh</span></button>
   </div>
@@ -1286,6 +1289,21 @@ function pipelineHotspots(d){
   return (d.hotspots?.rows||[]).map(([lat,lon,frp,t,conf,sat,igbp])=>({lat,lon,frp,t,igbp:igbp??null,sat:sat||'VIIRS',level:conf==='l'?'l':conf==='h'?'h':'n',pass:`${sat}|${Math.round(t/6e5)}`}))   // one overpass may span acquisition minutes
     .filter(h=>inBox(h.lat,h.lon,REGIONS.msea.bbox));
 }
+// short status message for the refresh button (visible on phones too, where the "Updated" label is hidden)
+let toastT=0; function toast(msg,ms=5000){const el=$('toast'); if(!el) return; el.textContent=msg; el.classList.add('on'); clearTimeout(toastT); toastT=setTimeout(()=>el.classList.remove('on'),ms);}
+// page version: the workflow stamps the commit into <meta name="build"> and build.txt; a newer build.txt means the page code changed
+const BUILD=document.querySelector('meta[name=build]')?.content||'dev';
+async function newBuild(){ if(BUILD==='dev'||location.protocol==='file:') return null;
+  try{const r=await fetch('build.txt?ts='+Date.now(),{cache:'no-store'}); if(!r.ok) return null; const b=(await r.text()).trim(); return b&&b!==BUILD?b:null;}catch(e){return null;} }
+async function refreshClick(){
+  const b=await newBuild();
+  if(b){ toast(T('New version of the page — reloading…','มีหน้าเว็บเวอร์ชันใหม่ — กำลังโหลดใหม่…'));
+    const u=new URL(location.href); u.searchParams.set('v',b); location.replace(u.toString()); return; }   // the query bypasses the browser's cached copy of the page
+  const before=P.data?P.data.generated:null; await runAuto(false);
+  if(!P.data) return; const g=P.data.generated, nxt=new Date(Math.floor(Date.now()/HR)*HR+HR+20*60e3);
+  toast(g!==before&&before!=null?T(`Updated to the run of ${hm(g)}.`,`อัปเดตเป็นรอบ ${hm(g)} แล้ว`)
+    :T(`Already the latest run (${hm(g)}). New runs arrive hourly, next about ${hm(nxt)}.`,`เป็นข้อมูลรอบล่าสุดแล้ว (${hm(g)}) ข้อมูลใหม่มาทุกชั่วโมง รอบถัดไปประมาณ ${hm(nxt)}`),6000);
+}
 async function runAuto(quiet){ try{ await runAuto_(quiet); }catch(e){ busy(null); if(!quiet) banner(`<b>${T('Update failed.','อัปเดตไม่สำเร็จ')}</b> ${esc(e.message)}`); console.error(e); } }
 async function runAuto_(quiet){
   if(!quiet) busy(T('Loading the latest hourly data…','กำลังโหลดข้อมูลรายชั่วโมงล่าสุด…'));
@@ -2105,7 +2123,7 @@ function hereTrend(lat,lon){
 }
 
 // ---- controls
-$('btnRun').onclick=()=>runAuto(false); $('btnRun2').onclick=()=>runAuto(false);
+$('btnRun').onclick=refreshClick; $('btnRun2').onclick=refreshClick;
 $('btnDemo').onclick=async()=>{busy(T('Building demo…','กำลังสร้างข้อมูลจำลอง…'));const now=Date.now();P.data=null;$('lyFire').checked=true;$('legTotal').hidden=true;$('legUnc').hidden=true;$('legFire').hidden=false;
   await runModel(demoData(now),'demo',spec=>demoWind(spec,Math.floor((now-30*3600e3)/3600e3)*3600e3,30+(+$('horizon').value)+2));};
 $('csvIn').onchange=async e=>{const f=e.target.files[0]; if(!f) return;
@@ -2163,10 +2181,12 @@ for(const el of document.querySelectorAll('input[name=layer]')) el.addEventListe
 $('rainBar').innerHTML=RAIN_SCALE.slice(1).map(([,c])=>`<i style="background:${c}"></i>`).join(''); $('tempBar').innerHTML=TEMP_SCALE.map(([,c])=>`<i style="background:${c}"></i>`).join('');
 $('uncBar').innerHTML=UNC_COL.map(c=>`<i style="background:${c}"></i>`).join('');
 $('alpha').addEventListener('change',()=>{FIELD_CACHE.clear(); redrawTime();});
+{const u=new URL(location.href); if(u.searchParams.has('v')){u.searchParams.delete('v'); history.replaceState(null,'',u.toString());}}
 // first paint, then refresh every 30 minutes while the tab is open
 computeReceptors(); renderAll(); applyVisibility();
 runAuto(false).then(()=>{ if(!P.data){ $('lyFire').checked=true; $('legTotal').hidden=true; $('legUnc').hidden=true; $('legFire').hidden=false; redrawTime(); } });
-setInterval(()=>{ if(document.visibilityState==='visible' && P.data) runAuto(true); },30*60e3);
+setInterval(async()=>{ if(document.visibilityState!=='visible'||!P.data) return; await runAuto(true);
+  if(await newBuild()) toast(T('A new version of the page is available — press Refresh.','มีหน้าเว็บเวอร์ชันใหม่ — กดปุ่มรีเฟรช'),15000); },30*60e3);
 </script>
 </body>
 </html>

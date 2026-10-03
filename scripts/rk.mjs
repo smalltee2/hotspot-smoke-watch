@@ -27,15 +27,17 @@ export function solve(A, b) {
   return x;
 }
 
-// exponential semivariogram γ(h) = c0 + c1 (1 - exp(-h/a)), fitted to binned empirical values by weighted least squares
-export function fitVariogram(pts, res, { binKm = 15, maxKm = 400 } = {}) {
-  const nb = Math.ceil(maxKm / binKm), sg = new Float64Array(nb), sn = new Float64Array(nb), sh = new Float64Array(nb);
+// exponential semivariogram γ(h) = c0 + c1 (1 - exp(-h/a)), fitted to binned empirical values by weighted least squares.
+// w = declustering weights: each pair counts w_i·w_j in its bin, so a dense cluster (thousands of short pairs in one city) does not
+// set the short-range structure applied everywhere. Bins need ≥ 5 actual pairs; their weight in the fit is the summed pair weight.
+export function fitVariogram(pts, res, { binKm = 15, maxKm = 400, w = null } = {}) {
+  const nb = Math.ceil(maxKm / binKm), sg = new Float64Array(nb), sn = new Float64Array(nb), sh = new Float64Array(nb), sc = new Float64Array(nb);
   for (let i = 0; i < pts.length; i++) for (let j = i + 1; j < pts.length; j++) {
     const h = kmFast(pts[i][0], pts[i][1], pts[j][0], pts[j][1]); if (h >= maxKm) continue;
-    const k = Math.floor(h / binKm); sg[k] += 0.5 * (res[i] - res[j]) ** 2; sn[k]++; sh[k] += h;
+    const k = Math.floor(h / binKm), q = w ? w[i] * w[j] : 1; sg[k] += q * 0.5 * (res[i] - res[j]) ** 2; sn[k] += q; sh[k] += q * h; sc[k]++;
   }
-  const bins = []; for (let k = 0; k < nb; k++) if (sn[k] >= 5) bins.push({ h: sh[k] / sn[k], g: sg[k] / sn[k], n: sn[k] });
-  const varRes = res.reduce((a, v) => a + v * v, 0) / res.length;
+  const bins = []; for (let k = 0; k < nb; k++) if (sc[k] >= 5 && sn[k] > 0) bins.push({ h: sh[k] / sn[k], g: sg[k] / sn[k], n: sn[k], pairs: sc[k] });
+  const varRes = w ? res.reduce((a, v, i) => a + w[i] * v * v, 0) / w.reduce((a, v) => a + v, 0) : res.reduce((a, v) => a + v * v, 0) / res.length;
   if (bins.length < 3) return { c0: varRes * 0.5, c1: varRes * 0.5, a: 100, bins, fallback: true };
   let best = null;
   for (let a = 10; a <= 500; a += 5) {
@@ -100,7 +102,7 @@ export function regressionKriging(obs, gridSpec, opt = {}) {
   const inv = Array.from({ length: p }, (_, j) => solve(XtX.map(r => r.slice()), Array.from({ length: p }, (_, k) => +(k === j))));
   const covSlope = inv.every(Boolean) ? inv.map(col => col.map(x => s2 * x)) : null;   // symmetric, so columns = rows
   const regVar = x => { let q = s2 / n; if (covSlope) for (let j = 0; j < p; j++) for (let k = 0; k < p; k++) q += (x[j] - xbar[j]) * covSlope[j][k] * (x[k] - xbar[k]); return Math.max(0, q); };
-  const vario = fitVariogram(pts, res);
+  const vario = fitVariogram(pts, res, { w: opt.declusterDeg ? W : null });
   const maxKm = Math.min(400, Math.max(150, 3 * vario.a)), K = opt.K || 16;
   // fade the kriged residual linearly from 1 at maxKm/2 to 0 at maxKm from the nearest monitor, so far areas revert to the regression
   const fade = d => d <= maxKm / 2 ? 1 : d >= maxKm ? 0 : 1 - (d - maxKm / 2) / (maxKm / 2);
@@ -114,7 +116,7 @@ export function regressionKriging(obs, gridSpec, opt = {}) {
     const rest = obs.filter((_, j) => j !== i), wr = declusterWeights(rest.map(r => [r.lat, r.lon]), opt.declusterDeg || 0);
     const b = ols(rest.map(r => r.x), rest.map(r => r.y), wr) || beta;
     const pr = r => b[0] + r.x.reduce((s, v, j) => s + b[j + 1] * v, 0);
-    const rp = rest.map(r => [r.lat, r.lon]), rr = rest.map(r => r.y - pr(r)), vi = fitVariogram(rp, rr);
+    const rp = rest.map(r => [r.lat, r.lon]), rr = rest.map(r => r.y - pr(r)), vi = fitVariogram(rp, rr, { w: opt.declusterDeg ? wr : null });
     const mk = Math.min(400, Math.max(150, 3 * vi.a)), fd = d => d <= mk / 2 ? 1 : d >= mk ? 0 : 1 - (d - mk / 2) / (mk / 2);
     const k = krige(rp, rr, vi, o.lat, o.lon, { K, maxKm: mk }), f = fd(k.dmin), sl = vi.c0 + vi.c1;
     const yhat = pr(o) + k.est * f;
@@ -128,7 +130,7 @@ export function regressionKriging(obs, gridSpec, opt = {}) {
     values[iy * nx + ix] = Math.round(k.est * fade(k.dmin) * 1000) / 1000;
     sd[iy * nx + ix] = Math.round(Math.sqrt(residVar(k)) * 100) / 100;   // residual part only; the page adds the regression part
   }
-  return { beta, declusterDeg: opt.declusterDeg || 0, weightRange: [Math.min(...W), Math.max(...W)].map(v => +v.toFixed(3)), regCov: { s2n: s2 / n, xbar, covSlope }, vario: { c0: vario.c0, c1: vario.c1, a_km: vario.a, nbins: vario.bins.length, fallback: !!vario.fallback }, maxKm,
+  return { beta, weights: W, declusterDeg: opt.declusterDeg || 0, weightRange: [Math.min(...W), Math.max(...W)].map(v => +v.toFixed(3)), regCov: { s2n: s2 / n, xbar, covSlope }, vario: { c0: vario.c0, c1: vario.c1, a_km: vario.a, nbins: vario.bins.length, fallback: !!vario.fallback }, maxKm,
     cv: cv.map(c => c.c), cvCover1s: Math.round(cover * 100) / 100, cvSdMedian: Math.round([...cvSd].sort((a, b) => a - b)[cvSd.length >> 1] * 1000) / 1000,
     resid: { lon0, lat0, step, nx, ny, values, sd } };
 }

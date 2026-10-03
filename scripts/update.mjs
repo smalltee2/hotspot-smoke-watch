@@ -424,17 +424,23 @@ async function main() {
     const c = mean24T(C.times, C.st[i], s.obs.t); if (c == null) return;
     const x = [Math.log(c + 1)]; if (dem) { const e = sampleGrid(dem, s.lat, s.lon); if (e == null) return; x.push(e / 1000); }
     if (met) { const m = sampleMet(met, s.lat, s.lon, s.obs.t); x.push(Math.log(Math.max(m.blh, 50) / 1000), m.ws); }
-    rkObs.push({ lat: s.lat, lon: s.lon, y: Math.log(o24.v + 1), x, obs: o24.v, cams: c, t: s.obs.t });
+    rkObs.push({ lat: s.lat, lon: s.lon, y: Math.log(o24.v + 1), x, obs: o24.v, cams: c, t: s.obs.t, cc: s.country });
   });
   if (rkObs.length >= CFG.rk.minStations) {
     const rs = CFG.rk.residStep, rnx = Math.round((g[2] - g[0]) / rs) + 1, rny = Math.round((g[3] - g[1]) / rs) + 1;
     const out = regressionKriging(rkObs, { lon0: g[0], lat0: g[1], step: rs, nx: rnx, ny: rny }, { K: CFG.rk.K, declusterDeg: CFG.rk.declusterDeg });
     if (out) {
       const err = (a, b) => ({ rmse: +Math.sqrt(a.reduce((s, v, i) => s + (v - b[i]) ** 2, 0) / a.length).toFixed(2), mb: +(a.reduce((s, v, i) => s + v - b[i], 0) / a.length).toFixed(2) });
+      // leave-one-out scores that are not dominated by the dense Bangkok network: declustering-weighted, and by area
+      const W = out.weights, werr = (a, b) => { const sw = W.reduce((x, v) => x + v, 0); return { rmse: +Math.sqrt(a.reduce((s, v, i) => s + W[i] * (v - b[i]) ** 2, 0) / sw).toFixed(2), mb: +(a.reduce((s, v, i) => s + W[i] * (v - b[i]), 0) / sw).toFixed(2) }; };
+      const areaOf = r => r.cc && r.cc !== 'TH' ? 'outside Thailand' : inBox(r.lat, r.lon, [100.3, 13.45, 100.95, 14.05]) ? 'Bangkok' : inBox(r.lat, r.lon, [97.3, 16.5, 101.4, 20.5]) ? 'upper North' : 'rest of Thailand';
+      const byArea = {}; rkObs.forEach((r, i) => { const a = areaOf(r); (byArea[a] ||= []).push(i); });
+      const areaCV = Object.fromEntries(Object.entries(byArea).map(([a, ix]) => [a, { n: ix.length, cams: err(ix.map(i => rkObs[i].cams), ix.map(i => rkObs[i].obs)), rk: err(ix.map(i => out.cv[i]), ix.map(i => rkObs[i].obs)) }]));
       const o = rkObs.map(r => r.obs), tSorted = rkObs.map(r => r.t).sort((a, b) => a - b);
       rk = { t: tSorted[Math.floor(tSorted.length / 2)], n: rkObs.length, beta: out.beta.map(b => +b.toFixed(4)), predictors: ['ln(CAMS+1)', ...(dem ? ['elevation_km'] : []), ...(met ? ['ln(BLH_km)', 'wind100_ms'] : [])],
         vario: { ...out.vario, c0: +out.vario.c0.toFixed(4), c1: +out.vario.c1.toFixed(4) }, maxKm: out.maxKm, leadEfoldH: CFG.biasLeadEfoldH,
-        cv: { n: o.length, cams: err(rkObs.map(r => r.cams), o), rk: err(out.cv, o), cover1s: out.cvCover1s, sdMedian: out.cvSdMedian },
+        cv: { n: o.length, cams: err(rkObs.map(r => r.cams), o), rk: err(out.cv, o), cover1s: out.cvCover1s, sdMedian: out.cvSdMedian,
+          declustered: { cams: werr(rkObs.map(r => r.cams), o), rk: werr(out.cv, o) }, byArea: areaCV },
         regCov: { s2n: +out.regCov.s2n.toPrecision(4), xbar: out.regCov.xbar.map(x => +x.toPrecision(6)), covSlope: out.regCov.covSlope && out.regCov.covSlope.map(r => r.map(x => +x.toPrecision(6))) }, resid: out.resid };
       // bias field for the page: B = predicted ln(PM24+1) − ln(CAMS24+1), on the residual grid; applied to hourly CAMS as (c+1)·e^(w·B) − 1.
       // Total σ (kriged residual + regression part) on the same grid.
@@ -457,7 +463,8 @@ async function main() {
         }
         rk.basis = '24h'; rk.bias = { lon0: R.lon0, lat0: R.lat0, step: R.step, nx: R.nx, ny: R.ny, values: B, sd: SD }; delete rk.resid; }
       rk.decluster = { cellDeg: out.declusterDeg, weightRange: out.weightRange };
-      log(`RK: ${rk.n} monitors (declustered, ${out.declusterDeg}° cells, weights ${out.weightRange.join('–')}), beta=[${rk.beta.join(', ')}], range ${rk.vario.a_km} km, LOO RMSE CAMS ${rk.cv.cams.rmse} → RK ${rk.cv.rk.rmse} µg/m³, ±1σ coverage ${rk.cv.cover1s}`);
+      log(`RK: ${rk.n} monitors (declustered, ${out.declusterDeg}° cells, weights ${out.weightRange.join('–')}), beta=[${rk.beta.join(', ')}], range ${rk.vario.a_km} km, LOO RMSE CAMS ${rk.cv.cams.rmse} → RK ${rk.cv.rk.rmse} µg/m³ (declustered ${rk.cv.declustered.cams.rmse} → ${rk.cv.declustered.rk.rmse}), ±1σ coverage ${rk.cv.cover1s}`);
+      log('RK LOO by area (CAMS → RK, µg/m³): ' + Object.entries(areaCV).map(([a, v]) => `${a} n=${v.n} ${v.cams.rmse}→${v.rk.rmse}`).join(' · '));
     }
   } else log(`RK skipped: only ${rkObs.length} monitors with fresh data`);
   const gridRaw = hours.map((t, j) => gridPts.map((_, p) => { const v = C.grid[p][i0 + j]; return v == null ? -1 : r1(v); }));

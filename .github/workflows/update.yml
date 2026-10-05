@@ -42,6 +42,8 @@ jobs:
             data/state.json
             data/met.json
             data/latest.json
+            data/rk-bias.json
+            data/rk-bias-A.json
             data/landcover.bin
             data/verify.json
           key: pipeline-state-${{ github.run_id }}-${{ github.run_attempt }}
@@ -75,6 +77,8 @@ jobs:
             data/state.json
             data/met.json
             data/latest.json
+            data/rk-bias.json
+            data/rk-bias-A.json
             data/landcover.bin
             data/verify.json
           key: pipeline-state-${{ github.run_id }}-${{ github.run_attempt }}

@@ -632,12 +632,15 @@ async function main() {
     const areaOf = r => r.cc && r.cc !== 'TH' ? 'outside Thailand' : inBox(r.lat, r.lon, [100.3, 13.45, 100.95, 14.05]) ? 'Bangkok' : inBox(r.lat, r.lon, [97.3, 16.5, 101.4, 20.5]) ? 'upper North' : 'rest of Thailand';
     const byArea = {}; rkObs.forEach((r, i) => { const a = areaOf(r); (byArea[a] ||= []).push(i); });
     const areaCV = Object.fromEntries(Object.entries(byArea).map(([a, ix]) => [a, { n: ix.length, cams: err(ix.map(i => rkObs[i].cams), ix.map(i => rkObs[i].obs)), rk: err(ix.map(i => out.cv[i]), ix.map(i => rkObs[i].obs)) }]));
+    // leave-one-out by input type: the hindcast's headline score is the one at reference monitors (low-cost sensors share their scale error)
+    const byType = {}; rkObs.forEach((r, i) => { (byType[r.lc ? 'low-cost' : 'reference'] ||= []).push(i); });
+    const typeCV = Object.fromEntries(Object.entries(byType).map(([a, ix]) => [a, { n: ix.length, cams: err(ix.map(i => rkObs[i].cams), ix.map(i => rkObs[i].obs)), rk: err(ix.map(i => out.cv[i]), ix.map(i => rkObs[i].obs)) }]));
     const o = rkObs.map(r => r.obs), tSorted = rkObs.map(r => r.t).sort((a, b) => a - b);
     const rk = { t: tSorted[Math.floor(tSorted.length / 2)], n: rkObs.length, nLowcost: rkObs.filter(r => r.lc).length, withAssim: withInc, beta: out.beta.map(b => +b.toFixed(4)), predictors: ['ln(CAMS+1)', ...(dem ? ['elevation_km'] : []), ...(met ? ['ln(BLH_km)', 'wind100_ms'] : [])].slice(0, out.nPred),
       xRange: out.xRange.map(r => r.map(v => +v.toFixed(4))), maxLogCorr: +out.maxLogCorr.toFixed(4),
       vario: { ...out.vario, c0: +out.vario.c0.toFixed(4), c1: +out.vario.c1.toFixed(4) }, maxKm: out.maxKm, leadEfoldH: CFG.biasLeadEfoldH,
       cv: { n: o.length, cams: err(rkObs.map(r => r.cams), o), rk: err(out.cv, o), cover1s: out.cvCover1s, sdMedian: out.cvSdMedian,
-        declustered: { cams: werr(rkObs.map(r => r.cams), o), rk: werr(out.cv, o) }, byArea: areaCV },
+        declustered: { cams: werr(rkObs.map(r => r.cams), o), rk: werr(out.cv, o) }, byArea: areaCV, byType: typeCV },
       regCov: { s2n: +out.regCov.s2n.toPrecision(4), xbar: out.regCov.xbar.map(x => +x.toPrecision(6)), covSlope: out.regCov.covSlope && out.regCov.covSlope.map(r => r.map(x => +x.toPrecision(6))) } };
     // bias field for the page: B = predicted ln(PM24+1) − ln(C24+1) on the residual grid, applied to the hourly C as (c+1)·e^(w·B) − 1;
     // total σ (kriged residual + regression part) on the same grid
@@ -674,7 +677,7 @@ async function main() {
     rk.decluster = { cellDeg: out.declusterDeg, weightRange: out.weightRange };
     log(`${label} guards: ${out.nPred} of ${1 + (dem ? 1 : 0) + (met ? 2 : 0)} predictors, aux predictors clamped to the monitors' range in ${nClamp} of ${R.nx * R.ny} cells, correction bounded to ±${out.maxLogCorr.toFixed(2)} in ${nBound}`);
     log(`${label}: ${rk.n} inputs (${rk.nLowcost} low-cost sensors; declustered, ${out.declusterDeg}° cells, weights ${out.weightRange.join('–')}), beta=[${rk.beta.join(', ')}], range ${rk.vario.a_km} km, LOO RMSE model ${rk.cv.cams.rmse} → RK ${rk.cv.rk.rmse} µg/m³ (declustered ${rk.cv.declustered.cams.rmse} → ${rk.cv.declustered.rk.rmse}), ±1σ coverage ${rk.cv.cover1s}`);
-    log(`${label} LOO by area (model → RK, µg/m³): ` + Object.entries(areaCV).map(([a, v]) => `${a} n=${v.n} ${v.cams.rmse}→${v.rk.rmse}`).join(' · '));
+    log(`${label} LOO by area (model → RK, µg/m³): ` + Object.entries(areaCV).map(([a, v]) => `${a} n=${v.n} ${v.cams.rmse}→${v.rk.rmse}`).join(' · ') + ' · by type: ' + Object.entries(typeCV).map(([a, v]) => `${a} n=${v.n} ${v.cams.rmse}→${v.rk.rmse}`).join(' · '));
     return rk;
   }
   const rkFineFiles = [];
@@ -685,7 +688,7 @@ async function main() {
   // 7. outputs
   await writeJSON(path.join(DATA, 'latest.json'), {
     generated: now, camsIssued: C.at, bbox: CFG.bbox, runlog: RUNLOG,
-    method: { kf: CFG.kf, biasLeadEfoldH: CFG.biasLeadEfoldH, rk: CFG.rk },
+    method: { kf: CFG.kf, biasLeadEfoldH: CFG.biasLeadEfoldH, rk: { ...CFG.rk, lowcost: { use: LCc.use, a: LCc.a, b: LCc.b, windowD: LCc.windowD, minDays: LCc.minDays } } },
     rk, rkA, assim: assimSummary(assim), ml: state.ml ? { active: mlOn, weights: state.ml.weights, lastDay: state.ml.lastDay, experts: Object.keys(state.ml.models || {}).concat(season ? ['season'] : []), last: mlRec, field: mlField } : null, dem: dem ? { file: 'data/static/elev.json', step: dem.step, source: dem.source } : null,
     met: met ? { file: 'data/met-web.json', model: met.model, fetched: met.fetched, grids: met.grids.map(g => ({ step: g.step, bbox: [g.lon0, g.lat0, g.lon0 + (g.nx - 1) * g.step, g.lat0 + (g.ny - 1) * g.step] })) } : null,
     hours, stations: outStations,

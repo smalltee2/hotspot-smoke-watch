@@ -32,7 +32,6 @@ export function lowcostQC(daily, stations, dayNow, cfg = LOWCOST) {
       const nb = near.filter(([t, d]) => d <= rad && own.filter(dd => Number.isFinite(daily[t.id][dd])).length >= cfg.minCommon).map(([t]) => t);
       if (nb.length >= 2 || (rad === cfg.r2 && nb.length >= 1)) {
         const x = [], y = []; for (const d of own) { const v = nb.map(t => daily[t.id][d]).filter(Number.isFinite); if (v.length) { x.push(D[d]); y.push(median(v)); } }
-        if (x.length < cfg.minCommon) break;
         const r = corr(x, y), ratio = x.reduce((a, v) => a + v, 0) / Math.max(1e-9, y.reduce((a, v) => a + v, 0));
         res = !(r >= cfg.rMin) ? 'fail: low r with neighbours' : ratio < cfg.ratio[0] || ratio > cfg.ratio[1] ? 'fail: mean differs from neighbours' : 'pass'; break;
       }

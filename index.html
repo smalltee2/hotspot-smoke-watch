@@ -469,11 +469,11 @@ td.num{text-align:right;font-family:var(--font-data);font-variant-numeric:tabula
       <h3>Station forecasts: Kalman filter</h3>
       <p class="note">Each monitor's log-ratio bias b = ln(obs+1) − ln(CAMS+1) is tracked with a scalar Kalman filter (random-walk state), following the predictor bias correction of Delle Monache et al. (2006). The forecast at the station is (CAMS+1)·e<sup>b·w</sup> − 1, where w = e<sup>−lead/48 h</sup> fades the correction with lead time. The noise settings (Q = 0.02, R = 0.15 per hour, in log units) and the 48 h e-folding time are starting values, not fitted ones; they will be tuned from the lead-time verification below.</p>
       <h3>Map: regression kriging with a CAMS drift</h3>
-      <p class="note">At the latest observation hour, the measured 24-hour mean PM<sub>2.5</sub> at reference monitors is regressed on the CAMS 24-hour mean and terrain elevation, in log space (24-hour means because that is what the stations report; see above):</p>
+      <p class="note">At the latest observation hour, the measured 24-hour mean PM<sub>2.5</sub> at reference monitors and at quality-checked low-cost sensors (put on the reference scale by a co-location fit, ref = −3.29 + 0.924·sensor, and kept only if they agreed with their neighbours over the previous 30 days) is regressed on the CAMS 24-hour mean and terrain elevation, in log space (24-hour means because that is what the stations report; see above):</p>
       <span class="eq">ln(PM+1) = β₀ + β₁·ln(CAMS+1) + β₂·z + β₃·ln(BLH) + β₄·U + ε</span>
       <p class="note">z is elevation in km from a 0.05° terrain grid (AWS Terrain Tiles, largely SRTM-derived); BLH (km) and U, the 100 m wind speed (m s⁻¹), come from the ECMWF IFS HRES fields above at the observation hour and, for forecasts, at each valid hour. They let the map respond to shallow mixing and calm nights at a finer scale than CAMS; wind speed is also a predictor in the hourly 1 km PM<sub>2.5</sub> model for Thailand of Punpukdee et al. (2024). The residuals ε are interpolated by ordinary kriging with an exponential semivariogram fitted each hour (nearest 16 monitors, residual grid 0.1°). This is the regression–interpolation structure used for the EEA European air-quality maps (Horálek et al., 2025), kriging with a chemistry-transport-model drift as in Real et al. (2022), and regression/universal kriging as compared by Beelen et al. (2009). Elevation is included because it improved PM<sub>2.5</sub> mapping over Thailand in Han et al. (2022). For forecast hours the map is</p>
       <span class="eq">ln(PM+1) = ln(CAMS+1) + w·[β₀ + (β₁−1)·ln(CAMS+1) + β₂·z + β₃·ln(BLH) + β₄·U + ε̂],  w = e<sup>−lead/48 h</sup></span>
-      <p class="note">so the correction is full at the analysis hour and the map returns to CAMS for long leads. Far from monitors the kriged residual fades to zero and only the regression part remains. The map is computed at 0.05°; real detail comes from the monitors and the terrain, while CAMS itself is about 0.4°. To prevent extrapolation, the elevation, boundary-layer and wind predictors are clamped to the range the monitors span, fewer predictors are used when fewer than 10 monitors per coefficient report, and the correction is bounded to a factor of three either way (the 2024–26 hindcast showed that without these guards a monitor at the edge of the predictor range could make the correction explode in hours with few reporting monitors). Because the model works in log space, e<sup>ŷ</sup> − 1 is a median-type estimate; the mean would be about e<sup>σ²/2</sup> higher (≈ 5–13 % for σ = 0.3–0.5). The page shows the median, and the leave-one-out and lead-time bias below show whether that matters. Leave-one-out scores refit the regression and the variogram without the left-out monitor.</p>
+      <p class="note">so the correction is full at the analysis hour and the map returns to CAMS for long leads. Far from monitors the kriged residual fades to zero and only the regression part remains. The correction is computed on a 0.025° grid (about 2.8 km); real detail comes from the monitors, the sensors and the terrain, while CAMS itself is about 0.4°. In the 2024–26 hindcast adding the low-cost sensors lowered the leave-one-out error of the map from 10.9 to 10.6 µg/m³ at reference monitors and from 23.5 to 19.3 µg/m³ at low-cost sensors; detail finer than about 10 km could not be verified. To prevent extrapolation, the elevation, boundary-layer and wind predictors are clamped to the range the monitors span, fewer predictors are used when fewer than 10 monitors per coefficient report, and the correction is bounded to a factor of three either way (the 2024–26 hindcast showed that without these guards a monitor at the edge of the predictor range could make the correction explode in hours with few reporting monitors). Because the model works in log space, e<sup>ŷ</sup> − 1 is a median-type estimate; the mean would be about e<sup>σ²/2</sup> higher (≈ 5–13 % for σ = 0.3–0.5). The page shows the median, and the leave-one-out and lead-time bias below show whether that matters. Leave-one-out scores refit the regression and the variogram without the left-out monitor.</p>
       <p class="note"><strong>Declustering.</strong> Monitors are unevenly spread: about a third are in Bangkok. So that one city does not set the region-wide regression, each monitor is weighted by 1/(number of monitors in its 0.25° cell), scaled so the weights sum to the number of monitors (cell declustering; Deutsch, 1989; Isaaks and Srivastava, 1989), and the regression and its variance are fitted by weighted least squares, also inside the leave-one-out check. The kriging of the residuals is unchanged, since ordinary kriging already accounts for clustered data through the covariance. In a synthetic test with 60 spread monitors (slope 0.90) and 65 clustered urban ones (slope 0.60), the unweighted fit gave 0.79 and the declustered fit 0.88. The same weights are used in the variogram fit: each pair of monitors counts w<sub>i</sub>·w<sub>j</sub>, so the thousands of short-distance pairs inside Bangkok do not set the spatial range and nugget used everywhere. Leave-one-out scores are reported overall, declustered, and by area (Bangkok, upper North, rest of Thailand, outside Thailand), because a Bangkok monitor left out is predicted almost perfectly by neighbours a few km away and would flatter an overall score.</p>
       <p class="note"><strong>Uncertainty layer.</strong> The regression-kriging prediction variance (Hengl et al., 2007) is the kriging variance of the residual plus the variance of the regression part: σ² = σ²<sub>OK</sub> + s²/n + (x₀−x̄)ᵀ·Cov(β<sub>slopes</sub>)·(x₀−x̄) (the regression variance in centred form), with σ²<sub>OK</sub> = Σλᵢγ(xᵢ,x₀) + μ from the ordinary-kriging system and Cov(β<sub>slopes</sub>) = s²(X<sub>c</sub>ᵀX<sub>c</sub>)⁻¹ from the regression on centred predictors (an ordinary-least-squares stand-in for the generalised-least-squares term). Where the kriged residual is faded out, σ² rises toward the variogram sill. Because the model is in log space, the 68% range is (PM+1)·e<sup>±σ</sup> − 1, and the map shows e<sup>σ</sup> − 1 as a percentage. σ is checked hourly by leave-one-out: about 68% of left-out monitors should fall inside ±1σ. It covers the analysis hour only; forecast error grows with lead time (table below).</p>
       <div id="rkBox" class="note"></div>
@@ -531,7 +531,7 @@ td.num{text-align:right;font-family:var(--font-data);font-variant-numeric:tabula
     <div class="legend" id="legend"><details id="legDet" open><summary data-th="ชั้นข้อมูลและคำอธิบาย">Layers and legend</summary>
       <div class="layerpick" role="radiogroup" aria-label="Map layer">
         <label><input type="radio" name="layer" id="lyTotal" value="total" checked> <span data-th="PM&lt;sub&gt;2.5&lt;/sub&gt; รวม (พยากรณ์)">Total PM<sub>2.5</sub> forecast</span></label>
-        <label class="dev-only"><input type="radio" name="layer" id="lyFine" value="fine"> <span data-th="PM&lt;sub&gt;2.5&lt;/sub&gt; รวม ละเอียด (เห็นรายละเอียดไฟ)">Total PM<sub>2.5</sub>, fine (fire detail)</span></label>
+        <label class="dev-only"><input type="radio" name="layer" id="lyFine" value="fine"> <span data-th="PM&lt;sub&gt;2.5&lt;/sub&gt; รวม + รายละเอียดไฟ (ทดลอง)">Total PM<sub>2.5</sub> + fire detail (experimental)</span></label>
         <label><input type="radio" name="layer" id="lyFire" value="fire"> <span data-th="เฉพาะควันไฟ">Fire smoke only</span></label>
         <label class="dev-only"><input type="radio" name="layer" id="lyUnc" value="unc"> <span data-th="ความไม่แน่นอนของแผนที่ (±1σ)">Map uncertainty (±1σ)</span></label>
         <label><input type="radio" name="layer" id="lyRain" value="rain"> <span data-th="ฝน (มม./ชม.)">Rain, mm/h</span></label>
@@ -1312,7 +1312,7 @@ async function runAuto(quiet){ try{ await runAuto_(quiet); }catch(e){ busy(null)
 async function runAuto_(quiet){
   if(!quiet) busy(T('Loading the latest hourly data…','กำลังโหลดข้อมูลรายชั่วโมงล่าสุด…'));
   const d=await loadPipeline();
-  if(d){P.data=d; busy(T('Loading meteorology…','กำลังโหลดข้อมูลอุตุนิยมวิทยา…')); await Promise.all([loadDEM(),loadMet(),loadMlField()]); await runModel(pipelineHotspots(d),'live',null,quiet); showFreshness(); loadVerify(); renderRK(); renderAssim(); renderML();}
+  if(d){P.data=d; busy(T('Loading meteorology…','กำลังโหลดข้อมูลอุตุนิยมวิทยา…')); await Promise.all([loadDEM(),loadMet(),loadMlField(),loadRkFine()]); await runModel(pipelineHotspots(d),'live',null,quiet); showFreshness(); loadVerify(); renderRK(); renderAssim(); renderML();}
   else if(!quiet){P.data=null; await runLive();}
 }
 let DEM=null, MET=null;
@@ -1348,6 +1348,13 @@ const curRK=()=>P.data?(useA()&&P.data.rkA?P.data.rkA:P.data.rk):null;
 // zero beyond the last field; applied as (C+1)·e^r̂ − 1 on top of the assimilated, kriged map
 // the field is a separate file (data/ml-field.json, 0.1°, integers ×scale stored as differences along x); older runs kept it inside latest.json
 let MLF=null;
+// the map correction at 0.025° (data/rk-bias.json, rk-bias-A.json: integers ×scale as differences along x); latest.json keeps a 0.1° copy
+const RKF={};
+async function loadRkFine(){ for(const rk of [P.data&&P.data.rk,P.data&&P.data.rkA]){ const m=rk&&rk.biasFine; if(!m) continue;
+    const key=m.file+'|'+m.t; if(RKF[m.file]&&RKF[m.file].key===key){rk.biasF=RKF[m.file].G; continue;}
+    try{const r=await fetch(m.file+'?t='+m.t); if(!r.ok) continue; const F=await r.json(); const v=new Float32Array(F.nx*F.ny);
+      for(let iy=0;iy<F.ny;iy++){let q=0; for(let ix=0;ix<F.nx;ix++){const k=iy*F.nx+ix; q+=F.values[k]; v[k]=q/F.scale;}}
+      const G={lon0:F.lon0,lat0:F.lat0,step:F.step,nx:F.nx,ny:F.ny,values:v}; RKF[m.file]={key,G}; rk.biasF=G;}catch(e){} } }
 async function loadMlField(){ const m=P.data&&P.data.ml&&P.data.ml.field; if(!m){MLF=null; return;} if(!m.file){MLF=m; return;}
   if(MLF&&MLF.t0===m.t0&&MLF.src===m.file) return;
   try{const r=await fetch(m.file+'?t='+m.t0); if(!r.ok){MLF=null; return;} const F=await r.json();
@@ -1369,7 +1376,7 @@ function rkX(c,lat,lon,t){
 function rkValue(c,lat,lon,t){
   const rk=curRK(); if(!rk||c<0) return c;
   if(rk.bias){ // 24-h basis (from 2 Oct 2026): bias field B = ln(PM24+1) − ln(CAMS24+1) at the analysis hour, applied to hourly CAMS
-    const B=sampleRegular(rk.bias,lat,lon); if(B==null) return c;
+    const B=sampleRegular(rk.biasF||rk.bias,lat,lon); if(B==null) return c;   // 0.025° file when loaded, else the 0.1° copy
     const w=Math.exp(-Math.max(0,(t-rk.t)/36e5)/(rk.leadEfoldH||48)); return Math.max(0,(c+1)*Math.exp(w*B)-1); }
   const x=rkX(c,lat,lon,t); if(!x) return c;
   const w=Math.exp(-Math.max(0,(t-rk.t)/36e5)/(rk.leadEfoldH||48)), lc=Math.log(c+1);
@@ -1504,7 +1511,7 @@ function drawGrid(){
   if(R){so=Math.max(so,R.bbox[1]-.2); w=Math.max(w,R.bbox[0]-.2); n=Math.min(n,R.bbox[3]+.2); e=Math.min(e,R.bbox[2]+.2);}
   const fine=layerMode()==='fine', avg=avg24();
   // 24-h means cost 24 fields per frame, so they run on a coarser grid
-  let cell=fine?0.025:0.05; const cap=avg?120000:400000; while(((e-w)/cell)*((n-so)/cell)>cap) cell*=1.25;
+  let cell=0.025; const cap=avg?120000:400000;   // the correction is on a 0.025° grid; large views are drawn coarser to stay fast while(((e-w)/cell)*((n-so)/cell)>cap) cell*=1.25;
   const fx=Math.ceil((e-w)/cell), fy=Math.ceil((n-so)/cell);
   let F;
   if(!avg) F=hourField(i,so,w,fx,fy,cell,fine);
@@ -2178,7 +2185,7 @@ function renderLegend(){
     ? ({ug:'PM₂.₅ รายชั่วโมง (µg/m³)',ug24:'PM₂.₅ เฉลี่ย 24 ชม. (µg/m³)',th:'AQI ไทยจากค่าเฉลี่ย 24 ชม. (คพ. 2566)',us:'AQI สหรัฐฯ จากค่าเฉลี่ย 24 ชม. (EPA 2024)'})[u]+
       (PUBLIC?' · ':' · CAMS + สถานีตรวจวัด + ภูมิประเทศ ')+'ค่า 24 ชม. คือค่าเฉลี่ย 24 ชั่วโมงที่สิ้นสุด ณ เวลาที่เลือก กรอบเส้นประคือพื้นที่พยากรณ์'
     : ({ug:'PM₂.₅ hourly, µg/m³',ug24:'PM₂.₅ 24-h mean, µg/m³',th:'Thai AQI from the 24-h mean (PCD 2023)',us:'US AQI from the 24-h mean (EPA 2024)'})[u]+
-    (PUBLIC?' · ':' · CAMS + monitors + terrain. ')+'24-h values are the mean of the 24 hours ending at the slider time. Dashed box: forecast area.';
+    (PUBLIC?' · ':' · CAMS + monitors + low-cost sensors + terrain, 0.025°. ')+'24-h values are the mean of the 24 hours ending at the slider time. Dashed box: forecast area.';
 }
 applyStaticLang(); if(!S.mode) $('modeChip').textContent=T('no data','ไม่มีข้อมูล');
 $('btnLang').onclick=()=>{ LANG=LANG==='th'?'en':'th'; store.set('hsw.lang',LANG); applyStaticLang();

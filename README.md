@@ -1,6 +1,6 @@
-# HyCast-MSEA
+# SEA-HAF
 
-Hybrid physics–statistics–machine-learning PM2.5 forecast for mainland Southeast Asia (formerly "Hotspot Smoke Watch"; the repository name and site address are unchanged).
+Southeast Asia Hybrid Air-quality Forecast: a hybrid physics–statistics–machine-learning PM2.5 forecast for mainland Southeast Asia (formerly "Hotspot Smoke Watch"; the repository name and site address are unchanged).
 
 Hourly PM2.5 warning page for Northern Thailand and mainland Southeast Asia.
 

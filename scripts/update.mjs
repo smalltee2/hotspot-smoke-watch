@@ -1,4 +1,4 @@
-// Hourly update for HyCast-MSEA (formerly Hotspot Smoke Watch).
+// Hourly update for SEA-HAF, the Southeast Asia Hybrid Air-quality Forecast (formerly Hotspot Smoke Watch).
 // Runs in GitHub Actions (Node 20+, no dependencies). Reads keys from env:
 //   OPENAQ_API_KEY, FIRMS_MAP_KEY
 // Writes:

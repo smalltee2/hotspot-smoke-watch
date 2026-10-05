@@ -621,7 +621,7 @@ async function main() {
       if (withInc) c = Math.max(0, c + incPrev(s, s.obs.t, '24'));   // the increment forecast for this hour by an earlier run (out of sample)
       const x = [Math.log(c + 1)]; if (dem) { const e = sampleGrid(dem, s.lat, s.lon); if (e == null) return; x.push(e / 1000); }
       if (met) { const m = sampleMet(met, s.lat, s.lon, s.obs.t); x.push(Math.log(Math.max(m.blh, 50) / 1000), m.ws); }
-      rkObs.push({ lat: s.lat, lon: s.lon, y: Math.log(ov + 1), x, obs: ov, cams: c, t: s.obs.t, cc: s.country, lc: !s.monitor });
+      rkObs.push({ id: s.id, lat: s.lat, lon: s.lon, y: Math.log(ov + 1), x, obs: ov, cams: c, t: s.obs.t, cc: s.country, lc: !s.monitor });
     });
     if (rkObs.length < CFG.rk.minStations) { log(`${label} skipped: only ${rkObs.length} monitors with fresh data`); return null; }
     const out = regressionKriging(rkObs, { lon0: g[0], lat0: g[1], step: rs, nx: rnx, ny: rny }, { K: CFG.rk.K, declusterDeg: CFG.rk.declusterDeg });
@@ -642,6 +642,8 @@ async function main() {
       cv: { n: o.length, cams: err(rkObs.map(r => r.cams), o), rk: err(out.cv, o), cover1s: out.cvCover1s, sdMedian: out.cvSdMedian,
         declustered: { cams: werr(rkObs.map(r => r.cams), o), rk: werr(out.cv, o) }, byArea: areaCV, byType: typeCV },
       regCov: { s2n: +out.regCov.s2n.toPrecision(4), xbar: out.regCov.xbar.map(x => +x.toPrecision(6)), covSlope: out.regCov.covSlope && out.regCov.covSlope.map(r => r.map(x => +x.toPrecision(6))) } };
+    // per-site leave-one-out values of this analysis (not written to latest.json): logged to history for the daily evaluation of the map
+    Object.defineProperty(rk, 'cvRows', { value: rkObs.map((r, k) => [r.id, r.lc ? 0 : 1, +r.obs.toFixed(1), +r.cams.toFixed(1), +out.cv[k].toFixed(1)]), enumerable: false });
     // bias field for the page: B = predicted ln(PM24+1) − ln(C24+1) on the residual grid, applied to the hourly C as (c+1)·e^(w·B) − 1;
     // total σ (kriged residual + regression part) on the same grid
     const R = out.resid, cg = C.grid, gnx = nx, gny = ny, B = new Array(R.nx * R.ny), SD = new Array(R.nx * R.ny);
@@ -699,6 +701,10 @@ async function main() {
   const iso = new Date(now).toISOString(), ym = iso.slice(0, 7), stamp = iso.slice(0, 13).replace(/[-:]/g, '');
   const hdir = path.join(DATA, 'history', ym);
   await appendCSV(path.join(hdir, `obs-${stamp}.csv`), 'time_utc,station_id,obs_pm25,cams_raw,cams_plus_inc', obsRows);
+  // map: leave-one-out value of the 0.025° analysis at every input site (24-h means at the analysis hour), for the daily evaluation (map vs CAMS)
+  const mapRows = [];
+  for (const [ver, r] of [['map', rk], ['mapA', rkA]]) if (r && r.cvRows) for (const row of r.cvRows) mapRows.push([iso.slice(0, 13) + ':00Z', new Date(r.t).toISOString().slice(0, 13) + ':00Z', ver, ...row]);
+  await appendCSV(path.join(hdir, `map-${stamp}.csv`), 'run_utc,analysis_utc,version,station_id,monitor,obs24,cams24,map_loo', mapRows);
   // forecast log: without and with the fire assimilation (corrA, blend24A), so verify.mjs scores both on the same rows
   const fRows = [], stIndex = new Map(stations.map((s, i) => [s.id, i]));
   const m24 = (arr, j) => { if (!arr) return ''; let su = 0, n = 0; for (let q = j - 23; q <= j; q++) { const v = q >= 0 ? arr[q] : null; if (v != null) { su += v; n++; } } return n >= 18 ? r1(su / n) : ''; };

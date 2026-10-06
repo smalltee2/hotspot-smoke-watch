@@ -404,7 +404,8 @@ async function main() {
     }
     const demV = { ...dem25, values: (() => { const v = new Float64Array(dem25.nx * dem25.ny); for (let iy = 0; iy < dem25.ny; iy++) { let q = 0; for (let ix = 0; ix < dem25.nx; ix++) { q += dem25.values[iy * dem25.nx + ix]; v[iy * dem25.nx + ix] = q; } } return v; })() };
     const obsT = a4tSt.map(s => ({ id: s.id, lat: s.lat, lon: s.lon, rows: (a4tH.get(s.id) || []).filter(r => r[2]?.t2 != null).map(r => [r[0], r[2].t2]) }));
-    const r = downscaleT2(met, demV, obsT, now, { sampleMet, sampleGrid, log }), t2SeaLevelAt = (la, lo, t) => t2SeaLevel(met, la, lo, t);
+    const note = m => { log(m); if (process.env.GITHUB_ACTIONS) console.log(`::notice title=t2 downscaling::${m}`); };   // annotation: readable through the API
+    const r = downscaleT2(met, demV, obsT, now, { sampleMet, sampleGrid, log: note }), t2SeaLevelAt = (la, lo, t) => t2SeaLevel(met, la, lo, t);
     if (r?.file) { await writeJSON(path.join(DATA, 't2-corr.json'), r.file); state.t2cv ||= []; state.t2cv.push([r.cv.hour, r.cv.n, r.cv.ecmwf.rmse, r.cv.terrain.rmse, r.cv.stations.rmse]); state.t2cv = state.t2cv.slice(-200); }
     // true forecast check at the stations: +24 h predictions stored now, scored when that hour has been measured (state.t2fc → state.t2score)
     if (r?.file) {
@@ -419,12 +420,12 @@ async function main() {
         const e = [[], [], []]; for (const o of obsT) { const p = state.t2fc[k][o.id], ob = o.rows.find(r => r[0] === tk); if (!p || !ob) continue; p.forEach((v, i) => e[i].push(v - ob[1])); }
         if (e[0].length >= 10 || tk < now - 30 * HOUR) { if (e[0].length >= 10) { const rm = a => +Math.sqrt(a.reduce((s, x) => s + x * x, 0) / a.length).toFixed(2);
             state.t2score.push([new Date(tk).toISOString().slice(0, 13) + 'Z', e[0].length, rm(e[0]), rm(e[1]), rm(e[2])]);
-            log(`t2 +24 h forecast at ${e[0].length} stations, valid ${new Date(tk).toISOString().slice(0, 13)}Z: RMSE ECMWF ${rm(e[0])} → terrain ${rm(e[1])} → + stations ${rm(e[2])} °C`); }
+            note(`t2 +24 h forecast at ${e[0].length} stations, valid ${new Date(tk).toISOString().slice(0, 13)}Z: RMSE ECMWF ${rm(e[0])} → terrain ${rm(e[1])} → + stations ${rm(e[2])} °C`); }
           delete state.t2fc[k]; } }
       state.t2score = state.t2score.slice(-400);
     }
     t2Info = { dem: 'data/static/elev025.json', lapse: T2CFG.lapse, efoldH: T2CFG.efoldH, corr: r?.file ? 'data/t2-corr.json' : null, tA: r?.file?.tA ?? null, cv: r?.cv ?? null, score24: (state.t2score || []).slice(-14) };
-  } catch (e) { log(`t2 downscaling failed: ${e.message}`); }
+  } catch (e) { log(`t2 downscaling failed: ${e.message}`); if (process.env.GITHUB_ACTIONS) console.log(`::warning title=t2 downscaling::${e.message}`); }
 
   // 3c. hotspots
   let hot = await firmsHotspots(); let hotReused = false;

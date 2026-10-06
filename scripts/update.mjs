@@ -13,6 +13,7 @@ import path from 'node:path';
 import { buildDEM, sampleGrid } from './dem.mjs';
 import { regressionKriging, krigeField, clampAux } from './rk.mjs';
 import { fetchMet, sampleMet, packMet, MET_MODEL } from './met.mjs';
+import { updateGsmap, mergeIntoMet, webRain } from './gsmap.mjs';
 import { downscaleT2, packDEM, T2CFG, t2SeaLevel } from './t2down.mjs';
 import { buildLandcover, landcoverAt, packLandcover, unpackLandcover } from './landcover.mjs';
 import { loadModel } from './model.mjs';
@@ -386,6 +387,20 @@ async function main() {
       met.key = metKey; await writeJSON(path.join(DATA, 'met.json'), met);
     } catch (e) { log(`met refresh failed: ${e.message}${met ? ' (keeping previous)' : ''}`); }
   }
+  // 3b''. observed rain (JAXA GSMaP gauge-calibrated, 0.1°; scripts/gsmap.mjs): replaces the ECMWF rain of the hours already
+  //       observed, in memory only (met.json keeps the pure ECMWF fields), so wet removal in the smoke model, the assimilation and
+  //       the page use measured rain for the past; the page also draws the 0.1° observed field for those hours
+  let rainInfo = null;
+  if (met) try {
+    let gcache = await readJSON(path.join(DATA, 'gsmap-cache.json'), null);
+    gcache = await updateGsmap(gcache, now, { log });
+    await writeJSON(path.join(DATA, 'gsmap-cache.json'), gcache);
+    const v = mergeIntoMet(met, gcache), web = webRain(gcache, now);
+    if (web) { await writeJSON(path.join(DATA, 'rain-obs.json'), web); rainInfo = { file: 'data/rain-obs.json', times: [web.times[0], web.times[web.times.length - 1]], src: web.source, verify: v }; }
+    if (v?.n) { const m = `GSMaP replaced ECMWF rain at ${v.nRep} node-hours up to ${new Date(v.tLast).toISOString().slice(0, 13)}Z; ECMWF vs GSMaP at ${v.n} north-grid node-hours: total ratio ${v.ratio}, r ${v.r}, hits of ≥0.5 mm/h ${v.pod}, false alarms ${v.far}`;
+      log(m); if (process.env.GITHUB_ACTIONS) console.log(`::notice title=GSMaP rain::${m}`); state.rainScore ||= []; state.rainScore.push([new Date(now).toISOString().slice(0, 13) + 'Z', v.n, v.ratio, v.r, v.pod, v.far]); state.rainScore = state.rainScore.slice(-400); }
+  } catch (e) { log(`GSMaP observed rain failed: ${e.message}`); if (process.env.GITHUB_ACTIONS) console.log(`::warning title=GSMaP rain::${e.message}`); }
+
   // compact copy for the page: 36 h back (dispersion spin-up) to 75 h ahead (longest forecast option + interpolation)
   if (met) { const web = packMet(met, now - 36 * HOUR, now + 75 * HOUR); await writeJSON(path.join(DATA, 'met-web.json'), web);
     log(`met-web: ${web.times.length} h, ${(JSON.stringify(web).length / 1024).toFixed(0)} KB (full ${(JSON.stringify(met).length / 1024).toFixed(0)} KB)`); }
@@ -739,6 +754,7 @@ async function main() {
     method: { kf: CFG.kf, biasLeadEfoldH: CFG.biasLeadEfoldH, rk: { ...CFG.rk, lowcost: { use: LCc.use, a: LCc.a, b: LCc.b, windowD: LCc.windowD, minDays: LCc.minDays } } },
     rk, rkA, assim: assimSummary(assim), ml: state.ml ? { active: mlOn, weights: state.ml.weights, lastDay: state.ml.lastDay, experts: Object.keys(state.ml.models || {}).concat(season ? ['season'] : []), last: mlRec, field: mlField } : null, dem: dem ? { file: 'data/static/elev.json', step: dem.step, source: dem.source } : null,
     t2down: t2Info,
+    rainObs: rainInfo,
     met: met ? { file: 'data/met-web.json', model: met.model, fetched: met.fetched, grids: met.grids.map(g => ({ step: g.step, bbox: [g.lon0, g.lat0, g.lon0 + (g.nx - 1) * g.step, g.lat0 + (g.ny - 1) * g.step] })) } : null,
     hours, stations: outStations,
     grid: { lon0: g[0], lat0: g[1], step, nx, ny, values: gridRaw },  // raw CAMS; the page applies rk

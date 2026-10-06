@@ -46,6 +46,7 @@ jobs:
             data/rk-bias-A.json
             data/landcover.bin
             data/verify.json
+            data/gsmap-cache.json
           key: pipeline-state-${{ github.run_id }}-${{ github.run_attempt }}
           restore-keys: pipeline-state-
 
@@ -62,10 +63,22 @@ jobs:
           restore history data/history
           restore mltrain data/mltrain
 
+      - name: GSMaP server access (sftp; server key pinned to the fingerprint seen on first connect)
+        env:
+          GSMAP_USER: ${{ secrets.GSMAP_USER }}
+        run: |
+          [ -n "$GSMAP_USER" ] || exit 0
+          sudo apt-get -qq install -y sshpass >/dev/null || echo "::warning title=GSMaP::sshpass not installed"
+          mkdir -p ~/.ssh; ssh-keyscan -t ecdsa hokusai.eorc.jaxa.jp 2>/dev/null > kh || true
+          if [ "$(ssh-keygen -lf kh 2>/dev/null | awk '{print $2}')" = "SHA256:kkL3TavqWMH/An1zfx3nL20SrWZfgivga+K6Ro+UIY8" ]; then cat kh >> ~/.ssh/known_hosts; else echo "::warning title=GSMaP::server key not as expected, observed rain skipped"; fi
+          rm -f kh
+
       - name: Fetch data, correct forecast, write JSON
         env:
           OPENAQ_API_KEY: ${{ secrets.OPENAQ_API_KEY }}
           FIRMS_MAP_KEY: ${{ secrets.FIRMS_MAP_KEY }}
+          GSMAP_USER: ${{ secrets.GSMAP_USER }}
+          GSMAP_PASS: ${{ secrets.GSMAP_PASS }}
           NODE_EXTRA_CA_CERTS: scripts/certs/air4thai-chain.pem   # Let's Encrypt intermediates the Air4Thai server fails to send
         run: node scripts/update.mjs && node scripts/verify.mjs
 
@@ -81,6 +94,7 @@ jobs:
             data/rk-bias-A.json
             data/landcover.bin
             data/verify.json
+            data/gsmap-cache.json
           key: pipeline-state-${{ github.run_id }}-${{ github.run_attempt }}
 
       - name: Commit static files (main) and forecast history (branch "history", last 35 days)
@@ -138,7 +152,7 @@ jobs:
           sed -i "s/<meta name=\"build\" content=\"dev\">/<meta name=\"build\" content=\"${BUILD}\">/" _site/index.html _site/dev.html
           grep -q "content=\"${BUILD}\"" _site/index.html && grep -q "content=\"${BUILD}\"" _site/dev.html
           echo "${BUILD}" > _site/build.txt
-          for f in latest.json met-web.json ml-field.json t2-corr.json rk-bias.json rk-bias-A.json verify.json runlog.json; do [ -f "data/$f" ] && cp "data/$f" _site/data/ || true; done
+          for f in latest.json met-web.json ml-field.json t2-corr.json rain-obs.json rk-bias.json rk-bias-A.json verify.json runlog.json; do [ -f "data/$f" ] && cp "data/$f" _site/data/ || true; done
           for f in elev.json elev025.json; do [ -f data/static/$f ] && cp data/static/$f _site/data/static/ || true; done
           ls -la _site _site/data
 

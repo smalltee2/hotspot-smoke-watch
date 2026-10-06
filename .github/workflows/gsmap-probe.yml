@@ -1,4 +1,4 @@
-# README pass
+# control files
 # One-off check of the JAXA GSMaP data server before the rain upgrade is built:
 # logs in with the GSMAP_USER / GSMAP_PASS secrets, verifies the server key against the fingerprint the
 # owner saw on first connect, and lists the near-real-time folders. Results appear as annotations on the run.
@@ -33,9 +33,9 @@ jobs:
           export SSHPASS="$GSMAP_PASS"
           out=$(sshpass -e sftp -oBatchMode=no -oStrictHostKeyChecking=yes -P 22 -b b1 "$GSMAP_USER@$HOST" 2>&1 | grep -v -i "password" | head -80)
           echo "$out"
-          # the two READMEs (file naming, format, latency)
-          printf -- '-get /realtime/README.first.txt nrt.txt\n-get /now/README.first.txt now.txt\n' > b2
+          # GrADS control files: grid, byte order, undefined value, time meaning
+          printf -- '-get /now/sample/GSMaP_NOW.hourly.rain.ctl c1\n-get /realtime_ver/v6/sample/GSMaP_NRT.gauge_hr.rain.ctl c2\n-get /now/sample/readGSMaP_netcdf.py c3\n' > b2
           sshpass -e sftp -oBatchMode=no -oStrictHostKeyChecking=yes -P 22 -b b2 "$GSMAP_USER@$HOST" >/dev/null 2>&1 || true
-          # READMEs as annotations (≤ 10 per step): carriage returns removed, 1000-character pieces
-          for f in nrt.txt now.txt; do [ -f $f ] || continue; tr -d '\r' < $f | tr '\n' '|' | tr -s ' ' > $f.1
-            for k in 0 1 2 3; do piece=$(cut -c$((k*1000+1))-$((k*1000+1000)) $f.1); [ -n "$piece" ] && echo "::notice title=$f part $k::$piece"; done; done
+          for f in c1 c2 c3; do [ -f $f ] || continue; tr -d '\r' < $f | tr '\n' '|' | tr -s ' ' > $f.1
+            for k in 0 1 2; do piece=$(cut -c$((k*1000+1))-$((k*1000+1000)) $f.1); if [ -n "$piece" ]; then echo "::notice title=$f part $k::$piece"; fi; done; done
+          exit 0

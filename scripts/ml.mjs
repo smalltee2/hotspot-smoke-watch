@@ -91,7 +91,13 @@ async function listFiles(dir) { const out = [];
     if (e.isDirectory()) for (const f of await fs.readdir(path.join(dir, e.name)).catch(() => [])) out.push(path.join(dir, e.name, f)); }
   return out; }
 // rows: [{tIssue, tValid, id, lead, F, cams, ...features, obs}] for hourly stations with a verified hourly value
-export async function loadDataset(histDir, meta, { from = 0, to = Infinity } = {}) {
+// SEA-HAF v1.0 (6 Oct 2026): the experts also learn from quality-checked low-cost sensors (lowcost(id) true = the sensor passes the
+// rolling past-only neighbour check of the map), 1 in LC_SAMPLE whole sensor-days (local date of the valid hour) to bound memory.
+// In the 2025-26 replay (replay/ml_lowcost.mjs) this cut the 24-h-ahead hourly RMSE at low-cost sensors by 17-28 % (also 14-26 % at
+// sensors left out of training), where training on the reference monitors alone had raised it by 16-23 %; reference monitors unchanged.
+export const LC_SAMPLE = 8;
+const hashStr = s => { let h = 2166136261; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; };
+export async function loadDataset(histDir, meta, { from = 0, to = Infinity, lowcost = null } = {}) {
   const files = await listFiles(histDir), obs = new Map();
   for (const f of files.filter(f => /a4t-\d{8}\.csv$/.test(f))) for (const r of parseCSV(await fs.readFile(f, 'utf8'))) {
     const t = Date.parse(r.hour_end_utc), v = +r.pm25; if (isFinite(t) && isFinite(v)) obs.set(`${r.station_id}|${t}`, v); }
@@ -102,7 +108,8 @@ export async function loadDataset(histDir, meta, { from = 0, to = Infinity } = {
     const txt = await fs.readFile(f, 'utf8'); if (!txt.slice(0, 400).includes(',hloc')) continue;   // logs with ML features only
     for (const r of parseCSV(txt)) {
       if (r.obs_basis !== 'h' || r.correctedA === '' || r.correctedA === undefined) continue;
-      if (r.monitor === '0') continue;   // learn from reference monitors only (low-cost sensors are logged from 4 Oct 2026)
+      if (r.monitor === '0') {   // low-cost sensors (logged from 4 Oct 2026): only quality-checked ones, 1 in LC_SAMPLE sensor-days
+        if (!lowcost || !lowcost(r.station_id) || hashStr(`${r.station_id}|${Math.floor((Date.parse(r.valid_utc) + 7 * HOUR) / 864e5)}`) % LC_SAMPLE) continue; }
       const tV = Date.parse(r.valid_utc), tI = Date.parse(r.issued_utc); if (!(tV >= from && tV < to)) continue;
       const o = obs.get(`${r.station_id}|${tV}`); if (o == null) continue;
       const m = meta.get(r.station_id) || {};

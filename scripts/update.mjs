@@ -536,7 +536,8 @@ async function main() {
     try {
       const meta = new Map(stations.map(s => [String(s.id), { lat: s.lat, lon: s.lon }]));
       const dayStart = Date.parse(yday + 'T00:00:00+07:00'), dayEnd = dayStart + 864e5;
-      const rows = await loadDataset(path.join(DATA, 'history'), meta, { from: dayEnd - 36 * 864e5, to: dayEnd });
+      const lcOK = new Set(stations.filter(lcIn).map(s => String(s.id)));   // low-cost sensors passing today's rolling check
+      const rows = await loadDataset(path.join(DATA, 'history'), meta, { from: dayEnd - 36 * 864e5, to: dayEnd, lowcost: id => lcOK.has(id) });
       // long-term training store (branch "mltrain", 2 years): the verified day's rows, then the season expert's data
       const nStored = await storeDay(path.join(DATA, 'mltrain'), rows, dayStart, zlib.gzipSync);
       const seasonRows = await loadSeasonRows(path.join(DATA, 'mltrain'), dayStart + 12 * HOUR, zlib.gunzipSync, dayEnd);

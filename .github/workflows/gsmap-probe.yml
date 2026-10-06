@@ -1,3 +1,4 @@
+# run after the secrets were added
 # One-off check of the JAXA GSMaP data server before the rain upgrade is built:
 # logs in with the GSMAP_USER / GSMAP_PASS secrets, verifies the server key against the fingerprint the
 # owner saw on first connect, and lists the near-real-time folders. Results appear as annotations on the run.

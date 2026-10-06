@@ -1,0 +1,48 @@
+# One-off check of the JAXA GSMaP data server before the rain upgrade is built:
+# logs in with the GSMAP_USER / GSMAP_PASS secrets, verifies the server key against the fingerprint the
+# owner saw on first connect, and lists the near-real-time folders. Results appear as annotations on the run.
+name: GSMaP server check
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/gsmap-probe.yml']
+permissions:
+  contents: read
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: List GSMaP folders
+        env:
+          GSMAP_USER: ${{ secrets.GSMAP_USER }}
+          GSMAP_PASS: ${{ secrets.GSMAP_PASS }}
+          HOST: hokusai.eorc.jaxa.jp
+          FP: SHA256:kkL3TavqWMH/An1zfx3nL20SrWZfgivga+K6Ro+UIY8
+        run: |
+          set -u
+          if [ -z "$GSMAP_USER" ] || [ -z "$GSMAP_PASS" ]; then echo "::warning title=GSMaP::secrets GSMAP_USER / GSMAP_PASS not set"; exit 0; fi
+          sudo apt-get -qq install -y sshpass >/dev/null
+          mkdir -p ~/.ssh; ssh-keyscan -t ecdsa "$HOST" 2>/dev/null > kh
+          got=$(ssh-keygen -lf kh | awk '{print $2}')
+          if [ "$got" != "$FP" ]; then echo "::error title=GSMaP::server key $got does not match the expected $FP; not logging in"; exit 1; fi
+          cp kh ~/.ssh/known_hosts
+          printf -- '-pwd\n-ls -1 /\n-ls -1 /now\n-ls -1 /realtime\n-ls -1 /realtime_ver\n-ls -1 /standard\n' > b1
+          export SSHPASS="$GSMAP_PASS"
+          out=$(sshpass -e sftp -oBatchMode=no -oStrictHostKeyChecking=yes -P 22 -b b1 "$GSMAP_USER@$HOST" 2>&1 | grep -v -i "password" | head -80)
+          echo "$out"
+          echo "::notice title=GSMaP top folders::$(echo "$out" | tr '\n' ' ' | cut -c1-900)"
+          # walk the newest year/month/day under the near-real-time folders and show the newest files
+          for root in /now /realtime /realtime_ver; do
+            p=$root
+            for lvl in 1 2 3 4 5; do
+              last=$(printf -- '-ls -1 %s\n' "$p" | sshpass -e sftp -oBatchMode=no -oStrictHostKeyChecking=yes -P 22 -b - "$GSMAP_USER@$HOST" 2>/dev/null | grep -v '^sftp>' | sed 's#.*/##' | grep -v '^\.' | sort | tail -1)
+              [ -z "$last" ] && break
+              case "$last" in *.*) break;; esac
+              p="$p/$last"
+            done
+            files=$(printf -- '-ls -l %s\n' "$p" | sshpass -e sftp -oBatchMode=no -oStrictHostKeyChecking=yes -P 22 -b - "$GSMAP_USER@$HOST" 2>/dev/null | grep -v '^sftp>' | tail -6 | awk '{print $5, $NF}' | tr '\n' ';')
+            echo "$root -> $p : $files"
+            echo "::notice title=GSMaP $root::newest folder $p ; files: $(echo "$files" | cut -c1-700)"
+          done

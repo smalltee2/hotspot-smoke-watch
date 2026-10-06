@@ -62,9 +62,15 @@ const CFG = {
   // 6 h 0.89, 12 h 0.78, 24 h 0.68; at 48 h the fitted 0.59 did not beat 0.5 out of season, so 0.5 is kept from 48 h on.
   // Linear in ln(L) between the fitted leads.
   blendByLead: [[1, 0.97], [3, 0.94], [6, 0.89], [12, 0.78], [24, 0.68], [48, 0.5]],
+  // SEA-HAF v1.0 (6 Oct 2026): inside the northern fire belt (17.5–22.5°N, 97–105.5°E) persistence carries more weight at 24 and 48 h.
+  // Weights refitted on the belt's reference monitors of the 2024–26 replay (replay/belt_v1.py): 0.74 at 24 h, 0.65 at 48 h; leads up to
+  // 12 h keep the weights above (the 6-h refit, pure persistence, lost to them). Leave-one-season-out over the belt (all sites, 24-h
+  // means): 48-h MSE −12 % [7, 17], sites beating persistence at 48 h 55 % → 87 %; 24 h unchanged; outside the belt nothing changes.
+  blendBelt: { box: [97, 17.5, 105.5, 22.5], byLead: [[1, 0.97], [3, 0.94], [6, 0.89], [12, 0.78], [24, 0.74], [48, 0.65]] },
 };
 const PM25_ID = 2; // OpenAQ parameter id for pm25
-const blendW = L => { const T = CFG.blendByLead; if (L <= T[0][0]) return T[0][1]; if (L >= T[T.length - 1][0]) return T[T.length - 1][1];
+const inBelt = (lat, lon) => { const B = CFG.blendBelt.box; return lon >= B[0] && lon <= B[2] && lat >= B[1] && lat <= B[3]; };
+const blendW = (L, s = null) => { const T = s && inBelt(s.lat, s.lon) ? CFG.blendBelt.byLead : CFG.blendByLead; if (L <= T[0][0]) return T[0][1]; if (L >= T[T.length - 1][0]) return T[T.length - 1][1];
   let k = 0; while (T[k + 1][0] < L) k++; const a = (Math.log(L) - Math.log(T[k][0])) / (Math.log(T[k + 1][0]) - Math.log(T[k][0])); return T[k][1] + a * (T[k + 1][1] - T[k][1]); };
 const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
 const DATA = path.join(ROOT, 'data');
@@ -486,7 +492,7 @@ async function main() {
       const val = hours.map((t, j) => j <= jNow ? (hist.has(t) ? hist.get(t) : null) : corr[j]);
       fc24 = hours.map((t, j) => {
         let su = 0, n = 0; for (let q = j - 23; q <= j; q++) { const v = q >= 0 ? val[q] : null; if (v != null) { su += v; n++; } }
-        if (n < 18) return null; const m = su / n, w = blendW(j - jNow); return r1(j <= jNow ? m : w * o24n.v + (1 - w) * m);
+        if (n < 18) return null; const m = su / n, w = blendW(j - jNow, s); return r1(j <= jNow ? m : w * o24n.v + (1 - w) * m);
       });
     }
     if (a24) {   // 24-h-mean stations: past hours carry the observed 24-h means; future = blend of persistence and corrected forecast (no fade)
@@ -495,7 +501,7 @@ async function main() {
       fc24 = hours.map((t, j) => {
         if (j <= jNow) return hist.has(t) ? hist.get(t) : null;
         let su = 0, n = 0; for (let q = j - 23; q <= j; q++) { const v = q >= 0 ? nf[q] : null; if (v != null) { su += v; n++; } }
-        if (n < 18) return null; const m = su / n, w = blendW(j - jNow); return r1(o0 != null ? w * o0 + (1 - w) * m : m);
+        if (n < 18) return null; const m = su / n, w = blendW(j - jNow, s); return r1(o0 != null ? w * o0 + (1 - w) * m : m);
       });
     }
     return { b, corr, fc24 };
@@ -564,7 +570,7 @@ async function main() {
       if (o24n && o24n.valid) { const hist = new Map((state.obsHist[s.id] || []).map(([t, v]) => [t, v]));
         const val = hours.map((t, j) => j <= jNow ? (hist.has(t) ? hist.get(t) : null) : corrM[j]);
         fc24M = hours.map((t, j) => { let su = 0, n = 0; for (let q = j - 23; q <= j; q++) { const v = q >= 0 ? val[q] : null; if (v != null) { su += v; n++; } }
-          if (n < 18) return null; const m = su / n, w = blendW(j - jNow); return r1(j <= jNow ? m : w * o24n.v + (1 - w) * m); }); }
+          if (n < 18) return null; const m = su / n, w = blendW(j - jNow, s); return r1(j <= jNow ? m : w * o24n.v + (1 - w) * m); }); }
       o.corrM = corrM; o.fc24M = fc24M; nAdj++;
     });
     log(`ML correction applied at ${nAdj} hourly stations (weights ${JSON.stringify(state.ml.weights)})`);

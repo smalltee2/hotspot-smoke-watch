@@ -406,15 +406,16 @@ async function main() {
     const obsT = a4tSt.map(s => ({ id: s.id, lat: s.lat, lon: s.lon, rows: (a4tH.get(s.id) || []).filter(r => r[2]?.t2 != null).map(r => [r[0], r[2].t2]) }));
     const note = m => { log(m); if (process.env.GITHUB_ACTIONS) console.log(`::notice title=t2 downscaling::${m}`); };   // annotation: readable through the API
     const r = downscaleT2(met, demV, obsT, now, { sampleMet, sampleGrid, log: note }), t2SeaLevelAt = (la, lo, t) => t2SeaLevel(met, la, lo, t);
-    if (r?.file) { await writeJSON(path.join(DATA, 't2-corr.json'), r.file); state.t2cv ||= []; state.t2cv.push([r.cv.hour, r.cv.n, r.cv.ecmwf.rmse, r.cv.terrain.rmse, r.cv.stations.rmse]); state.t2cv = state.t2cv.slice(-200); }
+    if (r?.file) await writeJSON(path.join(DATA, 't2-corr.json'), r.file);
+    if (r?.cv) { state.t2cv ||= []; state.t2cv.push([r.cv.hour, r.cv.n, r.cv.ecmwf.rmse, r.cv.terrain.rmse, r.cv.stations.rmse, +r.cv.useMean, +r.cv.useAnom]); state.t2cv = state.t2cv.slice(-200); }
     // true forecast check at the stations: +24 h predictions stored now, scored when that hour has been measured (state.t2fc → state.t2score)
-    if (r?.file) {
-      const F = r.file, fieldAt = (arr, lat, lon) => { const fx = Math.round((lon - F.lon0) / F.step), fy = Math.round((lat - F.lat0) / F.step);
+    if (r?.cv) {
+      const F = r.file, fieldAt = (arr, lat, lon) => { if (!F || !arr) return 0; const fx = Math.round((lon - F.lon0) / F.step), fy = Math.round((lat - F.lat0) / F.step);
         if (fx < 0 || fy < 0 || fx >= F.nx || fy >= F.ny) return 0; let q = 0; for (let ix = 0; ix <= fx; ix++) q += arr[fy * F.nx + ix]; return q / F.scale; };
-      const tv = F.tA + 24 * HOUR, fade = Math.exp(-24 / T2CFG.efoldH);
+      const tA = F?.tA ?? Math.floor(now / HOUR) * HOUR, tv = tA + 24 * HOUR, fade = F?.useAnom ? Math.exp(-24 / T2CFG.efoldH) : 0;
       state.t2fc ||= {}; state.t2fc[tv] = Object.fromEntries(obsT.map(o => { const z = sampleGrid(demV, o.lat, o.lon) ?? 0, sl = t2SeaLevelAt(o.lat, o.lon, tv), b = sampleMet(met, o.lat, o.lon, tv)?.t2;
         if (sl == null || b == null) return null; const ter = sl - T2CFG.lapse * z;
-        return [o.id, [+b.toFixed(2), +ter.toFixed(2), +(ter + fieldAt(F.mean, o.lat, o.lon) + fade * fieldAt(F.anom, o.lat, o.lon)).toFixed(2)]]; }).filter(Boolean));
+        return [o.id, [+b.toFixed(2), +ter.toFixed(2), +(ter + fieldAt(F?.mean, o.lat, o.lon) + fade * fieldAt(F?.anom, o.lat, o.lon)).toFixed(2)]]; }).filter(Boolean));
       state.t2score ||= [];
       for (const k of Object.keys(state.t2fc)) { const tk = +k; if (tk > now - HOUR) continue;
         const e = [[], [], []]; for (const o of obsT) { const p = state.t2fc[k][o.id], ob = o.rows.find(r => r[0] === tk); if (!p || !ob) continue; p.forEach((v, i) => e[i].push(v - ob[1])); }

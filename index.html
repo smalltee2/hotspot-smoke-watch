@@ -564,7 +564,7 @@ td.num{text-align:right;font-family:var(--font-data);font-variant-numeric:tabula
       <div id="legTemp" hidden>
         <div class="pcdbar" id="tempBar" style="grid-template-columns:repeat(7,1fr)"></div>
         <div class="ticks"><span>5</span><span>10</span><span>15</span><span>20</span><span>25</span><span>30</span><span>35</span><span>40 °C</span></div>
-        <div class="note" style="font-size:.68rem" data-th="อุณหภูมิอากาศที่ 2 ม. พยากรณ์ ECMWF ย่อส่วนเป็น 0.025° ด้วยความสูงภูมิประเทศ (6.5 °C/กม.) และปรับด้วยค่าตรวจวัดของสถานี Air4Thai">Air temperature at 2 m: ECMWF forecast downscaled to 0.025° with terrain height (6.5 °C/km) and corrected with Air4Thai station measurements.</div>
+        <div class="note" style="font-size:.68rem" data-th="อุณหภูมิอากาศที่ 2 ม. พยากรณ์ ECMWF ย่อส่วนเป็น 0.025° ด้วยความสูงภูมิประเทศ (6.5 °C/กม.) และปรับด้วยค่าตรวจวัดของสถานี Air4Thai เมื่อผ่านการทดสอบแบบตัดทีละสถานีในรอบนั้น">Air temperature at 2 m: ECMWF forecast downscaled to 0.025° with terrain height (6.5 °C/km) and, when it passes a leave-one-out check in that run, corrected with Air4Thai station measurements.</div>
       </div>
       <div id="legFire" hidden>
         <div class="pcdbar" id="fireBar"></div>
@@ -1359,7 +1359,7 @@ function t2At(lat,lon,t){
     sl=(1-at)*f(it*n)+at*f((it+1)*n); break; }
   if(sl==null) return null;
   let v=sl-G*(gridAt(T2D.dem,T2D.dem.values,lat,lon)||0);
-  const C=T2D.corr; if(C) v+=gridAt(C,C.mean,lat,lon)+Math.exp(-Math.abs(t-C.tA)/3600e3/C.efoldH)*gridAt(C,C.anom,lat,lon);
+  const C=T2D.corr; if(C&&C.useMean!==false) v+=gridAt(C,C.mean,lat,lon)+(C.useAnom===false?0:Math.exp(-Math.abs(t-C.tA)/3600e3/C.efoldH)*gridAt(C,C.anom,lat,lon));
   return v;
 }
 async function loadDEM(){

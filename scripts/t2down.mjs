@@ -47,7 +47,7 @@ export function downscaleT2(M, dem, obsRows, now, { sampleMet, sampleGrid, log =
     if (res.length < cfg.minObs) continue;
     const mean = res.reduce((a, x) => a + x[1], 0) / res.length, last = res[res.length - 1];
     if (now - last[0] > 3 * 3600e3) continue;
-    st.push({ id: s.id, lat: s.lat, lon: s.lon, z, mean, tLast: last[0], rLast: last[1], TLast: last[2], n: res.length });
+    st.push({ id: s.id, lat: s.lat, lon: s.lon, z, mean, tLast: last[0], rLast: last[1], TLast: last[2], n: res.length, res });
   }
   if (st.length < 10) { log(`t2 downscaling: only ${st.length} stations with ≥ ${cfg.minObs} h of temperature, station correction skipped`); return { stations: st.length, fields: null }; }
   const tA = Math.max(...st.map(s => s.tLast));
@@ -59,20 +59,30 @@ export function downscaleT2(M, dem, obsRows, now, { sampleMet, sampleGrid, log =
   const fAnom = krigeField(st.map(s => ({ lat: s.lat, lon: s.lon, y: s.rLast - s.mean })), spec, { K: 16, declusterDeg: 0.25 });
   if (!fMean || !fAnom) return { stations: st.length, fields: null };
 
-  // left-out verification at each station's latest hour (station removed from both fields; fields evaluated by kriging one point)
-  const errs = { ecmwf: [], terrain: [], stations: [] };
+  // verification, each station left out in turn:
+  //   all station-hours of the last 24 h: ECMWF bilinear, terrain, terrain + kriged mean residual of the other stations
+  //   latest hour: terrain + mean, and + latest anomaly of the other stations
+  // each part of the station correction is published only if it lowers the left-out error in this run
+  const Er = { ecmwf: [], terrain: [], mean: [] }, L = { terrain: [], mean: [], anom: [] };
   for (let i = 0; i < st.length; i++) {
     const s = st[i], others = st.filter((_, j) => j !== i), one = { lon0: s.lon, lat0: s.lat, step: cfg.step, nx: 1, ny: 1 };
-    const m = krigeField(others.map(o => ({ lat: o.lat, lon: o.lon, y: o.mean })), one, { K: 16, declusterDeg: 0.25 });
-    const a = krigeField(others.map(o => ({ lat: o.lat, lon: o.lon, y: o.rLast - o.mean })), one, { K: 16, declusterDeg: 0.25 });
-    const Tter = t2SeaLevel(M, s.lat, s.lon, s.tLast, cfg.lapse) - cfg.lapse * s.z, Tb = t2Bilinear(M, s.lat, s.lon, s.tLast, sampleMet);
-    errs.ecmwf.push(Tb - s.TLast); errs.terrain.push(Tter - s.TLast);
-    errs.stations.push(Tter + (m ? m.values[0] : 0) + (a ? a.values[0] : 0) - s.TLast);
+    const m = krigeField(others.map(o => ({ lat: o.lat, lon: o.lon, y: o.mean })), one, { K: 16, declusterDeg: 0.25 })?.values[0] ?? 0;
+    const a = krigeField(others.map(o => ({ lat: o.lat, lon: o.lon, y: o.rLast - o.mean })), one, { K: 16, declusterDeg: 0.25 })?.values[0] ?? 0;
+    for (const [t, r, To] of s.res) { const Tb = t2Bilinear(M, s.lat, s.lon, t, sampleMet); if (Tb != null) Er.ecmwf.push(Tb - To); Er.terrain.push(-r); Er.mean.push(m - r); }
+    L.terrain.push(-s.rLast); L.mean.push(m - s.rLast); L.anom.push(m + a - s.rLast);
   }
-  const stat = e => ({ rmse: +Math.sqrt(e.reduce((a, x) => a + x * x, 0) / e.length).toFixed(2), bias: +(e.reduce((a, x) => a + x, 0) / e.length).toFixed(2) });
-  const cv = { n: st.length, hour: new Date(tA).toISOString().slice(0, 13) + 'Z', ecmwf: stat(errs.ecmwf), terrain: stat(errs.terrain), stations: stat(errs.stations) };
-  log(`t2 downscaling: ${st.length} stations, mean residual ${fMean.mean} °C (range ${fMean.vario.a_km} km), latest anomaly mean ${fAnom.mean} °C; ` +
-      `left-out RMSE/bias at ${cv.hour}: ECMWF ${cv.ecmwf.rmse}/${cv.ecmwf.bias} → terrain ${cv.terrain.rmse}/${cv.terrain.bias} → + stations ${cv.stations.rmse}/${cv.stations.bias} °C`);
+  const stat = e => ({ rmse: +Math.sqrt(e.reduce((a, x) => a + x * x, 0) / e.length).toFixed(2), bias: +(e.reduce((a, x) => a + x, 0) / e.length).toFixed(2), n: e.length });
+  const cv = { n: st.length, hour: new Date(tA).toISOString().slice(0, 13) + 'Z', h24: { ecmwf: stat(Er.ecmwf), terrain: stat(Er.terrain), mean: stat(Er.mean) },
+               latest: { terrain: stat(L.terrain), mean: stat(L.mean), anom: stat(L.anom) } };
+  const useMean = cv.h24.mean.rmse < cv.h24.terrain.rmse, base = useMean ? cv.latest.mean.rmse : cv.latest.terrain.rmse;
+  const useAnom = useMean ? cv.latest.anom.rmse < base : false;
+  cv.useMean = useMean; cv.useAnom = useAnom;
+  // compact numbers kept for the run log / page
+  cv.ecmwf = cv.h24.ecmwf; cv.terrain = cv.h24.terrain; cv.stations = useMean ? cv.h24.mean : cv.h24.terrain;
+  log(`t2 downscaling: ${st.length} stations, mean residual ${fMean.mean} °C (range ${fMean.vario.a_km} km); left-out RMSE/bias, ${cv.h24.ecmwf.n} station-hours: ` +
+      `ECMWF ${cv.h24.ecmwf.rmse}/${cv.h24.ecmwf.bias} → terrain ${cv.h24.terrain.rmse}/${cv.h24.terrain.bias} → + station mean ${cv.h24.mean.rmse}/${cv.h24.mean.bias} °C; ` +
+      `latest hour ${cv.hour}: terrain ${cv.latest.terrain.rmse}, + mean ${cv.latest.mean.rmse}, + anomaly ${cv.latest.anom.rmse} °C → station mean ${useMean ? 'used' : 'not used'}, anomaly ${useAnom ? 'used' : 'not used'}`);
+  if (!useMean) return { stations: st.length, cv, file: null };
 
   // crop to cells that carry a correction, store ×100 as row differences (as rk-bias / ml-field)
   const { nx: fnx, ny: fny } = spec; let x0 = fnx, x1 = -1, y0 = fny, y1 = -1;
@@ -81,7 +91,7 @@ export function downscaleT2(M, dem, obsRows, now, { sampleMet, sampleGrid, log =
   const nx = x1 - x0 + 1, ny = y1 - y0 + 1, SC = 100;
   const enc = f => { const out = new Array(nx * ny); for (let iy = 0; iy < ny; iy++) { let prev = 0;
     for (let ix = 0; ix < nx; ix++) { const q = Math.round(Math.max(-cfg.maxAbsResid, Math.min(cfg.maxAbsResid, f[(iy + y0) * fnx + ix + x0])) * SC); out[iy * nx + ix] = q - prev; prev = q; } } return out; };
-  const file = { tA, lapse: cfg.lapse, efoldH: cfg.efoldH, lon0: +(spec.lon0 + x0 * cfg.step).toFixed(4), lat0: +(spec.lat0 + y0 * cfg.step).toFixed(4), step: cfg.step, nx, ny,
+  const file = { tA, useMean, useAnom, lapse: cfg.lapse, efoldH: cfg.efoldH, lon0: +(spec.lon0 + x0 * cfg.step).toFixed(4), lat0: +(spec.lat0 + y0 * cfg.step).toFixed(4), step: cfg.step, nx, ny,
                  enc: 'int-dx', scale: SC, mean: enc(fMean.values), anom: enc(fAnom.values), cv,
                  stations: st.map(s => [s.id, +s.lat.toFixed(4), +s.lon.toFixed(4), +s.mean.toFixed(2), +(s.rLast - s.mean).toFixed(2)]) };
   return { stations: st.length, cv, file };

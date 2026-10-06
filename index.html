@@ -563,8 +563,8 @@ td.num{text-align:right;font-family:var(--font-data);font-variant-numeric:tabula
       </div>
       <div id="legTemp" hidden>
         <div class="pcdbar" id="tempBar" style="grid-template-columns:repeat(7,1fr)"></div>
-        <div class="ticks"><span>&lt;10</span><span>15</span><span>20</span><span>25</span><span>30</span><span>35</span><span>40</span><span>°C</span></div>
-        <div class="note" style="font-size:.68rem" data-th="อุณหภูมิอากาศที่ 2 ม. (ECMWF)">Air temperature at 2 m (ECMWF forecast).</div>
+        <div class="ticks"><span>5</span><span>10</span><span>15</span><span>20</span><span>25</span><span>30</span><span>35</span><span>40 °C</span></div>
+        <div class="note" style="font-size:.68rem" data-th="อุณหภูมิอากาศที่ 2 ม. พยากรณ์ ECMWF ย่อส่วนเป็น 0.025° ด้วยความสูงภูมิประเทศ (6.5 °C/กม.) และปรับด้วยค่าตรวจวัดของสถานี Air4Thai">Air temperature at 2 m: ECMWF forecast downscaled to 0.025° with terrain height (6.5 °C/km) and corrected with Air4Thai station measurements.</div>
       </div>
       <div id="legFire" hidden>
         <div class="pcdbar" id="fireBar"></div>
@@ -1330,6 +1330,38 @@ async function loadMet(){
   if(!P.data?.met) {MET=null; return;} if(MET&&MET.fetched===P.data.met.fetched) return;
   try{const r=await fetch(P.data.met.file+'?f='+P.data.met.fetched); if(r.ok) MET=unpackMet(await r.json());}catch(e){MET=null;}
 }
+// 2-m temperature at 0.025° (scripts/t2down.mjs): ECMWF nodes brought to sea level with their own heights, back down to a 0.025° DEM
+// (6.5 °C/km), plus the Air4Thai stations' kriged residuals: the 24-h mean at every lead, the latest anomaly fading with lead (e-fold 6 h)
+let T2D=null;
+function undx(o,key){const a=o[key],out=new Float32Array(o.nx*o.ny),sc=o.scale||1; for(let y=0;y<o.ny;y++){let q=0; for(let x=0;x<o.nx;x++){q+=a[y*o.nx+x]; out[y*o.nx+x]=q/sc;}} return out;}
+async function loadT2(){
+  const info=P.data?.t2down; if(!info){T2D=null;return;} if(T2D&&T2D.key===(info.tA??'')+'|'+P.data.generated) return;
+  try{
+    const dem=T2D?.dem||await (await fetch(info.dem,{cache:'force-cache'})).json(); if(!T2D?.dem){dem.values=undx(dem,'values');}
+    let corr=null; if(info.corr){const c=await (await fetch(info.corr+'?t='+info.tA)).json(); c.mean=undx(c,'mean'); c.anom=undx(c,'anom'); corr=c;}
+    T2D={key:(info.tA??'')+'|'+P.data.generated,dem,corr,lapse:info.lapse,efoldH:info.efoldH};
+  }catch(e){T2D=null;}
+}
+function gridAt(G,arr,lat,lon){const fx=(lon-G.lon0)/G.step, fy=(lat-G.lat0)/G.step; if(fx<0||fy<0||fx>G.nx-1||fy>G.ny-1) return 0;
+  const x0=Math.min(Math.floor(fx),G.nx-2), y0=Math.min(Math.floor(fy),G.ny-2), ax=fx-x0, ay=fy-y0, i=y0*G.nx+x0;
+  return (1-ax)*(1-ay)*arr[i]+ax*(1-ay)*arr[i+1]+(1-ax)*ay*arr[i+G.nx]+ax*ay*arr[i+G.nx+1];}
+// downscaled t2 at (lat,lon,t); falls back to the plain ECMWF value when the heights or the DEM are missing
+function t2At(lat,lon,t){
+  const M=MET; if(!M) return null; const g0=M.grids[0];
+  if(!T2D||!g0.elev) return sampleMet(M,lat,lon,t)?.t2??null;
+  const Tt=M.times, nt=Tt.length; let ft=(t-Tt[0])/3600e3; ft=Math.min(Math.max(ft,0),nt-1.0001); const it=Math.floor(ft), at=ft-it, G=T2D.lapse;
+  let sl=null;
+  for(const g of M.grids){ let fx=(lon-g.lon0)/g.step, fy=(lat-g.lat0)/g.step;
+    if(!(fx>=0&&fy>=0&&fx<=g.nx-1&&fy<=g.ny-1)&&g!==M.grids[M.grids.length-1]) continue;
+    fx=Math.min(Math.max(fx,0),g.nx-1.0001); fy=Math.min(Math.max(fy,0),g.ny-1.0001);
+    const ix=Math.floor(fx), iy=Math.floor(fy), ax=fx-ix, ay=fy-iy, n=g.nx*g.ny, a=g.data.t2, z=g.elev, i=iy*g.nx+ix;
+    const node=(b,p)=>a[b+p]+G*z[p], f=b=>(1-ax)*(1-ay)*node(b,i)+ax*(1-ay)*node(b,i+1)+(1-ax)*ay*node(b,i+g.nx)+ax*ay*node(b,i+g.nx+1);
+    sl=(1-at)*f(it*n)+at*f((it+1)*n); break; }
+  if(sl==null) return null;
+  let v=sl-G*(gridAt(T2D.dem,T2D.dem.values,lat,lon)||0);
+  const C=T2D.corr; if(C) v+=gridAt(C,C.mean,lat,lon)+Math.exp(-Math.abs(t-C.tA)/3600e3/C.efoldH)*gridAt(C,C.anom,lat,lon);
+  return v;
+}
 async function loadDEM(){
   if(DEM||!P.data?.dem) return;
   try{const r=await fetch(P.data.dem.file,{cache:'force-cache'}); if(r.ok) DEM=await r.json();}catch(e){}
@@ -1555,6 +1587,9 @@ function drawGrid(){
 // ---- weather layers (ECMWF forecast from the pipeline): rain and 2-m temperature as shaded fields, 10-m wind as arrows
 const RAIN_SCALE=[[0.1,null],[0.5,'#c7e3f7'],[1,'#8fc3ea'],[2,'#4a97d6'],[5,'#1f63b5'],[10,'#0b3a86'],[Infinity,'#4a1a7a']];
 const TEMP_SCALE=[[10,'#3b4cc0'],[15,'#6f8fe3'],[20,'#a8c8f0'],[25,'#f2f0c8'],[30,'#f4b183'],[35,'#e0633f'],[Infinity,'#a50021']];
+// temperature: continuous between the stops (5 → 40 °C) so that terrain detail shows; rain keeps its classes
+const TEMP_STOPS=[[5,'#3b4cc0'],[12.5,'#6f8fe3'],[17.5,'#a8c8f0'],[22.5,'#f2f0c8'],[27.5,'#f4b183'],[32.5,'#e0633f'],[40,'#a50021']];
+function tempRGB(v){const S_=TEMP_STOPS; if(v<=S_[0][0]) return hexRGB(S_[0][1]); for(let i=1;i<S_.length;i++) if(v<=S_[i][0]){const a=hexRGB(S_[i-1][1]),b=hexRGB(S_[i][1]),f=(v-S_[i-1][0])/(S_[i][0]-S_[i-1][0]); return a.map((x,k)=>Math.round(x+(b[k]-x)*f));} return hexRGB(S_[S_.length-1][1]);}
 function wxColor(mode,v){ const sc=mode==='rain'?RAIN_SCALE:TEMP_SCALE; for(const [mx,c] of sc) if(v<=mx) return c; return sc[sc.length-1][1]; }
 function wxAt(lat,lon,t){ if(!MET) return null; const m=sampleMet(MET,lat,lon,t); return {pr:m.pr,t2:m.t2,rh:m.rh,u10:m.u10??m.u,v10:m.v10??m.v,ws100:m.ws,u100:m.u,v100:m.v}; }
 const windFrom=(u,v)=>{ const d=(Math.atan2(-u,-v)/DEG+360)%360; return d; };   // meteorological direction the wind blows FROM (deg)
@@ -1566,13 +1601,16 @@ function drawWx(){
   const t=curT(); if(t==null||t<MET.times[0]||t>MET.times[MET.times.length-1]){S.fieldInfo=T('No weather forecast for this hour.','ไม่มีพยากรณ์อากาศสำหรับชั่วโมงนี้'); return;}
   const R=regionShape(), B=REGIONS.msea.bbox; let so=B[1], w=B[0], n=B[3], e=B[2];
   if(R){so=Math.max(so,R.bbox[1]-.2); w=Math.max(w,R.bbox[0]-.2); n=Math.min(n,R.bbox[3]+.2); e=Math.min(e,R.bbox[2]+.2);}
-  let cell=0.1; while(((e-w)/cell)*((n-so)/cell)>60000) cell*=1.25;
+  if(mode==='temp'&&P.data?.t2down&&(!T2D||T2D.key!==(P.data.t2down.tA??'')+'|'+P.data.generated)&&!loadT2.busy&&loadT2.tried!==(P.data.t2down.tA??'')+'|'+P.data.generated){loadT2.busy=1; loadT2.tried=(P.data.t2down.tA??'')+'|'+P.data.generated; loadT2().then(()=>{loadT2.busy=0; if(T2D&&layerMode()==='temp') redrawTime();});}   // the 0.025° DEM loads only for this layer
+  const down=mode==='temp'&&!!T2D&&!!MET.grids[0].elev;
+  let cell=down?0.025:0.1; while(((e-w)/cell)*((n-so)/cell)>(down?650000:60000)) cell*=1.25;
   const fx=Math.ceil((e-w)/cell), fy=Math.ceil((n-so)/cell), F=new Float32Array(fx*fy);
-  for(let y=0;y<fy;y++) for(let x=0;x<fx;x++){const m=sampleMet(MET,so+(y+.5)*cell,w+(x+.5)*cell,t); F[y*fx+x]=mode==='rain'?m.pr:(m.t2??NaN);}
-  S.fine={F,w,so,nx:fx,ny:fy,cell}; S.fieldInfo=mode==='rain'?T('Rain, mm/h (ECMWF)','ฝน มม./ชม. (ECMWF)'):T('Temperature at 2 m, °C (ECMWF)','อุณหภูมิ 2 ม. °C (ECMWF)');
+  for(let y=0;y<fy;y++) for(let x=0;x<fx;x++){const la=so+(y+.5)*cell, lo=w+(x+.5)*cell; if(mode==='rain'){F[y*fx+x]=sampleMet(MET,la,lo,t).pr;} else {const v=t2At(la,lo,t); F[y*fx+x]=v==null?NaN:v;}}
+  S.fine={F,w,so,nx:fx,ny:fy,cell};
+  S.fieldInfo=mode==='rain'?T('Rain, mm/h (ECMWF)','ฝน มม./ชม. (ECMWF)'):down?T(`Temperature at 2 m, °C: ECMWF downscaled to ${cell.toFixed(3)}° with terrain${T2D.corr?' and Air4Thai stations':''}`,`อุณหภูมิ 2 ม. °C: ECMWF ย่อส่วนเป็น ${cell.toFixed(3)}° ด้วยภูมิประเทศ${T2D.corr?' และสถานี Air4Thai':''}`):T('Temperature at 2 m, °C (ECMWF)','อุณหภูมิ 2 ม. °C (ECMWF)');
   const W=Math.min(1100,Math.round((e-w)*60)), H=Math.min(1100,Math.round((mercY(n)-mercY(so))/DEG*60));
   const url=regionCanvas(so,w,n,e,W,H,(lat,lon)=>{const x=Math.floor((lon-w)/cell), y=Math.floor((lat-so)/cell); if(x<0||y<0||x>=fx||y>=fy) return null;
-    const v=F[y*fx+x]; if(v!==v) return null; const c=wxColor(mode,v); if(!c) return null; const rgb=hexRGB(c); return [rgb[0],rgb[1],rgb[2],mode==='rain'?150:120];});
+    const v=F[y*fx+x]; if(v!==v) return null; if(mode==='temp'){const rgb=tempRGB(v); return [rgb[0],rgb[1],rgb[2],150];} const c=wxColor(mode,v); if(!c) return null; const rgb=hexRGB(c); return [rgb[0],rgb[1],rgb[2],150];});
   gridLayer=L.layerGroup([L.imageOverlay(url,[[so,w],[n,e]],{interactive:false})]).addTo(map);
 }
 let windLayer=L.layerGroup().addTo(map);
@@ -1616,7 +1654,7 @@ function drawWind(){
     const len=8+Math.min(16,sp*2.5), col=sp<2?'#8aa0b4':sp<4?'#4f6f91':sp<7?'#1f4e79':'#8b1a1a', sz=2*len+6;
     const html=`<svg viewBox="${-len-3} ${-len-3} ${sz} ${sz}" width="${sz}" height="${sz}" style="transform:rotate(${bearing}deg)"><path d="M0 ${len} L0 ${-len} M-5 ${-len+6} L0 ${-len} L5 ${-len+6}" fill="none" stroke="${col}" stroke-width="${sp<2?1.4:2}" stroke-linecap="round"/></svg>`;
     L.marker([la,lo],{icon:L.divIcon({className:'windarrow',html,iconSize:[sz,sz],iconAnchor:[sz/2,sz/2]}),keyboard:false,interactive:true})
-      .bindTooltip(()=>`${T('Wind (10 m)','ลม (10 ม.)')} ${sp.toFixed(1)} m/s ${T('from','จาก')} ${compass(windFrom(u,v))} (${Math.round(windFrom(u,v))}°)${!PUBLIC?`<br>100 m: ${m.ws.toFixed(1)} m/s ${T('from','จาก')} ${compass(windFrom(m.u,m.v))} · BLH ${Math.round(m.blh)} m`:''}<br>${T('Temp.','อุณหภูมิ')} ${m.t2!=null?m.t2.toFixed(1):'–'} °C · ${T('rain','ฝน')} ${m.pr>=0.05?m.pr.toFixed(1)+' mm/h':T('none','ไม่มี')}`).addTo(windLayer);
+      .bindTooltip(()=>`${T('Wind (10 m)','ลม (10 ม.)')} ${sp.toFixed(1)} m/s ${T('from','จาก')} ${compass(windFrom(u,v))} (${Math.round(windFrom(u,v))}°)${!PUBLIC?`<br>100 m: ${m.ws.toFixed(1)} m/s ${T('from','จาก')} ${compass(windFrom(m.u,m.v))} · BLH ${Math.round(m.blh)} m`:''}<br>${T('Temp.','อุณหภูมิ')} ${(()=>{const v=t2At(la,lo,t); return v!=null?v.toFixed(1):'–';})()} °C · ${T('rain','ฝน')} ${m.pr>=0.05?m.pr.toFixed(1)+' mm/h':T('none','ไม่มี')}`).addTo(windLayer);
   }
 }
 map.on('zoomend moveend',()=>{ if(shown('shWind')) drawWind(); });
@@ -2224,7 +2262,7 @@ $('unitSel').addEventListener('change',()=>{store.set('hsw.unitSel',$('unitSel')
 renderLegend();
 for(const el of document.querySelectorAll('input[name=layer]')) el.addEventListener('change',()=>{
   $('legTotal').hidden=!gridMode(); $('legFire').hidden=layerMode()!=='fire'; $('legUnc').hidden=layerMode()!=='unc'; $('legRain').hidden=layerMode()!=='rain'; $('legTemp').hidden=layerMode()!=='temp'; redrawTime();});
-$('rainBar').innerHTML=RAIN_SCALE.slice(1).map(([,c])=>`<i style="background:${c}"></i>`).join(''); $('tempBar').innerHTML=TEMP_SCALE.map(([,c])=>`<i style="background:${c}"></i>`).join('');
+$('rainBar').innerHTML=RAIN_SCALE.slice(1).map(([,c])=>`<i style="background:${c}"></i>`).join(''); $('tempBar').style.background=`linear-gradient(to right,${TEMP_STOPS.map(([v,c])=>`${c} ${((v-5)/35*100).toFixed(1)}%`).join(',')})`;
 $('uncBar').innerHTML=UNC_COL.map(c=>`<i style="background:${c}"></i>`).join('');
 $('alpha').addEventListener('change',()=>{FIELD_CACHE.clear(); redrawTime();});
 {const u=new URL(location.href); if(u.searchParams.has('v')){u.searchParams.delete('v'); history.replaceState(null,'',u.toString());}}

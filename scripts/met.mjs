@@ -28,13 +28,13 @@ export async function fetchMet(grids, { get, sleep, log, pastDays = 2, forecastD
   for (const gs of grids) {
     const nx = Math.round((gs.bbox[2] - gs.bbox[0]) / gs.step) + 1, ny = Math.round((gs.bbox[3] - gs.bbox[1]) / gs.step) + 1;
     const pts = []; for (let iy = 0; iy < ny; iy++) for (let ix = 0; ix < nx; ix++) pts.push([gs.bbox[1] + iy * gs.step, gs.bbox[0] + ix * gs.step]);
-    const per = [];
+    const per = [], elev = [];
     for (let i = 0; i < pts.length; i += 100) {
       const c = pts.slice(i, i + 100);
       const url = `https://api.open-meteo.com/v1/forecast?latitude=${c.map(p => p[0].toFixed(3)).join(',')}&longitude=${c.map(p => p[1].toFixed(3)).join(',')}` +
         `&hourly=${VARS}&models=${MET_MODEL}&wind_speed_unit=ms&timeformat=unixtime&timezone=GMT&past_days=${pastDays}&forecast_days=${forecastDays}`;
       let js = await (await get(url)).json(); if (!Array.isArray(js)) js = [js];
-      for (const o of js) { if (!out.times) out.times = o.hourly.time.map(s => s * 1000); per.push(o.hourly); }
+      for (const o of js) { if (!out.times) out.times = o.hourly.time.map(s => s * 1000); per.push(o.hourly); elev.push(Math.round(o.elevation ?? 0)); }
       if (i + 100 < pts.length) await sleep(12000); // ≤ 500 locations/min
     }
     // free-troposphere stability N² = (g/θ)·dθ/dz between 850 and 700 hPa (ECMWF IFS 0.25°), same time axis
@@ -78,7 +78,7 @@ export async function fetchMet(grids, { get, sleep, log, pastDays = 2, forecastD
         d.n2[i] = Math.round((n2 ?? N2_DEFAULT) * 1e6) / 1e6;
       }
     }
-    out.times = T; out.grids.push({ lon0: gs.bbox[0], lat0: gs.bbox[1], step: gs.step, nx, ny, a, nt, data: d });
+    out.times = T; out.grids.push({ lon0: gs.bbox[0], lat0: gs.bbox[1], step: gs.step, nx, ny, a, nt, data: d, elev });   // elev: m, the height Open-Meteo used for t2 at each node
     log(`met ${gs.name}: ${pts.length} points × ${nt} h at ${gs.step}° (${MET_MODEL})${missBLH ? `, BLH missing in ${missBLH} values (filled)` : ''}${n2miss ? `, N² default in ${n2miss} of ${N} values` : ''}`);
   }
   // all grids share one time axis window: use the first grid's
@@ -122,7 +122,7 @@ export function packMet(M, from, to) {
       }
       data[k] = out;
     }
-    return { lon0: g.lon0, lat0: g.lat0, step: g.step, nx: g.nx, ny: g.ny, data };
+    return { lon0: g.lon0, lat0: g.lat0, step: g.step, nx: g.nx, ny: g.ny, data, ...(g.elev ? { elev: g.elev } : {}) };
   });
   return { model: M.model, fetched: M.fetched, vars: M.vars, enc: 'int-dt', scale: MET_SCALE, times: T.slice(a, b), grids };
 }

@@ -397,7 +397,7 @@ async function main() {
     await writeJSON(path.join(DATA, 'gsmap-cache.json'), gcache);
     const v = mergeIntoMet(met, gcache), web = webRain(gcache, now);
     if (web) { await writeJSON(path.join(DATA, 'rain-obs.json'), web); rainInfo = { file: 'data/rain-obs.json', times: [web.times[0], web.times[web.times.length - 1]], src: web.source, verify: v }; }
-    if (v?.n) { const m = `GSMaP replaced ECMWF rain at ${v.nRep} node-hours up to ${new Date(v.tLast).toISOString().slice(0, 13)}Z; ECMWF vs GSMaP at ${v.n} north-grid node-hours: total ratio ${v.ratio}, r ${v.r}, hits of ≥0.5 mm/h ${v.pod}, false alarms ${v.far}`;
+    if (v?.n) { const m = `GSMaP replaced ECMWF rain at ${v.nRep} node-hours up to ${new Date(v.tLast).toISOString().slice(0, 13)}Z; ECMWF vs GSMaP at ${v.n} north-grid node-hours: total ratio ${v.ratio}, r ${v.r}, hits of ≥0.5 mm/h ${v.pod}, false alarms ${v.far}; node totals r ${v.diag?.rTotals} (${v.diag?.nNodes} nodes); hourly r with GSMaP shifted -3..+3 h: ${JSON.stringify(v.diag?.rByShiftH)}`;
       log(m); if (process.env.GITHUB_ACTIONS) console.log(`::notice title=GSMaP rain::${m}`); state.rainScore ||= []; state.rainScore.push([new Date(now).toISOString().slice(0, 13) + 'Z', v.n, v.ratio, v.r, v.pod, v.far]); state.rainScore = state.rainScore.slice(-400); }
   } catch (e) { log(`GSMaP observed rain failed: ${e.message}`); if (process.env.GITHUB_ACTIONS) console.log(`::warning title=GSMaP rain::${e.message}`); }
 

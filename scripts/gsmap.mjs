@@ -87,7 +87,7 @@ export function mergeIntoMet(M, cache) {
         for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) { const q = a[y * c.nx + x]; if (q >= 0) { s += q / 10; v++; } }
         if (v < 0.5 * all) continue;
         const i = k * n + p, ob = Math.round(s / v * 10) / 10;
-        if (gi === 0) pairs.push([g.data.pr[i], ob]);
+        if (gi === 0) pairs.push([g.data.pr[i], ob, k, p]);
         g.data.pr[i] = ob; nRep++;
       }
     });
@@ -97,7 +97,14 @@ export function mergeIntoMet(M, cache) {
   const wetE = pairs.filter(p => p[0] >= 0.5), wetO = pairs.filter(p => p[1] >= 0.5), hit = pairs.filter(p => p[0] >= 0.5 && p[1] >= 0.5).length;
   const mE = sE / pairs.length, mO = sO / pairs.length, cov = pairs.reduce((a, p) => a + (p[0] - mE) * (p[1] - mO), 0);
   const sdE = Math.sqrt(pairs.reduce((a, p) => a + (p[0] - mE) ** 2, 0)), sdO = Math.sqrt(pairs.reduce((a, p) => a + (p[1] - mO) ** 2, 0));
-  return { nRep, tLast, n: pairs.length, ratio: sO > 0 ? +(sE / sO).toFixed(2) : null, r: sdE && sdO ? +(cov / sdE / sdO).toFixed(2) : null,
+  // diagnostics: node totals over the observed hours, and the hourly correlation with the observation shifted by -3..+3 h
+  const corr = P => { const n = P.length; if (n < 10) return null; const a = P.reduce((s, p) => s + p[0], 0) / n, b = P.reduce((s, p) => s + p[1], 0) / n;
+    let c = 0, x = 0, y = 0; for (const p of P) { c += (p[0] - a) * (p[1] - b); x += (p[0] - a) ** 2; y += (p[1] - b) ** 2; } return x && y ? +(c / Math.sqrt(x * y)).toFixed(2) : null; };
+  const tot = new Map(); for (const [e, o, , p] of pairs) { const q = tot.get(p) || [0, 0]; q[0] += e; q[1] += o; tot.set(p, q); }
+  const key = new Map(pairs.map(q => [q[2] + ':' + q[3], q])), lag = {};
+  for (let L = -3; L <= 3; L++) { const P = []; for (const [e, , k, p] of pairs) { const q = key.get((k + L) + ':' + p); if (q) P.push([e, q[1]]); } lag[L] = corr(P); }
+  const diag = { rTotals: corr([...tot.values()]), nNodes: tot.size, rByShiftH: lag };
+  return { diag, nRep, tLast, n: pairs.length, ratio: sO > 0 ? +(sE / sO).toFixed(2) : null, r: sdE && sdO ? +(cov / sdE / sdO).toFixed(2) : null,
            pod: wetO.length ? +(hit / wetO.length).toFixed(2) : null, far: wetE.length ? +(1 - hit / wetE.length).toFixed(2) : null };
 }
 

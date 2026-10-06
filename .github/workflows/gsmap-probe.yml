@@ -34,7 +34,7 @@ jobs:
           echo "$out"
           echo "::notice title=GSMaP top folders::$(echo "$out" | tr '\n' ' ' | cut -c1-900)"
           # walk the newest year/month/day under the near-real-time folders and show the newest files
-          for root in /now /realtime /realtime_ver; do
+          for root in /realtime/hourly_G /realtime/hourly /now/half_hour_G /now/netcdf /now/latest /realtime/latest; do
             p=$root
             for lvl in 1 2 3 4 5; do
               last=$(printf -- '-ls -1 %s\n' "$p" | sshpass -e sftp -oBatchMode=no -oStrictHostKeyChecking=yes -P 22 -b - "$GSMAP_USER@$HOST" 2>/dev/null | grep -v '^sftp>' | sed 's#.*/##' | grep -v '^\.' | sort | tail -1)
@@ -46,3 +46,7 @@ jobs:
             echo "$root -> $p : $files"
             echo "::notice title=GSMaP $root::newest folder $p ; files: $(echo "$files" | cut -c1-700)"
           done
+          # the two READMEs (file naming, format, latency)
+          printf -- '-get /realtime/README.first.txt nrt.txt\n-get /now/README.first.txt now.txt\n' > b2
+          sshpass -e sftp -oBatchMode=no -oStrictHostKeyChecking=yes -P 22 -b b2 "$GSMAP_USER@$HOST" >/dev/null 2>&1 || true
+          for f in nrt.txt now.txt; do [ -f $f ] && { echo "== $f"; cat $f; echo "::notice title=GSMaP $f::$(head -c 3000 $f | tr '\n' ' ')"; }; done

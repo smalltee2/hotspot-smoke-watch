@@ -569,7 +569,7 @@ td.num{text-align:right;font-family:var(--font-data);font-variant-numeric:tabula
       <div id="legFire" hidden>
         <div class="pcdbar" id="fireBar"></div>
         <div class="ticks" id="fireTicks"></div>
-        <div class="note" style="font-size:.68rem" data-th="PM&lt;sub&gt;2.5&lt;/sub&gt; ที่เพิ่มจากไฟ (µg/m³) สีตามหมวด AQI ของ US EPA (9.0 / 35.4 / 55.4 / 125.4 / 225.4)">Fire-added PM<sub>2.5</sub>, µg/m³. US EPA AQI colours (breakpoints 9.0 / 35.4 / 55.4 / 125.4 / 225.4).</div>
+        <div class="note" style="font-size:.68rem" data-th="PM&lt;sub&gt;2.5&lt;/sub&gt; ที่เพิ่มจากไฟ (µg/m³) ช่วงละ 20 µg/m³ สีดำ = มากกว่า 200">Fire-added PM<sub>2.5</sub>, µg/m³; steps of 20, black above 200.</div>
       </div>
       <div class="keys">
         <span><i class="dot" style="background:var(--ember)"></i><span data-th="จุดความร้อน (ขนาด = FRP)">Hotspot (size = FRP)</span></span>
@@ -1468,21 +1468,25 @@ const unitMode=()=>$('unitSel').value;   // 'ug' | 'ug24' | 'th' | 'us'
 const avg24=()=>unitMode()!=='ug';
 function bandFor(v){ if(unitMode()==='us'){const b=US_BANDS.find(b=>v<=b.max); return {color:b.color,en:T(b.en,b.th),ink:(b.max<=35.4)?'#1d2321':'#fff'};}
   const b=pcdBand(v); return {color:cssVar('--'+b.key),en:T(b.en,b.th),ink:'#fff'}; }
-// map colours in µg/m³ (hourly and 24-h mean): the US EPA AQI colours at the EPA PM2.5 breakpoints, shared by the total and
+// map colours in µg/m³ (hourly and 24-h mean): MAP_BANDS (20-µg/m³ steps to 200, black above), shared by the total and
 // fire-smoke layers; Thai AQI keeps the official PCD colours, US AQI the EPA colours.
 // Category words (pills, warnings) always follow the official PCD or EPA bands.
 const MS_BANDS=[{max:15,color:'#3b9fd9'},{max:25,color:'#5ec26a'},{max:37.5,color:'#f2d33c'},{max:50,color:'#f5a623'},{max:75,color:'#e8541b'},
   {max:100,color:'#c62828'},{max:150,color:'#8e24aa'},{max:200,color:'#5d1f6b'},{max:Infinity,color:'#2b0f33'}];
 const msScale=()=>unitMode()==='ug'||unitMode()==='ug24';
-// µg/m³ views of the total map use the US EPA PM2.5 colours, the same as the fire-smoke layer (see rampColor)
-function rampCss(v){return US_BANDS.find(b=>v<=b.max).color;}
+// µg/m³ views of the total map use MAP_BANDS, the same as the fire-smoke layer (see rampColor)
+// map scale for µg/m³ (total and fire smoke): ten 20-µg/m³ bands from 0 to 200, light blue → cyan → green → yellow → orange → red →
+// dark red, and black above 200 (a rainbow scale common in PM2.5 maps), so that 0–200 µg/m³ is resolved in fine steps
+const MAP_BANDS=[{max:20,color:'#cfeefb'},{max:40,color:'#7fd0f5'},{max:60,color:'#35b6e6'},{max:80,color:'#4cc49a'},{max:100,color:'#a6d94a'},
+  {max:120,color:'#f2e43a'},{max:140,color:'#f9b42d'},{max:160,color:'#f2762b'},{max:180,color:'#d7301f'},{max:200,color:'#8e1a14'},{max:Infinity,color:'#111111'}];
+function rampCss(v){return MAP_BANDS.find(b=>v<=b.max).color;}
 function mapColor(v){ return msScale()?rampCss(v):bandFor(v).color; }
 function pcdColor(v){return mapColor(v);}
 function fmtVal(v){ if(v==null) return '–'; const u=unitMode(); return u==='th'?`AQI ${aqiTH(v)}`:u==='us'?`${T('US AQI','AQI สหรัฐฯ')} ${aqiUS(v)}`:`${fmtN(v)} µg/m³`; }
 const unitShort=()=>({ug:'µg/m³',ug24:'µg/m³',th:T('Thai AQI','AQI ไทย'),us:T('US AQI','AQI สหรัฐฯ')})[unitMode()];
 const valNum=v=>{const u=unitMode(); return u==='th'?String(aqiTH(v)):u==='us'?String(aqiUS(v)):fmtN(v);};
 function pill(v){const b=bandFor(v); return `<span class="pill" style="background:${b.color};color:${b.ink}">${b.en}</span>`;}
-function contourScheme(){ if(msScale()) return US_BANDS.slice(0,5).map((b,i)=>({lv:b.max,color:US_BANDS[i+1].color}));
+function contourScheme(){ if(msScale()) return [40,80,120,160,200].map(lv=>({lv,color:rampCss(lv+1)}));
   return unitMode()==='us'
   ? US_BANDS.slice(0,5).map((b,i)=>({lv:b.max,color:US_BANDS[i+1].color}))
   : [15,25,37.5,75].map((lv,j)=>({lv,color:cssVar('--'+PCD[j+1].key)})); }
@@ -2006,12 +2010,10 @@ function drawTowns(){
 }
 function clearPlume(){if(plume){map.removeLayer(plume);plume=null;}}
 // smoke colour ramp (µg/m3)
-// µg/m³ colours of both PM2.5 layers (total and fire smoke): the US EPA AQI categories for PM2.5 (24-h breakpoints of the 2024 revision,
-// 40 CFR Part 58 App. G: 0–9.0 / 9.1–35.4 / 35.5–55.4 / 55.5–125.4 / 125.5–225.4 / above 225.4 µg/m³) in the EPA colours (US_BANDS);
-// fire smoke below 1 µg/m³ is not drawn
+// µg/m³ colours of both PM2.5 layers (total and fire smoke): MAP_BANDS; fire smoke below 1 µg/m³ is not drawn
 const RAMP=[[1]];
-const EPA_ALPHA=.62;
-function rampColor(c){ if(!(c>=1)) return null; const rgb=hexRGB(US_BANDS.find(b=>c<=b.max).color); return [rgb[0],rgb[1],rgb[2],EPA_ALPHA]; }
+const EPA_ALPHA=.68;
+function rampColor(c){ if(!(c>=1)) return null; const rgb=hexRGB(rampCss(c)); return [rgb[0],rgb[1],rgb[2],EPA_ALPHA]; }
 function puffField(s,w,so,nx,ny,cell){
   const F=new Float32Array(nx*ny);
   for(let i=0;i<s.n;i++){const sy=s.sy[i], s2=2*sy*sy, amp=s.m[i]/(Math.PI*s2)*s.fz[i];
@@ -2194,10 +2196,10 @@ if(window.ResizeObserver) new ResizeObserver(()=>map.invalidateSize()).observe(d
 $('region').addEventListener('change',()=>{fitRegion(); drawRegionMask(); computeReceptors(); if(S.hots.length){drawHotspots();} renderAll(); redrawTime();});
 drawRegionMask(); fitRegion();
 
-// US EPA PM2.5 categories as six equal blocks, labelled at the breakpoints (µg/m³)
-function epaBar(bar,ticks,first){ bar.style.gridTemplateColumns='repeat(6,1fr)';
-  bar.innerHTML=US_BANDS.map((b,k)=>`<i style="background:${b.color}" title="${T(b.en,b.th)}: ${k?US_BANDS[k-1].max+0.1:0}${b.max<Infinity?'–'+b.max:'+'} µg/m³"></i>`).join('');
-  ticks.innerHTML='<span style="position:relative;display:block;width:100%;height:1.1em">'+[first,'9','35','55','125','225'].map((t,k)=>`<span style="position:absolute;left:${k/6*100}%;transform:translateX(${k?'-50%':'0'})">${t}</span>`).join('')+'</span>'; }
+// map scale as eleven equal blocks (ten 20-µg/m³ bands and > 200), labelled every 40 µg/m³
+function epaBar(bar,ticks,first){ bar.style.gridTemplateColumns='repeat(11,1fr)';
+  bar.innerHTML=MAP_BANDS.map((b,k)=>`<i style="background:${b.color}" title="${k?MAP_BANDS[k-1].max:0}${b.max<Infinity?'–'+b.max:'+'} µg/m³"></i>`).join('');
+  ticks.innerHTML='<span style="position:relative;display:block;width:100%;height:1.1em">'+[[0,first],[2,'40'],[4,'80'],[6,'120'],[8,'160'],[10,'200']].map(([k,t])=>`<span style="position:absolute;left:${k/11*100}%;transform:translateX(${k?'-50%':'0'})">${t}</span>`).join('')+'</span>'; }
 function renderLegend(){
   const u=unitMode(), bar=$('legBar'), ticks=$('legTicks'); epaBar($('fireBar'),$('fireTicks'),'1');
   if(u==='us'){ const w=[9,26.4,20,70,100,60]; bar.style.gridTemplateColumns=w.map(x=>x+'fr').join(' ');
@@ -2209,9 +2211,9 @@ function renderLegend(){
     ticks.innerHTML=(u==='th'?['0','25','50','100','200','']:['0','15','25','37.5','75','']).map(t=>`<span>${t}</span>`).join(''); }
   $('legNote').textContent=LANG==='th'
     ? ({ug:'PM₂.₅ รายชั่วโมง (µg/m³)',ug24:'PM₂.₅ เฉลี่ย 24 ชม. (µg/m³)',th:'AQI ไทยจากค่าเฉลี่ย 24 ชม. (คพ. 2566)',us:'AQI สหรัฐฯ จากค่าเฉลี่ย 24 ชม. (EPA 2024)'})[u]+
-      ' · สีตามหมวด AQI ของ US EPA (9.0 / 35.4 / 55.4 / 125.4 / 225.4 µg/m³)'+(PUBLIC?' · ':' · CAMS + สถานีตรวจวัด + ภูมิประเทศ ')+'ค่า 24 ชม. คือค่าเฉลี่ย 24 ชั่วโมงที่สิ้นสุด ณ เวลาที่เลือก กรอบเส้นประคือพื้นที่พยากรณ์'
+      ' · ช่วงละ 20 µg/m³ สีดำ = มากกว่า 200'+(PUBLIC?' · ':' · CAMS + สถานีตรวจวัด + ภูมิประเทศ ')+'ค่า 24 ชม. คือค่าเฉลี่ย 24 ชั่วโมงที่สิ้นสุด ณ เวลาที่เลือก กรอบเส้นประคือพื้นที่พยากรณ์'
     : ({ug:'PM₂.₅ hourly, µg/m³',ug24:'PM₂.₅ 24-h mean, µg/m³',th:'Thai AQI from the 24-h mean (PCD 2023)',us:'US AQI from the 24-h mean (EPA 2024)'})[u]+
-    ' · US EPA AQI colours (breakpoints 9.0 / 35.4 / 55.4 / 125.4 / 225.4 µg/m³)'+(PUBLIC?' · ':' · CAMS + monitors + low-cost sensors + terrain, 0.025°. ')+'24-h values are the mean of the 24 hours ending at the slider time. Dashed box: forecast area.';
+    ' · steps of 20 µg/m³, black above 200'+(PUBLIC?' · ':' · CAMS + monitors + low-cost sensors + terrain, 0.025°. ')+'24-h values are the mean of the 24 hours ending at the slider time. Dashed box: forecast area.';
 }
 applyStaticLang(); if(!S.mode) $('modeChip').textContent=T('no data','ไม่มีข้อมูล');
 $('btnLang').onclick=()=>{ LANG=LANG==='th'?'en':'th'; store.set('hsw.lang',LANG); applyStaticLang();

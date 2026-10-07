@@ -33,7 +33,7 @@ def bilinear_blocks(B):
     return np.where(den > 0, num / np.maximum(den, 1e-12), np.nan)
 
 for m in range(1, 13):
-    cand = [n for n in names if re.search(rf'_pr_{m:02d}_', n)]
+    cand = [n for n in names if re.search(rf'(_pr_{m:02d}_|_{m:02d}_1981|1981-2010_{m:02d}[_.])', n)]
     if not cand: raise SystemExit(f'no file for month {m}')
     url = cand[0] if cand[0].startswith('http') else base + cand[0]
     with rasterio.open('/vsicurl/' + url) as src:

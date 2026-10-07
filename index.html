@@ -559,7 +559,7 @@ td.num{text-align:right;font-family:var(--font-data);font-variant-numeric:tabula
       <div id="legRain" hidden>
         <div class="pcdbar" id="rainBar" style="grid-template-columns:1fr 1fr 1fr 1fr 1fr 1fr"></div>
         <div class="ticks"><span>0.1</span><span>0.5</span><span>1</span><span>2</span><span>5</span><span>10</span><span>mm/h</span></div>
-        <div class="note" style="font-size:.68rem" data-th="ฝนรายชั่วโมง 24 ชม. ที่ผ่านมา: ฝนที่ตรวจวัดจากดาวเทียมปรับด้วยเครื่องวัดฝน (JAXA GSMaP 0.1°) ใช้คำนวณการชะล้างควันด้วย ชั่วโมงถัดไป: พยากรณ์ ECMWF ฝนชะล้างฝุ่นออกจากอากาศ">Hourly rain. Past 24 h: observed by satellite and calibrated with rain gauges (JAXA GSMaP, 0.1°), also used for wet removal of smoke; later hours: ECMWF forecast. Rain washes particles out of the air.</div>
+        <div class="note" style="font-size:.68rem" data-th="ฝนรายชั่วโมง 24 ชม. ที่ผ่านมา: ฝนที่ตรวจวัดจากดาวเทียมปรับด้วยเครื่องวัดฝน (JAXA GSMaP 0.1°) ย่อส่วนเป็น 0.025° ด้วยรูปแบบฝนรายเดือน 1981–2010 (CHELSA V2.1) ใช้คำนวณการชะล้างควันด้วย ชั่วโมงถัดไป: พยากรณ์ ECMWF ฝนชะล้างฝุ่นออกจากอากาศ">Hourly rain. Past 24 h: observed by satellite and calibrated with rain gauges (JAXA GSMaP, 0.1°), downscaled to 0.025° with the month's 1981–2010 rain pattern (CHELSA V2.1) and also used for wet removal of smoke; later hours: ECMWF forecast. Rain washes particles out of the air.</div>
       </div>
       <div id="legTemp" hidden>
         <div class="pcdbar" id="tempBar" style="grid-template-columns:repeat(7,1fr)"></div>
@@ -1373,6 +1373,23 @@ async function loadRainObs(){
 // observed rain rate (mm/h) at (lat,lon) for the hour containing t; undefined = not observed (use the forecast), null = missing cell
 function rainObsAt(lat,lon,t){ const R=RAINOBS; if(!R) return undefined; const T0=Math.floor(t/3600e3)*3600e3, k=R.times.indexOf(T0); if(k<0) return undefined;
   const x=Math.round((lon-R.lon0)/R.step), y=Math.round((lat-R.lat0)/R.step); if(x<0||y<0||x>=R.nx||y>=R.ny) return undefined; const q=R.a[k][y*R.nx+x]; return q<0?null:q/R.scale; }
+// rain at 0.025°: GSMaP 0.1° interpolated bilinearly (missing cells left out) × the month's rain-pattern factor from the CHELSA V2.1
+// 1981-2010 climatology (scripts/prclim.py: fine climatology ÷ its own 0.1° version), so wetter slopes and drier valleys show
+const RFAC={}; let RFACmeta=null;
+async function loadRainFac(m){ const k=String(m).padStart(2,'0'); if(RFAC[k]!==undefined) return RFAC[k]; RFAC[k]=null;
+  try{ if(!RFACmeta){const r=await fetch('data/static/prclim/meta.json',{cache:'force-cache'}); if(!r.ok) return null; RFACmeta=await r.json();}
+    const r=await fetch('data/static/prclim/'+RFACmeta.files[k],{cache:'force-cache'}); if(!r.ok) return null;
+    const ds=r.body.pipeThrough(new DecompressionStream('deflate')); RFAC[k]=new Uint8Array(await new Response(ds).arrayBuffer()); }catch(e){RFAC[k]=null;}
+  return RFAC[k]; }
+function rainFineAt(lat,lon,t){
+  const R=RAINOBS; if(!R) return undefined; const k=R.times.indexOf(Math.floor(t/3600e3)*3600e3); if(k<0) return undefined;
+  const a=R.a[k], fx=(lon-R.lon0)/R.step, fy=(lat-R.lat0)/R.step; if(fx<-0.5||fy<-0.5||fx>R.nx-0.5||fy>R.ny-0.5) return undefined;
+  const x0=Math.max(0,Math.min(R.nx-2,Math.floor(fx))), y0=Math.max(0,Math.min(R.ny-2,Math.floor(fy))), ax=Math.min(1,Math.max(0,fx-x0)), ay=Math.min(1,Math.max(0,fy-y0));
+  let s=0,w=0; for(const [dx,dy,wt] of [[0,0,(1-ax)*(1-ay)],[1,0,ax*(1-ay)],[0,1,(1-ax)*ay],[1,1,ax*ay]]){const q=a[(y0+dy)*R.nx+x0+dx]; if(q>=0&&wt>0){s+=wt*q;w+=wt;}}
+  if(!w) return null; let v=s/w/R.scale;
+  const F=RFAC[String(new Date(t+7*3600e3).getUTCMonth()+1).padStart(2,'0')], M=RFACmeta;
+  if(F&&M){const ix=Math.round((lon-M.lon0)/M.step), iy=Math.round((lat-M.lat0)/M.step); if(ix>=0&&iy>=0&&ix<M.nx&&iy<M.ny) v*=F[iy*M.nx+ix]/50;}
+  return v; }
 async function loadDEM(){
   if(DEM||!P.data?.dem) return;
   try{const r=await fetch(P.data.dem.file,{cache:'force-cache'}); if(r.ok) DEM=await r.json();}catch(e){}
@@ -1615,12 +1632,15 @@ function drawWx(){
   if(mode==='temp'&&P.data?.t2down&&(!T2D||T2D.key!==(P.data.t2down.tA??'')+'|'+P.data.generated)&&!loadT2.busy&&loadT2.tried!==(P.data.t2down.tA??'')+'|'+P.data.generated){loadT2.busy=1; loadT2.tried=(P.data.t2down.tA??'')+'|'+P.data.generated; loadT2().then(()=>{loadT2.busy=0; if(T2D&&layerMode()==='temp') redrawTime();});}   // the 0.025° DEM loads only for this layer
   if(mode==='rain'&&P.data?.rainObs&&(!RAINOBS||RAINOBS.key!==P.data.rainObs.times.join('|'))&&!loadRainObs.busy&&loadRainObs.tried!==P.data.rainObs.times.join('|')){loadRainObs.busy=1; loadRainObs.tried=P.data.rainObs.times.join('|'); loadRainObs().then(()=>{loadRainObs.busy=0; if(RAINOBS&&layerMode()==='rain') redrawTime();});}
   const obsRain=mode==='rain'&&!!RAINOBS&&RAINOBS.times.includes(Math.floor(t/3600e3)*3600e3);
+  const facKey=String(new Date(t+7*3600e3).getUTCMonth()+1).padStart(2,'0');
+  if(obsRain&&RFAC[facKey]===undefined){ loadRainFac(facKey).then(f=>{ if(f&&layerMode()==='rain') redrawTime(); }); }
+  const fineRain=obsRain&&!!RFAC[facKey];
   const down=mode==='temp'&&!!T2D&&!!MET.grids[0].elev;
-  let cell=down?0.025:obsRain?0.05:0.1; while(((e-w)/cell)*((n-so)/cell)>(down?650000:obsRain?200000:60000)) cell*=1.25;
+  let cell=(down||fineRain)?0.025:obsRain?0.05:0.1; while(((e-w)/cell)*((n-so)/cell)>((down||fineRain)?650000:obsRain?200000:60000)) cell*=1.25;
   const fx=Math.ceil((e-w)/cell), fy=Math.ceil((n-so)/cell), F=new Float32Array(fx*fy);
-  for(let y=0;y<fy;y++) for(let x=0;x<fx;x++){const la=so+(y+.5)*cell, lo=w+(x+.5)*cell; if(mode==='rain'){ if(obsRain){const v=rainObsAt(la,lo,t); F[y*fx+x]=v==null?NaN:v;} else F[y*fx+x]=sampleMet(MET,la,lo,t).pr;} else {const v=t2At(la,lo,t); F[y*fx+x]=v==null?NaN:v;}}
+  for(let y=0;y<fy;y++) for(let x=0;x<fx;x++){const la=so+(y+.5)*cell, lo=w+(x+.5)*cell; if(mode==='rain'){ if(obsRain){const v=fineRain?rainFineAt(la,lo,t):rainObsAt(la,lo,t); F[y*fx+x]=v==null?NaN:v;} else F[y*fx+x]=sampleMet(MET,la,lo,t).pr;} else {const v=t2At(la,lo,t); F[y*fx+x]=v==null?NaN:v;}}
   S.fine={F,w,so,nx:fx,ny:fy,cell};
-  S.fieldInfo=mode==='rain'?(obsRain?T(`Observed rain, mm/h: JAXA GSMaP gauge-calibrated, 0.1° (${RAINOBS.src[RAINOBS.times.indexOf(Math.floor(t/3600e3)*3600e3)]==='nrt'?'Gauge_NRT':'Gauge_NOW'})`,`ฝนที่ตรวจวัด มม./ชม.: JAXA GSMaP ปรับด้วยเครื่องวัดฝน 0.1°`):T('Rain forecast, mm/h (ECMWF)','ฝนพยากรณ์ มม./ชม. (ECMWF)')):down?T(`Temperature at 2 m, °C: ECMWF downscaled to ${cell.toFixed(3)}° with terrain${T2D.corr?' and Air4Thai stations':''}`,`อุณหภูมิ 2 ม. °C: ECMWF ย่อส่วนเป็น ${cell.toFixed(3)}° ด้วยภูมิประเทศ${T2D.corr?' และสถานี Air4Thai':''}`):T('Temperature at 2 m, °C (ECMWF)','อุณหภูมิ 2 ม. °C (ECMWF)');
+  S.fieldInfo=mode==='rain'?(obsRain?T(`Observed rain, mm/h: JAXA GSMaP gauge-calibrated${fineRain?`, downscaled to ${cell.toFixed(3)}° with the CHELSA rain climatology`:', 0.1°'} (${RAINOBS.src[RAINOBS.times.indexOf(Math.floor(t/3600e3)*3600e3)]==='nrt'?'Gauge_NRT':'Gauge_NOW'})`,`ฝนที่ตรวจวัด มม./ชม.: JAXA GSMaP ปรับด้วยเครื่องวัดฝน${fineRain?' ย่อส่วนเป็น '+cell.toFixed(3)+'° ด้วยภูมิอากาศฝน CHELSA':' 0.1°'}`):T('Rain forecast, mm/h (ECMWF)','ฝนพยากรณ์ มม./ชม. (ECMWF)')):down?T(`Temperature at 2 m, °C: ECMWF downscaled to ${cell.toFixed(3)}° with terrain${T2D.corr?' and Air4Thai stations':''}`,`อุณหภูมิ 2 ม. °C: ECMWF ย่อส่วนเป็น ${cell.toFixed(3)}° ด้วยภูมิประเทศ${T2D.corr?' และสถานี Air4Thai':''}`):T('Temperature at 2 m, °C (ECMWF)','อุณหภูมิ 2 ม. °C (ECMWF)');
   const W=Math.min(1100,Math.round((e-w)*60)), H=Math.min(1100,Math.round((mercY(n)-mercY(so))/DEG*60));
   const url=regionCanvas(so,w,n,e,W,H,(lat,lon)=>{const x=Math.floor((lon-w)/cell), y=Math.floor((lat-so)/cell); if(x<0||y<0||x>=fx||y>=fy) return null;
     const v=F[y*fx+x]; if(v!==v) return null; if(mode==='temp'){const rgb=tempRGB(v); return [rgb[0],rgb[1],rgb[2],150];} const c=wxColor(mode,v); if(!c) return null; const rgb=hexRGB(c); return [rgb[0],rgb[1],rgb[2],150];});

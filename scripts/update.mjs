@@ -14,6 +14,7 @@ import { buildDEM, sampleGrid } from './dem.mjs';
 import { regressionKriging, krigeField, clampAux } from './rk.mjs';
 import { fetchMet, sampleMet, packMet, MET_MODEL } from './met.mjs';
 import { updateGsmap, mergeIntoMet, webRain } from './gsmap.mjs';
+import { fetchGauges, scoreGauges } from './thaiwater.mjs';
 import { downscaleT2, packDEM, T2CFG, t2SeaLevel } from './t2down.mjs';
 import { buildLandcover, landcoverAt, packLandcover, unpackLandcover } from './landcover.mjs';
 import { loadModel } from './model.mjs';
@@ -399,6 +400,18 @@ async function main() {
     if (web) { await writeJSON(path.join(DATA, 'rain-obs.json'), web); rainInfo = { file: 'data/rain-obs.json', times: [web.times[0], web.times[web.times.length - 1]], src: web.source, verify: v }; }
     if (v?.n) { const m = `GSMaP replaced ECMWF rain at ${v.nRep} node-hours up to ${new Date(v.tLast).toISOString().slice(0, 13)}Z; ECMWF vs GSMaP at ${v.n} north-grid node-hours: total ratio ${v.ratio}, r ${v.r}, hits of ≥0.5 mm/h ${v.pod}, false alarms ${v.far}; node totals r ${v.diag?.rTotals} (${v.diag?.nNodes} nodes); hourly r with GSMaP shifted -3..+3 h: ${JSON.stringify(v.diag?.rByShiftH)}`;
       log(m); if (process.env.GITHUB_ACTIONS) console.log(`::notice title=GSMaP rain::${m}`); state.rainScore ||= []; state.rainScore.push([new Date(now).toISOString().slice(0, 13) + 'Z', v.n, v.ratio, v.r, v.pod, v.far]); state.rainScore = state.rainScore.slice(-400); }
+    // independent check against ThaiWater rain gauges (hourly), pooled over the last 7 days
+    state.gaugeRain = await fetchGauges(state.gaugeRain, now, { get, log });
+    state.gaugeScored ||= {}; for (const k of Object.keys(state.gaugeScored)) if (+k < now - 48 * HOUR) delete state.gaugeScored[k];
+    const sc = await scoreGauges(state.gaugeRain, gcache, DATA, state.gaugeScored);
+    state.rainGaugeScore = [...(state.rainGaugeScore || []).filter(r => !sc.some(x => x.hour === r.hour)), ...sc].filter(r => Date.parse(r.hour.replace('Z', ':00Z')) > now - 7 * 24 * HOUR).slice(-200);
+    if (state.rainGaugeScore.length) {
+      const R = state.rainGaugeScore, N = R.reduce((a, r) => a + r.n, 0), pool = k => +Math.sqrt(R.reduce((a, r) => a + r.n * r[k][0] ** 2, 0) / N).toFixed(3),
+            mr = k => +(R.reduce((a, r) => a + r.n * (r[k][1] ?? 0), 0) / N).toFixed(3);
+      const m = `rain vs ThaiWater gauges, ${R.length} hours, ${N} gauge-hours (${R.reduce((a, r) => a + r.wet, 0)} wet ≥0.5 mm): RMSE / mean hourly r — GSMaP 0.1° cell ${pool('cell')} / ${mr('cell')}, interpolated ${pool('bil')} / ${mr('bil')}, 0.025° with CHELSA pattern ${pool('fine')} / ${mr('fine')} mm/h` + (sc.length ? `; this run scored ${sc.map(x => x.hour + ' ' + x.src).join(', ')}` : '');
+      log(m); if (process.env.GITHUB_ACTIONS) console.log(`::notice title=rain vs gauges::${m}`);
+      rainInfo && (rainInfo.gauges = { hours: R.length, gaugeHours: N, rmse: { cell: pool('cell'), bil: pool('bil'), fine: pool('fine') }, r: { cell: mr('cell'), bil: mr('bil'), fine: mr('fine') } });
+    }
   } catch (e) { log(`GSMaP observed rain failed: ${e.message}`); if (process.env.GITHUB_ACTIONS) console.log(`::warning title=GSMaP rain::${e.message}`); }
 
   // compact copy for the page: 36 h back (dispersion spin-up) to 75 h ahead (longest forecast option + interpolation)

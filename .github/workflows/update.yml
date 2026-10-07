@@ -154,6 +154,7 @@ jobs:
           echo "${BUILD}" > _site/build.txt
           for f in latest.json met-web.json ml-field.json t2-corr.json rain-obs.json rk-bias.json rk-bias-A.json verify.json runlog.json; do [ -f "data/$f" ] && cp "data/$f" _site/data/ || true; done
           for f in elev.json elev025.json; do [ -f data/static/$f ] && cp data/static/$f _site/data/static/ || true; done
+          [ -d data/static/prclim ] && cp -r data/static/prclim _site/data/static/ || true
           ls -la _site _site/data
 
       - uses: actions/configure-pages@v5

@@ -625,7 +625,10 @@ td.num{text-align:right;font-family:var(--font-data);font-variant-numeric:tabula
       <div class="keys">
         <span><i class="dot" style="background:var(--ember)"></i><span data-th="จุดความร้อน (ขนาด = FRP)">Hotspot (size = FRP)</span></span>
         <span><i class="dot" style="border:2px solid var(--fg)"></i><span data-th="เมือง / จุดรับ">Town / receptor</span></span>
-        <span><i style="display:inline-block;width:14px;height:10px;vertical-align:-1px"><svg viewBox="0 0 14 10" width="14" height="10"><path d="M0 5h10M7 1l4 4-4 4" fill="none" stroke="var(--fg)" stroke-width="1.6"/></svg></i><span data-th="ลม: อนุภาคเคลื่อนไปตามทิศที่ลมพัด (เร็ว/สว่าง = แรง) ดูค่าลมได้ที่ตำแหน่งของฉันและเมือง">Wind: particles drift the way the wind blows (faster and brighter = stronger); wind values are shown under “my location” and each town</span></span>
+        <span><i style="display:inline-block;width:14px;height:10px;vertical-align:-1px"><svg viewBox="0 0 14 10" width="14" height="10"><path d="M0 5h10M7 1l4 4-4 4" fill="none" stroke="var(--fg)" stroke-width="1.6"/></svg></i><span data-th="ลม: อนุภาคเคลื่อนไปตามทิศที่ลมพัด สีและความเร็วตามความแรงลม ดูค่าลมได้ที่ตำแหน่งของฉันและเมือง">Wind: particles drift the way the wind blows, coloured and moving by wind speed; wind values are shown under “my location” and each town</span></span>
+        <div id="legWind" hidden><div class="pcdbar" id="windBar" style="grid-template-columns:repeat(6,1fr)"></div>
+          <div class="ticks"><span>0</span><span>1.6</span><span>3.4</span><span>5.5</span><span>8</span><span>10.8</span><span>m/s</span></div>
+          <div class="note" style="font-size:.66rem" data-th="ลม 10 ม. แบ่งตามมาตราโบฟอร์ต (WMO): สงบ–ลมเบา (0–1), ลมอ่อน (2), ลมโชย (3), ลมปานกลาง (4), ลมแรงพอควร (5), ลมแรงขึ้นไป (6+)">10-m wind by Beaufort force (WMO): calm–light air (0–1), light breeze (2), gentle (3), moderate (4), fresh (5), strong and above (6+)</div></div>
         <span><i class="dot" style="background:var(--aq2);box-shadow:0 0 0 3px var(--aq4);border:1px solid var(--fg)"></i><span data-th="Air4Thai: ด้านใน = ค่าตรวจวัด, วงนอก = แบบจำลอง">Air4Thai: inside = measured, ring = model</span></span>
         <span><i class="dot" style="border-radius:2px;border:1.5px solid var(--fg);background:var(--aq2)"></i><span data-th="สถานีตรวจวัด (ค่าปัจจุบัน)">Monitor (measured now)</span></span>
       </div>
@@ -1752,6 +1755,9 @@ function drawWx(){
 let windLayer=L.layerGroup().addTo(map);
 // moving particles like Windy: each particle drifts with the 10-m wind at the slider time, leaving a fading trail;
 // drawn on a canvas over the map (restarted on pan/zoom), with sparse arrows for direction and the tooltip readout
+// colour by Beaufort force (WMO; upper limits in m/s at 10 m): 0–1 < 1.6, 2 < 3.4, 3 < 5.5, 4 < 8.0, 5 < 10.8, 6+ above
+const WIND_BFT=[[1.6,'#e9f2fb'],[3.4,'#9cd2f7'],[5.5,'#46a6f0'],[8.0,'#8a6cf2'],[10.8,'#d84fd0'],[Infinity,'#ff3d6e']];
+const windBin=sp=>{ for(let i=0;i<WIND_BFT.length;i++) if(sp<WIND_BFT[i][0]) return i; return WIND_BFT.length-1; };
 const WP={canvas:null,ctx:null,parts:[],raf:0,t:null};
 function windParticles(on){
   if(!on){ if(WP.raf) cancelAnimationFrame(WP.raf); WP.raf=0; if(WP.canvas){WP.canvas.remove(); WP.canvas=null;} WP.parts=[]; return; }
@@ -1764,17 +1770,19 @@ function windParticles(on){
   const N=Math.min(2500,Math.round(sz.x*sz.y/450)); const spawn=p=>{for(let k=0;k<20;k++){p.lat=la0+Math.random()*(la1-la0); p.lon=lo0+Math.random()*(lo1-lo0); if(!R||inRegion(p.lat,p.lon)) break;} p.age=Math.floor(Math.random()*120); return p;};
   WP.parts=Array.from({length:N},()=>spawn({}));
   const z=map.getZoom(), k=0.0032*Math.pow(2,7-z);   // degrees per frame per (m/s): the same ground speed looks the same at every zoom
-  const ctx=WP.ctx, col=getComputedStyle(document.documentElement).colorScheme==='dark'||document.documentElement.dataset.theme==='dark'?'rgba(235,240,255,':'rgba(20,40,80,';
+  const ctx=WP.ctx, NB=WIND_BFT.length;
   if(WP.raf) cancelAnimationFrame(WP.raf);
   const frame=()=>{ if(!WP.canvas||!shown('shWind')) return;
     ctx.globalCompositeOperation='destination-in'; ctx.fillStyle='rgba(0,0,0,0.965)'; ctx.fillRect(0,0,sz.x,sz.y); ctx.globalCompositeOperation='source-over';
-    ctx.lineWidth=1.5; ctx.lineCap='round';
+    ctx.lineCap='round'; const seg=Array.from({length:NB},()=>[]);
     for(const p of WP.parts){ const m=sampleMet(MET,p.lat,p.lon,WP.t), u=m.u10??m.u, v=m.v10??m.v, sp=Math.hypot(u,v);
       const q0=map.latLngToContainerPoint([p.lat,p.lon]); const nlat=p.lat+v*k, nlon=p.lon+u*k/Math.cos(p.lat*DEG);
-      const q1=map.latLngToContainerPoint([nlat,nlon]);
-      ctx.strokeStyle=col+(Math.min(1,0.35+sp/8))+')'; ctx.beginPath(); ctx.moveTo(q0.x,q0.y); ctx.lineTo(q1.x,q1.y); ctx.stroke();
+      const q1=map.latLngToContainerPoint([nlat,nlon]); seg[windBin(sp)].push(q0.x,q0.y,q1.x,q1.y);
       p.lat=nlat; p.lon=nlon; p.age++;
       if(p.age>140||p.lat<la0||p.lat>la1||p.lon<lo0||p.lon>lo1||(R&&!inRegion(p.lat,p.lon))||sp<0.1) spawn(p); }
+    const path=a=>{ctx.beginPath(); for(let i=0;i<a.length;i+=4){ctx.moveTo(a[i],a[i+1]); ctx.lineTo(a[i+2],a[i+3]);}};
+    ctx.lineWidth=2.8; ctx.strokeStyle='rgba(10,14,20,0.3)'; for(const a of seg) if(a.length){path(a); ctx.stroke();}   // halo: readable on any map colour
+    ctx.lineWidth=1.6; seg.forEach((a,b)=>{ if(a.length){ ctx.strokeStyle=WIND_BFT[b][1]; path(a); ctx.stroke(); } });
     WP.raf=requestAnimationFrame(frame); };
   WP.raf=requestAnimationFrame(frame);
 }
@@ -1787,7 +1795,7 @@ function drawWind(){
   for(let la=Math.ceil(la0/step)*step; la<=la1; la+=step) for(let lo=Math.ceil(lo0/step)*step; lo<=lo1; lo+=step){
     if(R&&!inRegion(la,lo)) continue; const m=sampleMet(MET,la,lo,t), u=m.u10??m.u, v=m.v10??m.v, sp=Math.hypot(u,v);
     const bearing=(Math.atan2(u,v)/DEG+360)%360;   // direction the wind blows TO, clockwise from north
-    const len=8+Math.min(16,sp*2.5), col=sp<2?'#8aa0b4':sp<4?'#4f6f91':sp<7?'#1f4e79':'#8b1a1a', sz=2*len+6;
+    const len=8+Math.min(16,sp*2.5), col=WIND_BFT[windBin(sp)][1], sz=2*len+6;
     const html=`<svg viewBox="${-len-3} ${-len-3} ${sz} ${sz}" width="${sz}" height="${sz}" style="transform:rotate(${bearing}deg)"><path d="M0 ${len} L0 ${-len} M-5 ${-len+6} L0 ${-len} L5 ${-len+6}" fill="none" stroke="${col}" stroke-width="${sp<2?1.4:2}" stroke-linecap="round"/></svg>`;
     L.marker([la,lo],{icon:L.divIcon({className:'windarrow',html,iconSize:[sz,sz],iconAnchor:[sz/2,sz/2]}),keyboard:false,interactive:true})
       .bindTooltip(()=>`${T('Wind (10 m)','ลม (10 ม.)')} ${sp.toFixed(1)} m/s ${T('from','จาก')} ${compass(windFrom(u,v))} (${Math.round(windFrom(u,v))}°)${!PUBLIC?`<br>100 m: ${m.ws.toFixed(1)} m/s ${T('from','จาก')} ${compass(windFrom(m.u,m.v))} · BLH ${Math.round(m.blh)} m`:''}<br>${T('Temp.','อุณหภูมิ')} ${(()=>{const v=t2At(la,lo,t); return v!=null?v.toFixed(1):'–';})()} °C · ${T('rain','ฝน')} ${(()=>{const o=rainAt(la,lo,t), r=o!=null?o:m.pr, ob=rainIsObs(la,lo,t); return (r>=0.05?r.toFixed(1)+' mm/h':T('none','ไม่มี'))+(ob?' ('+T('observed','ตรวจวัด')+')':'');})()}`).addTo(windLayer);
@@ -1861,6 +1869,8 @@ for(const id of ['shContour','shSt','shA4t','shHot','shTown','shWind','shWindArr
   const v=store.get('hsw.'+id); if(v!=null) $(id).checked=v==='1';
   $(id).addEventListener('change',()=>{store.set('hsw.'+id,$(id).checked?'1':'0');applyVisibility();});
 }
+$('windBar').innerHTML=WIND_BFT.map(([,c])=>`<i style="background:${c};box-shadow:inset 0 0 0 1px rgba(0,0,0,.25)"></i>`).join('');
+{const f=()=>{$('legWind').hidden=!$('shWind').checked;}; f(); $('shWind').addEventListener('change',f);}
 function stationNow(s,t){const i=gIdx(t);return i>=0?sCorr(s)[i]:null;}
 // ---- Air4Thai layer: measured value (inside) against the model at the same place and hour (ring). Both on the same basis:
 // hourly view → 1-h values (Bangkok BMA stations only report 24-h means, so for them both sides are 24-h means); 24-h/AQI views → 24-h means.

@@ -161,6 +161,9 @@ jobs:
       - name: Build site
         id: build
         if: always()
+        env:
+          DEV_USER: ${{ secrets.DEV_USER }}
+          DEV_PASS: ${{ secrets.DEV_PASS }}
         run: |
           mkdir -p _site/data/static
           # developer page = index.html as written; public page = the same file switched to public mode
@@ -173,6 +176,11 @@ jobs:
           sed -i "s/<meta name=\"build\" content=\"dev\">/<meta name=\"build\" content=\"${BUILD}\">/" _site/index.html _site/dev.html
           grep -q "content=\"${BUILD}\"" _site/index.html && grep -q "content=\"${BUILD}\"" _site/dev.html
           echo "${BUILD}" > _site/build.txt
+          # private pages: the developer page and the performance page are published encrypted (username + password from
+          # the DEV_USER / DEV_PASS secrets; without them a notice is published instead of the page)
+          node scripts/lockpage.mjs _site/dev.html _site/dev.html "Developer page"
+          node scripts/lockpage.mjs _site/perf.html _site/perf.html "Model performance"
+          if grep -q 'data-mode\|id="map"' _site/dev.html; then echo "developer page not encrypted"; exit 1; fi
           for f in latest.json met-web.json ml-field.json t2-corr.json rain-obs.json wx-ml.json perf.json perf-series.json rk-bias.json rk-bias-A.json verify.json runlog.json; do [ -f "data/$f" ] && cp "data/$f" _site/data/ || true; done
           for f in elev.json elev025.json; do [ -f data/static/$f ] && cp data/static/$f _site/data/static/ || true; done
           [ -d data/static/prclim ] && cp -r data/static/prclim _site/data/static/ || true

@@ -1,0 +1,246 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SEA-HAF · Model performance</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Condensed:wght@500;600;700&family=IBM+Plex+Sans+Thai:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
+<script>window.L||document.write('<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"><\/script>')</script>
+<style>
+:root{--bg:#eceeed;--panel:#f8f8f6;--line:#d3d6d3;--fg:#1d2321;--muted:#5d6763;--focus:#1f6fd1;
+  --c-cams:#8c6d4f;--c-kalman:#8a5cc2;--c-blend:#1a9a8a;--c-system:#d1491a;--c-pers:#6b7470;--c-ref:#1f6fd1;--good:#1f7a4d;--bad:#b3261e;
+  --font-body:'IBM Plex Sans Thai','IBM Plex Sans Condensed',system-ui,sans-serif;--font-data:'IBM Plex Mono',ui-monospace,monospace}
+@media (prefers-color-scheme:dark){:root{--bg:#151918;--panel:#1d2220;--line:#323936;--fg:#e7eae8;--muted:#9aa5a0;--focus:#6aa8ff;
+  --c-cams:#c9a27c;--c-kalman:#b791ea;--c-blend:#3cc7b5;--c-system:#ff7a3d;--c-pers:#a3ada8;--c-ref:#6aa8ff;--good:#4cc28a;--bad:#ff6b5e}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.5 var(--font-body)}
+header{display:flex;flex-wrap:wrap;align-items:baseline;gap:8px 16px;padding:14px 16px;border-bottom:1px solid var(--line);background:var(--panel);position:sticky;top:0;z-index:1000}
+header h1{margin:0;font:700 1.15rem/1.2 'IBM Plex Sans Condensed',sans-serif;letter-spacing:.02em}
+header h1 span{color:var(--c-system)}
+header .gen{color:var(--muted);font:.8rem var(--font-data)}
+header a{margin-left:auto;color:var(--focus);font-weight:600;text-decoration:none}
+main{max-width:1180px;margin:0 auto;padding:12px 16px 40px}
+.controls{display:flex;flex-wrap:wrap;gap:10px 18px;align-items:end;margin:6px 0 14px}
+.controls label{display:flex;flex-direction:column;font-size:.75rem;color:var(--muted);gap:3px}
+select{font:500 .9rem var(--font-body);padding:5px 8px;border:1px solid var(--line);border-radius:4px;background:var(--panel);color:var(--fg)}
+section{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:14px 16px;margin:12px 0}
+section h2{margin:0 0 4px;font:600 1rem/1.3 'IBM Plex Sans Condensed',sans-serif}
+.note{color:var(--muted);font-size:.8rem;margin:2px 0 8px}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.tile{border:1px solid var(--line);border-radius:5px;padding:9px 11px;background:var(--bg)}
+.tile b{display:block;font:600 1.45rem/1.15 var(--font-data)}
+.tile span{font-size:.75rem;color:var(--muted)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media (max-width:820px){.grid2{grid-template-columns:1fr}}
+svg.chart{width:100%;height:auto;display:block}
+svg text{font-family:var(--font-data);fill:var(--muted)}
+.legend{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:.78rem;margin:4px 0 0}
+.legend i{display:inline-block;width:14px;height:3px;margin-right:5px;vertical-align:middle;border-radius:2px}
+table{border-collapse:collapse;width:100%;font:.82rem var(--font-data)}
+th,td{padding:4px 8px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
+th:first-child,td:first-child{text-align:left}
+th{color:var(--muted);font-weight:500}
+.tablewrap{overflow-x:auto}
+#map{height:430px;border-radius:5px;border:1px solid var(--line)}
+.pos{color:var(--good)}.neg{color:var(--bad)}
+.empty{color:var(--muted);font-style:italic;padding:18px 0}
+.readout{font:.8rem var(--font-data);color:var(--fg);min-height:1.3em;margin-top:4px}
+</style>
+</head>
+<body>
+<header>
+  <h1>SEA-<span>HAF</span> · model performance</h1>
+  <span class="gen" id="gen">loading…</span>
+  <a href="dev.html">← forecast</a>
+</header>
+<main>
+  <div class="controls">
+    <label>Station group <select id="selGroup"></select></label>
+    <label>Value <select id="selMetric"><option value="24h">24-h mean (Thai AQI basis)</option><option value="1h">hourly value</option></select></label>
+    <label>Lead time <select id="selLead"></select></label>
+    <label>Period <select id="selWin"><option value="1">newest day</option><option value="7" selected>last 7 days</option><option value="all">all days kept (≤ 35)</option></select></label>
+  </div>
+
+  <section><h2>Summary</h2><p class="note" id="sumNote"></p><div class="tiles" id="tiles"></div></section>
+
+  <div class="grid2">
+    <section><h2>Error by day</h2><p class="note">Root-mean-square error of each forecast, per Thai day, same rows for all forecasts.</p><div id="chDaily"></div></section>
+    <section><h2>Skill against persistence by day</h2><p class="note">1 − MSE(system)/MSE(persistence): above 0 the published forecast beat "no change". Dashed line = mean bias of the system, scaled to fit (factor in the legend).</p><div id="chSkill"></div></section>
+  </div>
+  <div class="grid2">
+    <section><h2>Error by lead time</h2><p class="note">Pooled over the chosen period.</p><div id="chLead"></div></section>
+    <section><h2>Skill by lead time</h2><p class="note">Against persistence and against raw CAMS, pooled over the period.</p><div id="chLeadSkill"></div></section>
+  </div>
+
+  <section><h2>Skill at each station</h2><p class="note" id="mapNote">Skill against persistence at the chosen lead, all days kept (24-h means). Blue = better than persistence, red = worse; larger dots = more pairs. Tap a station for its numbers and its time series below.</p><div id="map"></div></section>
+
+  <section><h2>Station time series</h2>
+    <div class="controls" style="margin:4px 0 8px"><label>Station <select id="selSt"></select></label><label>Lead <select id="selStLead"><option>24</option><option>6</option></select></label><label>Value <select id="selStMetric"><option value="24h">24-h mean</option><option value="1h">hourly</option></select></label></div>
+    <div class="grid2"><div><div id="chSt"></div><div class="readout" id="stRead">Tap the chart to read an hour.</div></div><div id="chScat"></div></div>
+  </section>
+
+  <section><h2>Warnings: 24-h mean above the Thai thresholds</h2><p class="note">Hits, misses and false alarms of the 24-h mean at 37.5 and 75 µg/m³ (Thai PCD orange and red), pooled over the period, chosen group and lead. POD = hits / observed events, FAR = false alarms / forecast events, CSI = hits / (hits + misses + false alarms).</p><div class="tablewrap" id="tbWarn"></div></section>
+
+  <div class="grid2">
+    <section><h2>0.025° map against CAMS</h2><p class="note">Leave-one-out value of the published map at each monitor (24-h means, 10 UTC analysis), against raw CAMS, by day.</p><div id="chMap"></div></section>
+    <section><h2>Self-learning weights</h2><p class="note">Weight of each expert after each verified day (PM2.5, temperature, rain); "base" = no learned correction.</p><div id="chML"></div></section>
+  </div>
+
+  <section><h2>Weather layers (live only, from 7 Oct 2026)</h2><p class="note">2-m temperature at the Air4Thai stations (hourly means) and rain at the stations against JAXA GSMaP; GSMaP against ThaiWater rain gauges. Same lead time as above.</p>
+    <div class="grid2"><div><div id="chT2"></div></div><div><div id="chRain"></div></div></div>
+    <div class="tablewrap" id="tbGauge" style="margin-top:10px"></div>
+  </section>
+  <p class="note" id="defs"></p>
+</main>
+<script>
+const $=id=>document.getElementById(id), CSS=k=>getComputedStyle(document.documentElement).getPropertyValue(k).trim();
+const MODELS=[['cams','raw CAMS','--c-cams'],['kalman','Kalman','--c-kalman'],['blend','blend','--c-blend'],['system','published system','--c-system'],['persistence','persistence','--c-pers']];
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const fmt=(v,d=2)=>v==null||!isFinite(v)?'–':(+v).toFixed(d);
+let P=null, SER=null, map=null, stLayer=null;
+
+// pooled scores over several daily aggregates of identical rows: RMSE from n-weighted MSE, bias n-weighted, r = n-weighted mean of daily r
+function pool(rows){ if(!rows.length) return null; const n=rows.reduce((a,r)=>a+r.n,0);
+  const mse=rows.reduce((a,r)=>a+r.n*r.rmse*r.rmse,0)/n, bias=rows.reduce((a,r)=>a+r.n*r.bias,0)/n, mae=rows.reduce((a,r)=>a+r.n*r.mae,0)/n;
+  const rr=rows.filter(r=>r.r!=null), rw=rr.reduce((a,r)=>a+r.n,0);
+  return {n,mse,rmse:Math.sqrt(mse),bias,mae,r:rw?rr.reduce((a,r)=>a+r.n*r.r,0)/rw:null,obsMean:rows.reduce((a,r)=>a+r.n*r.obsMean,0)/n,days:new Set(rows.map(r=>r.day)).size}; }
+function winDays(){ const w=$('selWin').value, D=P.days; return w==='all'?D:D.slice(-(+w)); }
+const sel=()=>({g:$('selGroup').value,m:$('selMetric').value,L:+$('selLead').value,days:new Set(winDays())});
+
+// ------------------------------------------------------------------ small SVG charts
+function lineChart(el,{x,series,yLabel='',zero=false,yMin=null,bars=null,height=220,xFmt=v=>v,xNum=false,onTap=null}){
+  const W=560,H=height,pl=44,pr=14,pt=12,pb=30;
+  const vals=series.flatMap(s=>s.v.filter(v=>v!=null)).concat(bars?bars.v.filter(v=>v!=null):[]);
+  if(!vals.length){el.innerHTML='<div class="empty">No data for this selection yet.</div>';return;}
+  let lo=yMin!=null?yMin:Math.min(...vals), hi=Math.max(...vals); if(zero) {lo=Math.min(0,lo); hi=Math.max(0,hi);} if(hi-lo<1e-9){hi+=1;lo-=zero?0:1;}
+  const pad=(hi-lo)*0.08; hi+=pad; if(lo!==0||!zero) lo-=lo===0?0:pad;
+  const X=i=>pl+(x.length<2?(W-pl-pr)/2:i*(W-pl-pr)/(x.length-1)), Y=v=>pt+(hi-v)/(hi-lo)*(H-pt-pb);
+  // round tick values (1, 2, 2.5, 5 × 10ⁿ)
+  const raw=(hi-lo)/5, p10=Math.pow(10,Math.floor(Math.log10(raw))), step=[1,2,2.5,5,10].map(m=>m*p10).find(v=>v>=raw)||raw, dec=Math.max(0,-Math.floor(Math.log10(step)+1e-9)+(step/p10===2.5?1:0));
+  let g=''; for(let v=Math.ceil(lo/step)*step; v<=hi+1e-9; v+=step){ g+=`<line x1="${pl}" x2="${W-pr}" y1="${Y(v)}" y2="${Y(v)}" stroke="${CSS('--line')}"/><text x="${pl-5}" y="${Y(v)+3.5}" font-size="10" text-anchor="end">${(Math.abs(v)<1e-9?0:v).toFixed(dec)}</text>`; }
+  if(zero&&lo<0) g+=`<line x1="${pl}" x2="${W-pr}" y1="${Y(0)}" y2="${Y(0)}" stroke="${CSS('--fg')}" stroke-width="1"/>`;
+  const every=Math.max(1,Math.ceil(x.length/8)); x.forEach((d,i)=>{ if(i%every===0||i===x.length-1) g+=`<text x="${X(i)}" y="${H-10}" font-size="10" text-anchor="middle">${esc(xFmt(d))}</text>`; });
+  if(bars){ const bw=Math.max(3,(W-pl-pr)/Math.max(1,x.length)*0.6); bars.v.forEach((v,i)=>{ if(v==null) return; const y0=Y(Math.max(0,Math.min(v,0)===v?v:0));
+      g+=`<rect x="${X(i)-bw/2}" y="${Math.min(Y(v),Y(0))}" width="${bw}" height="${Math.abs(Y(v)-Y(0))}" fill="${v>=0?CSS('--good'):CSS('--bad')}" fill-opacity=".75"><title>${esc(xFmt(x[i]))}: ${v.toFixed(3)}</title></rect>`; }); }
+  for(const s of series){ let d='',pen=false; s.v.forEach((v,i)=>{ if(v==null){pen=false;return;} d+=`${pen?'L':'M'}${X(i).toFixed(1)},${Y(v).toFixed(1)}`; pen=true; });
+    g+=`<path d="${d}" fill="none" stroke="${s.c}" stroke-width="${s.w||2}" ${s.dash?'stroke-dasharray="5 4"':''}/>`;
+    if(s.dots!==false&&x.length<=60) s.v.forEach((v,i)=>{ if(v!=null) g+=`<circle cx="${X(i)}" cy="${Y(v)}" r="2.6" fill="${s.c}"><title>${esc(s.name)} · ${esc(xFmt(x[i]))}: ${v.toFixed(2)}</title></circle>`; }); }
+  if(yLabel) g+=`<text x="12" y="${pt+(H-pt-pb)/2}" font-size="10" transform="rotate(-90 12 ${pt+(H-pt-pb)/2})" text-anchor="middle">${esc(yLabel)}</text>`;
+  el.innerHTML=`<svg class="chart" viewBox="0 0 ${W} ${H}">${g}<line class="mk" x1="0" x2="0" y1="${pt}" y2="${H-pb}" stroke="${CSS('--fg')}" stroke-dasharray="2 2" style="display:none"/></svg>`+
+    `<div class="legend">${series.filter(s=>s.name).map(s=>`<span><i style="background:${s.c}"></i>${esc(s.name)}</span>`).join('')}${bars?`<span><i style="background:${CSS('--good')}"></i>${esc(bars.name)}</span>`:''}</div>`;
+  if(onTap){ const svg=el.querySelector('svg'); svg.style.cursor='crosshair'; svg.onclick=ev=>{ const b=svg.getBoundingClientRect(), vx=(ev.clientX-b.left)/b.width*W;
+    const i=Math.max(0,Math.min(x.length-1,Math.round((vx-pl)/((W-pl-pr)/Math.max(1,x.length-1))))); const mk=svg.querySelector('.mk'); mk.setAttribute('x1',X(i)); mk.setAttribute('x2',X(i)); mk.style.display=''; onTap(i); }; }
+}
+function scatter(el,pts,{xl,yl}){
+  const W=560,H=300,pl=44,pr=14,pt=12,pb=34; if(pts.length<3){el.innerHTML='<div class="empty">Not enough pairs.</div>';return;}
+  const hi=Math.max(...pts.flat())*1.05||1, X=v=>pl+v/hi*(W-pl-pr), Y=v=>pt+(hi-v)/hi*(H-pt-pb); let g='';
+  for(let k=0;k<=5;k++){const v=hi*k/5; g+=`<line x1="${pl}" x2="${W-pr}" y1="${Y(v)}" y2="${Y(v)}" stroke="${CSS('--line')}"/><text x="${pl-5}" y="${Y(v)+3.5}" font-size="10" text-anchor="end">${v.toFixed(0)}</text><text x="${X(v)}" y="${H-18}" font-size="10" text-anchor="middle">${v.toFixed(0)}</text>`;}
+  g+=`<line x1="${X(0)}" y1="${Y(0)}" x2="${X(hi)}" y2="${Y(hi)}" stroke="${CSS('--muted')}" stroke-dasharray="4 4"/>`;
+  for(const [o,f] of pts) g+=`<circle cx="${X(o).toFixed(1)}" cy="${Y(f).toFixed(1)}" r="2.4" fill="${CSS('--c-system')}" fill-opacity=".55"/>`;
+  g+=`<text x="${(W+pl)/2}" y="${H-3}" font-size="10" text-anchor="middle">${esc(xl)}</text><text x="12" y="${(H-pb)/2}" font-size="10" transform="rotate(-90 12 ${(H-pb)/2})" text-anchor="middle">${esc(yl)}</text>`;
+  el.innerHTML=`<svg class="chart" viewBox="0 0 ${W} ${H}">${g}</svg>`;
+}
+const dayFmt=d=>new Date(d+'T00:00:00Z').toLocaleDateString('en-GB',{day:'numeric',month:'short',timeZone:'UTC'});
+
+// ------------------------------------------------------------------ sections
+function rowsOf(g,m,L,model,days){ return P.daily.filter(r=>r.group===g&&r.metric===m&&r.lead===L&&r.model===model&&(!days||days.has(r.day))); }
+function renderSummary(){
+  const {g,m,L,days}=sel(), S={}; for(const [k] of MODELS) S[k]=pool(rowsOf(g,m,L,k,days));
+  const st=P.stations.filter(s=>s.lead===L&&(g==='lc'?!s.monitor:s.monitor)), better=st.filter(s=>s.ss!=null&&s.ss>0).length;
+  $('sumNote').textContent=`${P.groups[g]} · ${m==='24h'?'24-h means':'hourly values'} · +${L} h · ${[...days][0]?dayFmt([...days][0]):''} to ${dayFmt([...days].slice(-1)[0]||P.days.slice(-1)[0])}`;
+  if(!S.system){ $('tiles').innerHTML='<div class="empty">No pairs for this selection (hourly values exist only for hourly stations).</div>'; return; }
+  const ssP=S.persistence?1-S.system.mse/S.persistence.mse:null, ssC=S.cams?1-S.system.mse/S.cams.mse:null;
+  const T=(v,l,cls='')=>`<div class="tile"><b class="${cls}">${v}</b><span>${l}</span></div>`;
+  $('tiles').innerHTML=T(fmt(S.system.rmse),'RMSE, published system (µg/m³)')+T(fmt(S.cams?.rmse),'RMSE, raw CAMS')+T(fmt(S.persistence?.rmse),'RMSE, persistence')+
+    T((ssP>=0?'+':'')+fmt(ssP),'skill vs persistence',ssP>0?'pos':'neg')+T((ssC>=0?'+':'')+fmt(ssC),'skill vs CAMS',ssC>0?'pos':'neg')+
+    T((S.system.bias>=0?'+':'')+fmt(S.system.bias),'mean bias (µg/m³)')+T(fmt(S.system.r),'correlation r (mean of days)')+
+    T(`${S.system.n}`,`pairs over ${S.system.days} day(s); observed mean ${fmt(S.system.obsMean,1)}`)+(m==='24h'?T(st.length?`${Math.round(100*better/st.length)} %`:'–',`stations beating persistence (all days, ${st.length} stations)`):'');
+}
+function renderDaily(){
+  const {g,m,L}=sel(), D=winDays();
+  lineChart($('chDaily'),{x:D,xFmt:dayFmt,yLabel:'RMSE µg/m³',yMin:0,series:MODELS.map(([k,n,c])=>({name:n,c:CSS(c),dash:k==='persistence',w:k==='system'?3:1.8,v:D.map(d=>{const r=rowsOf(g,m,L,k,new Set([d]))[0];return r?r.rmse:null;})}))});
+  const ss=D.map(d=>{const s=rowsOf(g,m,L,'system',new Set([d]))[0], p=rowsOf(g,m,L,'persistence',new Set([d]))[0]; return s&&p&&p.rmse>0?1-(s.rmse*s.rmse)/(p.rmse*p.rmse):null;});
+  const bias=D.map(d=>{const s=rowsOf(g,m,L,'system',new Set([d]))[0]; return s?s.bias:null;});
+  const bmax=Math.max(1,...bias.filter(v=>v!=null).map(Math.abs)), smax=Math.max(0.2,...ss.filter(v=>v!=null).map(Math.abs));
+  lineChart($('chSkill'),{x:D,xFmt:dayFmt,zero:true,yLabel:'skill vs persistence',bars:{name:'skill (bars)',v:ss},series:[{name:`bias ×${(smax/bmax).toPrecision(2)} (scaled)`,c:CSS('--c-system'),dash:true,v:bias.map(b=>b==null?null:b*smax/bmax)}]});
+}
+function renderLead(){
+  const {g,m,days}=sel(), Ls=P.leads, pooled=k=>Ls.map(L=>pool(rowsOf(g,m,L,k,days)));
+  const PS={}; for(const [k] of MODELS) PS[k]=pooled(k);
+  lineChart($('chLead'),{x:Ls,xFmt:v=>'+'+v+' h',yLabel:'RMSE µg/m³',yMin:0,series:MODELS.map(([k,n,c])=>({name:n,c:CSS(c),dash:k==='persistence',w:k==='system'?3:1.8,v:PS[k].map(s=>s?s.rmse:null)}))});
+  lineChart($('chLeadSkill'),{x:Ls,xFmt:v=>'+'+v+' h',zero:true,yLabel:'skill',series:[
+    {name:'vs persistence',c:CSS('--c-system'),w:3,v:Ls.map((_,i)=>PS.system[i]&&PS.persistence[i]?1-PS.system[i].mse/PS.persistence[i].mse:null)},
+    {name:'vs raw CAMS',c:CSS('--c-cams'),v:Ls.map((_,i)=>PS.system[i]&&PS.cams[i]?1-PS.system[i].mse/PS.cams[i].mse:null)}]});
+}
+function renderMap(){
+  const {g,L:lead}=sel(); if(!window.L) return;
+  if(!map){ map=L.map('map',{zoomControl:true,attributionControl:true}).setView([16.5,101],5);
+    L.tileLayer(`https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/${matchMedia('(prefers-color-scheme: dark)').matches?'World_Dark_Gray_Base':'World_Light_Gray_Base'}/MapServer/tile/{z}/{y}/{x}`,{maxZoom:16,attribution:'Basemap © Esri, HERE, Garmin, © OpenStreetMap contributors'}).addTo(map);
+    stLayer=L.layerGroup().addTo(map); }
+  stLayer.clearLayers();
+  const st=P.stations.filter(s=>s.lead===lead&&(g==='lc'?!s.monitor:s.monitor));
+  $('mapNote').textContent=`Skill against persistence at +${lead} h, all days kept (24-h means), ${st.length} ${g==='lc'?'low-cost sensors':'reference stations'}. Blue = better than persistence, red = worse; larger dots = more pairs. Tap a station for its numbers.`;
+  const mix=(c,f)=>{const w=[242,242,240]; return `rgb(${c.map((x,i)=>Math.round(w[i]+(x-w[i])*f)).join(',')})`;};
+  const col=v=>v==null?'#999':v>=0?mix([31,111,209],Math.min(1,0.25+v/0.6)):mix([179,38,30],Math.min(1,0.25+(-v)/0.6));   // blue better, red worse than persistence
+  for(const s of st) L.circleMarker([s.lat,s.lon],{radius:3+Math.min(6,Math.sqrt(s.n)/6),weight:1,color:'#333',fillColor:col(s.ss),fillOpacity:.9})
+    .bindPopup(`<b>${esc(s.name)}</b><br>${esc(s.provider)} · ${esc(s.id)}<br>+${lead} h, ${s.n} pairs<br>RMSE system ${fmt(s.rmse)} · persistence ${fmt(s.rmsePers)} · CAMS ${fmt(s.rmseCams)} µg/m³<br>skill vs persistence <b>${fmt(s.ss)}</b> · bias ${fmt(s.bias)}`)
+    .on('click',()=>{ if(SER&&SER.stations[s.id]){ $('selSt').value=s.id; renderStation(); } }).addTo(stLayer);
+}
+async function loadSeries(){ if(SER) return; try{ SER=await (await fetch('data/perf-series.json?g='+P.generated)).json(); }catch(e){ SER={stations:{}}; }
+  const ids=Object.keys(SER.stations).sort((a,b)=>SER.stations[a].name.localeCompare(SER.stations[b].name));
+  $('selSt').innerHTML=ids.map(id=>`<option value="${esc(id)}">${esc(SER.stations[id].name)} (${esc(SER.stations[id].provider||id)})</option>`).join(''); }
+function renderStation(){
+  if(!SER) return; const id=$('selSt').value, s=SER.stations[id], L=$('selStLead').value, m=$('selStMetric').value;
+  if(!s||!s[L]){ $('chSt').innerHTML='<div class="empty">No series for this station and lead.</div>'; $('chScat').innerHTML=''; return; }
+  const rows=s[L].slice().sort((a,b)=>a[0]-b[0]), x=rows.map(r=>SER.t0+r[0]*SER.step), io=m==='24h'?2:1, ic=m==='24h'?3:5, is=m==='24h'?4:6;
+  const tf=t=>new Date(t+7*3600e3).toISOString().slice(5,13).replace('T',' ')+'h';
+  lineChart($('chSt'),{x,xFmt:tf,yMin:0,yLabel:'PM2.5 µg/m³',height:260,series:[
+    {name:'observed',c:CSS('--fg'),w:2.2,dots:false,v:rows.map(r=>r[io])},{name:'raw CAMS',c:CSS('--c-cams'),dots:false,v:rows.map(r=>r[ic])},{name:`published system (+${L} h)`,c:CSS('--c-system'),w:2.2,dots:false,v:rows.map(r=>r[is])}],
+    onTap:i=>{ const r=rows[i]; $('stRead').textContent=`${tf(x[i])} Thai · observed ${fmt(r[io],1)} · system ${fmt(r[is],1)} · CAMS ${fmt(r[ic],1)} µg/m³`; }});
+  scatter($('chScat'),rows.filter(r=>r[io]!=null&&r[is]!=null).map(r=>[r[io],r[is]]),{xl:'observed µg/m³',yl:`system (+${L} h) µg/m³`});
+}
+function renderWarn(){
+  const {g,L,days}=sel(), rows=P.cont.filter(c=>c.group===g&&c.lead===L&&days.has(c.day));
+  const tb=[`<table><tr><th>Threshold</th><th>Forecast</th><th>events observed</th><th>hits</th><th>misses</th><th>false alarms</th><th>POD</th><th>FAR</th><th>CSI</th></tr>`];
+  for(const T of [37.5,75]) for(const [mdl,lab] of [['system','published system'],['cams','raw CAMS'],['persistence','persistence']]){
+    const c=rows.filter(r=>r.thr===T&&r.model===mdl).reduce((a,r)=>({h:a.h+r.h,m:a.m+r.m,f:a.f+r.f}),{h:0,m:0,f:0});
+    const pod=c.h+c.m?c.h/(c.h+c.m):null, far=c.h+c.f?c.f/(c.h+c.f):null, csi=c.h+c.m+c.f?c.h/(c.h+c.m+c.f):null;
+    tb.push(`<tr><td>${T} µg/m³</td><td style="text-align:left">${lab}</td><td>${c.h+c.m}</td><td>${c.h}</td><td>${c.m}</td><td>${c.f}</td><td>${fmt(pod)}</td><td>${fmt(far)}</td><td>${fmt(csi)}</td></tr>`); }
+  $('tbWarn').innerHTML=tb.join('')+'</table>'+(rows.length&&!rows.some(r=>r.h+r.m>0)?'<p class="note">No observed exceedance in this period: POD and CSI are undefined until the burning season.</p>':'');
+}
+function renderMapProduct(){
+  const D=P.days.filter(d=>P.map.some(r=>r.day===d)), g=$('selGroup').value==='lc'?'low-cost':'reference', R=d=>P.map.find(r=>r.day===d&&r.group===g);
+  lineChart($('chMap'),{x:D,xFmt:dayFmt,yMin:0,yLabel:'RMSE µg/m³',series:[{name:'0.025° map (left out)',c:CSS('--c-system'),w:3,v:D.map(d=>R(d)?.map.rmse??null)},{name:'raw CAMS',c:CSS('--c-cams'),v:D.map(d=>R(d)?.cams.rmse??null)}]});
+}
+function renderML(){
+  const vars=[...new Set(P.ml.map(r=>r.var))], days=[...new Set(P.ml.map(r=>r.day))].sort(), cols={base:'--c-pers',day:'--c-blend',week:'--c-kalman',month:'--c-cams',season:'--c-system'};
+  if(!days.length){ $('chML').innerHTML='<div class="empty">No learning logs yet.</div>'; return; }
+  const series=[]; for(const v of vars) for(const e of ['base','day','week','month','season']) { const vv=days.map(d=>{const r=P.ml.find(x=>x.day===d&&x.var===v); return r&&r.weights?.[e]!=null?r.weights[e]:null;}); if(vv.some(x=>x!=null)) series.push({name:`${v}: ${e}`,c:CSS(cols[e]),dash:v!=='PM2.5',w:v==='PM2.5'?2.4:1.6,v:vv}); }
+  lineChart($('chML'),{x:days,xFmt:dayFmt,yMin:0,yLabel:'weight',series});
+}
+function renderWx(){
+  const L=+$('selLead').value, D=P.wxDays, R=(v,part,mdl,d)=>P.wx.find(r=>r.var===v&&r.part===part&&r.model===mdl&&r.lead===L&&r.day===d);
+  const T2M=[['ECMWF','--c-cams'],['terrain','--c-kalman'],['0.025° page','--c-blend'],['learned','--c-system']];
+  lineChart($('chT2'),{x:D,xFmt:dayFmt,yMin:0,yLabel:'temperature RMSE °C',series:T2M.map(([k,c])=>({name:k,c:CSS(c),w:k==='learned'?3:1.8,v:D.map(d=>R('t2','all',k,d)?.rmse??null)}))});
+  lineChart($('chRain'),{x:D,xFmt:dayFmt,zero:true,yLabel:'rain: hourly r vs GSMaP',series:[['ECMWF','--c-cams'],['0.025° page','--c-blend'],['learned','--c-system']].map(([k,c])=>({name:k,c:CSS(c),v:D.map(d=>R('rain','all',k,d)?.r??null)}))});
+  const G=P.gauges, rows=['cell','bil','fine'].map(m=>{ const h=pool(G.filter(r=>r.kind==='hourly'&&r.model===m)), t=pool(G.filter(r=>r.kind==='daytotal'&&r.model===m)); return `<tr><td>${{cell:'GSMaP 0.1° cell',bil:'GSMaP interpolated',fine:'0.025° (page)'}[m]}</td><td>${h?fmt(h.rmse):'–'}</td><td>${h?fmt(h.r):'–'}</td><td>${h?h.n:'–'}</td><td>${t?fmt(t.rmse):'–'}</td><td>${t?fmt(t.r):'–'}</td><td>${t?t.n:'–'}</td></tr>`; });
+  $('tbGauge').innerHTML=`<table><tr><th>Rain vs ThaiWater gauges (all days kept)</th><th>hourly RMSE mm</th><th>hourly r</th><th>n</th><th>day-total RMSE mm</th><th>day-total r</th><th>gauge-days</th></tr>${rows.join('')}</table>`;
+}
+function renderAll(){ renderSummary(); renderDaily(); renderLead(); renderMap(); renderWarn(); renderMapProduct(); renderML(); renderWx(); }
+
+(async()=>{
+  try{ P=await (await fetch('data/perf.json?t='+Date.now())).json(); }catch(e){ $('gen').textContent='performance data not available yet'; return; }
+  $('gen').textContent=`updated ${new Date(P.generated).toLocaleString('en-GB',{timeZone:'Asia/Bangkok',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})} Thai time · ${P.days.length} days (${dayFmt(P.days[0])} – ${dayFmt(P.days.slice(-1)[0])})`;
+  $('defs').textContent='Definitions: '+P.definitions+' Recomputed every 3 hours from the forecast and observation logs (scripts/perf.mjs).';
+  $('selGroup').innerHTML=Object.entries(P.groups).map(([k,v])=>`<option value="${k}"${k==='href'?' selected':''}>${esc(v)}</option>`).join('');
+  $('selLead').innerHTML=P.leads.map(L=>`<option value="${L}"${L===24?' selected':''}>+${L} h</option>`).join('');
+  for(const id of ['selGroup','selMetric','selLead','selWin']) $(id).onchange=renderAll;
+  for(const id of ['selSt','selStLead','selStMetric']) $(id).onchange=renderStation;
+  renderAll(); await loadSeries(); renderStation();
+})();
+</script>
+</body>
+</html>

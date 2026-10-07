@@ -157,6 +157,34 @@ td.num{text-align:right;font-family:var(--font-data);font-variant-numeric:tabula
 .here td,.here th{padding:3px 4px;white-space:normal;text-align:left;overflow-wrap:anywhere}
 .here .pill{white-space:nowrap}
 .here .act{margin-top:6px;display:flex;gap:6px}
+/* pop-up at page open: all parameters and their forecast at the viewer's location */
+.locpop{position:fixed;inset:0;z-index:3000;display:flex;align-items:center;justify-content:center;background:rgba(10,14,12,.5);padding:12px}
+.locpop[hidden]{display:none}
+.locpop .lpcard{background:var(--panel);color:var(--fg);border-radius:10px;width:100%;max-width:600px;max-height:calc(100dvh - 24px);overflow:auto;box-shadow:0 10px 40px rgba(0,0,0,.35);padding:14px 16px 12px;font-size:13px}
+.lphead{display:flex;align-items:flex-start;justify-content:space-between;gap:8px}
+.lphead h2{margin:0;font:600 1.02rem/1.25 var(--font-display);letter-spacing:.02em}
+.lphead .x{border:0;background:none;font-size:1.5rem;line-height:1;cursor:pointer;color:var(--muted);padding:0 4px}
+.lpnow{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:10px 0 4px}
+.lpnow>div{border:1px solid var(--line);border-radius:7px;padding:7px 9px;background:var(--bg);min-width:0}
+.lpnow b{display:block;font:600 1.2rem/1.15 var(--font-data);font-variant-numeric:tabular-nums}
+.lpnow span{display:block;font-size:.72rem;color:var(--muted);overflow-wrap:anywhere}
+.lpnow .pm{grid-column:span 3;display:flex;flex-wrap:wrap;align-items:center;gap:4px 12px}
+.lpnow .pm b{font-size:1.7rem}
+.lpsec{margin:12px 0 4px;font:600 .74rem/1.2 var(--font-display);text-transform:uppercase;letter-spacing:.09em;color:var(--muted)}
+.lpfc{overflow-x:auto}
+.lpfc table{width:100%;border-collapse:collapse;font:12px var(--font-data);font-variant-numeric:tabular-nums}
+.lpfc th,.lpfc td{padding:4px 6px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
+.lpfc th:first-child,.lpfc td:first-child{text-align:left}
+.lpfc th{font:500 .7rem var(--font-body,inherit);color:var(--muted)}
+.lpfc .warr{display:inline-block;font-style:normal;font-weight:700;color:var(--focus)}
+.lpfc td b{font-weight:600}
+.lpfc .dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:5px;vertical-align:-1px;border:1px solid rgba(0,0,0,.2)}
+.lpfc tr.nd td{border-top:2px solid var(--line)}
+.lpfoot{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;margin-top:10px}
+.lpfoot label{font-size:.75rem;color:var(--muted);display:flex;align-items:center;gap:6px}
+.lpfoot .btns{display:flex;gap:8px}
+@media (max-width:520px){.locpop{padding:0;align-items:flex-end}.locpop .lpcard{border-radius:12px 12px 0 0;max-height:92dvh;padding:12px 12px 10px}
+  .lpnow{grid-template-columns:repeat(2,minmax(0,1fr))}.lpnow .pm{grid-column:span 2}.lpfc th,.lpfc td{padding:4px 4px}}
 .stmark{width:12px;height:12px;border-radius:2px;border:1.5px solid var(--fg);box-sizing:border-box}
 .windarrow{pointer-events:auto}
 #windCanvas{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:420}
@@ -310,6 +338,7 @@ td.num{text-align:right;font-family:var(--font-data);font-variant-numeric:tabula
       <div><b id="sWarn">–</b><span data-th="เมืองที่เตือน">Towns warned</span></div>
     </div>
     <section id="hereBox" class="herebox" hidden aria-live="polite"></section>
+    <div id="locPop" class="locpop" hidden role="dialog" aria-modal="true" aria-labelledby="locPopT"><div class="lpcard" id="locPopCard"></div></div>
     <div class="tabs" role="tablist">
       <button role="tab" aria-selected="true" data-tab="warn" id="tab-warn" data-th="คำเตือน">Warnings</button>
       <button role="tab" aria-selected="false" data-tab="hot" id="tab-hot" data-th="จุดความร้อน">Hotspots</button>
@@ -1930,6 +1959,62 @@ const LocateCtl=L.Control.extend({options:{position:'topleft'},onAdd(){
       {enableHighAccuracy:true,timeout:15000,maximumAge:60000});};
   return b;}});
 new LocateCtl().addTo(map);
+// ---- pop-up when the page opens: every parameter now and its forecast at the viewer's location
+// (PM2.5 as on the map; 2-m temperature and rain at 0.025° as in the warnings; wind and humidity from ECMWF).
+// The location is read once per visit, only if the browser allows it; it is not sent anywhere. "Show this when the page opens"
+// is remembered on this device (hsw.locPop).
+let LOCPOP=null;
+function locPopHTML(lat,lon,acc){
+  const now=Date.now(), tNow=Math.floor(now/HR)*HR, pv=provinceOf(lat,lon), H=P.data?.hours||[], tEnd=H.length?H[H.length-1]:tNow;
+  const vNow=totalAt(lat,lon,tNow), w=wxAt(lat,lon,tNow), obsR=rainIsObs(lat,lon,tNow);
+  let p24=0,n24=0; for(const t of H){ if(t>tNow||t<=tNow-24*HR) continue; const v=totalAt(lat,lon,t); if(v!=null){p24+=v;n24++;} }
+  const past24=n24>=18?p24/n24:null, sp=w?Math.hypot(w.u10,w.v10):null;
+  const rain3=t=>{let s=0,n=0; for(let k=0;k<3;k++){const r=rainAt(lat,lon,t-k*HR); if(r!=null){s+=r;n++;}} return n?s:null;};
+  const fmtR=r=>r==null?'–':r<0.05?'0':r<10?r.toFixed(1):Math.round(r);
+  const day=t=>new Date(t-HR).toLocaleDateString(LOC(),{weekday:'short',day:'numeric'});   // hour-ending: 00:00 closes the day before
+  const hh=t=>{const d=new Date(t); return String(d.getHours()).padStart(2,'0')+':00';};
+  const wind=x=>{ if(!x) return '–'; const d=windFrom(x.u10,x.v10); return `${Math.hypot(x.u10,x.v10).toFixed(1)} <i class="warr" style="transform:rotate(${Math.round(d+180)}deg)" title="${T('from','จาก')} ${compass(d)}">↑</i>`; };
+  const rows=[]; let lastD='';
+  for(let t=tNow+3*HR;t<=Math.min(tEnd,tNow+48*HR);t+=3*HR){
+    const v=totalAt(lat,lon,t), x=wxAt(lat,lon,t), r=rain3(t), d=day(t), b=v!=null?bandFor(v):null;
+    rows.push(`<tr${lastD&&d!==lastD?' class="nd"':''}><td>${d!==lastD?`<b>${esc(d)}</b> `:''}${hh(t)}</td><td>${v!=null?`<i class="dot" style="background:${b.color}"></i>${fmtN(v)}`:'–'}</td><td>${x&&x.t2!=null?x.t2.toFixed(1):'–'}</td><td>${fmtR(r)}</td><td>${wind(x)}</td><td>${x&&x.rh!=null?Math.round(x.rh):'–'}</td></tr>`);
+    lastD=d; }
+  const tile=(v,l)=>`<div><b>${v}</b><span>${l}</span></div>`;
+  return `<div class="lphead"><div><h2 id="locPopT">${pv?esc(provName(pv))+(LANG!=='th'&&pv.th?' · '+esc(pv.th):''):T('Your location','ตำแหน่งของคุณ')}</h2>
+      <div class="note">${T('Now','ขณะนี้')} ${hm(now)} · ${lat.toFixed(3)}°N ${lon.toFixed(3)}°E${acc?` · ±${acc<1000?Math.round(acc)+T(' m',' ม.'):(acc/1000).toFixed(1)+T(' km',' กม.')}`:''}</div></div>
+      <button class="x" type="button" id="locPopX" aria-label="${T('Close','ปิด')}">×</button></div>
+    <div class="lpnow">
+      <div class="pm">${vNow!=null?`<b>${fmtN(vNow)} <small style="font-size:.7rem">µg/m³</small></b>${pill(vNow)}<span>${T('PM₂.₅ now (this hour)','PM₂.₅ ชั่วโมงนี้')}${past24!=null?` · ${T('AQI (24-h mean','AQI (เฉลี่ย 24 ชม.')} ${fmtN(past24)}): ${T('Thai','ไทย')} ${aqiTH(past24)} · ${T('US','สหรัฐฯ')} ${aqiUS(past24)}`:''}</span>`:`<span>${T('No PM₂.₅ forecast at this location.','ไม่มีค่าพยากรณ์ PM₂.₅ ที่ตำแหน่งนี้')}</span>`}</div>
+      ${tile(w&&w.t2!=null?w.t2.toFixed(1)+' °C':'–',T('Temperature (2 m, 0.025°)','อุณหภูมิ (2 ม., 0.025°)'))}
+      ${tile(w?fmtR(w.pr)+' '+T('mm','มม.'):'–',T('Rain, last hour','ฝน ชั่วโมงที่ผ่านมา')+' · '+(obsR?T('observed (GSMaP)','ตรวจวัด (GSMaP)'):T('forecast','พยากรณ์')))}
+      ${tile(sp!=null?sp.toFixed(1)+' m/s':'–',T('Wind (10 m)','ลม (10 ม.)')+(sp!=null?' '+T('from','จาก')+' '+compass(windFrom(w.u10,w.v10)):''))}
+      ${tile(w&&w.rh!=null?Math.round(w.rh)+' %':'–',T('Relative humidity','ความชื้นสัมพัทธ์'))}
+    </div>
+    ${rows.length?`<div class="lpsec">${T('Forecast, every 3 hours','พยากรณ์ ทุก 3 ชั่วโมง')}</div>
+    <div class="note" style="font-size:.68rem;margin:-2px 0 4px">${T('PM₂.₅ in µg/m³ (hourly) · temperature at the hour · rain in mm over the 3 h ending at the time · wind in m/s, arrow points where the wind blows to','PM₂.₅ หน่วย µg/m³ (รายชั่วโมง) · อุณหภูมิ ณ เวลานั้น · ฝน มม. รวม 3 ชม. ก่อนถึงเวลานั้น · ลม ม./วินาที ลูกศรชี้ทิศที่ลมพัดไป')}</div><div class="lpfc"><table><thead><tr><th>${T('Time','เวลา')}</th><th>PM₂.₅</th><th>°C</th><th>${T('Rain','ฝน')}</th><th>${T('Wind','ลม')}</th><th>RH %</th></tr></thead><tbody>${rows.join('')}</tbody></table></div>`:''}
+    <div class="lpsec">${T('Trend and daily outlook','แนวโน้มและภาพรวมรายวัน')}</div>
+    ${hereTrend(lat,lon)}
+    <div class="lpfoot"><label><input type="checkbox" id="locPopAuto"${store.get('hsw.locPop')==='off'?'':' checked'}> ${T('Show this when the page opens','แสดงหน้าต่างนี้เมื่อเปิดหน้าเว็บ')}</label>
+      <div class="btns"><button class="btn" type="button" id="locPopMap">${T('Show on map','ดูบนแผนที่')}</button><button class="btn" type="button" id="locPopClose">${T('Close','ปิด')}</button></div></div>
+    <p class="note" style="font-size:.68rem;margin:6px 0 0">${T('PM₂.₅ is the hourly value of the forecast map; temperature and rain are ECMWF downscaled to 0.025° (rain observed by JAXA GSMaP for past hours); wind and humidity are ECMWF. Your location stays on this device.','PM₂.₅ เป็นค่ารายชั่วโมงจากแผนที่พยากรณ์ อุณหภูมิและฝนเป็น ECMWF ที่ย่อส่วนเป็น 0.025° (ฝนในชั่วโมงที่ผ่านมาตรวจวัดโดย JAXA GSMaP) ลมและความชื้นจาก ECMWF ตำแหน่งของคุณเก็บอยู่ในเครื่องนี้เท่านั้น')}</p>`;
+}
+function renderLocPop(){
+  const box=$('locPop'); if(!LOCPOP||!P.data){box.hidden=true;return;}
+  const card=$('locPopCard'), sc=card.scrollTop; card.innerHTML=locPopHTML(LOCPOP.lat,LOCPOP.lon,LOCPOP.acc); card.scrollTop=sc; box.hidden=false;
+  const close=closeLocPop;
+  $('locPopX').onclick=close; $('locPopClose').onclick=close; box.onclick=e=>{ if(e.target===box) close(); };
+  $('locPopAuto').onchange=e=>store.set('hsw.locPop',e.target.checked?'on':'off');
+  $('locPopMap').onclick=()=>{ const q=LOCPOP; close(); document.querySelector('.locate-btn')?.classList.add('on'); showHere(q.lat,q.lon,q.acc,true); };
+  if(!renderLocPop.focused){ renderLocPop.focused=1; $('locPopClose').focus({preventScroll:true}); }
+}
+function closeLocPop(){ LOCPOP=null; $('locPop').hidden=true; }
+document.addEventListener('keydown',e=>{ if(e.key==='Escape'&&LOCPOP) closeLocPop(); });
+function openLocPop(lat,lon,acc){ LOCPOP={lat,lon,acc}; renderLocPop.focused=0; renderLocPop(); ensureT2(renderLocPop); ensureRainObs(renderLocPop); ensureRainFac(renderLocPop); }
+async function autoLocPop(){
+  if(store.get('hsw.locPop')==='off'||!navigator.geolocation||!P.data) return;
+  try{ const st=await navigator.permissions?.query({name:'geolocation'}); if(st&&st.state==='denied') return; }catch(e){}
+  navigator.geolocation.getCurrentPosition(pos=>openLocPop(pos.coords.latitude,pos.coords.longitude,pos.coords.accuracy),()=>{},{enableHighAccuracy:false,timeout:15000,maximumAge:10*60e3});
+}
 function drawStations(){
   stationLayer.clearLayers(); drawA4t(); if(!P.data) return; const t=curT(), live=Math.abs(t-Date.now())<HR;
   for(const s of P.data.stations){ if(!inRegion(s.lat,s.lon)||isA4t(s)) continue;
@@ -2395,7 +2480,7 @@ function renderLegend(){
 applyStaticLang(); if(!S.mode) $('modeChip').textContent=T('no data','ไม่มีข้อมูล');
 $('btnLang').onclick=()=>{ LANG=LANG==='th'?'en':'th'; store.set('hsw.lang',LANG); applyStaticLang();
   {const lb=document.querySelector('.locate-btn'); if(lb){lb.title=T('Show PM2.5 at my location','ดูค่าฝุ่นที่ตำแหน่งของฉัน'); lb.setAttribute('aria-label',lb.title);}} if(S.mode) setMode(S.mode); else $('modeChip').textContent=T('no data','ไม่มีข้อมูล');
-  renderLegend(); renderAll(); renderHereBox(); drawStations?.(); redrawTime(); };
+  renderLegend(); renderAll(); renderHereBox(); if(LOCPOP) renderLocPop(); drawStations?.(); redrawTime(); };
 {const v=store.get('hsw.unitSel'); if(v) $('unitSel').value=v;}
 $('unitSel').addEventListener('change',()=>{store.set('hsw.unitSel',$('unitSel').value); renderLegend(); renderAll(); redrawTime();});
 renderLegend();
@@ -2407,8 +2492,8 @@ $('alpha').addEventListener('change',()=>{FIELD_CACHE.clear(); redrawTime();});
 {const u=new URL(location.href); if(u.searchParams.has('v')){u.searchParams.delete('v'); history.replaceState(null,'',u.toString());}}
 // first paint, then refresh every 30 minutes while the tab is open
 computeReceptors(); renderAll(); applyVisibility();
-runAuto(false).then(()=>{ if(!P.data){ $('lyFire').checked=true; $('legTotal').hidden=true; $('legUnc').hidden=true; $('legFire').hidden=false; redrawTime(); } });
-setInterval(async()=>{ if(document.visibilityState!=='visible'||!P.data) return; await runAuto(true);
+runAuto(false).then(()=>{ if(P.data) autoLocPop(); if(!P.data){ $('lyFire').checked=true; $('legTotal').hidden=true; $('legUnc').hidden=true; $('legFire').hidden=false; redrawTime(); } });
+setInterval(async()=>{ if(document.visibilityState!=='visible'||!P.data) return; await runAuto(true); if(LOCPOP) renderLocPop();
   if(await newBuild()) toast(T('A new version of the page is available — press Refresh.','มีหน้าเว็บเวอร์ชันใหม่ — กดปุ่มรีเฟรช'),15000); },30*60e3);
 </script>
 </body>

@@ -20,12 +20,25 @@ jobs:
       - uses: actions/setup-python@v5
         with: { python-version: '3.12' }
       - name: Find the CHELSA files
-        id: list
         run: |
-          base="https://os.unil.cloud.switch.ch/chelsa02"
-          curl -sS --max-time 60 "$base?prefix=chelsa/global/climatologies/1981-2010/pr/" | grep -i '\.tif$' | sort > files.txt || true
-          n=$(wc -l < files.txt); echo "::notice title=CHELSA listing::$n files; $(head -3 files.txt | tr '\n' ' ')"
-          [ "$n" -ge 12 ] || { echo "::error title=CHELSA::listing gave $n files"; curl -sS -I --max-time 30 "$base?prefix=chelsa/global/climatologies/" | head -5; exit 1; }
+          : > files.txt
+          # 1) new bucket (chelsa-climate.org): list with delimiter to see the layout
+          for pre in "chelsa/global/climatologies/" "chelsa/global/climatologies/1981-2010/" "chelsa/global/climatologies/1981-2010/pr/"; do
+            r=$(curl -sS --max-time 60 "https://os.unil.cloud.switch.ch/chelsa02?prefix=$pre&delimiter=/" | head -c 600 | tr '\n' ' ')
+            echo "::notice title=listing $pre::$r"
+            curl -sS --max-time 60 "https://os.unil.cloud.switch.ch/chelsa02?prefix=$pre" | grep -i '_pr_[0-9][0-9]_.*\.tif$' | sed 's#^#https://os.unil.cloud.switch.ch/chelsa02/#' >> files.txt || true
+          done
+          # 2) the older EnviCloud bucket, standard V2.1 names
+          if [ "$(sort -u files.txt | wc -l)" -lt 12 ]; then
+            for m in 01 02 03 04 05 06 07 08 09 10 11 12; do
+              u="https://os.zhdk.cloud.switch.ch/envicloud/chelsa/chelsa_V2/GLOBAL/climatologies/1981-2010/pr/CHELSA_pr_${m}_1981-2010_V.2.1.tif"
+              c=$(curl -sS -I --max-time 30 -o /dev/null -w "%{http_code}" "$u"); [ "$m" = 01 ] && echo "::notice title=envicloud::$c $u"
+              [ "$c" = 200 ] && echo "$u" >> files.txt
+            done
+          fi
+          sort -u files.txt -o files.txt; n=$(wc -l < files.txt)
+          echo "::notice title=CHELSA files::$n; $(head -2 files.txt | tr '\n' ' ')"
+          [ "$n" -ge 12 ] || exit 1
       - name: Build the factors
         run: |
           pip -q install rasterio numpy

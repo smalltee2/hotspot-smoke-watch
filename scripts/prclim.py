@@ -35,7 +35,7 @@ def bilinear_blocks(B):
 for m in range(1, 13):
     cand = [n for n in names if re.search(rf'_pr_{m:02d}_', n)]
     if not cand: raise SystemExit(f'no file for month {m}')
-    url = base + cand[0]
+    url = cand[0] if cand[0].startswith('http') else base + cand[0]
     with rasterio.open('/vsicurl/' + url) as src:
         win = from_bounds(W, S, E, N, src.transform)
         a = src.read(1, window=win, out_shape=(NY, NX), resampling=Resampling.average, masked=True)

@@ -269,6 +269,8 @@ const isAvg24 = s => !s.hourly && CFG.avg24Providers.includes(s.provider);   // 
 
 // ------------------------------------------------------------------ main
 async function main() {
+  const T0 = Date.now(); let tPrev = T0, tLab = 'start', tAcc = [];
+  globalThis.TIMER = lab => { const t = Date.now(); tAcc.push(`${tLab} ${((t - tPrev) / 1000).toFixed(0)} s`); tPrev = t; tLab = lab; if (lab === 'outputs' && process.env.GITHUB_ACTIONS) console.log(`::notice title=timing::${tAcc.join(' · ')}`); };
   if (!process.env.OPENAQ_API_KEY) throw new Error('OPENAQ_API_KEY is not set');
   const state = await readJSON(path.join(DATA, 'state.json'), {});
   state.kf ||= {}; state.kfSlow ||= {}; state.obsHist ||= {};
@@ -389,6 +391,7 @@ async function main() {
       met.key = metKey; await writeJSON(path.join(DATA, 'met.json'), met);
     } catch (e) { log(`met refresh failed: ${e.message}${met ? ' (keeping previous)' : ''}`); }
   }
+  globalThis.TIMER('rain');
   // 3b''. observed rain (JAXA GSMaP gauge-calibrated, 0.1°; scripts/gsmap.mjs): replaces the ECMWF rain of the hours already
   //       observed, in memory only (met.json keeps the pure ECMWF fields), so wet removal in the smoke model, the assimilation and
   //       the page use measured rain for the past; the page also draws the 0.1° observed field for those hours
@@ -434,6 +437,7 @@ async function main() {
   if (met) { const web = packMet(met, now - 36 * HOUR, now + 75 * HOUR); await writeJSON(path.join(DATA, 'met-web.json'), web);
     log(`met-web: ${web.times.length} h, ${(JSON.stringify(web).length / 1024).toFixed(0)} KB (full ${(JSON.stringify(met).length / 1024).toFixed(0)} KB)`); }
 
+  globalThis.TIMER('t2+wxml');
   // 3b'. 2-m temperature downscaled to 0.025° (live forecast only; scripts/t2down.mjs): terrain lapse-rate correction on a 0.025° DEM
   //      plus the Air4Thai stations' residuals kriged (24-h mean kept, latest anomaly faded with lead). The page assembles the field.
   let t2Info = null;
@@ -542,6 +546,7 @@ async function main() {
     t2Info = { wxml: wxmlInfo, dem: 'data/static/elev025.json', demKey: key25, lapse: T2CFG.lapse, efoldH: T2CFG.efoldH, corr: r?.file ? 'data/t2-corr.json' : null, tA: r?.file?.tA ?? null, cv: r?.cv ?? null, score24: (state.t2score || []).slice(-14) };
   } catch (e) { log(`t2 downscaling failed: ${e.message}`); if (process.env.GITHUB_ACTIONS) console.log(`::warning title=t2 downscaling::${e.message}`); }
 
+  globalThis.TIMER('hotspots...');
   // 3c. hotspots
   let hot = await firmsHotspots(); let hotReused = false;
   if (!hot.length) {   // FIRMS unreachable or empty: keep the last good set (≤ 12 h old) rather than blanking the map
@@ -679,6 +684,7 @@ async function main() {
       obsSeries: (() => { const h = new Map((state.obsHist[s.id] || []).map(([t, v]) => [t, v])); const a = hours.slice(0, jNow + 1).map(t => h.has(t) ? h.get(t) : null); return a.some(v => v != null) ? a : null; })() };
   });
 
+  globalThis.TIMER('ml...');
   // 4c. self-learning post-processing (scripts/ml.mjs): once a day, score yesterday's experts on the newly verified day and
   //     retrain them; every hour, apply the weighted correction to the hourly stations' forecasts (only once an expert has
   //     earned weight). Features are the values known now, also written to the forecast log for training.
@@ -754,6 +760,7 @@ async function main() {
     } catch (e) { log(`ML map field failed: ${e.message}`); }
   }
 
+  globalThis.TIMER('rk...');
   // 5. regression kriging (RIMM-type) at the analysis hour, in log space:
   //    ln(obs+1) = b0 + b1 ln(C+1) + b2 elev_km + b3 ln(BLH/1000) + b4 wind100 + residual;  residual → ordinary kriging on a 0.025° grid; inputs: reference monitors + quality-checked low-cost sensors.
   //    Two versions: C = CAMS (rk, public) and C = CAMS + assimilation increment (rkA): the kriging then corrects only what the
@@ -847,6 +854,7 @@ async function main() {
   for (const [f, obj] of rkFineFiles) { await writeJSON(f, obj); log(`map correction ${path.basename(f)}: ${obj.nx}×${obj.ny} at ${obj.step}°, ${(JSON.stringify(obj).length / 1048576).toFixed(1)} MB`); }
   const gridRaw = hours.map((t, j) => gridPts.map((_, p) => { const v = C.grid[p][i0 + j]; return v == null ? -1 : r1(v); }));
 
+  globalThis.TIMER('outputs');
   // 7. outputs
   await writeJSON(path.join(DATA, 'latest.json'), {
     generated: now, camsIssued: C.at, bbox: CFG.bbox, runlog: RUNLOG,

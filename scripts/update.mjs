@@ -14,8 +14,8 @@ import { buildDEM, sampleGrid } from './dem.mjs';
 import { regressionKriging, krigeField, clampAux } from './rk.mjs';
 import { fetchMet, sampleMet, packMet, MET_MODEL } from './met.mjs';
 import { updateGsmap, mergeIntoMet, webRain } from './gsmap.mjs';
-import { fetchGauges, scoreGauges } from './thaiwater.mjs';
-import { downscaleT2, packDEM, T2CFG, t2SeaLevel, t2Bin } from './t2down.mjs';
+import { fetchGauges, scoreGauges, gsmapAt } from './thaiwater.mjs';
+import { downscaleT2, packDEM, T2CFG, t2SeaLevel, t2Bin, t2Down } from './t2down.mjs';
 import { buildLandcover, landcoverAt, packLandcover, unpackLandcover } from './landcover.mjs';
 import { loadModel } from './model.mjs';
 import { assimilateFires, assimSummary } from './assim.mjs';
@@ -412,6 +412,20 @@ async function main() {
       log(m); if (process.env.GITHUB_ACTIONS) console.log(`::notice title=rain vs gauges::${m}`);
       rainInfo && (rainInfo.gauges = { hours: R.length, gaugeHours: N, rmse: { cell: pool('cell'), bil: pool('bil'), fine: pool('fine') }, r: { cell: mr('cell'), bil: mr('bil'), fine: mr('fine') } });
     }
+    // daily observed-rain archive for the Mac evaluation (rainobs-YYYYMMDD.csv, Thai day, written once from 10:00 Thai time so the
+    // GSMaP NRT hours of the day have arrived): GSMaP (cell, bilinear, 0.025° value) at the Air4Thai stations and at the ThaiWater gauges
+    try {
+      const yday = thaiDate(now - 24 * HOUR), rf = path.join(DATA, 'history', yday.slice(0, 7), `rainobs-${yday.replace(/-/g, '')}.csv`);
+      if (new Date(now + 7 * HOUR).getUTCHours() >= 10 && await fs.access(rf).then(() => false, () => true)) {
+        const d0 = Date.parse(yday + 'T00:00:00+07:00'), rowsR = []; let nH = 0;
+        for (let te = d0 + HOUR; te <= d0 + 24 * HOUR; te += HOUR) { const ts = te - HOUR; if (!gcache.hours?.[ts]) continue; nH++;
+          const he = new Date(te).toISOString().slice(0, 13) + ':00Z';
+          for (const s of a4tSt) { const g = await gsmapAt(gcache, DATA, s.lat, s.lon, ts); if (g) rowsR.push([he, 'a4t', s.id, s.lat, s.lon, '', g.cell, g.bil, g.fine, g.src]); }
+          for (const [la, lo, mm] of state.gaugeRain?.[ts] || []) { const g = await gsmapAt(gcache, DATA, la, lo, ts); rowsR.push([he, 'gauge', '', la, lo, mm, g?.cell ?? '', g?.bil ?? '', g?.fine ?? '', g?.src ?? '']); } }
+        if (nH >= 20) { await appendCSV(rf, 'hour_end_utc,kind,station_id,lat,lon,gauge_mm,gsmap_cell,gsmap_bil,gsmap_fine,gsmap_src', rowsR); log(`observed-rain archive ${path.basename(rf)}: ${nH} hours, ${rowsR.length} rows`); }
+        else log(`observed-rain archive for ${yday}: only ${nH} GSMaP hours held, not written`);
+      }
+    } catch (e) { log(`observed-rain archive failed: ${e.message}`); }
   } catch (e) { log(`GSMaP observed rain failed: ${e.message}`); if (process.env.GITHUB_ACTIONS) console.log(`::warning title=GSMaP rain::${e.message}`); }
 
   // compact copy for the page: 36 h back (dispersion spin-up) to 75 h ahead (longest forecast option + interpolation)
@@ -453,6 +467,21 @@ async function main() {
           delete state.t2fc[k]; } }
       state.t2score = state.t2score.slice(-400);
     }
+    // weather forecast log for the daily evaluation on the Mac (wxf-YYYYMMDDTHH.csv, one per issue hour), Air4Thai stations, same leads
+    // as the PM2.5 log: 2-m temperature at valid − 30 min (Air4Thai TEMP is the hourly mean ending at valid) as ECMWF bilinear,
+    // terrain-corrected and as shown on the page; rain = ECMWF mm in the hour ending at valid (future hours: never replaced by GSMaP)
+    try {
+      const iso0 = new Date(now).toISOString(), stamp0 = iso0.slice(0, 13).replace(/[-:]/g, ''), wxf = path.join(DATA, 'history', iso0.slice(0, 7), `wxf-${stamp0}.csv`);
+      if (await fs.access(wxf).then(() => false, () => true)) {
+        const tI = Math.floor(now / HOUR) * HOUR, rowsW = [];
+        for (const s of a4tSt) { const z = sampleGrid(demV, s.lat, s.lon) ?? 0;
+          for (const L of CFG.logLeads) { const tv = tI + L * HOUR, tm = tv - T2CFG.obsOffsetMs, m = sampleMet(met, s.lat, s.lon, tm), mp = sampleMet(met, s.lat, s.lon, tv), d = t2Down(met, demV, r?.file || null, s.lat, s.lon, tm, sampleGrid);
+            rowsW.push([new Date(tI).toISOString().slice(0, 13) + ':00Z', new Date(tv).toISOString().slice(0, 13) + ':00Z', s.id, L, Math.round(z),
+              m?.t2 != null ? +m.t2.toFixed(2) : '', d.terrain != null ? +d.terrain.toFixed(2) : '', d.down != null ? +d.down.toFixed(2) : '', mp?.pr != null ? +mp.pr.toFixed(2) : '']); } }
+        await appendCSV(wxf, 'issued_utc,valid_utc,station_id,lead_h,elev_m,t2_ecmwf,t2_terrain,t2_down,pr_ecmwf', rowsW);
+        log(`weather forecast log ${path.basename(wxf)}: ${rowsW.length} rows`);
+      }
+    } catch (e) { log(`weather forecast log failed: ${e.message}`); }
     t2Info = { dem: 'data/static/elev025.json', demKey: key25, lapse: T2CFG.lapse, efoldH: T2CFG.efoldH, corr: r?.file ? 'data/t2-corr.json' : null, tA: r?.file?.tA ?? null, cv: r?.cv ?? null, score24: (state.t2score || []).slice(-14) };
   } catch (e) { log(`t2 downscaling failed: ${e.message}`); if (process.env.GITHUB_ACTIONS) console.log(`::warning title=t2 downscaling::${e.message}`); }
 

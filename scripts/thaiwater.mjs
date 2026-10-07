@@ -22,7 +22,7 @@ function findLatLon(o, depth = 0) {
 // store: { [hourStartUTCms]: [[lat, lon, mm], ...] }
 export async function fetchGauges(store, now, { get, log = console.log } = {}) {
   store ||= {};
-  for (const k of Object.keys(store)) if (+k < now - 36 * HOUR) delete store[k];
+  for (const k of Object.keys(store)) if (+k < now - 48 * HOUR) delete store[k];   // 48 h: the daily archive of yesterday needs ~34 h
   let js; try { js = await (await get(URL_)).json(); } catch (e) { log(`ThaiWater rain: ${e.message}`); return store; }
   const rows = Array.isArray(js?.data) ? js.data : [];
   let n = 0;
@@ -73,4 +73,17 @@ export async function scoreGauges(store, gcache, dataDir, scored = {}) {
     scored[k] = h.src;
   }
   return out;
+}
+
+// GSMaP at a point for the hour starting tStart: 0.1° cell, bilinear, bilinear × CHELSA factor (the page's 0.025° value); null if not held
+export async function gsmapAt(gcache, dataDir, lat, lon, tStart) {
+  const h = gcache?.hours?.[tStart]; if (!h) return null;
+  const c = GSCFG, a = h._a || (h._a = unpack(h.d)), fx = (lon - c.lon0) / 0.1, fy = (lat - c.lat0) / 0.1, xi = Math.round(fx), yi = Math.round(fy);
+  if (xi < 0 || yi < 0 || xi >= c.nx || yi >= c.ny) return null;
+  const cell = a[yi * c.nx + xi]; if (cell < 0) return null;
+  const x0 = Math.max(0, Math.min(c.nx - 2, Math.floor(fx))), y0 = Math.max(0, Math.min(c.ny - 2, Math.floor(fy))), ax = fx - x0, ay = fy - y0;
+  let s = 0, w = 0; for (const [dx, dy, wt] of [[0, 0, (1 - ax) * (1 - ay)], [1, 0, ax * (1 - ay)], [0, 1, (1 - ax) * ay], [1, 1, ax * ay]]) { const q = a[(y0 + dy) * c.nx + x0 + dx]; if (q >= 0) { s += wt * q; w += wt; } }
+  const bil = w ? s / w / 10 : cell / 10, F = await factor(dataDir, new Date(tStart + 7 * HOUR).getUTCMonth() + 1);
+  let fac = 1; if (F) { const M = F.meta, ix = Math.round((lon - M.lon0) / M.step), iy = Math.round((lat - M.lat0) / M.step); if (ix >= 0 && iy >= 0 && ix < M.nx && iy < M.ny) fac = F.f[iy * M.nx + ix] / 50; }
+  return { cell: cell / 10, bil: +bil.toFixed(2), fine: +(bil * fac).toFixed(2), src: h.src };
 }

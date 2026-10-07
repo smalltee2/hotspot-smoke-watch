@@ -561,7 +561,7 @@ td.num{text-align:right;font-family:var(--font-data);font-variant-numeric:tabula
       <div id="legRain" hidden>
         <div class="pcdbar" id="rainBar" style="grid-template-columns:1fr 1fr 1fr 1fr 1fr 1fr"></div>
         <div class="ticks"><span>0.1</span><span>0.5</span><span>1</span><span>2</span><span>5</span><span>10</span><span>mm/h</span></div>
-        <div class="note" style="font-size:.68rem" data-th="ฝนรายชั่วโมง 24 ชม. ที่ผ่านมา: ฝนที่ตรวจวัดจากดาวเทียมปรับด้วยเครื่องวัดฝน (JAXA GSMaP 0.1°) ประมาณค่าเป็น 0.025° และปรับรูปแบบด้วยฝนรายเดือน 1981–2010 (CHELSA V2.1 ปกติ ±7 %) ใช้คำนวณการชะล้างควันด้วย ชั่วโมงถัดไป: พยากรณ์ ECMWF ฝนชะล้างฝุ่นออกจากอากาศ">Hourly rain. Past 24 h: observed by satellite and calibrated with rain gauges (JAXA GSMaP, 0.1°), interpolated to 0.025° and shaped by the month's 1981–2010 rain pattern (CHELSA V2.1; typically ±7 %) and also used for wet removal of smoke; later hours: ECMWF forecast. Rain washes particles out of the air.</div>
+        <div class="note" style="font-size:.68rem" data-th="ฝนรายชั่วโมง 24 ชม. ที่ผ่านมา: ฝนที่ตรวจวัดจากดาวเทียมปรับด้วยเครื่องวัดฝน (JAXA GSMaP 0.1°) ประมาณค่าเป็น 0.025° และปรับรูปแบบด้วยฝนรายเดือน 1981–2010 (CHELSA V2.1 ปกติ ±7 %) ใช้คำนวณการชะล้างควันด้วย ชั่วโมงถัดไป: พยากรณ์ ECMWF ประมาณค่าเป็น 0.025° และปรับรูปแบบแบบเดียวกัน ฝนชะล้างฝุ่นออกจากอากาศ">Hourly rain. Past 24 h: observed by satellite and calibrated with rain gauges (JAXA GSMaP, 0.1°), interpolated to 0.025° and shaped by the month's 1981–2010 rain pattern (CHELSA V2.1; typically ±7 %) and also used for wet removal of smoke; later hours: ECMWF forecast, interpolated to 0.025° and shaped the same way. Rain washes particles out of the air.</div>
       </div>
       <div id="legTemp" hidden>
         <div class="pcdbar" id="tempBar" style="grid-template-columns:repeat(7,1fr)"></div>
@@ -1384,6 +1384,16 @@ async function loadRainFac(m){ const k=String(m).padStart(2,'0'); if(RFAC[k]!==u
     const r=await fetch('data/static/prclim/'+RFACmeta.files[k],{cache:'force-cache'}); if(!r.ok) return null;
     const ds=r.body.pipeThrough(new DecompressionStream('deflate')); RFAC[k]=new Uint8Array(await new Response(ds).arrayBuffer()); }catch(e){RFAC[k]=null;}
   return RFAC[k]; }
+// one variable of the met grids (bilinear in space, linear in time, finest grid containing the point): same as sampleMet, ~10× cheaper
+function metVarAt(M,k,lat,lon,t){ const T=M.times, nt=T.length; let ft=(t-T[0])/3600e3; ft=Math.min(Math.max(ft,0),nt-1.0001); const it=Math.floor(ft), at=ft-it;
+  for(const g of M.grids){ let fx=(lon-g.lon0)/g.step, fy=(lat-g.lat0)/g.step;
+    if(!(fx>=0&&fy>=0&&fx<=g.nx-1&&fy<=g.ny-1)&&g!==M.grids[M.grids.length-1]) continue;
+    fx=Math.min(Math.max(fx,0),g.nx-1.0001); fy=Math.min(Math.max(fy,0),g.ny-1.0001);
+    const ix=Math.floor(fx), iy=Math.floor(fy), ax=fx-ix, ay=fy-iy, n=g.nx*g.ny, a=g.data[k], i=iy*g.nx+ix;
+    const f=b=>(1-ax)*(1-ay)*a[b+i]+ax*(1-ay)*a[b+i+1]+(1-ax)*ay*a[b+i+g.nx]+ax*ay*a[b+i+g.nx+1];
+    return (1-at)*f(it*n)+at*f((it+1)*n); } return null; }
+function rainFactorAt(lat,lon,t){ const F=RFAC[String(new Date(t+7*3600e3).getUTCMonth()+1).padStart(2,'0')], M=RFACmeta; if(!F||!M) return 1;
+  const ix=Math.round((lon-M.lon0)/M.step), iy=Math.round((lat-M.lat0)/M.step); return ix>=0&&iy>=0&&ix<M.nx&&iy<M.ny?F[iy*M.nx+ix]/50:1; }
 function rainFineAt(lat,lon,t){
   const R=RAINOBS; if(!R) return undefined; const k=R.times.indexOf(obsHour(t)); if(k<0) return undefined;
   const a=R.a[k], fx=(lon-R.lon0)/R.step, fy=(lat-R.lat0)/R.step; if(fx<-0.5||fy<-0.5||fx>R.nx-0.5||fy>R.ny-0.5) return undefined;
@@ -1648,14 +1658,14 @@ function drawWx(){
   if(mode==='rain'&&P.data?.rainObs&&(!RAINOBS||RAINOBS.key!==P.data.rainObs.times.join('|'))&&!loadRainObs.busy&&loadRainObs.tried!==P.data.rainObs.times.join('|')){loadRainObs.busy=1; loadRainObs.tried=P.data.rainObs.times.join('|'); loadRainObs().then(()=>{loadRainObs.busy=0; if(RAINOBS&&layerMode()==='rain') redrawTime();});}
   const obsRain=mode==='rain'&&!!RAINOBS&&RAINOBS.times.includes(obsHour(t));
   const facKey=String(new Date(t+7*3600e3).getUTCMonth()+1).padStart(2,'0');
-  if(obsRain&&RFAC[facKey]===undefined){ loadRainFac(facKey).then(f=>{ if(f&&layerMode()==='rain') redrawTime(); }); }
-  const fineRain=obsRain&&!!RFAC[facKey];
+  if(mode==='rain'&&RFAC[facKey]===undefined){ loadRainFac(facKey).then(f=>{ if(f&&layerMode()==='rain') redrawTime(); }); }
+  const fineRain=mode==='rain'&&!!RFAC[facKey];   // observed and forecast rain both drawn at 0.025° with the month's CHELSA pattern
   const down=mode==='temp'&&!!T2D&&!!MET.grids[0].elev;
   let cell=(down||fineRain)?0.025:obsRain?0.05:0.1; while(((e-w)/cell)*((n-so)/cell)>((down||fineRain)?650000:obsRain?200000:60000)) cell*=1.25;
   const fx=Math.ceil((e-w)/cell), fy=Math.ceil((n-so)/cell), F=new Float32Array(fx*fy);
-  for(let y=0;y<fy;y++) for(let x=0;x<fx;x++){const la=so+(y+.5)*cell, lo=w+(x+.5)*cell; if(mode==='rain'){ if(obsRain){const v=fineRain?rainFineAt(la,lo,t):rainObsAt(la,lo,t); F[y*fx+x]=v==null?NaN:v;} else F[y*fx+x]=sampleMet(MET,la,lo,t).pr;} else {const v=t2At(la,lo,t); F[y*fx+x]=v==null?NaN:v;}}
+  for(let y=0;y<fy;y++) for(let x=0;x<fx;x++){const la=so+(y+.5)*cell, lo=w+(x+.5)*cell; if(mode==='rain'){ if(obsRain){const v=fineRain?rainFineAt(la,lo,t):rainObsAt(la,lo,t); F[y*fx+x]=v==null?NaN:v;} else {let v=metVarAt(MET,'pr',la,lo,t); if(fineRain&&v>0) v*=rainFactorAt(la,lo,t); F[y*fx+x]=v;}} else {const v=t2At(la,lo,t); F[y*fx+x]=v==null?NaN:v;}}
   S.fine={F,w,so,nx:fx,ny:fy,cell};
-  S.fieldInfo=mode==='rain'?(obsRain?T(`Observed rain, mm/h: JAXA GSMaP gauge-calibrated${fineRain?`, interpolated to ${cell.toFixed(3)}° and shaped by the CHELSA rain climatology (±7 % typical)`:', 0.1°'} (${RAINOBS.src[RAINOBS.times.indexOf(obsHour(t))]==='nrt'?'Gauge_NRT':'Gauge_NOW'})`,`ฝนที่ตรวจวัด มม./ชม.: JAXA GSMaP ปรับด้วยเครื่องวัดฝน${fineRain?' ประมาณค่าเป็น '+cell.toFixed(3)+'° และปรับรูปแบบด้วยภูมิอากาศฝน CHELSA (ปกติ ±7 %)':' 0.1°'}`):T('Rain forecast, mm/h (ECMWF)','ฝนพยากรณ์ มม./ชม. (ECMWF)')):down?T(`Temperature at 2 m, °C: ECMWF downscaled to ${cell.toFixed(3)}° with terrain${T2D.corr?' and Air4Thai stations':''}`,`อุณหภูมิ 2 ม. °C: ECMWF ย่อส่วนเป็น ${cell.toFixed(3)}° ด้วยภูมิประเทศ${T2D.corr?' และสถานี Air4Thai':''}`):T('Temperature at 2 m, °C (ECMWF)','อุณหภูมิ 2 ม. °C (ECMWF)');
+  S.fieldInfo=mode==='rain'?(obsRain?T(`Observed rain, mm/h: JAXA GSMaP gauge-calibrated${fineRain?`, interpolated to ${cell.toFixed(3)}° and shaped by the CHELSA rain climatology (±7 % typical)`:', 0.1°'} (${RAINOBS.src[RAINOBS.times.indexOf(obsHour(t))]==='nrt'?'Gauge_NRT':'Gauge_NOW'})`,`ฝนที่ตรวจวัด มม./ชม.: JAXA GSMaP ปรับด้วยเครื่องวัดฝน${fineRain?' ประมาณค่าเป็น '+cell.toFixed(3)+'° และปรับรูปแบบด้วยภูมิอากาศฝน CHELSA (ปกติ ±7 %)':' 0.1°'}`):(fineRain?T(`Rain forecast, mm/h: ECMWF (0.25° north, 1° elsewhere) interpolated to ${cell.toFixed(3)}° and shaped by the CHELSA rain climatology`,`ฝนพยากรณ์ มม./ชม.: ECMWF (0.25° ภาคเหนือ 1° พื้นที่อื่น) ประมาณค่าเป็น ${cell.toFixed(3)}° และปรับรูปแบบด้วยภูมิอากาศฝน CHELSA`):T('Rain forecast, mm/h (ECMWF)','ฝนพยากรณ์ มม./ชม. (ECMWF)'))):down?T(`Temperature at 2 m, °C: ECMWF downscaled to ${cell.toFixed(3)}° with terrain${T2D.corr?' and Air4Thai stations':''}`,`อุณหภูมิ 2 ม. °C: ECMWF ย่อส่วนเป็น ${cell.toFixed(3)}° ด้วยภูมิประเทศ${T2D.corr?' และสถานี Air4Thai':''}`):T('Temperature at 2 m, °C (ECMWF)','อุณหภูมิ 2 ม. °C (ECMWF)');
   const W=Math.min(1100,Math.round((e-w)*60)), H=Math.min(1100,Math.round((mercY(n)-mercY(so))/DEG*60));
   const url=regionCanvas(so,w,n,e,W,H,(lat,lon)=>{const x=Math.floor((lon-w)/cell), y=Math.floor((lat-so)/cell); if(x<0||y<0||x>=fx||y>=fy) return null;
     const v=F[y*fx+x]; if(v!==v) return null; if(mode==='temp'){const rgb=tempRGB(v); return [rgb[0],rgb[1],rgb[2],150];} const c=wxColor(mode,v); if(!c) return null; const rgb=hexRGB(c); return [rgb[0],rgb[1],rgb[2],150];});

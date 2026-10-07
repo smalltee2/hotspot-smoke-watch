@@ -403,7 +403,7 @@ td.num{text-align:right;font-family:var(--font-data);font-variant-numeric:tabula
         </select></div>
       <div id="wv-prov" class="wv">
         <h3 data-th="แนวโน้ม PM&lt;sub&gt;2.5&lt;/sub&gt; รายพื้นที่">PM<sub>2.5</sub> trend by area</h3>
-        <p class="note" data-th="ค่าพยากรณ์ PM&lt;sub&gt;2.5&lt;/sub&gt; (ทุกแหล่ง) เฉลี่ยทั้งพื้นที่ทุกชั่วโมง ย้อนหลัง 1 วันและล่วงหน้าถึง 4 วัน เลือกจังหวัด หรือกดชื่อจังหวัดในรายการด้านล่าง">Forecast PM<sub>2.5</sub> (all sources) averaged over the area, hour by hour, from yesterday to 4 days ahead. Pick a province, or tap one in the list below.</p>
+        <p class="note" id="areaNote"></p>
         <div id="areaTrend" class="note">–</div>
         <h3 data-th="พยากรณ์รายจังหวัด">Forecast by province</h3>
         <p class="note" data-th="ค่าเฉลี่ยของทุกจุด 0.1° ในจังหวัด เรียงจากค่าสูงสุด">Average over every 0.1° point in the province, highest first.</p>
@@ -2629,6 +2629,8 @@ function renderAreaTrend(){
   const box=$('areaTrend'); ensureT2(renderAreaTrend); ensureRainObs(renderAreaTrend); ensureRainFac(renderAreaTrend);
   if(!P.data||!P.data.grid){box.innerHTML=T('Area trends appear when the page runs from the hosted site.','แนวโน้มรายพื้นที่จะแสดงเมื่อเปิดหน้าเว็บจากเว็บไซต์ที่โฮสต์'); renderProvList(null); return;}
   const A=areaSeries(), H=A.H, now=Date.now(); if(!A.groups.has(areaSel)) areaSel='__all';
+  { const nd=Math.max(1,Math.floor((H[H.length-1]-now)/864e5));   // whole days of forecast left in the data
+    $('areaNote').innerHTML=T(`Forecast PM<sub>2.5</sub> (all sources) averaged over the area, hour by hour, from today to ${nd} days ahead. Pick a province, or tap one in the list below.`,`ค่าพยากรณ์ PM<sub>2.5</sub> (ทุกแหล่ง) เฉลี่ยทั้งพื้นที่ทุกชั่วโมง ตั้งแต่วันนี้ ล่วงหน้า ${nd} วัน เลือกจังหวัด หรือกดชื่อจังหวัดในรายการด้านล่าง`); }
   const provs=[...A.groups.entries()].filter(([g])=>g!=='__all'), nm=g=>g.p?provName(g.p):g.name;
   provs.sort((a,b)=>nm(a[1]).localeCompare(nm(b[1]),LOC()));
   const g=A.groups.get(areaSel), multi=provs.length>1;

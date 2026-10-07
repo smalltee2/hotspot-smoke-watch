@@ -11,10 +11,10 @@
 <script>window.L||document.write('<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"><\/script>')</script>
 <style>
 :root{--bg:#eceeed;--panel:#f8f8f6;--line:#d3d6d3;--fg:#1d2321;--muted:#5d6763;--focus:#1f6fd1;
-  --c-cams:#8c6d4f;--c-kalman:#8a5cc2;--c-blend:#1a9a8a;--c-system:#d1491a;--c-pers:#6b7470;--c-ref:#1f6fd1;--good:#1f7a4d;--bad:#b3261e;
+  --c-raw:#8c6d4f;--c-cams:#8c6d4f;--c-kalman:#8a5cc2;--c-x1:#8a5cc2;--c-x2:#1a9a8a;--c-x3:#c08a00;--c-blend:#1a9a8a;--c-system:#d1491a;--c-pers:#6b7470;--c-ref:#1f6fd1;--good:#1f7a4d;--bad:#b3261e;
   --font-body:'IBM Plex Sans Thai','IBM Plex Sans Condensed',system-ui,sans-serif;--font-data:'IBM Plex Mono',ui-monospace,monospace}
 @media (prefers-color-scheme:dark){:root{--bg:#151918;--panel:#1d2220;--line:#323936;--fg:#e7eae8;--muted:#9aa5a0;--focus:#6aa8ff;
-  --c-cams:#c9a27c;--c-kalman:#b791ea;--c-blend:#3cc7b5;--c-system:#ff7a3d;--c-pers:#a3ada8;--c-ref:#6aa8ff;--good:#4cc28a;--bad:#ff6b5e}}
+  --c-raw:#c9a27c;--c-cams:#c9a27c;--c-kalman:#b791ea;--c-x1:#b791ea;--c-x2:#3cc7b5;--c-x3:#e6b84a;--c-blend:#3cc7b5;--c-system:#ff7a3d;--c-pers:#a3ada8;--c-ref:#6aa8ff;--good:#4cc28a;--bad:#ff6b5e}}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.5 var(--font-body)}
 header{display:flex;flex-wrap:wrap;align-items:baseline;gap:8px 16px;padding:14px 16px;border-bottom:1px solid var(--line);background:var(--panel);position:sticky;top:0;z-index:1000}
@@ -67,6 +67,11 @@ th{color:var(--muted);font-weight:500}
 .pos{color:var(--good)}.neg{color:var(--bad)}
 .empty{color:var(--muted);font-style:italic;padding:18px 0}
 .readout{font:.8rem var(--font-data);color:var(--fg);min-height:1.3em;margin-top:4px}
+.parbar{display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--c-system);border-radius:6px;padding:10px 14px;margin:10px 0 4px}
+.parbar label{font:600 .95rem 'IBM Plex Sans Condensed',sans-serif;display:flex;align-items:center;gap:10px;min-width:0}
+#selPar{font:600 1.05rem var(--font-body);padding:7px 12px;border-width:2px;border-color:var(--c-system);min-width:220px}
+.parbar .pinfo{color:var(--muted);font-size:.8rem;flex:1 1 300px;min-width:0}
+@media (max-width:600px){.parbar label{width:100%;flex-direction:column;align-items:stretch;gap:4px}#selPar{width:100%;min-width:0}}
 </style>
 </head>
 <body>
@@ -76,9 +81,13 @@ th{color:var(--muted);font-weight:500}
   <a href="dev.html">← forecast</a>
 </header>
 <main>
+  <div class="parbar">
+    <label>Parameter <select id="selPar"></select></label>
+    <span class="pinfo" id="parInfo"></span>
+  </div>
   <div class="controls">
     <label>Station group <select id="selGroup"></select></label>
-    <label>Value <select id="selMetric"><option value="24h">24-h mean (Thai AQI basis)</option><option value="1h">hourly value</option></select></label>
+    <label>Value <select id="selMetric"></select></label>
     <label>Lead time <select id="selLead"></select></label>
     <label>Period <select id="selWin"><option value="1">newest day</option><option value="7" selected>last 7 days</option><option value="all">all days kept (≤ 35)</option></select></label>
   </div>
@@ -86,41 +95,40 @@ th{color:var(--muted);font-weight:500}
   <section><h2>Summary</h2><p class="note" id="sumNote"></p><div class="tiles" id="tiles"></div></section>
 
   <div class="grid2">
-    <section><h2>Error by day</h2><p class="note">Root-mean-square error of each forecast, per Thai day, same rows for all forecasts.</p><div id="chDaily"></div></section>
-    <section><h2>Skill against persistence by day</h2><p class="note">1 − MSE(system)/MSE(persistence): above 0 the published forecast beat "no change". Dashed line = mean bias of the system, scaled to fit (factor in the legend).</p><div id="chSkill"></div></section>
+    <section><h2>Error by day</h2><p class="note">Root-mean-square error of each forecast, per Thai day, on the same rows for all forecasts.</p><div id="chDaily"></div></section>
+    <section><h2>Skill against the reference by day</h2><p class="note" id="skillNote"></p><div id="chSkill"></div></section>
   </div>
   <div class="grid2">
     <section><h2>Error by lead time</h2><p class="note">Pooled over the chosen period.</p><div id="chLead"></div></section>
-    <section><h2>Skill by lead time</h2><p class="note">Against persistence and against raw CAMS, pooled over the period.</p><div id="chLeadSkill"></div></section>
+    <section><h2>Skill by lead time</h2><p class="note" id="leadSkillNote"></p><div id="chLeadSkill"></div></section>
   </div>
 
-  <section><h2>Skill at each station</h2><p class="note" id="mapNote">Skill against persistence at the chosen lead, all days kept (24-h means). Blue = better than persistence, red = worse; larger dots = more pairs. Tap a station for its numbers and its time series below.</p><div id="map"></div></section>
+  <section><h2>What each step adds</h2><p class="note">RMSE before and after each processing step, on the rows where the step was applied, pooled over the period, group and lead. Negative change = the step lowered the error.</p><div class="tablewrap" id="tbSteps"></div></section>
+
+  <section><h2>Skill at each station</h2><p class="note" id="mapNote"></p><div id="map"></div></section>
 
   <section><h2>Station time series</h2>
-    <div class="controls" style="margin:4px 0 8px"><label class="stlab">Station <select id="selSt"></select></label><label>Lead <select id="selStLead"><option>24</option><option>6</option></select></label><label>Value <select id="selStMetric"><option value="24h">24-h mean</option><option value="1h">hourly</option></select></label></div>
+    <div class="controls" style="margin:4px 0 8px"><label class="stlab">Station <select id="selSt"></select></label><label>Lead <select id="selStLead"><option>24</option><option>6</option></select></label><label>Value <select id="selStMetric"></select></label></div>
     <div class="grid2"><div><div id="chSt"></div><div class="readout" id="stRead">Tap the chart to read an hour.</div></div><div id="chScat"></div></div>
   </section>
 
-  <section><h2>Warnings: 24-h mean above the Thai thresholds</h2><p class="note">Hits, misses and false alarms of the 24-h mean at 37.5 and 75 µg/m³ (Thai PCD orange and red), pooled over the period, chosen group and lead. POD = hits / observed events, FAR = false alarms / forecast events, CSI = hits / (hits + misses + false alarms).</p><div class="tablewrap" id="tbWarn"></div></section>
+  <section><h2>Threshold events</h2><p class="note" id="warnNote"></p><div class="tablewrap" id="tbWarn"></div></section>
 
   <div class="grid2">
-    <section><h2>0.025° map against CAMS</h2><p class="note">Leave-one-out value of the published map at each monitor (24-h means, 10 UTC analysis), against raw CAMS, by day.</p><div id="chMap"></div></section>
-    <section><h2>Self-learning weights</h2><p class="note">Weight of each expert after each verified day (PM2.5, temperature, rain); "base" = no learned correction.</p><div id="chML"></div></section>
+    <section><h2 id="chkTitle">Independent check</h2><p class="note" id="chkNote"></p><div id="chCheck"></div><div class="tablewrap" id="tbCheck" style="margin-top:8px"></div></section>
+    <section><h2>Self-learning weights</h2><p class="note">Weight of each expert after each verified day; "base" = no learned correction. The published forecast uses the learned correction only once an expert has earned weight.</p><div id="chML"></div></section>
   </div>
-
-  <section><h2>Weather layers (live only, from 7 Oct 2026)</h2><p class="note">2-m temperature at the Air4Thai stations (hourly means) and rain at the stations against JAXA GSMaP; GSMaP against ThaiWater rain gauges. Same lead time as above.</p>
-    <div class="grid2"><div><div id="chT2"></div></div><div><div id="chRain"></div></div></div>
-    <div class="tablewrap" id="tbGauge" style="margin-top:10px"></div>
-  </section>
   <p class="note" id="defs"></p>
 </main>
 <script>
 const $=id=>document.getElementById(id), CSS=k=>getComputedStyle(document.documentElement).getPropertyValue(k).trim();
-const MODELS=[['cams','raw CAMS','--c-cams'],['kalman','Kalman','--c-kalman'],['blend','blend','--c-blend'],['system','published system','--c-system'],['persistence','persistence','--c-pers']];
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-const fmt=(v,d=2)=>v==null||!isFinite(v)?'–':(+v).toFixed(d);
-let P=null, SER=null, map=null, stLayer=null;
+const fmt=(v,d=2)=>v==null||!isFinite(v)?'–':(+v).toFixed(d), sgn=(v,d=2)=>v==null||!isFinite(v)?'–':(v>=0?'+':'')+(+v).toFixed(d);
+let ALL=null, P=null, cur='pm25', SER=null, map=null, stLayer=null;
 
+// the current parameter: model list with colours (raw, published and reference keep their colours across parameters)
+function models(){ let x=0; return P.models.map(([k,n])=>[k,n,k===P.raw?'--c-raw':k===P.published?'--c-system':k===P.ref?'--c-pers':['--c-x1','--c-x2','--c-x3'][x++%3]]); }
+const lab=k=>(P.models.find(m=>m[0]===k)||[k,k])[1];
 // pooled scores over several daily aggregates of identical rows: RMSE from n-weighted MSE, bias n-weighted, r = n-weighted mean of daily r
 function pool(rows){ if(!rows.length) return null; const n=rows.reduce((a,r)=>a+r.n,0);
   const mse=rows.reduce((a,r)=>a+r.n*r.rmse*r.rmse,0)/n, bias=rows.reduce((a,r)=>a+r.n*r.bias,0)/n, mae=rows.reduce((a,r)=>a+r.n*r.mae,0)/n;
@@ -128,23 +136,27 @@ function pool(rows){ if(!rows.length) return null; const n=rows.reduce((a,r)=>a+
   return {n,mse,rmse:Math.sqrt(mse),bias,mae,r:rw?rr.reduce((a,r)=>a+r.n*r.r,0)/rw:null,obsMean:rows.reduce((a,r)=>a+r.n*r.obsMean,0)/n,days:new Set(rows.map(r=>r.day)).size}; }
 function winDays(){ const w=$('selWin').value, D=P.days; return w==='all'?D:D.slice(-(+w)); }
 const sel=()=>({g:$('selGroup').value,m:$('selMetric').value,L:+$('selLead').value,days:new Set(winDays())});
+const unitOf=m=>m==='day'?P.unit+' per day':P.unit;
+function rowsOf(g,m,L,model,days){ return P.daily.filter(r=>r.group===g&&r.metric===m&&r.lead===L&&r.model===model&&(!days||days.has(r.day))); }
+const one=(g,m,L,k,d)=>P.daily.find(r=>r.group===g&&r.metric===m&&r.lead===L&&r.model===k&&r.day===d);
+const noData=()=>`<div class="empty">No verified ${esc(P.label.toLowerCase())} pairs for this selection yet.${P.since&&!P.days.length?` Scoring starts after the first complete Thai day of the weather logs (logs began ${dayFmt(P.since)}).`:''}</div>`;
 
 // ------------------------------------------------------------------ small SVG charts
 const chartW=el=>Math.round(Math.max(280,Math.min(900,el.clientWidth||560)));
-function lineChart(el,{x,series,yLabel='',zero=false,yMin=null,bars=null,height=220,xFmt=v=>v,xNum=false,onTap=null}){
-  const W=chartW(el),H=Math.round(Math.min(height,Math.max(170,W*0.62))),pl=44,pr=14,pt=12,pb=30;
+function ticks(lo,hi,nt=5){ const raw=(hi-lo)/nt, p10=Math.pow(10,Math.floor(Math.log10(raw))), step=[1,2,2.5,5,10].map(m=>m*p10).find(v=>v>=raw)||raw;
+  const dec=Math.max(0,-Math.floor(Math.log10(step)+1e-9)+(step/p10===2.5?1:0)), out=[]; for(let v=Math.ceil(lo/step-1e-9)*step; v<=hi+1e-9; v+=step) out.push(+v.toFixed(10)); return {out,dec}; }
+function lineChart(el,{x,series,yLabel='',zero=false,yMin=null,bars=null,height=220,xFmt=v=>v,onTap=null}){
+  const W=chartW(el),H=Math.round(Math.min(height,Math.max(170,W*0.62))),pl=46,pr=14,pt=12,pb=30;
   const vals=series.flatMap(s=>s.v.filter(v=>v!=null)).concat(bars?bars.v.filter(v=>v!=null):[]);
-  if(!vals.length){el.innerHTML='<div class="empty">No data for this selection yet.</div>';return;}
-  let lo=yMin!=null?yMin:Math.min(...vals), hi=Math.max(...vals); if(zero) {lo=Math.min(0,lo); hi=Math.max(0,hi);} if(hi-lo<1e-9){hi+=1;lo-=zero?0:1;}
-  const pad=(hi-lo)*0.08; hi+=pad; if(lo!==0||!zero) lo-=lo===0?0:pad;
+  if(!vals.length){el.innerHTML=noData();return;}
+  let lo=yMin!=null?Math.min(yMin,...vals):Math.min(...vals), hi=Math.max(...vals); if(zero) {lo=Math.min(0,lo); hi=Math.max(0,hi);} if(hi-lo<1e-9){hi+=1;lo-=zero||yMin===0?0:1;}
+  const pad=(hi-lo)*0.08; hi+=pad; if(!(lo===0&&(zero||yMin===0))) lo-=pad;
   const X=i=>pl+(x.length<2?(W-pl-pr)/2:i*(W-pl-pr)/(x.length-1)), Y=v=>pt+(hi-v)/(hi-lo)*(H-pt-pb);
-  // round tick values (1, 2, 2.5, 5 × 10ⁿ)
-  const raw=(hi-lo)/5, p10=Math.pow(10,Math.floor(Math.log10(raw))), step=[1,2,2.5,5,10].map(m=>m*p10).find(v=>v>=raw)||raw, dec=Math.max(0,-Math.floor(Math.log10(step)+1e-9)+(step/p10===2.5?1:0));
-  let g=''; for(let v=Math.ceil(lo/step)*step; v<=hi+1e-9; v+=step){ g+=`<line x1="${pl}" x2="${W-pr}" y1="${Y(v)}" y2="${Y(v)}" stroke="${CSS('--line')}"/><text x="${pl-5}" y="${Y(v)+3.5}" font-size="10" text-anchor="end">${(Math.abs(v)<1e-9?0:v).toFixed(dec)}</text>`; }
+  const T=ticks(lo,hi); let g=''; for(const v of T.out) g+=`<line x1="${pl}" x2="${W-pr}" y1="${Y(v)}" y2="${Y(v)}" stroke="${CSS('--line')}"/><text x="${pl-5}" y="${Y(v)+3.5}" font-size="10" text-anchor="end">${(Math.abs(v)<1e-9?0:v).toFixed(T.dec)}</text>`;
   if(zero&&lo<0) g+=`<line x1="${pl}" x2="${W-pr}" y1="${Y(0)}" y2="${Y(0)}" stroke="${CSS('--fg')}" stroke-width="1"/>`;
   const lw=String(xFmt(x[0])).length*6.3+14, every=Math.max(1,Math.ceil(x.length/Math.max(2,Math.floor((W-pl-pr)/(1.5*lw)))));   // as many x labels as fit without overlap
   x.forEach((d,i)=>{ const last=i===x.length-1; if((i%every===0&&(x.length-1-i)*(W-pl-pr)/Math.max(1,x.length-1)>=1.5*lw)||last) g+=`<text x="${X(i)}" y="${H-10}" font-size="10" text-anchor="${last&&x.length>1?'end':i===0&&x.length>1?'start':'middle'}">${esc(xFmt(d))}</text>`; });
-  if(bars){ const bw=Math.max(3,(W-pl-pr)/Math.max(1,x.length)*0.6); bars.v.forEach((v,i)=>{ if(v==null) return; const y0=Y(Math.max(0,Math.min(v,0)===v?v:0));
+  if(bars){ const bw=Math.max(3,(W-pl-pr)/Math.max(1,x.length)*0.6); bars.v.forEach((v,i)=>{ if(v==null) return;
       g+=`<rect x="${X(i)-bw/2}" y="${Math.min(Y(v),Y(0))}" width="${bw}" height="${Math.abs(Y(v)-Y(0))}" fill="${v>=0?CSS('--good'):CSS('--bad')}" fill-opacity=".75"><title>${esc(xFmt(x[i]))}: ${v.toFixed(3)}</title></rect>`; }); }
   for(const s of series){ let d='',pen=false; s.v.forEach((v,i)=>{ if(v==null){pen=false;return;} d+=`${pen?'L':'M'}${X(i).toFixed(1)},${Y(v).toFixed(1)}`; pen=true; });
     g+=`<path d="${d}" fill="none" stroke="${s.c}" stroke-width="${s.w||2}" ${s.dash?'stroke-dasharray="5 4"':''}/>`;
@@ -156,111 +168,147 @@ function lineChart(el,{x,series,yLabel='',zero=false,yMin=null,bars=null,height=
     const i=Math.max(0,Math.min(x.length-1,Math.round((vx-pl)/((W-pl-pr)/Math.max(1,x.length-1))))); const mk=svg.querySelector('.mk'); mk.setAttribute('x1',X(i)); mk.setAttribute('x2',X(i)); mk.style.display=''; onTap(i); }; }
 }
 function scatter(el,pts,{xl,yl}){
-  const W=chartW(el),H=Math.round(Math.min(300,W*0.75)),pl=44,pr=14,pt=12,pb=34; if(pts.length<3){el.innerHTML='<div class="empty">Not enough pairs.</div>';return;}
-  const hi=Math.max(...pts.flat())*1.05||1, X=v=>pl+v/hi*(W-pl-pr), Y=v=>pt+(hi-v)/hi*(H-pt-pb); let g='';
-  for(let k=0;k<=5;k++){const v=hi*k/5; g+=`<line x1="${pl}" x2="${W-pr}" y1="${Y(v)}" y2="${Y(v)}" stroke="${CSS('--line')}"/><text x="${pl-5}" y="${Y(v)+3.5}" font-size="10" text-anchor="end">${v.toFixed(0)}</text><text x="${X(v)}" y="${H-18}" font-size="10" text-anchor="middle">${v.toFixed(0)}</text>`;}
-  g+=`<line x1="${X(0)}" y1="${Y(0)}" x2="${X(hi)}" y2="${Y(hi)}" stroke="${CSS('--muted')}" stroke-dasharray="4 4"/>`;
+  const W=chartW(el),H=Math.round(Math.min(300,W*0.75)),pl=46,pr=14,pt=12,pb=34; if(pts.length<3){el.innerHTML='<div class="empty">Not enough pairs.</div>';return;}
+  const all=pts.flat(); let hi=Math.max(...all), lo=Math.min(...all); lo=lo>=0&&lo<0.4*hi?0:lo; const pd=(hi-lo)*0.05||1; hi+=pd; if(lo!==0) lo-=pd;
+  const X=v=>pl+(v-lo)/(hi-lo)*(W-pl-pr), Y=v=>pt+(hi-v)/(hi-lo)*(H-pt-pb), T=ticks(lo,hi); let g='';
+  for(const v of T.out) g+=`<line x1="${pl}" x2="${W-pr}" y1="${Y(v)}" y2="${Y(v)}" stroke="${CSS('--line')}"/><text x="${pl-5}" y="${Y(v)+3.5}" font-size="10" text-anchor="end">${v.toFixed(T.dec)}</text><text x="${X(v)}" y="${H-18}" font-size="10" text-anchor="middle">${v.toFixed(T.dec)}</text>`;
+  g+=`<line x1="${X(lo)}" y1="${Y(lo)}" x2="${X(hi)}" y2="${Y(hi)}" stroke="${CSS('--muted')}" stroke-dasharray="4 4"/>`;
   for(const [o,f] of pts) g+=`<circle cx="${X(o).toFixed(1)}" cy="${Y(f).toFixed(1)}" r="2.4" fill="${CSS('--c-system')}" fill-opacity=".55"/>`;
   g+=`<text x="${(W+pl)/2}" y="${H-3}" font-size="10" text-anchor="middle">${esc(xl)}</text><text x="12" y="${(H-pb)/2}" font-size="10" transform="rotate(-90 12 ${(H-pb)/2})" text-anchor="middle">${esc(yl)}</text>`;
   el.innerHTML=`<svg class="chart" viewBox="0 0 ${W} ${H}">${g}</svg>`;
 }
 const dayFmt=d=>new Date(d+'T00:00:00Z').toLocaleDateString('en-GB',{day:'numeric',month:'short',timeZone:'UTC'});
 
-// ------------------------------------------------------------------ sections
-function rowsOf(g,m,L,model,days){ return P.daily.filter(r=>r.group===g&&r.metric===m&&r.lead===L&&r.model===model&&(!days||days.has(r.day))); }
+// ------------------------------------------------------------------ sections (the same for every parameter)
 function renderSummary(){
-  const {g,m,L,days}=sel(), S={}; for(const [k] of MODELS) S[k]=pool(rowsOf(g,m,L,k,days));
-  const st=P.stations.filter(s=>s.lead===L&&(g==='lc'?!s.monitor:s.monitor)), better=st.filter(s=>s.ss!=null&&s.ss>0).length;
-  $('sumNote').textContent=`${P.groups[g]} · ${m==='24h'?'24-h means':'hourly values'} · +${L} h · ${[...days][0]?dayFmt([...days][0]):''} to ${dayFmt([...days].slice(-1)[0]||P.days.slice(-1)[0])}`;
-  if(!S.system){ $('tiles').innerHTML='<div class="empty">No pairs for this selection (hourly values exist only for hourly stations).</div>'; return; }
-  const ssP=S.persistence?1-S.system.mse/S.persistence.mse:null, ssC=S.cams?1-S.system.mse/S.cams.mse:null;
-  const T=(v,l,cls='')=>`<div class="tile"><b class="${cls}">${v}</b><span>${l}</span></div>`;
-  $('tiles').innerHTML=T(fmt(S.system.rmse),'RMSE, published system (µg/m³)')+T(fmt(S.cams?.rmse),'RMSE, raw CAMS')+T(fmt(S.persistence?.rmse),'RMSE, persistence')+
-    T((ssP>=0?'+':'')+fmt(ssP),'skill vs persistence',ssP>0?'pos':'neg')+T((ssC>=0?'+':'')+fmt(ssC),'skill vs CAMS',ssC>0?'pos':'neg')+
-    T((S.system.bias>=0?'+':'')+fmt(S.system.bias),'mean bias (µg/m³)')+T(fmt(S.system.r),'correlation r (mean of days)')+
-    T(`${S.system.n}`,`pairs over ${S.system.days} day(s); observed mean ${fmt(S.system.obsMean,1)}`)+(m==='24h'?T(st.length?`${Math.round(100*better/st.length)} %`:'–',`stations beating persistence (all days, ${st.length} stations)`):'');
+  const {g,m,L,days}=sel(), S={}; for(const [k] of models()) S[k]=pool(rowsOf(g,m,L,k,days));
+  const st=stationsFor(g,L), better=st.filter(s=>s.ss!=null&&s.ss>0).length, D=[...days];
+  $('sumNote').textContent=`${P.label} · ${P.groups[g]} · ${P.metrics[m]} · +${L} h`+(D.length?` · ${dayFmt(D[0])} to ${dayFmt(D[D.length-1])}`:'');
+  const pub=S[P.published], raw=S[P.raw], ref=S[P.ref];
+  if(!pub){ $('tiles').innerHTML=noData(); return; }
+  const ssR=ref?1-pub.mse/ref.mse:null, ssW=raw?1-pub.mse/raw.mse:null, u=unitOf(m);
+  const T=(v,l,cls='')=>`<div class="tile"><b class="${cls}">${v}</b><span>${esc(l)}</span></div>`;
+  $('tiles').innerHTML=T(fmt(pub.rmse),`RMSE, ${lab(P.published)} (${u})`)+T(fmt(raw?.rmse),`RMSE, ${lab(P.raw)}`)+T(fmt(ref?.rmse),`RMSE, ${lab(P.ref)}`)+
+    T(sgn(ssR),`skill vs ${lab(P.ref)}`,ssR>0?'pos':'neg')+T(sgn(ssW),`skill vs ${lab(P.raw)}`,ssW>0?'pos':'neg')+
+    T(sgn(pub.bias),`mean bias (${u})`)+T(fmt(pub.r),'correlation r (mean of days)')+
+    T(`${pub.n}`,`pairs over ${pub.days} day(s); observed mean ${fmt(pub.obsMean,P.decimals)} ${u}`)+
+    T(st.length?`${Math.round(100*better/st.length)} %`:'–',`stations beating ${lab(P.ref)} (all days, ${st.length} stations)`);
 }
 function renderDaily(){
-  const {g,m,L}=sel(), D=winDays();
-  lineChart($('chDaily'),{x:D,xFmt:dayFmt,yLabel:'RMSE µg/m³',yMin:0,series:MODELS.map(([k,n,c])=>({name:n,c:CSS(c),dash:k==='persistence',w:k==='system'?3:1.8,v:D.map(d=>{const r=rowsOf(g,m,L,k,new Set([d]))[0];return r?r.rmse:null;})}))});
-  const ss=D.map(d=>{const s=rowsOf(g,m,L,'system',new Set([d]))[0], p=rowsOf(g,m,L,'persistence',new Set([d]))[0]; return s&&p&&p.rmse>0?1-(s.rmse*s.rmse)/(p.rmse*p.rmse):null;});
-  const bias=D.map(d=>{const s=rowsOf(g,m,L,'system',new Set([d]))[0]; return s?s.bias:null;});
-  const bmax=Math.max(1,...bias.filter(v=>v!=null).map(Math.abs)), smax=Math.max(0.2,...ss.filter(v=>v!=null).map(Math.abs));
-  lineChart($('chSkill'),{x:D,xFmt:dayFmt,zero:true,yLabel:'skill vs persistence',bars:{name:'skill (bars)',v:ss},series:[{name:`bias ×${(smax/bmax).toPrecision(2)} (scaled)`,c:CSS('--c-system'),dash:true,v:bias.map(b=>b==null?null:b*smax/bmax)}]});
+  const {g,m,L}=sel(), D=winDays(), M=models();
+  lineChart($('chDaily'),{x:D,xFmt:dayFmt,yLabel:`RMSE ${unitOf(m)}`,yMin:0,series:M.map(([k,n,c])=>({name:n,c:CSS(c),dash:k===P.ref,w:k===P.published?3:1.8,v:D.map(d=>one(g,m,L,k,d)?.rmse??null)}))});
+  const ss=D.map(d=>{const s=one(g,m,L,P.published,d), p=one(g,m,L,P.ref,d); return s&&p&&p.rmse>0?1-(s.rmse*s.rmse)/(p.rmse*p.rmse):null;});
+  const bias=D.map(d=>one(g,m,L,P.published,d)?.bias??null);
+  const bmax=Math.max(1e-6,...bias.filter(v=>v!=null).map(Math.abs)), smax=Math.max(0.2,...ss.filter(v=>v!=null).map(Math.abs));
+  $('skillNote').textContent=`1 − MSE(${lab(P.published)})/MSE(${lab(P.ref)}): above 0 the published forecast beat the reference. Dashed line = mean bias of the published forecast, scaled to fit (factor in the legend).`;
+  lineChart($('chSkill'),{x:D,xFmt:dayFmt,zero:true,yLabel:`skill vs ${lab(P.ref)}`,bars:{name:'skill (bars)',v:ss},series:[{name:`bias ×${(smax/bmax).toPrecision(2)} (scaled)`,c:CSS('--c-system'),dash:true,v:bias.map(b=>b==null?null:b*smax/bmax)}]});
 }
 function renderLead(){
-  const {g,m,days}=sel(), Ls=P.leads, pooled=k=>Ls.map(L=>pool(rowsOf(g,m,L,k,days)));
-  const PS={}; for(const [k] of MODELS) PS[k]=pooled(k);
-  lineChart($('chLead'),{x:Ls,xFmt:v=>'+'+v+' h',yLabel:'RMSE µg/m³',yMin:0,series:MODELS.map(([k,n,c])=>({name:n,c:CSS(c),dash:k==='persistence',w:k==='system'?3:1.8,v:PS[k].map(s=>s?s.rmse:null)}))});
-  lineChart($('chLeadSkill'),{x:Ls,xFmt:v=>'+'+v+' h',zero:true,yLabel:'skill',series:[
-    {name:'vs persistence',c:CSS('--c-system'),w:3,v:Ls.map((_,i)=>PS.system[i]&&PS.persistence[i]?1-PS.system[i].mse/PS.persistence[i].mse:null)},
-    {name:'vs raw CAMS',c:CSS('--c-cams'),v:Ls.map((_,i)=>PS.system[i]&&PS.cams[i]?1-PS.system[i].mse/PS.cams[i].mse:null)}]});
+  const {g,m,days}=sel(), Ls=ALL.leads, M=models(), PS={}; for(const [k] of M) PS[k]=Ls.map(L=>pool(rowsOf(g,m,L,k,days)));
+  lineChart($('chLead'),{x:Ls,xFmt:v=>'+'+v+' h',yLabel:`RMSE ${unitOf(m)}`,yMin:0,series:M.map(([k,n,c])=>({name:n,c:CSS(c),dash:k===P.ref,w:k===P.published?3:1.8,v:PS[k].map(s=>s?s.rmse:null)}))});
+  $('leadSkillNote').textContent=`Skill of the ${lab(P.published)} forecast against ${lab(P.ref)} and against ${lab(P.raw)}, pooled over the period.`;
+  const sk=o=>Ls.map((_,i)=>PS[P.published][i]&&PS[o][i]&&PS[o][i].mse>0?1-PS[P.published][i].mse/PS[o][i].mse:null);
+  lineChart($('chLeadSkill'),{x:Ls,xFmt:v=>'+'+v+' h',zero:true,yLabel:'skill',series:[{name:`vs ${lab(P.ref)}`,c:CSS('--c-system'),w:3,v:sk(P.ref)},{name:`vs ${lab(P.raw)}`,c:CSS('--c-raw'),v:sk(P.raw)}]});
 }
+function renderSteps(){
+  const {g,m,L,days}=sel(), rows=[];
+  for(const [name,a,b] of P.steps||[]){ const A=pool(rowsOf(g,m,L,a,days)), B=pool(rowsOf(g,m,L,b,days)); if(!A||!B) { rows.push(`<tr><td>${esc(name)}</td><td colspan="5" style="text-align:left;color:var(--muted)">not applied in this selection yet</td></tr>`); continue; }
+    const ch=(B.rmse-A.rmse)/A.rmse*100; rows.push(`<tr><td>${esc(name)}</td><td>${fmt(A.rmse)}</td><td>${fmt(B.rmse)}</td><td class="${ch<0?'pos':ch>0?'neg':''}">${sgn(ch,1)} %</td><td>${sgn(B.bias)}</td><td>${A.n}</td></tr>`); }
+  $('tbSteps').innerHTML=rows.length?`<table><tr><th>Step</th><th>RMSE before</th><th>RMSE after</th><th>change</th><th>bias after</th><th>pairs</th></tr>${rows.join('')}</table>`:'<div class="empty">No steps for this parameter.</div>';
+}
+function stationsFor(g,L){ const sg=P.stationGroups[g]?g:null; return P.stations.filter(s=>s.lead===L&&(!sg||s.group===sg)); }
 function renderMap(){
   const {g,L:lead}=sel(); if(!window.L) return;
   if(!map){ map=L.map('map',{zoomControl:true,attributionControl:true}).setView([16.5,101],5);
     L.tileLayer(`https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/${matchMedia('(prefers-color-scheme: dark)').matches?'World_Dark_Gray_Base':'World_Light_Gray_Base'}/MapServer/tile/{z}/{y}/{x}`,{maxZoom:16,attribution:'Basemap © Esri, HERE, Garmin, © OpenStreetMap contributors'}).addTo(map);
     stLayer=L.layerGroup().addTo(map); }
   stLayer.clearLayers();
-  const st=P.stations.filter(s=>s.lead===lead&&(g==='lc'?!s.monitor:s.monitor));
-  $('mapNote').textContent=`Skill against persistence at +${lead} h, all days kept (24-h means), ${st.length} ${g==='lc'?'low-cost sensors':'reference stations'}. Blue = better than persistence, red = worse; larger dots = more pairs. Tap a station for its numbers.`;
+  const st=stationsFor(g,lead), sg=P.stationGroups[g]||Object.values(P.stationGroups)[0], u=unitOf(P.stationMetric);
+  $('mapNote').textContent=`${P.label}: skill of the ${lab(P.published)} forecast against ${lab(P.ref)} at +${lead} h, all days kept (${P.metrics[P.stationMetric]}), ${st.length} stations (${sg}). Blue = better than ${lab(P.ref)}, red = worse; larger dots = more pairs. Tap a station for its numbers and its time series.`;
   const mix=(c,f)=>{const w=[242,242,240]; return `rgb(${c.map((x,i)=>Math.round(w[i]+(x-w[i])*f)).join(',')})`;};
-  const col=v=>v==null?'#999':v>=0?mix([31,111,209],Math.min(1,0.25+v/0.6)):mix([179,38,30],Math.min(1,0.25+(-v)/0.6));   // blue better, red worse than persistence
+  const col=v=>v==null?'#999':v>=0?mix([31,111,209],Math.min(1,0.25+v/0.6)):mix([179,38,30],Math.min(1,0.25+(-v)/0.6));
   for(const s of st) L.circleMarker([s.lat,s.lon],{radius:3+Math.min(6,Math.sqrt(s.n)/6),weight:1,color:'#333',fillColor:col(s.ss),fillOpacity:.9})
-    .bindPopup(`<b>${esc(s.name)}</b><br>${esc(s.provider)} · ${esc(s.id)}<br>+${lead} h, ${s.n} pairs<br>RMSE system ${fmt(s.rmse)} · persistence ${fmt(s.rmsePers)} · CAMS ${fmt(s.rmseCams)} µg/m³<br>skill vs persistence <b>${fmt(s.ss)}</b> · bias ${fmt(s.bias)}`)
-    .on('click',()=>{ if(SER&&SER.stations[s.id]){ $('selSt').value=s.id; renderStation(); } }).addTo(stLayer);
+    .bindPopup(`<b>${esc(s.name)}</b><br>${esc(s.provider)} · ${esc(s.id)}<br>+${lead} h, ${s.n} pairs<br>RMSE ${esc(lab(P.published))} ${fmt(s.rmse)} · ${esc(lab(P.ref))} ${fmt(s.rmseRef)} · ${esc(lab(P.raw))} ${fmt(s.rmseRaw)} ${esc(u)}<br>skill vs ${esc(lab(P.ref))} <b>${fmt(s.ss)}</b> · bias ${fmt(s.bias)}`)
+    .on('click',()=>{ const S=SER?.params?.[cur]; if(S&&S[s.id]){ $('selSt').value=s.id; renderStation(); } }).addTo(stLayer);
+  if(!st.length) L.popup({closeButton:false}).setLatLng([16.5,101]).setContent(P.days.length?'No station has enough pairs at this lead yet.':'No verified days yet.').openOn(map);
+  else map.closePopup();
 }
-async function loadSeries(){ if(SER) return; try{ SER=await (await fetch('data/perf-series.json?g='+P.generated)).json(); }catch(e){ SER={stations:{}}; }
-  const ids=Object.keys(SER.stations).sort((a,b)=>SER.stations[a].name.localeCompare(SER.stations[b].name));
-  $('selSt').innerHTML=ids.map(id=>`<option value="${esc(id)}">${esc(SER.stations[id].name)} (${esc(SER.stations[id].provider||id)})</option>`).join(''); }
+async function loadSeries(){ if(SER) return; try{ SER=await (await fetch('data/perf-series.json?g='+ALL.generated)).json(); }catch(e){ SER={params:{}}; } }
+function fillStations(){
+  const S=SER?.params?.[cur]||{}, ids=Object.keys(S).sort((a,b)=>S[a].name.localeCompare(S[b].name)), keep=$('selSt').value;
+  $('selSt').innerHTML=ids.length?ids.map(id=>`<option value="${esc(id)}">${esc(S[id].name)} (${esc(S[id].provider||id)})</option>`).join(''):'<option value="">no series yet</option>';
+  if(S[keep]) $('selSt').value=keep;
+  const cols=Object.keys(P.series.cols), km=$('selStMetric').value;
+  $('selStMetric').innerHTML=cols.map(k=>`<option value="${k}">${esc(P.metrics[k]||k)}</option>`).join(''); if(cols.includes(km)) $('selStMetric').value=km;
+}
 function renderStation(){
-  if(!SER) return; const id=$('selSt').value, s=SER.stations[id], L=$('selStLead').value, m=$('selStMetric').value;
-  if(!s||!s[L]){ $('chSt').innerHTML='<div class="empty">No series for this station and lead.</div>'; $('chScat').innerHTML=''; return; }
-  const rows=s[L].slice().sort((a,b)=>a[0]-b[0]), x=rows.map(r=>SER.t0+r[0]*SER.step), io=m==='24h'?2:1, ic=m==='24h'?3:5, is=m==='24h'?4:6;
+  if(!SER) return; const S=SER.params?.[cur]||{}, id=$('selSt').value, s=S[id], L=$('selStLead').value, m=$('selStMetric').value, u=P.unit;
+  if(!s||!s[L]){ $('chSt').innerHTML=noData(); $('chScat').innerHTML=''; $('stRead').textContent=''; return; }
+  const rows=s[L].slice().sort((a,b)=>a[0]-b[0]), x=rows.map(r=>SER.t0+r[0]*SER.step), [io,ir,ip]=P.series.cols[m]||Object.values(P.series.cols)[0];
   const tf=t=>new Date(t+7*3600e3).toISOString().slice(5,13).replace('T',' ')+'h';
-  lineChart($('chSt'),{x,xFmt:tf,yMin:0,yLabel:'PM2.5 µg/m³',height:260,series:[
-    {name:'observed',c:CSS('--fg'),w:2.2,dots:false,v:rows.map(r=>r[io])},{name:'raw CAMS',c:CSS('--c-cams'),dots:false,v:rows.map(r=>r[ic])},{name:`published system (+${L} h)`,c:CSS('--c-system'),w:2.2,dots:false,v:rows.map(r=>r[is])}],
-    onTap:i=>{ const r=rows[i]; $('stRead').textContent=`${tf(x[i])} Thai · observed ${fmt(r[io],1)} · system ${fmt(r[is],1)} · CAMS ${fmt(r[ic],1)} µg/m³`; }});
-  scatter($('chScat'),rows.filter(r=>r[io]!=null&&r[is]!=null).map(r=>[r[io],r[is]]),{xl:'observed µg/m³',yl:`system (+${L} h) µg/m³`});
+  lineChart($('chSt'),{x,xFmt:tf,yMin:cur==='t2'?null:0,yLabel:`${P.label} ${u}`,height:260,series:[
+    {name:'observed',c:CSS('--fg'),w:2.2,dots:false,v:rows.map(r=>r[io])},{name:lab(P.raw),c:CSS('--c-raw'),dots:false,v:rows.map(r=>r[ir])},{name:`${lab(P.published)} (+${L} h)`,c:CSS('--c-system'),w:2.2,dots:false,v:rows.map(r=>r[ip])}],
+    onTap:i=>{ const r=rows[i]; $('stRead').textContent=`${tf(x[i])} Thai · observed ${fmt(r[io],P.decimals)} · ${lab(P.published)} ${fmt(r[ip],P.decimals)} · ${lab(P.raw)} ${fmt(r[ir],P.decimals)} ${u}`; }});
+  $('stRead').textContent='Tap the chart to read an hour.';
+  scatter($('chScat'),rows.filter(r=>r[io]!=null&&r[ip]!=null).map(r=>[r[io],r[ip]]),{xl:`observed ${u}`,yl:`${lab(P.published)} (+${L} h) ${u}`});
 }
 function renderWarn(){
-  const {g,L,days}=sel(), rows=P.cont.filter(c=>c.group===g&&c.lead===L&&days.has(c.day));
+  const {g,L,days}=sel(), rows=P.cont.filter(c=>(c.group==null||c.group===g)&&c.lead===L&&days.has(c.day)), u=P.unit;
+  const grpNote=P.cont.some(c=>c.group!=null)?'chosen group':'all stations (the group choice does not apply here)';
+  $('warnNote').textContent=`Hits, misses and false alarms of the ${P.metrics[P.thrMetric]} at ${P.thresholds.map(t=>t[1]).join(' and ')}, pooled over the period, ${grpNote} and lead. POD = hits / observed events, FAR = false alarms / forecast events, CSI = hits / (hits + misses + false alarms).`;
   const tb=[`<table><tr><th>Threshold</th><th>Forecast</th><th>events observed</th><th>hits</th><th>misses</th><th>false alarms</th><th>POD</th><th>FAR</th><th>CSI</th></tr>`];
-  for(const T of [37.5,75]) for(const [mdl,lab] of [['system','published system'],['cams','raw CAMS'],['persistence','persistence']]){
+  for(const [T] of P.thresholds) for(const mdl of [P.published,P.raw,P.ref]){
     const c=rows.filter(r=>r.thr===T&&r.model===mdl).reduce((a,r)=>({h:a.h+r.h,m:a.m+r.m,f:a.f+r.f}),{h:0,m:0,f:0});
     const pod=c.h+c.m?c.h/(c.h+c.m):null, far=c.h+c.f?c.f/(c.h+c.f):null, csi=c.h+c.m+c.f?c.h/(c.h+c.m+c.f):null;
-    tb.push(`<tr><td>${T} µg/m³</td><td style="text-align:left">${lab}</td><td>${c.h+c.m}</td><td>${c.h}</td><td>${c.m}</td><td>${c.f}</td><td>${fmt(pod)}</td><td>${fmt(far)}</td><td>${fmt(csi)}</td></tr>`); }
-  $('tbWarn').innerHTML=tb.join('')+'</table>'+(rows.length&&!rows.some(r=>r.h+r.m>0)?'<p class="note">No observed exceedance in this period: POD and CSI are undefined until the burning season.</p>':'');
+    tb.push(`<tr><td>≥ ${T} ${esc(u)}</td><td style="text-align:left">${esc(lab(mdl))}</td><td>${c.h+c.m}</td><td>${c.h}</td><td>${c.m}</td><td>${c.f}</td><td>${fmt(pod)}</td><td>${fmt(far)}</td><td>${fmt(csi)}</td></tr>`); }
+  $('tbWarn').innerHTML=!rows.length?noData():tb.join('')+'</table>'+(!rows.some(r=>r.h+r.m>0)?'<p class="note">No observed event above these thresholds in this period: POD and CSI are undefined until one occurs.</p>':'');
 }
-function renderMapProduct(){
-  const D=P.days.filter(d=>P.map.some(r=>r.day===d)), g=$('selGroup').value==='lc'?'low-cost':'reference', R=d=>P.map.find(r=>r.day===d&&r.group===g);
-  lineChart($('chMap'),{x:D,xFmt:dayFmt,yMin:0,yLabel:'RMSE µg/m³',series:[{name:'0.025° map (left out)',c:CSS('--c-system'),w:3,v:D.map(d=>R(d)?.map.rmse??null)},{name:'raw CAMS',c:CSS('--c-cams'),v:D.map(d=>R(d)?.cams.rmse??null)}]});
+function renderCheck(){
+  const C=P.check; $('tbCheck').innerHTML='';
+  if(!C){ $('chkTitle').textContent='Independent check'; $('chkNote').textContent=''; $('chCheck').innerHTML=`<div class="empty">No independent ${esc(P.label.toLowerCase())} observations are logged besides the stations scored above.</div>`; return; }
+  $('chkTitle').textContent=C.title; $('chkNote').textContent=C.note;
+  if(C.gauge){   // rain: GSMaP against gauges
+    const D=[...new Set(C.rows.map(r=>r.day))].sort(), M=[['cell','GSMaP 0.1° cell','--c-x1'],['bil','GSMaP interpolated','--c-x2'],['fine','0.025° (page)','--c-system']];
+    lineChart($('chCheck'),{x:D,xFmt:dayFmt,yMin:0,yLabel:'hourly RMSE mm',series:M.map(([k,n,c])=>({name:n,c:CSS(c),w:k==='fine'?3:1.8,v:D.map(d=>C.rows.find(r=>r.day===d&&r.kind==='hourly'&&r.model===k)?.rmse??null)}))});
+    const days=new Set(winDays().length?winDays():D), rows=M.map(([k,n])=>{ const h=pool(C.rows.filter(r=>r.kind==='hourly'&&r.model===k&&days.has(r.day))), t=pool(C.rows.filter(r=>r.kind==='daytotal'&&r.model===k&&days.has(r.day)));
+      return `<tr><td>${n}</td><td>${h?fmt(h.rmse):'–'}</td><td>${h?fmt(h.r):'–'}</td><td>${h?sgn(h.bias):'–'}</td><td>${h?h.n:'–'}</td><td>${t?fmt(t.rmse):'–'}</td><td>${t?fmt(t.r):'–'}</td><td>${t?t.n:'–'}</td></tr>`; });
+    $('tbCheck').innerHTML=`<table><tr><th>Against gauges (period)</th><th>hourly RMSE mm</th><th>r</th><th>bias</th><th>n</th><th>day-total RMSE mm</th><th>r</th><th>gauge-days</th></tr>${rows.join('')}</table>`;
+    return; }
+  const grp=$('selGroup').value==='lc'?'low-cost sensors':'reference monitors', D=[...new Set(C.rows.map(r=>r.day))].sort(), R=d=>C.rows.find(r=>r.day===d&&r.group===grp);
+  $('chkNote').textContent=C.note+` Shown: ${grp}.`;
+  lineChart($('chCheck'),{x:D,xFmt:dayFmt,yMin:0,yLabel:`RMSE ${P.unit}`,series:[{name:C.aLabel,c:CSS('--c-system'),w:3,v:D.map(d=>R(d)?.a.rmse??null)},{name:C.bLabel,c:CSS('--c-raw'),v:D.map(d=>R(d)?.b.rmse??null)}]});
 }
 function renderML(){
-  const vars=[...new Set(P.ml.map(r=>r.var))], days=[...new Set(P.ml.map(r=>r.day))].sort(), cols={base:'--c-pers',day:'--c-blend',week:'--c-kalman',month:'--c-cams',season:'--c-system'};
-  if(!days.length){ $('chML').innerHTML='<div class="empty">No learning logs yet.</div>'; return; }
-  const series=[]; for(const v of vars) for(const e of ['base','day','week','month','season']) { const vv=days.map(d=>{const r=P.ml.find(x=>x.day===d&&x.var===v); return r&&r.weights?.[e]!=null?r.weights[e]:null;}); if(vv.some(x=>x!=null)) series.push({name:`${v}: ${e}`,c:CSS(cols[e]),dash:v!=='PM2.5',w:v==='PM2.5'?2.4:1.6,v:vv}); }
+  const ML=P.ml||[], days=[...new Set(ML.map(r=>r.day))].sort(), cols={base:'--c-pers',day:'--c-x2',week:'--c-x1',month:'--c-raw',season:'--c-system'};
+  if(!days.length){ $('chML').innerHTML=`<div class="empty">No learning logs for ${esc(P.label.toLowerCase())} yet.</div>`; return; }
+  const series=[]; for(const e of ['base','day','week','month','season']) { const vv=days.map(d=>{const r=ML.find(x=>x.day===d); return r&&r.weights?.[e]!=null?r.weights[e]:null;}); if(vv.some(x=>x!=null)) series.push({name:e,c:CSS(cols[e]),w:e==='base'?1.6:2.4,dash:e==='base',v:vv}); }
   lineChart($('chML'),{x:days,xFmt:dayFmt,yMin:0,yLabel:'weight',series});
 }
-function renderWx(){
-  const L=+$('selLead').value, D=P.wxDays, R=(v,part,mdl,d)=>P.wx.find(r=>r.var===v&&r.part===part&&r.model===mdl&&r.lead===L&&r.day===d);
-  const T2M=[['ECMWF','--c-cams'],['terrain','--c-kalman'],['0.025° page','--c-blend'],['learned','--c-system']];
-  lineChart($('chT2'),{x:D,xFmt:dayFmt,yMin:0,yLabel:'temperature RMSE °C',series:T2M.map(([k,c])=>({name:k,c:CSS(c),w:k==='learned'?3:1.8,v:D.map(d=>R('t2','all',k,d)?.rmse??null)}))});
-  lineChart($('chRain'),{x:D,xFmt:dayFmt,zero:true,yLabel:'rain: hourly r vs GSMaP',series:[['ECMWF','--c-cams'],['0.025° page','--c-blend'],['learned','--c-system']].map(([k,c])=>({name:k,c:CSS(c),v:D.map(d=>R('rain','all',k,d)?.r??null)}))});
-  const G=P.gauges, rows=['cell','bil','fine'].map(m=>{ const h=pool(G.filter(r=>r.kind==='hourly'&&r.model===m)), t=pool(G.filter(r=>r.kind==='daytotal'&&r.model===m)); return `<tr><td>${{cell:'GSMaP 0.1° cell',bil:'GSMaP interpolated',fine:'0.025° (page)'}[m]}</td><td>${h?fmt(h.rmse):'–'}</td><td>${h?fmt(h.r):'–'}</td><td>${h?h.n:'–'}</td><td>${t?fmt(t.rmse):'–'}</td><td>${t?fmt(t.r):'–'}</td><td>${t?t.n:'–'}</td></tr>`; });
-  $('tbGauge').innerHTML=`<table><tr><th>Rain vs ThaiWater gauges (all days kept)</th><th>hourly RMSE mm</th><th>hourly r</th><th>n</th><th>day-total RMSE mm</th><th>day-total r</th><th>gauge-days</th></tr>${rows.join('')}</table>`;
+function renderAll(){ renderSummary(); renderDaily(); renderLead(); renderSteps(); renderMap(); renderWarn(); renderCheck(); renderML(); }
+
+// ------------------------------------------------------------------ parameter switch: repopulate the selectors, keep what still applies
+function fillMetrics(){ const g=$('selGroup').value, km=$('selMetric').value, ok=Object.keys(P.metrics).filter(m=>!P.metricGroups?.[m]||P.metricGroups[m].includes(g));
+  $('selMetric').innerHTML=ok.map(m=>`<option value="${m}">${esc(P.metrics[m])}</option>`).join(''); if(ok.includes(km)) $('selMetric').value=km; }
+function setParam(k){
+  cur=ALL.params[k]?k:'pm25'; P=ALL.params[cur]; $('selPar').value=cur; if(location.hash.slice(1)!==cur) history.replaceState(null,'','#'+cur);
+  document.title=`SEA-HAF · Model performance · ${P.label}`;
+  const D=P.days; $('gen').textContent=`updated ${new Date(ALL.generated).toLocaleString('en-GB',{timeZone:'Asia/Bangkok',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})} Thai time · ${P.label}: ${D.length} verified day(s)`+(D.length?` (${dayFmt(D[0])} – ${dayFmt(D[D.length-1])})`:'');
+  $('parInfo').textContent=`${P.unit} · forecasts: ${P.models.map(m=>m[1]).join(', ')} · ${P.refNote}.`;
+  $('selGroup').innerHTML=Object.entries(P.groups).map(([g,v])=>`<option value="${g}">${esc(v)}</option>`).join(''); $('selGroup').value=P.defaultGroup;
+  fillMetrics(); fillStations(); renderAll(); renderStation();
 }
-function renderAll(){ renderSummary(); renderDaily(); renderLead(); renderMap(); renderWarn(); renderMapProduct(); renderML(); renderWx(); }
 
 (async()=>{
-  try{ P=await (await fetch('data/perf.json?t='+Date.now())).json(); }catch(e){ $('gen').textContent='performance data not available yet'; return; }
-  $('gen').textContent=`updated ${new Date(P.generated).toLocaleString('en-GB',{timeZone:'Asia/Bangkok',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})} Thai time · ${P.days.length} days (${dayFmt(P.days[0])} – ${dayFmt(P.days.slice(-1)[0])})`;
-  $('defs').textContent='Definitions: '+P.definitions+' Recomputed every 3 hours from the forecast and observation logs (scripts/perf.mjs).';
-  $('selGroup').innerHTML=Object.entries(P.groups).map(([k,v])=>`<option value="${k}"${k==='href'?' selected':''}>${esc(v)}</option>`).join('');
-  $('selLead').innerHTML=P.leads.map(L=>`<option value="${L}"${L===24?' selected':''}>+${L} h</option>`).join('');
-  for(const id of ['selGroup','selMetric','selLead','selWin']) $(id).onchange=renderAll;
+  try{ ALL=await (await fetch('data/perf.json?t='+Date.now())).json(); if(!ALL.params) throw 0; }catch(e){ $('gen').textContent='performance data not available yet'; return; }
+  $('defs').textContent='Definitions: '+ALL.definitions;
+  $('selPar').innerHTML=Object.entries(ALL.params).map(([k,p])=>`<option value="${k}">${esc(p.label)} (${esc(p.unit)})</option>`).join('');
+  $('selLead').innerHTML=ALL.leads.map(L=>`<option value="${L}"${L===24?' selected':''}>+${L} h</option>`).join('');
+  $('selPar').onchange=()=>setParam($('selPar').value);
+  $('selGroup').onchange=()=>{ fillMetrics(); renderAll(); };
+  for(const id of ['selMetric','selLead','selWin']) $(id).onchange=renderAll;
   for(const id of ['selSt','selStLead','selStMetric']) $(id).onchange=renderStation;
-  renderAll(); await loadSeries(); renderStation();
+  addEventListener('hashchange',()=>{ const k=location.hash.slice(1); if(k!==cur&&ALL.params[k]) setParam(k); });
+  await loadSeries(); setParam(location.hash.slice(1)||'pm25');
   let rw=innerWidth, rt=0; addEventListener('resize',()=>{ if(Math.abs(innerWidth-rw)<40) return; clearTimeout(rt); rt=setTimeout(()=>{ rw=innerWidth; renderAll(); renderStation(); if(map) map.invalidateSize(); },250); });
 })();
 </script>

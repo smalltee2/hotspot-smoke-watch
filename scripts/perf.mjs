@@ -142,7 +142,8 @@ async function main() {
   const persLag = L => 24 * Math.ceil((L + 1) / 24) * H;   // same hour, newest day known at issue time
   for (const f of files.filter(f => /wxf-\d{8}T\d{2}\.csv$/.test(f))) for (const r of parse(await fs.readFile(f, 'utf8'))) {
     const L = +r.lead_h, tv = Date.parse(r.valid_utc), day = thaiDay(tv), id = r.station_id; if (!(day < today) || !LEADS.includes(L)) continue;
-    const hr = new Date(tv - H / 2 + TH).getUTCHours(), dn = hr >= 7 && hr < 19 ? 'day' : 'night', reg = wxGroup(id), k = `${id}|${r.valid_utc.slice(0, 13)}`, kp = `${id}|${k13(tv - persLag(L))}`;
+    // day/night by the hour end in Thai time, as the downscaling bins (t2Bin: hours ending 07–18 = day)
+    const hr = new Date(tv + TH).getUTCHours(), dn = hr >= 7 && hr < 19 ? 'day' : 'night', reg = wxGroup(id), k = `${id}|${r.valid_utc.slice(0, 13)}`, kp = `${id}|${k13(tv - persLag(L))}`;
     const to = tObs.get(k);
     if (to != null) {
       const F = { ecmwf: num(r.t2_ecmwf), terrain: num(r.t2_terrain), page: num(r.t2_down), learned: first(r.t2_ml, r.t2_down), persistence: tObs.get(kp) ?? null };
@@ -184,19 +185,19 @@ async function main() {
       ml: ml.pm25 },
     t2: { label: '2-m temperature', unit: '°C', decimals: 1, since: '2026-10-07', ...t2Out.stats,
       models: [['ecmwf', 'raw ECMWF'], ['terrain', 'terrain-corrected'], ['page', '0.025° (before learning)'], ['learned', 'published (after learning)'], ['persistence', 'persistence']], raw: 'ecmwf', published: 'learned', ref: 'persistence',
-      groups: { all: 'All Air4Thai stations', north: 'Northern box (96.5–102.5 E, 14.5–21.5 N)', south: 'Outside the northern box', day: 'Daytime hours (07–18 Thai)', night: 'Night hours' }, defaultGroup: 'all',
+      groups: { all: 'All Air4Thai stations', north: 'Northern box (96.5–102.5 E, 14.5–21.5 N)', south: 'Outside the northern box', day: 'Daytime (hours ending 07–18 Thai)', night: 'Night (hours ending 19–06 Thai)' }, defaultGroup: 'all',
       metrics: { '1h': 'hourly value' }, metricGroups: {}, stationGroups: { all: 'Air4Thai' }, stationMetric: '1h',
       thresholds: [[35, '35 °C (TMD hot)'], [40, '40 °C (TMD very hot)']], thrMetric: '1h',
-      refNote: 'persistence = the temperature observed at the same hour on the newest day known at issue time',
+      refNote: 'persistence = the temperature observed at the same hour on the newest day known at issue time (24 h before valid for leads < 24 h, 48 h for +24 h, 72 h for +48 h). The station-residual step is scored at the stations the residual field is built from, so it is an upper bound for other places; the left-out check is on the developer page',
       steps: [['terrain (lapse-rate) correction', 'ecmwf', 'terrain'], ['station residual (day/night)', 'terrain', 'page'], ['self-learning correction', 'page', 'learned']],
       series: { cols: { '1h': [1, 2, 3] } }, check: null, ml: ml.t2 },
     rain: { label: 'Rain', unit: 'mm', decimals: 1, since: '2026-10-07', ...prOut.stats,
       models: [['ecmwf', 'raw ECMWF'], ['page', '0.025° (before learning)'], ['learned', 'published (after learning)'], ['persistence', 'persistence']], raw: 'ecmwf', published: 'learned', ref: 'persistence',
-      groups: { all: 'All Air4Thai stations', north: 'Northern box', south: 'Outside the northern box', day: 'Daytime hours', night: 'Night hours' }, defaultGroup: 'all',
+      groups: { all: 'All Air4Thai stations', north: 'Northern box', south: 'Outside the northern box', day: 'Daytime (hours ending 07–18 Thai)', night: 'Night (hours ending 19–06 Thai)' }, defaultGroup: 'all',
       metrics: { '1h': 'hourly amount (mm in the hour)', day: 'daily total (mm per Thai day)' }, metricGroups: { day: ['all', 'north', 'south'] }, stationGroups: { all: 'Air4Thai' }, stationMetric: '1h',
       thresholds: [[0.5, '0.5 mm in an hour (wet hour)'], [5, '5 mm in an hour (heavy shower)']], thrMetric: '1h',
       steps: [['CHELSA rain-pattern factor (0.025°)', 'ecmwf', 'page'], ['self-learning correction', 'page', 'learned']],
-      refNote: 'observed = JAXA GSMaP gauge-calibrated rain at 0.025° at the station; persistence = the rain at the same hour on the newest day known at issue time',
+      refNote: 'observed = JAXA GSMaP gauge-calibrated rain at 0.025° at the station, which carries the same CHELSA pattern factor as the 0.025° forecast, so the factor step is not independently verified here (the gauge check below is); persistence = the rain at the same hour on the newest day known at issue time',
       series: { cols: { '1h': [1, 2, 3] } },
       check: { title: 'GSMaP (the rain observation) against ThaiWater gauges', note: 'Independent check of the observed rain used above: GSMaP 0.1° cell, interpolated, and the 0.025° page value against rain gauges; hourly amounts and daily totals.', gauge: true, rows: rcheck },
       ml: ml.rain },
@@ -207,6 +208,7 @@ async function main() {
   await fs.writeFile(outF, JSON.stringify(out));
   const ser = { t0: tSeries, step: H, params: { pm25: pmOut.series, t2: t2Out.series, rain: prOut.series } };
   await fs.writeFile(path.join(DATA, 'perf-series.json'), JSON.stringify(ser));
-  console.log(`perf: PM2.5 ${params.pm25.days.length} days, ${params.pm25.daily.length} scores; temperature ${params.t2.days.length} days; rain ${params.rain.days.length} days; ${((Date.now() - t0) / 1000).toFixed(1)} s`);
+  const msg = `PM2.5 ${params.pm25.days.length} days, ${params.pm25.daily.length} scores, ${params.pm25.stations.length} station scores; temperature ${params.t2.days.length} days, ${params.t2.daily.length} scores; rain ${params.rain.days.length} days, ${params.rain.daily.length} scores, ${rcheck.length} gauge scores; ${((Date.now() - t0) / 1000).toFixed(1)} s`;
+  console.log('perf: ' + msg); if (process.env.GITHUB_ACTIONS) console.log(`::notice title=model performance::${msg}`);
 }
-main().catch(e => { console.error('perf failed:', e.stack || e.message); process.exitCode = 0; });
+main().catch(e => { console.error('perf failed:', e.stack || e.message); if (process.env.GITHUB_ACTIONS) console.log(`::warning title=model performance::perf.mjs failed: ${e.message}`); process.exitCode = 0; });

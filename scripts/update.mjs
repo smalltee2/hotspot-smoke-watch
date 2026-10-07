@@ -865,6 +865,8 @@ async function main() {
     rainObs: rainInfo,
     met: met ? { file: 'data/met-web.json', model: met.model, fetched: met.fetched, grids: met.grids.map(g => ({ step: g.step, bbox: [g.lon0, g.lat0, g.lon0 + (g.nx - 1) * g.step, g.lat0 + (g.ny - 1) * g.step] })) } : null,
     hours, stations: outStations,
+    // latest measured weather at the Air4Thai stations (hour-ending means; ≤ 6 h old): the page's "now" values at the viewer's location
+    obsWx: a4tSt.filter(s => state.obsWx?.[s.id]).map(s => { const o = state.obsWx[s.id]; return { id: s.id, lat: s.lat, lon: s.lon, t: o.t, t2: o.t2 ?? null, rh: o.rh ?? null, ws: o.ws ?? null, wd: o.wd ?? null }; }),
     grid: { lon0: g[0], lat0: g[1], step, nx, ny, values: gridRaw },  // raw CAMS; the page applies rk
     hotspots: { cols: ['lat', 'lon', 'frp', 't', 'conf', 'sat', 'igbp'], igbpYear: LC?.year ?? null, rows: hot, fetched: hotFetched ?? (await readJSON(path.join(DATA, 'latest.json'), null))?.hotspots?.fetched ?? null },
   });

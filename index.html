@@ -123,7 +123,10 @@ td.num{text-align:right;font-family:var(--font-data);font-variant-numeric:tabula
 .scrub input{width:100%;accent-color:var(--ember)}
 .scrub .t{font:500 .82rem/1.2 var(--font-data);font-variant-numeric:tabular-nums;text-align:right;min-width:9.5em}
 .scrub .t small{display:block;color:var(--muted);font-size:.7rem}
-.legend{position:absolute;right:12px;top:12px;z-index:500;background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:8px 10px;font-size:.72rem;max-width:210px}
+.legend{position:absolute;right:12px;top:12px;z-index:500;background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:8px 10px;font-size:.72rem;max-width:210px;
+  /* never runs under the forecast time bar: height limited to the map minus the bar (its height is measured: --scrubH) */
+  max-height:calc(100% - var(--legTop,12px) - var(--scrubH,58px) - 12px - 8px);overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin}
+.legend summary{position:sticky;top:-8px;background:var(--panel);z-index:1;padding:2px 0}
 .legend .bar{height:10px;border-radius:2px;margin:5px 0 3px;background:linear-gradient(90deg,rgba(250,214,140,.55),rgba(236,140,60,.75),rgba(196,66,15,.85),rgba(120,30,40,.9),rgba(60,10,60,.95))}
 .legend .ticks{display:flex;justify-content:space-between;font-family:var(--font-data);color:var(--muted)}
 .legend .keys{display:grid;gap:3px;margin-top:6px}
@@ -172,6 +175,9 @@ td.num{text-align:right;font-family:var(--font-data);font-variant-numeric:tabula
 .lphero svg{flex:0 0 auto;width:58px;height:58px}
 .lphero .hv{font:600 1.45rem/1.1 var(--font-data);font-variant-numeric:tabular-nums}
 .lphero .hl{font-weight:600;font-size:.86rem;line-height:1.25;overflow-wrap:anywhere}
+.lphero .obs,.lphero .mod{display:inline-block;font-size:.62rem;padding:0 5px;border-radius:8px;margin-left:3px;vertical-align:1px}
+.lphero .obs{background:#d9efe2;color:#1f6a43}.lphero .mod{background:var(--line);color:var(--muted)}
+.lpnow .src{font-size:.66rem;margin-top:2px;opacity:.85}
 .lphero .hs{font-size:.72rem;color:var(--muted);line-height:1.3;overflow-wrap:anywhere}
 @media (max-width:520px){.lphero>div{flex-direction:column;align-items:flex-start;gap:4px;padding:8px 10px}.lphero svg{width:46px;height:46px}.lphero .hv{font-size:1.25rem}}
 .lpnow{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:10px 0 4px}
@@ -244,7 +250,7 @@ td.num{text-align:right;font-family:var(--font-data);font-variant-numeric:tabula
   .pane{overflow:visible;padding:12px 12px 24px}
   .summary b{font-size:1.05rem}
   .summary span{font-size:.62rem;letter-spacing:.04em}
-  .legend{max-width:min(200px,calc(100vw - 120px));font-size:.68rem;padding:6px 8px;top:8px;right:8px}
+  .legend{max-width:min(200px,calc(100vw - 120px));font-size:.68rem;padding:6px 8px;top:8px;right:8px;--legTop:8px;max-height:calc(100% - 8px - var(--scrubH,52px) - 20px - 8px)}
   .legend .keys{display:none}
   .basemap-switch{left:48px;top:8px}
   .basemap-switch select{max-width:116px}
@@ -272,7 +278,6 @@ td.num{text-align:right;font-family:var(--font-data);font-variant-numeric:tabula
   main{grid-template-columns:minmax(260px,320px) 1fr}
   .summary div{padding:6px}
   .summary b{font-size:.95rem}
-  .legend{max-height:calc(100% - 70px);overflow:auto}
 }
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 
@@ -1244,6 +1249,9 @@ function setTiles(){
 function setBasemap(k){bm=k;store.set('hsw.basemap2',k);setTiles();}
 $('bmSel').onchange=e=>setBasemap(e.target.value);
 if(matchMedia('(max-width:820px)').matches) $('legDet').open=false;
+// keep the layer panel above the forecast time bar at every size: the bar's real height (it wraps on narrow screens) sets --scrubH
+{const sc=document.querySelector('.scrub'), mw=document.querySelector('.mapwrap'); if(sc&&mw){ const set=()=>mw.style.setProperty('--scrubH',sc.offsetHeight+'px'); set();
+  if(window.ResizeObserver) new ResizeObserver(set).observe(sc); else addEventListener('resize',set); }}
 setTiles(); labelZoom();
 const reTheme=()=>{setTiles();drawRegionMask();if(S.hots.length){drawHotspots();drawTraj();}drawTowns();};
 matchMedia('(prefers-color-scheme: dark)').addEventListener('change',reTheme);
@@ -1707,7 +1715,7 @@ function wx24(lat,lon,tEnd){ if(!MET||tEnd==null) return null; let tmin=Infinity
     const r=rainAt(lat,lon,t); if(rainIsObs(lat,lon,t)) obsH++; if(r!=null){rain+=r;n++;}}
   return n?{tmin:isFinite(tmin)?tmin:null,tmax:isFinite(tmax)?tmax:null,rain,obsH}:null; }
 function wx24Text(w){ if(!w) return ''; const tt=w.tmin!=null?`${Math.round(w.tmin)}–${Math.round(w.tmax)} °C`:'–';
-  const rr=w.rain<0.5?T('no rain','ไม่มีฝน'):`${T('rain','ฝน')} ${w.rain<10?w.rain.toFixed(1):Math.round(w.rain)} ${T('mm','มม.')}`;
+  const rr=w.rain<0.1?T('no rain','ไม่มีฝน'):`${T('rain','ฝน')} ${w.rain<10?w.rain.toFixed(1):Math.round(w.rain)} ${T('mm','มม.')} (${rainDayCat(w.rain)})`;
   return `${tt} · ${rr}${w.rain>=5?` <span class="wxwash" title="${T('Rain washes smoke out of the air','ฝนชะล้างควันออกจากอากาศ')}">${T('(helps clear smoke)','(ช่วยชะล้างควัน)')}</span>`:''}`; }
 // the 0.025° temperature (DEM + station corrections) for the warning list: loaded once, list redrawn when ready
 // one load at a time; callbacks of callers that arrive while it runs are queued and all run when it is done
@@ -1975,8 +1983,12 @@ new LocateCtl().addTo(map);
 // The location is read once per visit, only if the browser allows it; it is not sent anywhere. "Show this when the page opens"
 // is remembered on this device (hsw.locPop).
 let LOCPOP=null;
-// icons at the top of the pop-up. Weather: rain from the 0.025° rain (GSMaP observed for the past hour, else ECMWF), the larger of
-// the past and the coming hour; without rain, ECMWF total cloud cover (< 30 % clear, 30–70 % partly cloudy, ≥ 70 % cloudy);
+// ---- icons and categories at the top of the pop-up (published definitions)
+// cloud: US National Weather Service forecast terms, eighths of sky covered (≤ 1/8 clear/sunny, 1/8–3/8 mostly clear/sunny,
+//   3/8–5/8 partly cloudy, 5/8–7/8 mostly cloudy, ≥ 7/8 cloudy; weather.gov/ajk/ForecastTerms), applied to ECMWF total cloud cover (%)
+// rain in an hour: from 0.1 mm (the lowest rain amount of the Thai Meteorological Department); light < 2.5, moderate 2.5–7.6,
+//   heavy > 7.6 mm/h (US rain-rate terms, AMS Glossary of Meteorology)
+// rain in a day: TMD rain amount criteria, 0.1–10.0 light, 10.1–35.0 moderate, 35.1–90.0 heavy, ≥ 90.1 mm very heavy
 // sun or moon by Thai local hour (06–18 day). PM2.5: a face in the colour of the map's band (smile · neutral · frown · mask).
 const WXI={
   sun:'<circle cx="32" cy="32" r="11" fill="#f2a900"/><g stroke="#f2a900" stroke-width="3.5" stroke-linecap="round">'+[0,45,90,135,180,225,270,315].map(a=>{const r=Math.PI*a/180;return `<line x1="${(32+17*Math.cos(r)).toFixed(1)}" y1="${(32+17*Math.sin(r)).toFixed(1)}" x2="${(32+24*Math.cos(r)).toFixed(1)}" y2="${(32+24*Math.sin(r)).toFixed(1)}"/>`;}).join('')+'</g>',
@@ -1984,18 +1996,25 @@ const WXI={
   cloud:(y=0,c='#a3adb0')=>`<path transform="translate(0 ${y})" d="M18 46h30a10 10 0 0 0 0-20 14 14 0 0 0-27-3 10 10 0 0 0-3 23z" fill="${c}" stroke="rgba(0,0,0,.12)" stroke-width="1"/>`,
   drops:n=>'<g stroke="#2f7fd8" stroke-width="3" stroke-linecap="round">'+(n>3?[[20,50],[28,54],[36,50],[44,54],[24,58],[40,58]]:n>1?[[24,52],[34,55],[44,52]]:[[30,52],[40,52]]).slice(0,n>3?6:n>1?3:2).map(([x,y])=>`<line x1="${x}" y1="${y}" x2="${x-3}" y2="${y+6}"/>`).join('')+'</g>',
 };
-function wxIcon(lat,lon,t){
-  if(!MET) return null; const m=sampleMet(MET,lat,lon,t)||{}, r=Math.max(rainAt(lat,lon,t)??0,rainAt(lat,lon,t+HR)??0), cc=m.cc;
-  const hr=+new Date(t).toLocaleString('en-GB',{hour:'2-digit',hour12:false,timeZone:'Asia/Bangkok'}), day=hr>=6&&hr<18, sky=day?WXI.sun:WXI.moon;
-  let k,svg;
-  if(r>=5){k=T('Heavy rain','ฝนตกหนัก'); svg=WXI.cloud(-8,'#7d8a90')+WXI.drops(6);}
-  else if(r>=0.5){k=T('Rain','ฝนตก'); svg=WXI.cloud(-8)+WXI.drops(3);}
-  else if(r>=0.1){k=T('Light rain','ฝนเล็กน้อย'); svg=WXI.cloud(-8)+WXI.drops(1);}
-  else if(cc==null||!isFinite(cc)){k=T('No rain','ไม่มีฝน'); svg=sky;}
-  else if(cc>=70){k=T('Cloudy','มีเมฆมาก'); svg=WXI.cloud(-2);}
-  else if(cc>=30){k=day?T('Partly cloudy','มีเมฆบางส่วน'):T('Partly cloudy','มีเมฆบางส่วน'); svg=`<g transform="translate(-8 -8) scale(.85)">${sky}</g>`+WXI.cloud(6);}
-  else {k=day?T('Clear, sunny','ท้องฟ้าแจ่มใส'):T('Clear night','ท้องฟ้าโปร่ง'); svg=sky;}
-  return {label:k,svg:`<svg viewBox="0 0 64 64" aria-hidden="true">${svg}</svg>`,rain:r,cc};
+const sm=(svg,x,y,k)=>`<g transform="translate(${x} ${y}) scale(${k})">${svg}</g>`;
+function cloudCat(cc,day){ if(cc==null||!isFinite(cc)) return null; const sky=day?WXI.sun:WXI.moon;
+  return cc<=12.5?{label:day?T('Sunny','ท้องฟ้าแจ่มใส'):T('Clear','ท้องฟ้าโปร่ง'),svg:sky}
+    :cc<=37.5?{label:day?T('Mostly sunny','มีเมฆเล็กน้อย'):T('Mostly clear','มีเมฆเล็กน้อย'),svg:sky+sm(WXI.cloud(0),26,26,.55)}
+    :cc<=62.5?{label:T('Partly cloudy','มีเมฆบางส่วน'),svg:sm(sky,-8,-8,.85)+WXI.cloud(6)}
+    :cc<=87.5?{label:T('Mostly cloudy','มีเมฆเป็นส่วนมาก'),svg:sm(sky,-2,-4,.6)+WXI.cloud(2)}
+    :{label:T('Cloudy','มีเมฆเต็มท้องฟ้า'),svg:sm(WXI.cloud(0,'#c3cacc'),-10,-12,.8)+WXI.cloud(2,'#98a3a7')}; }
+function rainHourCat(r){ return r==null||r<0.1?null:r<2.5?{k:1,label:T('Light rain','ฝนเบา')}:r<=7.6?{k:2,label:T('Moderate rain','ฝนปานกลาง')}:{k:3,label:T('Heavy rain','ฝนหนัก')}; }
+function rainDayCat(mm){ return mm==null||mm<0.1?T('no rain','ไม่มีฝน'):mm<=10?T('light rain','ฝนเล็กน้อย'):mm<=35?T('moderate rain','ฝนปานกลาง'):mm<=90?T('heavy rain','ฝนหนัก'):T('very heavy rain','ฝนหนักมาก'); }
+// r: rain in the hour (mm) to show; cloud cover from ECMWF at time t
+function wxIcon(lat,lon,t,r){
+  if(!MET) return null; const m=sampleMet(MET,lat,lon,t)||{}, cc=m.cc;
+  const hr=+new Date(t).toLocaleString('en-GB',{hour:'2-digit',hour12:false,timeZone:'Asia/Bangkok'}), day=hr>=6&&hr<18;
+  const rc=rainHourCat(r), c=cloudCat(cc,day);
+  let label,svg;
+  if(rc){label=rc.label; svg=WXI.cloud(-8,rc.k===3?'#7d8a90':'#a3adb0')+WXI.drops(rc.k===3?6:rc.k===2?3:1);}
+  else if(c){label=c.label; svg=c.svg;}
+  else {label=T('No rain','ไม่มีฝน'); svg=day?WXI.sun:WXI.moon;}
+  return {label,svg:`<svg viewBox="0 0 64 64" aria-hidden="true">${svg}</svg>`,rain:r,cc,cloud:c?c.label:null};
 }
 function pmIcon(v){
   const b=bandFor(v), k=PCD.findIndex(x=>v<=x.max), face=b.color, ink='rgba(0,0,0,.72)';
@@ -2003,17 +2022,33 @@ function pmIcon(v){
   const mask=k>=4?'<g stroke="rgba(0,0,0,.45)" stroke-width="1.6" fill="none"><path d="M7 27 L14 35M57 27 L50 35"/></g><path d="M13 34 Q32 29 51 34 L48 47 Q32 55 16 47 Z" fill="#f4f6f8" stroke="rgba(0,0,0,.4)" stroke-width="1.6"/><g stroke="#aeb7bb" stroke-width="1.6" stroke-linecap="round"><path d="M18 39 Q32 36 46 39M19 44 Q32 41 45 44"/></g>':'';
   return `<svg viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="26" fill="${face}" stroke="rgba(0,0,0,.18)" stroke-width="1.5"/><g stroke="${ink}" fill="${ink}"><circle cx="23.5" cy="26" r="3" stroke="none"/><circle cx="40.5" cy="26" r="3" stroke="none"/>${mouth}${mask}</g></svg>`;
 }
-function locPopHero(lat,lon,tNow,vNow,past24,w){
-  const wi=wxIcon(lat,lon,tNow);
-  const pm=vNow!=null?`<div>${pmIcon(vNow)}<div><div class="hs">PM₂.₅</div><div class="hv">${fmtN(vNow)} <small style="font-size:.6em">µg/m³</small></div><div class="hl">${esc(bandFor(vNow).en)}</div>${past24!=null?`<div class="hs">AQI ${T('Thai','ไทย')} ${aqiTH(past24)}</div>`:''}</div></div>`:'';
-  const wx=wi?`<div>${wi.svg}<div><div class="hs">${T('Weather','สภาพอากาศ')}</div><div class="hv">${w&&w.t2!=null?Math.round(w.t2)+'°C':'–'}</div><div class="hl">${esc(wi.label)}</div>${wi.cc!=null&&isFinite(wi.cc)?`<div class="hs">${T('cloud','เมฆ')} ${Math.round(wi.cc)}%${wi.rain>=0.1?` · ${T('rain','ฝน')} ${wi.rain<10?wi.rain.toFixed(1):Math.round(wi.rain)} ${T('mm/h','มม./ชม.')}`:''}</div>`:''}</div></div>`:'';
+// ---- "now" at the viewer's location from measurements (≤ 3 h old): PM2.5 at the nearest reference monitor, temperature / humidity /
+// wind at the nearest Air4Thai station, rain from JAXA GSMaP (gauge-calibrated) at 0.025° for the newest observed hour.
+// Model values at the exact location are shown beside them; without a recent measurement the model value is shown and marked so.
+const OBS_MAX_AGE=3*HR;
+function nowObs(lat,lon,now){
+  const fresh=t=>t!=null&&now-t<=OBS_MAX_AGE&&t<=now+HR;
+  let pm=null; for(const s of P.data?.stations||[]){ if(!s.monitor||!s.obs||!fresh(s.obs.t)) continue; const d=haversineKm(lat,lon,s.lat,s.lon); if(!pm||d<pm.d) pm={st:s,d,v:s.obs.v,t:s.obs.t,avg24:!!s.avg24}; }
+  if(pm){ const o=pm.st.obs24; pm.v24=o&&o.valid?o.v:(pm.avg24?pm.v:null); }
+  let wx=null; const byId=new Map((P.data?.stations||[]).map(s=>[String(s.id),s]));
+  for(const o of P.data?.obsWx||[]){ if(!fresh(o.t)||o.t2==null) continue; const d=haversineKm(lat,lon,o.lat,o.lon); if(!wx||d<wx.d) wx={...o,d,st:byId.get(String(o.id))}; }
+  let rain=null; for(let k=0;k<=6;k++){ const t=Math.floor(now/HR)*HR-k*HR; if(rainIsObs(lat,lon,t)){ const r=rainAt(lat,lon,t); if(r!=null){ rain={t,r}; break; } } }
+  if(rain&&!fresh(rain.t)) rain=null;
+  return {pm,wx,rain};
+}
+const kmTxt=d=>(d<10?d.toFixed(1):Math.round(d))+' '+T('km','กม.');
+function locPopHero(lat,lon,tNow,O,vNow,aqi24,w){
+  const pmV=O.pm?O.pm.v:vNow, tV=O.wx?.t2??w?.t2, rV=O.rain?O.rain.r:Math.max(rainAt(lat,lon,tNow)??0,rainAt(lat,lon,tNow+HR)??0), wi=wxIcon(lat,lon,tNow,rV);
+  const src=o=>o?`<span class="obs">${T('measured','ตรวจวัด')}</span>`:`<span class="mod">${T('model','แบบจำลอง')}</span>`;
+  const pm=pmV!=null?`<div>${pmIcon(pmV)}<div><div class="hs">PM₂.₅${O.pm?.avg24?' '+T('(24-h mean)','(เฉลี่ย 24 ชม.)'):''} ${src(O.pm)}</div><div class="hv">${fmtN(pmV)} <small style="font-size:.6em">µg/m³</small></div><div class="hl">${esc(bandFor(pmV).en)}</div>${aqi24!=null?`<div class="hs">AQI ${T('Thai','ไทย')} ${aqiTH(aqi24)}</div>`:''}</div></div>`:'';
+  const wx=wi?`<div>${wi.svg}<div><div class="hs">${T('Weather','สภาพอากาศ')} ${src(O.wx||O.rain)}</div><div class="hv">${tV!=null?Math.round(tV)+'°C':'–'}</div><div class="hl">${esc(wi.label)}</div><div class="hs">${wi.cc!=null&&isFinite(wi.cc)?`${T('cloud','เมฆ')} ${Math.round(wi.cc)}% (ECMWF)`:''}${wi.rain>=0.1?` · ${T('rain','ฝน')} ${wi.rain<10?wi.rain.toFixed(1):Math.round(wi.rain)} ${T('mm/h','มม./ชม.')}`:''}</div></div></div>`:'';
   return pm||wx?`<div class="lphero">${pm}${wx}</div>`:'';
 }
 function locPopHTML(lat,lon,acc){
   const now=Date.now(), tNow=Math.floor(now/HR)*HR, pv=provinceOf(lat,lon), H=P.data?.hours||[], tEnd=H.length?H[H.length-1]:tNow;
-  const vNow=totalAt(lat,lon,tNow), w=wxAt(lat,lon,tNow), obsR=rainIsObs(lat,lon,tNow);
+  const vNow=totalAt(lat,lon,tNow), w=wxAt(lat,lon,tNow), O=nowObs(lat,lon,now);
   let p24=0,n24=0; for(const t of H){ if(t>tNow||t<=tNow-24*HR) continue; const v=totalAt(lat,lon,t); if(v!=null){p24+=v;n24++;} }
-  const past24=n24>=18?p24/n24:null, sp=w?Math.hypot(w.u10,w.v10):null;
+  const past24=n24>=18?p24/n24:null, aqi24=O.pm&&O.pm.v24!=null?O.pm.v24:past24;
   const rain3=t=>{let s=0,n=0; for(let k=0;k<3;k++){const r=rainAt(lat,lon,t-k*HR); if(r!=null){s+=r;n++;}} return n?s:null;};
   const fmtR=r=>r==null?'–':r<0.05?'0':r<10?r.toFixed(1):Math.round(r);
   const day=t=>new Date(t-HR).toLocaleDateString(LOC(),{weekday:'short',day:'numeric'});   // hour-ending: 00:00 closes the day before
@@ -2024,17 +2059,27 @@ function locPopHTML(lat,lon,acc){
     const v=totalAt(lat,lon,t), x=wxAt(lat,lon,t), r=rain3(t), d=day(t), b=v!=null?bandFor(v):null;
     rows.push(`<tr${lastD&&d!==lastD?' class="nd"':''}><td>${d!==lastD?`<b>${esc(d)}</b> `:''}${hh(t)}</td><td>${v!=null?`<i class="dot" style="background:${b.color}"></i>${fmtN(v)}`:'–'}</td><td>${x&&x.t2!=null?x.t2.toFixed(1):'–'}</td><td>${fmtR(r)}</td><td>${wind(x)}</td><td>${x&&x.rh!=null?Math.round(x.rh):'–'}</td></tr>`);
     lastD=d; }
-  const tile=(v,l)=>`<div><b>${v}</b><span>${l}</span></div>`;
+  const tile=(v,l,s)=>`<div><b>${v}</b><span>${l}</span>${s?`<span class="src">${s}</span>`:''}</div>`;
+  const stLbl=(st,d,t)=>`${st?esc(stName(st)):T('station','สถานี')} · ${kmTxt(d)} · ${hm(t)}`;
+  const modTxt=v=>`${T('model here','แบบจำลอง ณ ตำแหน่งนี้')} ${v}`;
+  const W=O.wx, pmO=O.pm;
   return `<div class="lphead"><div><h2 id="locPopT">${pv?esc(provName(pv))+(LANG!=='th'&&pv.th?' · '+esc(pv.th):''):T('Your location','ตำแหน่งของคุณ')}</h2>
       <div class="note">${T('Now','ขณะนี้')} ${hm(now)} · ${lat.toFixed(3)}°N ${lon.toFixed(3)}°E${acc?` · ±${acc<1000?Math.round(acc)+T(' m',' ม.'):(acc/1000).toFixed(1)+T(' km',' กม.')}`:''}</div></div>
       <button class="x" type="button" id="locPopX" aria-label="${T('Close','ปิด')}">×</button></div>
-    ${locPopHero(lat,lon,tNow,vNow,past24,w)}
+    ${locPopHero(lat,lon,tNow,O,vNow,aqi24,w)}
+    <div class="lpsec">${T('Now: latest measurements','ขณะนี้: ค่าตรวจวัดล่าสุด')}</div>
     <div class="lpnow">
-      <div class="pm">${vNow!=null?`<b>${fmtN(vNow)} <small style="font-size:.7rem">µg/m³</small></b>${pill(vNow)}<span>${T('PM₂.₅ now (this hour)','PM₂.₅ ชั่วโมงนี้')}${past24!=null?` · ${T('AQI (24-h mean','AQI (เฉลี่ย 24 ชม.')} ${fmtN(past24)}): ${T('Thai','ไทย')} ${aqiTH(past24)} · ${T('US','สหรัฐฯ')} ${aqiUS(past24)}`:''}</span>`:`<span>${T('No PM₂.₅ forecast at this location.','ไม่มีค่าพยากรณ์ PM₂.₅ ที่ตำแหน่งนี้')}</span>`}</div>
-      ${tile(w&&w.t2!=null?w.t2.toFixed(1)+' °C':'–',T('Temperature (2 m, 0.025°)','อุณหภูมิ (2 ม., 0.025°)'))}
-      ${tile(w?fmtR(w.pr)+' '+T('mm','มม.'):'–',T('Rain, last hour','ฝน ชั่วโมงที่ผ่านมา')+' · '+(obsR?T('observed (GSMaP)','ตรวจวัด (GSMaP)'):T('forecast','พยากรณ์')))}
-      ${tile(sp!=null?sp.toFixed(1)+' m/s':'–',T('Wind (10 m)','ลม (10 ม.)')+(sp!=null?' '+T('from','จาก')+' '+compass(windFrom(w.u10,w.v10)):''))}
-      ${tile(w&&w.rh!=null?Math.round(w.rh)+' %':'–',T('Relative humidity','ความชื้นสัมพัทธ์'))}
+      <div class="pm">${pmO?`<b>${fmtN(pmO.v)} <small style="font-size:.7rem">µg/m³</small></b>${pill(pmO.v)}<span>PM₂.₅ ${pmO.avg24?T('24-h mean','เฉลี่ย 24 ชม.'):T('hourly','รายชั่วโมง')} · ${stLbl(pmO.st,pmO.d,pmO.t)}${aqi24!=null?` · AQI ${T('Thai','ไทย')} ${aqiTH(aqi24)} · ${T('US','สหรัฐฯ')} ${aqiUS(aqi24)}`:''}</span>${vNow!=null?`<span class="src">${modTxt(fmtN(vNow)+' µg/m³')}</span>`:''}`
+        :vNow!=null?`<b>${fmtN(vNow)} <small style="font-size:.7rem">µg/m³</small></b>${pill(vNow)}<span>PM₂.₅ · ${T('no monitor reading in the last 3 h: forecast map value','ไม่มีค่าตรวจวัดใน 3 ชม.: ค่าจากแผนที่พยากรณ์')}${past24!=null?` · AQI ${T('Thai','ไทย')} ${aqiTH(past24)}`:''}</span>`
+        :`<span>${T('No PM₂.₅ value at this location.','ไม่มีค่า PM₂.₅ ที่ตำแหน่งนี้')}</span>`}</div>
+      ${W?tile(W.t2.toFixed(1)+' °C',T('Temperature','อุณหภูมิ'),stLbl(W.st,W.d,W.t)+(w&&w.t2!=null?'<br>'+modTxt(w.t2.toFixed(1)+' °C'):''))
+         :tile(w&&w.t2!=null?w.t2.toFixed(1)+' °C':'–',T('Temperature','อุณหภูมิ'),T('model (0.025°): no station reading in 3 h','แบบจำลอง (0.025°): ไม่มีค่าสถานีใน 3 ชม.'))}
+      ${O.rain?tile(fmtR(O.rain.r)+' '+T('mm','มม.'),T('Rain in the hour to','ฝนในชั่วโมงถึง')+' '+hm(O.rain.t),T('JAXA GSMaP (satellite + gauges), 0.025°','JAXA GSMaP (ดาวเทียม + เครื่องวัด) 0.025°'))
+         :tile(w?fmtR(w.pr)+' '+T('mm','มม.'):'–',T('Rain, last hour','ฝน ชั่วโมงที่ผ่านมา'),T('model: no GSMaP hour in 3 h','แบบจำลอง: ไม่มีข้อมูล GSMaP ใน 3 ชม.'))}
+      ${W&&W.ws!=null?tile(W.ws.toFixed(1)+' m/s',T('Wind','ลม')+(W.wd!=null?' '+T('from','จาก')+' '+compass(W.wd):''),stLbl(W.st,W.d,W.t))
+         :tile(w?Math.hypot(w.u10,w.v10).toFixed(1)+' m/s':'–',T('Wind (10 m)','ลม (10 ม.)')+(w?' '+T('from','จาก')+' '+compass(windFrom(w.u10,w.v10)):''),T('model (ECMWF)','แบบจำลอง (ECMWF)'))}
+      ${W&&W.rh!=null?tile(Math.round(W.rh)+' %',T('Relative humidity','ความชื้นสัมพัทธ์'),stLbl(W.st,W.d,W.t))
+         :tile(w&&w.rh!=null?Math.round(w.rh)+' %':'–',T('Relative humidity','ความชื้นสัมพัทธ์'),T('model (ECMWF)','แบบจำลอง (ECMWF)'))}
     </div>
     ${rows.length?`<div class="lpsec">${T('Forecast, every 3 hours','พยากรณ์ ทุก 3 ชั่วโมง')}</div>
     <div class="note" style="font-size:.68rem;margin:-2px 0 4px">${T('PM₂.₅ in µg/m³ (hourly) · temperature at the hour · rain in mm over the 3 h ending at the time · wind in m/s, arrow points where the wind blows to','PM₂.₅ หน่วย µg/m³ (รายชั่วโมง) · อุณหภูมิ ณ เวลานั้น · ฝน มม. รวม 3 ชม. ก่อนถึงเวลานั้น · ลม ม./วินาที ลูกศรชี้ทิศที่ลมพัดไป')}</div><div class="lpfc"><table><thead><tr><th>${T('Time','เวลา')}</th><th>PM₂.₅</th><th>°C</th><th>${T('Rain','ฝน')}</th><th>${T('Wind','ลม')}</th><th>RH %</th></tr></thead><tbody>${rows.join('')}</tbody></table></div>`:''}
@@ -2042,7 +2087,9 @@ function locPopHTML(lat,lon,acc){
     ${hereTrend(lat,lon)}
     <div class="lpfoot"><label><input type="checkbox" id="locPopAuto"${store.get('hsw.locPop')==='off'?'':' checked'}> ${T('Show this when the page opens','แสดงหน้าต่างนี้เมื่อเปิดหน้าเว็บ')}</label>
       <div class="btns"><button class="btn" type="button" id="locPopMap">${T('Show on map','ดูบนแผนที่')}</button><button class="btn" type="button" id="locPopClose">${T('Close','ปิด')}</button></div></div>
-    <p class="note" style="font-size:.68rem;margin:6px 0 0">${T('PM₂.₅ is the hourly value of the forecast map; temperature and rain are ECMWF downscaled to 0.025° (rain observed by JAXA GSMaP for past hours); wind, humidity and cloud cover are ECMWF. Weather icon: rain this or the next hour (≥ 0.1 mm), otherwise cloud cover (clear < 30 %, cloudy ≥ 70 %). Your location stays on this device.','PM₂.₅ เป็นค่ารายชั่วโมงจากแผนที่พยากรณ์ อุณหภูมิและฝนเป็น ECMWF ที่ย่อส่วนเป็น 0.025° (ฝนในชั่วโมงที่ผ่านมาตรวจวัดโดย JAXA GSMaP) ลม ความชื้น และเมฆจาก ECMWF ไอคอนอากาศ: ฝนในชั่วโมงนี้หรือชั่วโมงถัดไป (≥ 0.1 มม.) ถ้าไม่มีฝนดูจากปริมาณเมฆ (โปร่ง < 30 % เมฆมาก ≥ 70 %) ตำแหน่งของคุณเก็บอยู่ในเครื่องนี้เท่านั้น')}</p>`;
+    <p class="note" style="font-size:.68rem;margin:6px 0 0">${T(
+      'Now: measurements no older than 3 h — PM₂.₅ at the nearest reference monitor, temperature, humidity and wind at the nearest Air4Thai station (distance shown), rain from JAXA GSMaP at 0.025°; the model value at your exact location is shown beside them. Forecast: PM₂.₅ from the forecast map; temperature and rain ECMWF downscaled to 0.025°; wind, humidity and cloud cover ECMWF. Sky: US National Weather Service terms (eighths of sky covered: ≤ 1/8 sunny, to 3/8 mostly sunny, to 5/8 partly cloudy, to 7/8 mostly cloudy, above cloudy) applied to ECMWF total cloud cover. Rain in an hour: from 0.1 mm (lowest Thai Meteorological Department amount); light < 2.5, moderate 2.5–7.6, heavy > 7.6 mm/h (AMS Glossary of Meteorology). Rain in a day: Thai Meteorological Department amounts (0.1–10 light, 10.1–35 moderate, 35.1–90 heavy, above 90 mm very heavy). Your location stays on this device.',
+      'ขณะนี้: ค่าตรวจวัดที่อายุไม่เกิน 3 ชม. — PM₂.₅ จากสถานีตรวจวัดมาตรฐานที่ใกล้ที่สุด อุณหภูมิ ความชื้น และลมจากสถานี Air4Thai ที่ใกล้ที่สุด (แสดงระยะทาง) ฝนจาก JAXA GSMaP ที่ 0.025° และแสดงค่าแบบจำลอง ณ ตำแหน่งของคุณคู่กัน พยากรณ์: PM₂.₅ จากแผนที่พยากรณ์ อุณหภูมิและฝนเป็น ECMWF ย่อส่วนเป็น 0.025° ลม ความชื้น และเมฆจาก ECMWF สภาพท้องฟ้า: ใช้นิยามของ National Weather Service สหรัฐฯ (ส่วนแปดของท้องฟ้าที่เมฆปกคลุม: ≤ 1/8 แจ่มใส, ถึง 3/8 เมฆเล็กน้อย, ถึง 5/8 เมฆบางส่วน, ถึง 7/8 เมฆเป็นส่วนมาก, มากกว่านั้นเมฆเต็มท้องฟ้า) กับปริมาณเมฆรวมของ ECMWF ฝนรายชั่วโมง: เริ่มที่ 0.1 มม. (ค่าต่ำสุดของเกณฑ์กรมอุตุนิยมวิทยา) เบา < 2.5 ปานกลาง 2.5–7.6 หนัก > 7.6 มม./ชม. (AMS Glossary of Meteorology) ฝนรายวัน: เกณฑ์ปริมาณฝนของกรมอุตุนิยมวิทยา (0.1–10 เล็กน้อย 10.1–35 ปานกลาง 35.1–90 หนัก มากกว่า 90 มม. หนักมาก) ตำแหน่งของคุณเก็บอยู่ในเครื่องนี้เท่านั้น')}</p>`;
 }
 function renderLocPop(){
   const box=$('locPop'); if(!LOCPOP||!P.data){box.hidden=true;return;}
@@ -2420,7 +2467,7 @@ function trendBlock(H,v,opt={}){
   return `${tw?`<div class="tw">${tw.arr} ${tw.txt} <span class="note">· ${T('next 24 h','24 ชม. ข้างหน้า')} ${fmtN(tw.b)} ${T('vs past 24 h','เทียบกับ 24 ชม. ที่ผ่านมา')} ${fmtN(tw.a)} µg/m³</span></div>`:''}
     ${trendSvg(H,v,opt)}
     ${opt.wx?wxSvg(H,opt.wx):''}
-    ${days.length?`<div class="chips">${days.map(o=>{const w=dw.get(o.d); return `<div class="chip">${esc(dayLabel(o.t-HR))}<b>${fmtVal(o.mean)}</b>${pill(o.mean)}${w&&isFinite(w.tmin)?`<span class="cwx">${Math.round(w.tmin)}–${Math.round(w.tmax)} °C · ${w.rain<0.5?T('no rain','ไม่มีฝน'):(w.rain<10?w.rain.toFixed(1):Math.round(w.rain))+' '+T('mm','มม.')}</span>`:''}</div>`;}).join('')}</div>`:''}
+    ${days.length?`<div class="chips">${days.map(o=>{const w=dw.get(o.d); return `<div class="chip">${esc(dayLabel(o.t-HR))}<b>${fmtVal(o.mean)}</b>${pill(o.mean)}${w&&isFinite(w.tmin)?`<span class="cwx">${Math.round(w.tmin)}–${Math.round(w.tmax)} °C · ${w.rain<0.1?T('no rain','ไม่มีฝน'):(w.rain<10?w.rain.toFixed(1):Math.round(w.rain))+' '+T('mm','มม.')+' · '+rainDayCat(w.rain)}</span>`:''}</div>`;}).join('')}</div>`:''}
     <p class="note" style="font-size:.7rem">${T('Orange: hourly. Blue: 24-hour average (the basis of the Thai AQI).','เส้นส้ม: รายชั่วโมง เส้นน้ำเงิน: ค่าเฉลี่ย 24 ชม. (ใช้คำนวณ AQI ของไทย)')}${opt.lo?T(' Shading: range across the area (most of the area lies inside it).',' แถบสี: ช่วงค่าภายในพื้นที่ (พื้นที่ส่วนใหญ่อยู่ในช่วงนี้)'):''}${opt.fire?T(' Dashed: smoke from fires in our model.',' เส้นประ: ควันจากไฟตามแบบจำลองของเรา'):''} ${T('Day boxes: daily average from midnight to midnight.','กล่องรายวัน: ค่าเฉลี่ยรายวัน (เที่ยงคืนถึงเที่ยงคืน)')}${opt.wx?T(' Weather: red line = 2-m temperature (°C, ECMWF downscaled to 0.025°, plus the self-learning correction once it has earned weight), blue bars = rain in each hour, read against the blue scale on the right (mm per hour; darker = observed by JAXA GSMaP, lighter = ECMWF forecast; tap or hover a bar for its value); day boxes show the day\'s lowest–highest temperature and rain total.',' สภาพอากาศ: เส้นแดง = อุณหภูมิ 2 ม. (°C, ECMWF ย่อส่วนเป็น 0.025°) แท่งน้ำเงิน = ฝนรายชั่วโมง อ่านค่าจากสเกลสีน้ำเงินด้านขวา (มม./ชม. สีเข้ม = ตรวจวัดโดย JAXA GSMaP สีอ่อน = พยากรณ์ ECMWF แตะหรือชี้ที่แท่งเพื่อดูค่า) กล่องรายวันแสดงอุณหภูมิต่ำสุด–สูงสุดและฝนรวมของวัน'):''}</p>`;
 }
 const AREA_CACHE={key:null}, INC_FIELDS={sim:null,map:new Map()};

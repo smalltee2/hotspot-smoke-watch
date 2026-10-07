@@ -1,0 +1,122 @@
+{
+ "source": "CHELSA V2.1 monthly precipitation climatology 1981-2010 (Karger et al. 2017, doi:10.1038/sdata.2017.122; data doi:10.16904/envidat.228)",
+ "lon0": 92.0125,
+ "lat0": 5.0125,
+ "step": 0.025,
+ "nx": 720,
+ "ny": 800,
+ "rows": "south to north",
+ "enc": "zlib uint8, factor = value/50",
+ "files": {
+  "01": "factor_01.bin",
+  "02": "factor_02.bin",
+  "03": "factor_03.bin",
+  "04": "factor_04.bin",
+  "05": "factor_05.bin",
+  "06": "factor_06.bin",
+  "07": "factor_07.bin",
+  "08": "factor_08.bin",
+  "09": "factor_09.bin",
+  "10": "factor_10.bin",
+  "11": "factor_11.bin",
+  "12": "factor_12.bin"
+ },
+ "stats": {
+  "01": {
+   "src": "https://os.unil.cloud.switch.ch/chelsa02/chelsa/global/climatologies/pr/1981-2010/CHELSA_pr_01_1981-2010_V.2.1.tif",
+   "land_cells": 576000,
+   "p05": 0.9278271324772973,
+   "p95": 1.0680145472374598,
+   "cellmean_median": 0.9992806296599129,
+   "kB": 143
+  },
+  "02": {
+   "src": "https://os.unil.cloud.switch.ch/chelsa02/chelsa/global/climatologies/pr/1981-2010/CHELSA_pr_02_1981-2010_V.2.1.tif",
+   "land_cells": 576000,
+   "p05": 0.9301455216943316,
+   "p95": 1.0680400114290347,
+   "cellmean_median": 0.9993513329388899,
+   "kB": 138
+  },
+  "03": {
+   "src": "https://os.unil.cloud.switch.ch/chelsa02/chelsa/global/climatologies/pr/1981-2010/CHELSA_pr_03_1981-2010_V.2.1.tif",
+   "land_cells": 576000,
+   "p05": 0.9313888156724638,
+   "p95": 1.0680605688599156,
+   "cellmean_median": 0.9995130520270046,
+   "kB": 127
+  },
+  "04": {
+   "src": "https://os.unil.cloud.switch.ch/chelsa02/chelsa/global/climatologies/pr/1981-2010/CHELSA_pr_04_1981-2010_V.2.1.tif",
+   "land_cells": 576000,
+   "p05": 0.9316156751518997,
+   "p95": 1.0683751607796361,
+   "cellmean_median": 0.9997198007976386,
+   "kB": 123
+  },
+  "05": {
+   "src": "https://os.unil.cloud.switch.ch/chelsa02/chelsa/global/climatologies/pr/1981-2010/CHELSA_pr_05_1981-2010_V.2.1.tif",
+   "land_cells": 576000,
+   "p05": 0.9330805126678345,
+   "p95": 1.0671479815268667,
+   "cellmean_median": 0.9998406651994283,
+   "kB": 122
+  },
+  "06": {
+   "src": "https://os.unil.cloud.switch.ch/chelsa02/chelsa/global/climatologies/pr/1981-2010/CHELSA_pr_06_1981-2010_V.2.1.tif",
+   "land_cells": 576000,
+   "p05": 0.9303531714042016,
+   "p95": 1.0678360437901246,
+   "cellmean_median": 0.9997571342660287,
+   "kB": 124
+  },
+  "07": {
+   "src": "https://os.unil.cloud.switch.ch/chelsa02/chelsa/global/climatologies/pr/1981-2010/CHELSA_pr_07_1981-2010_V.2.1.tif",
+   "land_cells": 576000,
+   "p05": 0.9293423113098542,
+   "p95": 1.0682326380047111,
+   "cellmean_median": 0.9997402502945179,
+   "kB": 126
+  },
+  "08": {
+   "src": "https://os.unil.cloud.switch.ch/chelsa02/chelsa/global/climatologies/pr/1981-2010/CHELSA_pr_08_1981-2010_V.2.1.tif",
+   "land_cells": 576000,
+   "p05": 0.9308272092486404,
+   "p95": 1.0673593216822885,
+   "cellmean_median": 0.9997486625332546,
+   "kB": 125
+  },
+  "09": {
+   "src": "https://os.unil.cloud.switch.ch/chelsa02/chelsa/global/climatologies/pr/1981-2010/CHELSA_pr_09_1981-2010_V.2.1.tif",
+   "land_cells": 576000,
+   "p05": 0.9337200225509944,
+   "p95": 1.0663338042449806,
+   "cellmean_median": 0.9998611119345797,
+   "kB": 121
+  },
+  "10": {
+   "src": "https://os.unil.cloud.switch.ch/chelsa02/chelsa/global/climatologies/pr/1981-2010/CHELSA_pr_10_1981-2010_V.2.1.tif",
+   "land_cells": 576000,
+   "p05": 0.9340679330426664,
+   "p95": 1.0668490219596245,
+   "cellmean_median": 0.9998945632190964,
+   "kB": 120
+  },
+  "11": {
+   "src": "https://os.unil.cloud.switch.ch/chelsa02/chelsa/global/climatologies/pr/1981-2010/CHELSA_pr_11_1981-2010_V.2.1.tif",
+   "land_cells": 576000,
+   "p05": 0.9326598511422426,
+   "p95": 1.0669496026189467,
+   "cellmean_median": 0.9998588541898252,
+   "kB": 122
+  },
+  "12": {
+   "src": "https://os.unil.cloud.switch.ch/chelsa02/chelsa/global/climatologies/pr/1981-2010/CHELSA_pr_12_1981-2010_V.2.1.tif",
+   "land_cells": 576000,
+   "p05": 0.9305811838705706,
+   "p95": 1.0668480241601168,
+   "cellmean_median": 0.999485755499149,
+   "kB": 130
+  }
+ }
+}

@@ -102,6 +102,8 @@ html[data-mode=public] .summary{grid-template-columns:repeat(2,1fr)}
 .fc2{display:grid;grid-template-columns:1fr 1fr;gap:6px;align-self:center}
 .fc2 .d{border:1px solid var(--line);border-radius:6px;padding:4px 6px 5px;text-align:center;min-width:0;background:var(--bg);overflow:hidden}
 .fc2 .d .h{display:block;font-size:.62rem;color:var(--muted);white-space:nowrap}
+.fc2 .d .ic{display:flex;justify-content:center;gap:2px;margin:2px 0 1px}
+.fc2 .d .ic svg{width:24px;height:24px;display:block}
 .fc2 .d b{display:block;font:600 1rem/1.15 var(--font-data);font-variant-numeric:tabular-nums}
 .fc2 .d i.bar{display:block;height:4px;border-radius:2px;margin:2px 0 3px}
 .fc2 .d .w{display:block;font-size:.62rem;color:var(--muted);line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -2314,15 +2316,19 @@ function winMax(H,ser,tNow,a,b,is24){ let best=null,tB=null;
     if(is24) v=ser[i]; else { let s=0,n=0; for(let j=Math.max(0,i-23);j<=i;j++){ const x=ser[j]; if(x!=null){s+=x;n++;} } v=n>=18?s/n:null; }
     if(v!=null&&(best==null||v>best)){best=v;tB=t;} }
   return best==null?null:{v:best,t:tB}; }
-function wxWinPt(lat,lon,tNow,a,b){ if(!MET) return null; let lo=Infinity,hi=-Infinity,r=0,n=0;
-  for(let t=tNow+(a+1)*HR;t<=tNow+b*HR;t+=HR){ const x=t2At(lat,lon,t); if(x!=null){lo=Math.min(lo,x);hi=Math.max(hi,x);} const p=rainAt(lat,lon,t); if(p!=null){r+=p;n++;} }
-  return n?{lo:isFinite(lo)?lo:null,hi:isFinite(hi)?hi:null,rain:r}:null; }
-function wxWinArea(H,wx,tNow,a,b){ if(!wx) return null; let lo=Infinity,hi=-Infinity,r=0,n=0;
-  H.forEach((t,i)=>{ if(t<=tNow+a*HR||t>tNow+b*HR) return; const x=wx.t2[i], p=wx.pr[i]; if(x!=null){lo=Math.min(lo,x);hi=Math.max(hi,x);} if(p!=null){r+=p;n++;} });
-  return n?{lo:isFinite(lo)?lo:null,hi:isFinite(hi)?hi:null,rain:r}:null; }
+const bkkHour=t=>+new Date(t).toLocaleString('en-GB',{hour:'2-digit',hour12:false,timeZone:'Asia/Bangkok'});
+// period weather: temperature range, rain total, and the daytime (07–18 h) mean ECMWF cloud cover for the icon
+function wxWinPt(lat,lon,tNow,a,b){ if(!MET) return null; let lo=Infinity,hi=-Infinity,r=0,n=0,cs=0,cn=0;
+  for(let t=tNow+(a+1)*HR;t<=tNow+b*HR;t+=HR){ const x=t2At(lat,lon,t); if(x!=null){lo=Math.min(lo,x);hi=Math.max(hi,x);} const p=rainAt(lat,lon,t); if(p!=null){r+=p;n++;}
+    const h=bkkHour(t); if(h>=7&&h<=18){ const c=sampleMet(MET,lat,lon,t)?.cc; if(c!=null&&isFinite(c)){cs+=c;cn++;} } }
+  return n?{lo:isFinite(lo)?lo:null,hi:isFinite(hi)?hi:null,rain:r,cc:cn?cs/cn:null}:null; }
+function wxWinArea(H,wx,tNow,a,b){ if(!wx) return null; let lo=Infinity,hi=-Infinity,r=0,n=0,cs=0,cn=0;
+  H.forEach((t,i)=>{ if(t<=tNow+a*HR||t>tNow+b*HR) return; const x=wx.t2[i], p=wx.pr[i]; if(x!=null){lo=Math.min(lo,x);hi=Math.max(hi,x);} if(p!=null){r+=p;n++;}
+    const h=bkkHour(t); if(wx.cc&&wx.cc[i]!=null&&h>=7&&h<=18){cs+=wx.cc[i];cn++;} });
+  return n?{lo:isFinite(lo)?lo:null,hi:isFinite(hi)?hi:null,rain:r,cc:cn?cs/cn:null}:null; }
 function fc2(ws,wx){ const lab=[T('Next 24 h','24 ชม. แรก'),T('24–48 h','24–48 ชม.')];
   return `<div class="fc2">${ws.map((w,k)=>{ const x=wx?.[k];
-    return `<div class="d"><span class="h">${lab[k]}</span>${w?`<b>${valNum(w.v)}</b><i class="bar" style="background:${bandFor(w.v).color}"></i>`:'<b>–</b><i class="bar"></i>'}${x?`${x.lo!=null?`<span class="w">${Math.round(x.lo)}–${Math.round(x.hi)} °C</span>`:''}<span class="w">${x.rain<0.1?T('no rain','ไม่มีฝน'):`${T('rain','ฝน')} ${x.rain<10?x.rain.toFixed(1):Math.round(x.rain)} ${T('mm','มม.')}`}</span>`:''}</div>`; }).join('')}</div>`; }
+    return `<div class="d"><span class="h">${lab[k]}</span><span class="ic">${w?pmIcon(w.v):''}${x?wxDayIcon(x)||'':''}</span>${w?`<b>${valNum(w.v)}</b><i class="bar" style="background:${bandFor(w.v).color}"></i>`:'<b>–</b><i class="bar"></i>'}${x?`${x.lo!=null?`<span class="w">${Math.round(x.lo)}–${Math.round(x.hi)} °C</span>`:''}<span class="w">${x.rain<0.1?T('no rain','ไม่มีฝน'):`${T('rain','ฝน')} ${x.rain<10?x.rain.toFixed(1):Math.round(x.rain)} ${T('mm','มม.')}`}</span>`:''}</div>`; }).join('')}</div>`; }
 function card2({attr,name,tag,sub,ws,wx}){ const worst=ws.reduce((m,w)=>w&&(m==null||w.v>m)?w.v:m,null);
   return `<div class="alert c2" ${attr}><i class="sev" style="background:${worst!=null?bandFor(worst).color:'var(--line)'}"></i>
     <div style="min-width:0"><div class="name">${esc(name)} ${tag?`<span class="note">${esc(tag)}</span>`:''}</div><div class="sub">${worst!=null?pill(worst)+' ':''}${sub||''}</div></div>${fc2(ws,wx)}</div>`; }

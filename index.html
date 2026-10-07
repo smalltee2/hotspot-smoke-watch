@@ -1098,7 +1098,7 @@ const store={get(k){try{return localStorage.getItem(k);}catch(e){return null;}},
 // public page (index.html built with data-mode="public"): developer controls and technical text are hidden
 const PUBLIC=document.documentElement.dataset.mode==='public';
 // ---- language: Thai or English. Static text carries data-th; dynamic text uses T(en, th)
-let LANG=store.get('hsw.lang')||((navigator.language||'').toLowerCase().startsWith('th')?'th':'en');
+let LANG=store.get('hsw.lang')||'th';   // Thai by default; a choice made with the language button is remembered on the device
 const T=(en,th)=>LANG==='th'?th:en;
 const LOC=()=>LANG==='th'?'th-TH':undefined;
 const hm=t=>new Date(t).toLocaleTimeString(LOC(),{hour:'2-digit',minute:'2-digit'});

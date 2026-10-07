@@ -701,6 +701,7 @@ td.num{text-align:right;font-family:var(--font-data);font-variant-numeric:tabula
         <label><input type="checkbox" id="shSt" checked> <span data-th="สถานี OpenAQ">OpenAQ stations</span></label>
         <label><input type="checkbox" id="shHot" checked> <span data-th="จุดความร้อน">Hotspots</span></label>
         <label><input type="checkbox" id="shTown" checked> <span data-th="เมือง">Towns</span></label>
+        <label><input type="checkbox" id="shGibs"> <span data-th="ภาพดาวเทียมรายวัน NASA (เห็นควัน)">NASA daily satellite image (shows smoke)</span></label>
       </div></details>
     </div>
     <div class="basemap-switch"><label for="bmSel" class="vh">Basemap</label>
@@ -709,7 +710,6 @@ td.num{text-align:right;font-family:var(--font-data);font-variant-numeric:tabula
         <option value="street" data-th="แผนที่ถนน">Street map</option>
         <option value="terrain" data-th="ภูมิประเทศ">Terrain</option>
         <option value="sat" data-th="ภาพดาวเทียม">Satellite</option>
-        <option value="gibs" data-th="ภาพดาวเทียมรายวัน NASA (เห็นควัน)">NASA daily satellite (shows smoke)</option>
         <option value="plain" data-th="เส้นขอบอย่างเดียว (ออฟไลน์)">Plain (offline)</option>
       </select><span id="gibsDate" class="gibsdate" hidden></span></div>
     <div class="scrub">
@@ -1269,7 +1269,7 @@ function drawRegionMask(){
     L.polygon([outer,...holes],{pane:'regionmask',stroke:false,fillColor:cssVar('--bg'),fillOpacity:.72,interactive:false}),
     L.polygon(holes,{pane:'regionmask',color:cssVar('--fg'),weight:1.4,opacity:.7,fill:false,interactive:false})]).addTo(map);
 }
-let landLayer,provLayer,ctryLayer,provLabels,tiles,bm=store.get('hsw.basemap2')||'light';
+let landLayer,provLayer,ctryLayer,provLabels,tiles,bm=store.get('hsw.basemap2')||'light'; if(bm==='gibs'){bm='light';store.set('hsw.basemap2','light');store.set('hsw.shGibs','1');}
 // One set of borders at a time: online basemaps draw their own country borders, so the built-in
 // outline map is used only for "Plain", plus optional province borders on top of an online map.
 {const v=store.get('hsw.shProv'); if(v!=null) document.getElementById('shProv').checked=v==='1';}
@@ -1299,11 +1299,21 @@ const TILESETS={
   street:()=>['https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap contributors'}],
   terrain:()=>['https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',{subdomains:'abc',maxZoom:17,attribution:'© OpenStreetMap contributors, SRTM · © OpenTopoMap (CC-BY-SA)'}],
   sat:()=>['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:18,attribution:'Imagery © Esri, Maxar, Earthstar Geographics'}],
-  // NASA GIBS daily true-colour (VIIRS NOAA-20, corrected reflectance, 250 m; NOAA-21 then Suomi NPP where a tile is missing): smoke plumes
-  // and haze show as grey-brown veils. One image per day from the early-afternoon overpass (≈13:30 local), available a few hours later
-  gibs:()=>[`https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/VIIRS_NOAA20_CorrectedReflectance_TrueColor/default/${gibsDate()}/GoogleMapsCompatible_Level9/{z}/{y}/{x}.jpg`,
-    {maxZoom:16,maxNativeZoom:9,attribution:'Imagery: NASA GIBS / EOSDIS, VIIRS true colour '+gibsDate()}],
 };
+// NASA GIBS daily true-colour (VIIRS NOAA-20 corrected reflectance, 250 m; NOAA-21 then Suomi NPP where a tile is missing), as a map
+// layer over the basemap and under the PM2.5 colours: smoke plumes and haze show as grey-brown veils. One image per day from the
+// early-afternoon overpass (≈13:30 local), available a few hours later
+let gibsLayer=null;
+function setGibs(){
+  const on=$('shGibs')?.checked, gd=$('gibsDate');
+  if(!on){ if(gibsLayer){map.removeLayer(gibsLayer);gibsLayer=null;} if(gd) gd.hidden=true; return; }
+  const day=gibsDate(); if(gibsLayer&&gibsLayer._day===day) return; if(gibsLayer) map.removeLayer(gibsLayer);
+  gibsLayer=L.tileLayer(`https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/VIIRS_NOAA20_CorrectedReflectance_TrueColor/default/${day}/GoogleMapsCompatible_Level9/{z}/{y}/{x}.jpg`,
+    {maxZoom:16,maxNativeZoom:9,zIndex:5,attribution:'Imagery: NASA GIBS / EOSDIS, VIIRS true colour '+day})
+    .on('tileerror',e=>{ const im=e.tile, k=+(im.dataset.alt||0), alt=['VIIRS_NOAA21','VIIRS_SNPP'][k]; if(alt){ im.dataset.alt=k+1; im.src=im.src.replace(/VIIRS_(NOAA20|NOAA21|SNPP)/,alt); } })
+    .addTo(map); gibsLayer._day=day;
+  if(gd){ gd.hidden=false; gd.textContent=T('NASA image of ','ภาพ NASA วันที่ ')+new Date(day+'T12:00:00Z').toLocaleDateString(LOC(),{day:'numeric',month:'short',year:'numeric'}); }
+}
 // day of the NASA image: the day of the slider time, never after today; today's image only from 17:00 Thai time (overpass ≈13:30 + latency)
 function gibsDate(){ const now=Date.now(); let ct=null; try{ ct=curT(); }catch(e){} const t=Math.min(ct??now,now), dk=x=>Math.floor((x+BKK_)/864e5);
   let d=dk(t); const hrNow=new Date(now+BKK_).getUTCHours(); if(d===dk(now)&&hrNow<17) d--; return new Date(d*864e5).toISOString().slice(0,10); }
@@ -1312,15 +1322,14 @@ function setTiles(){
   if(tiles){map.removeLayer(tiles);tiles=null;}
   if(bm!=='plain'){const [url,opt]=TILESETS[bm]();let fails=0,ok=0;
     tiles=L.tileLayer(url,{...opt,attribution:opt.attribution+' · Fires: NASA FIRMS · Wind: Open-Meteo · Borders: World Bank Official Boundaries'})
-      .on('tileload',()=>ok++).on('tileerror',e=>{ if(bm==='gibs'){ const im=e.tile, k=+(im.dataset.alt||0), alt=['VIIRS_NOAA21','VIIRS_SNPP'][k];
-          if(alt){ im.dataset.alt=k+1; im.src=im.src.replace(/VIIRS_(NOAA20|NOAA21|SNPP)/,alt); return; } }if(++fails>6&&!ok){setBasemap('plain');banner(T('Online map tiles could not load here, so the page switched to the built-in outline map. Fires, wind and smoke still work.','โหลดแผนที่ออนไลน์ไม่ได้ จึงเปลี่ยนเป็นแผนที่เส้นขอบในตัว จุดไฟ ลม และควันยังแสดงได้ตามปกติ'),'info');}}).addTo(map);}
+      .on('tileload',()=>ok++).on('tileerror',()=>{if(++fails>6&&!ok){setBasemap('plain');banner(T('Online map tiles could not load here, so the page switched to the built-in outline map. Fires, wind and smoke still work.','โหลดแผนที่ออนไลน์ไม่ได้ จึงเปลี่ยนเป็นแผนที่เส้นขอบในตัว จุดไฟ ลม และควันยังแสดงได้ตามปกติ'),'info');}}).addTo(map);}
   else map.attributionControl.addAttribution('Borders: World Bank Official Boundaries');
   styleBase();
-  $('bmSel').value=bm; tiles&&(tiles._gibsDay=bm==='gibs'?gibsDate():null);
-  const gd=$('gibsDate'); if(gd){ gd.hidden=bm!=='gibs'; if(bm==='gibs') gd.textContent=T('NASA image of ','ภาพ NASA วันที่ ')+new Date(gibsDate()+'T12:00:00Z').toLocaleDateString(LOC(),{day:'numeric',month:'short',year:'numeric'}); }
+  $('bmSel').value=bm;
 }
 function setBasemap(k){bm=k;store.set('hsw.basemap2',k);setTiles();}
 $('bmSel').onchange=e=>setBasemap(e.target.value);
+{const v=store.get('hsw.shGibs'); if(v!=null) $('shGibs').checked=v==='1'; $('shGibs').addEventListener('change',()=>{store.set('hsw.shGibs',$('shGibs').checked?'1':'0'); setGibs();}); setGibs();}
 if(matchMedia('(max-width:820px)').matches) $('legDet').open=false;
 // keep the layer panel above the forecast time bar at every size: the bar's real height (it wraps on narrow screens) sets --scrubH
 {const sc=document.querySelector('.scrub'), mw=document.querySelector('.mapwrap'); if(sc&&mw){ const set=()=>mw.style.setProperty('--scrubH',sc.offsetHeight+'px'); set();
@@ -1406,9 +1415,9 @@ function setTimeline(){
   // the hour shown as "now"; a manual refresh, or a view that was on "now", moves to the current hour; a chosen past/forecast hour is kept
   let iNow=S.times.findIndex(h=>h>=Date.now()-HR/2); if(iNow<0) iNow=Math.max(0,S.times.length-1);
   let i=-1; if(i<0) i=iNow;   // every load and refresh shows the current hour (like Windy); the user moves on from there
-  S.jumpNow=false; S.nowSel=S.times[iNow]; S.hour=i; sl.value=i;
+  S.jumpNow=false; S.nowSel=S.times[iNow]; S.hour=i; sl.value=i; setGibs();
 }
-function redrawTime(){if(hereLL&&!$('hereBox').hidden) renderHereBox(); if(bm==='gibs'&&tiles&&tiles._gibsDay!==gibsDate()) setTiles();
+function redrawTime(){if(hereLL&&!$('hereBox').hidden) renderHereBox(); if(gibsLayer) setGibs();
   updateTimeLabel();drawPlume();drawGrid();drawContours();drawTowns();drawStations();drawWind();}
 
 // ---- hourly data written by the GitHub Actions pipeline (same site)

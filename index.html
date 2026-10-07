@@ -239,6 +239,16 @@ td.num{text-align:right;font-family:var(--font-data);font-variant-numeric:tabula
 .legend .keys span{display:flex;gap:6px;align-items:center}
 .dot{width:10px;height:10px;border-radius:50%;display:inline-block;flex:none}
 .basemap-switch{position:absolute;left:50px;top:10px;z-index:500}
+.nasatip{position:absolute;z-index:650;pointer-events:none;background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:6px 8px;font-size:.72rem;max-width:250px;box-shadow:0 2px 10px rgb(0 0 0 / .2)}
+.nasatip b.k{display:block;font-size:.85rem;margin-bottom:2px}
+.nasatip ul,.nasaarea ul{margin:2px 0 0;padding-left:14px}
+.nasatip li,.nasaarea li{margin:1px 0}
+.nasaarea{margin-top:6px;font-size:.7rem}
+.nasaarea .bar{display:flex;height:10px;border-radius:3px;overflow:hidden;margin:4px 0}
+.nasaarea .bar i{display:block;height:100%}
+.nasaarea .row{display:flex;justify-content:space-between;gap:6px}
+.mapwrap.cropping #map{cursor:crosshair}
+#nasaCrop.on{background:var(--ember);color:#fff;border-color:var(--ember)}
 .gibsdate{display:block;margin-top:4px;font:500 .68rem var(--font-data);background:var(--panel);border:1px solid var(--line);border-radius:4px;padding:2px 6px;box-shadow:0 1px 4px rgb(0 0 0 / .15);width:max-content;max-width:60vw}
 .basemap-switch select{font-size:.75rem;padding:5px 6px;border:1px solid var(--line);border-radius:4px;background:var(--panel);box-shadow:0 1px 4px rgb(0 0 0 / .15)}
 .vh{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
@@ -515,6 +525,7 @@ td.num{text-align:right;font-family:var(--font-data);font-variant-numeric:tabula
         <li data-th="&lt;b&gt;คำเตือน&lt;/b&gt;: เลือกดูรายจังหวัด (ค่าเฉลี่ยของทุกจุด 0.1° ในจังหวัด) รายเมือง (ค่าที่ตัวเมือง) หรือสถานีตรวจวัด (ค่าที่วัดได้ขณะนี้ และค่าพยากรณ์ที่ปรับให้ตรงกับสถานีนั้น) ทุกแบบแสดงค่าเฉลี่ย 24 ชม. สูงสุดของ PM&lt;sub&gt;2.5&lt;/sub&gt; ใน 24 ชม. แรก และ 24–48 ชม. ข้างหน้าคู่กัน พร้อมอุณหภูมิต่ำสุด–สูงสุดและฝนรวมของช่วงเดียวกัน หน่วย µg/m³ หรือ AQI ตามที่เลือก กดรายการเพื่อดูกราฟ"><b>Warnings</b>: by province (average of every 0.1° point in the province), by town (the value at the town) or by monitoring station (measured now, and the forecast adjusted to that station). Each shows the highest 24-h mean PM<sub>2.5</sub> in the next 24 h and in 24–48 h side by side, with the lowest–highest temperature and the rain total of the same periods, in µg/m³ or AQI as chosen. Tap an item for its chart.</li>
         <li data-th="&lt;b&gt;กราฟ PM&lt;sub&gt;2.5&lt;/sub&gt;&lt;/b&gt;: เส้นส้ม = ค่ารายชั่วโมง เส้นน้ำเงิน = ค่าเฉลี่ย 24 ชม. (ใช้คำนวณ AQI ของไทย) แถบสีจาง = ช่วงค่าภายในพื้นที่ (พื้นที่ส่วนใหญ่อยู่ในช่วงนี้) เส้นประสีเข้ม = ควันไฟตามแบบจำลองของเรา เส้นประแนวนอน = เกณฑ์ 15 / 25 / 37.5 / 75 µg/m³ เส้นตั้ง = ขณะนี้"><b>PM<sub>2.5</sub> chart</b>: orange = hourly value; blue = 24-hour average (the basis of the Thai AQI); pale band = range across the area (most of the area lies inside it); dark dashed = smoke from fires in our model; horizontal dashed lines = the 15 / 25 / 37.5 / 75 µg/m³ thresholds; vertical line = now.</li>
         <li data-th="&lt;b&gt;กราฟอุณหภูมิและฝน&lt;/b&gt;: เส้นแดง = อุณหภูมิ 2 ม. (ECMWF ย่อส่วนเป็น 0.025° และการปรับแก้ที่เรียนรู้เองเมื่อมีน้ำหนัก) แท่งน้ำเงิน = ฝนในแต่ละชั่วโมง อ่านค่าจากสเกลด้านขวา (มม./ชม.) สีเข้ม = ตรวจวัดโดย JAXA GSMaP สีอ่อน = พยากรณ์ ECMWF แตะที่กราฟเพื่ออ่านค่าของชั่วโมงนั้น"><b>Temperature and rain chart</b>: red line = 2-m temperature (ECMWF downscaled to 0.025°, plus the self-learning correction once it has earned weight); blue bars = rain in each hour, read on the right-hand scale (mm per hour; darker = observed by JAXA GSMaP, lighter = ECMWF forecast). Tap the chart to read an hour.</li>
+        <li data-th="&lt;b&gt;ภาพดาวเทียม NASA: ชี้หรือลากกรอบ&lt;/b&gt;: หน้าเว็บประเมินว่าเป็นท้องฟ้าโปร่ง เมฆ ควันหรือหมอกควัน หรือไม่แน่ใจ จากหลักฐานหลายอย่าง ณ ชั่วโมงที่ดาวเทียมผ่าน (ราว 13:30 น.): ปริมาณเมฆ ECMWF ตามนิยามท้องฟ้าของ NWS (เกิน 7/8 = เมฆ, เกิน 5/8 = ค่อนข้างมีเมฆ, ไม่เกิน 3/8 = ค่อนข้างโปร่ง) · ค่า AOD จากดาวเทียม (ถ้าวัดได้ แปลว่าดาวเทียมเห็นว่าไม่มีเมฆ; ตั้งแต่ 1 = ฟ้าหลัวมาก, ต่ำกว่า 0.1 = ท้องฟ้าใส ตาม NASA Earth Observatory) · PM&lt;sub&gt;2.5&lt;/sub&gt; จากแผนที่พยากรณ์ตามเกณฑ์กรมควบคุมมลพิษ (เกิน 37.5 และ 75 µg/m³) · สัดส่วนควันไฟในแบบจำลอง (ตั้งแต่ครึ่งหนึ่ง) · จุดความร้อน 24 ชม. ก่อนหน้าในรัศมีเตือน และจำนวนที่อยู่เหนือลม (ตั้งแต่ 3 จุด) · สีของภาพ (คำบรรยายคร่าว ๆ ของหน้าเว็บเอง ให้น้ำหนักน้อย) คะแนนเมฆตั้งแต่ 2 = เมฆ, คะแนนควันตั้งแต่ 2 = ควัน, ไม่มีหลักฐานทั้งสองฝั่ง = โปร่ง, ขัดกัน = ไม่แน่ใจ เป็นการประเมินจากกฎ ไม่ใช่ ML ที่ผ่านการฝึก"><b>NASA image: point or drag a box</b>: the page judges clear sky, cloud, smoke or haze, or not sure, from several pieces of evidence at the satellite's overpass hour (about 13:30 local): ECMWF cloud cover in the NWS sky terms (above 7/8 cloud, above 5/8 mostly cloudy, at most 3/8 mostly clear) · satellite aerosol optical depth (retrieved = the satellite found it cloud-free; 1 or more = very hazy, below 0.1 = clear sky, after NASA Earth Observatory) · PM<sub>2.5</sub> of the forecast map in the Thai PCD bands (above 37.5 and 75 µg/m³) · the fire-smoke share in our model (half or more) · hotspots in the previous 24 h within the alert radius and how many lie upwind (3 or more) · the image colour (the page's own rough description, weighted lightly). Cloud score 2 or more = cloud, smoke score 2 or more = smoke, neither = clear, conflicting = not sure. A rule-based assessment, not a trained ML model.</li>
         <li data-th="&lt;b&gt;กล่องรายวัน&lt;/b&gt;: ค่าเฉลี่ยรายวัน (เที่ยงคืนถึงเที่ยงคืน) อุณหภูมิต่ำสุด–สูงสุด และฝนรวมของวัน ไอคอนหน้า = ระดับ PM&lt;sub&gt;2.5&lt;/sub&gt; ไอคอนอากาศ = ฝนรวมของวันตามเกณฑ์กรมอุตุนิยมวิทยา (0.1–10 มม. เล็กน้อย, มากกว่า 10 ปานกลาง, มากกว่า 35 หนัก) ถ้าไม่มีฝน ใช้ปริมาณเมฆเฉลี่ยช่วงกลางวันจาก ECMWF ตามนิยามท้องฟ้าของ National Weather Service สหรัฐฯ"><b>Day boxes</b>: daily average (midnight to midnight), the day's lowest–highest temperature and rain total. Face = PM<sub>2.5</sub> level; weather icon = the day's rain in Thai Meteorological Department amounts (0.1–10 mm light, above 10 moderate, above 35 heavy), or without rain the daytime mean ECMWF cloud cover in the US National Weather Service sky terms.</li>
       </ul>
       <h3 data-th="ระดับสีและคำแนะนำ">Colours and what to do</h3>
@@ -541,6 +552,7 @@ td.num{text-align:right;font-family:var(--font-data);font-variant-numeric:tabula
         <li data-th="&lt;b&gt;คำเตือน&lt;/b&gt;: เลือกดูรายจังหวัด (ค่าเฉลี่ยของทุกจุด 0.1° ในจังหวัด) รายเมือง (ค่าที่ตัวเมือง) หรือสถานีตรวจวัด (ค่าที่วัดได้ขณะนี้ และค่าพยากรณ์ที่ปรับให้ตรงกับสถานีนั้น) ทุกแบบแสดงค่าเฉลี่ย 24 ชม. สูงสุดของ PM&lt;sub&gt;2.5&lt;/sub&gt; ใน 24 ชม. แรก และ 24–48 ชม. ข้างหน้าคู่กัน พร้อมอุณหภูมิต่ำสุด–สูงสุดและฝนรวมของช่วงเดียวกัน หน่วย µg/m³ หรือ AQI ตามที่เลือก กดรายการเพื่อดูกราฟ"><b>Warnings</b>: by province (average of every 0.1° point in the province), by town (the value at the town) or by monitoring station (measured now, and the forecast adjusted to that station). Each shows the highest 24-h mean PM<sub>2.5</sub> in the next 24 h and in 24–48 h side by side, with the lowest–highest temperature and the rain total of the same periods, in µg/m³ or AQI as chosen. Tap an item for its chart.</li>
         <li data-th="&lt;b&gt;กราฟ PM&lt;sub&gt;2.5&lt;/sub&gt;&lt;/b&gt;: เส้นส้ม = ค่ารายชั่วโมง เส้นน้ำเงิน = ค่าเฉลี่ย 24 ชม. (ใช้คำนวณ AQI ของไทย) แถบสีจาง = ช่วงค่าภายในพื้นที่ (พื้นที่ส่วนใหญ่อยู่ในช่วงนี้) เส้นประสีเข้ม = ควันไฟตามแบบจำลองของเรา เส้นประแนวนอน = เกณฑ์ 15 / 25 / 37.5 / 75 µg/m³ เส้นตั้ง = ขณะนี้"><b>PM<sub>2.5</sub> chart</b>: orange = hourly value; blue = 24-hour average (the basis of the Thai AQI); pale band = range across the area (most of the area lies inside it); dark dashed = smoke from fires in our model; horizontal dashed lines = the 15 / 25 / 37.5 / 75 µg/m³ thresholds; vertical line = now.</li>
         <li data-th="&lt;b&gt;กราฟอุณหภูมิและฝน&lt;/b&gt;: เส้นแดง = อุณหภูมิ 2 ม. (ECMWF ย่อส่วนเป็น 0.025° และการปรับแก้ที่เรียนรู้เองเมื่อมีน้ำหนัก) แท่งน้ำเงิน = ฝนในแต่ละชั่วโมง อ่านค่าจากสเกลด้านขวา (มม./ชม.) สีเข้ม = ตรวจวัดโดย JAXA GSMaP สีอ่อน = พยากรณ์ ECMWF แตะที่กราฟเพื่ออ่านค่าของชั่วโมงนั้น"><b>Temperature and rain chart</b>: red line = 2-m temperature (ECMWF downscaled to 0.025°, plus the self-learning correction once it has earned weight); blue bars = rain in each hour, read on the right-hand scale (mm per hour; darker = observed by JAXA GSMaP, lighter = ECMWF forecast). Tap the chart to read an hour.</li>
+        <li data-th="&lt;b&gt;ภาพดาวเทียม NASA: ชี้หรือลากกรอบ&lt;/b&gt;: หน้าเว็บประเมินว่าเป็นท้องฟ้าโปร่ง เมฆ ควันหรือหมอกควัน หรือไม่แน่ใจ จากหลักฐานหลายอย่าง ณ ชั่วโมงที่ดาวเทียมผ่าน (ราว 13:30 น.): ปริมาณเมฆ ECMWF ตามนิยามท้องฟ้าของ NWS (เกิน 7/8 = เมฆ, เกิน 5/8 = ค่อนข้างมีเมฆ, ไม่เกิน 3/8 = ค่อนข้างโปร่ง) · ค่า AOD จากดาวเทียม (ถ้าวัดได้ แปลว่าดาวเทียมเห็นว่าไม่มีเมฆ; ตั้งแต่ 1 = ฟ้าหลัวมาก, ต่ำกว่า 0.1 = ท้องฟ้าใส ตาม NASA Earth Observatory) · PM&lt;sub&gt;2.5&lt;/sub&gt; จากแผนที่พยากรณ์ตามเกณฑ์กรมควบคุมมลพิษ (เกิน 37.5 และ 75 µg/m³) · สัดส่วนควันไฟในแบบจำลอง (ตั้งแต่ครึ่งหนึ่ง) · จุดความร้อน 24 ชม. ก่อนหน้าในรัศมีเตือน และจำนวนที่อยู่เหนือลม (ตั้งแต่ 3 จุด) · สีของภาพ (คำบรรยายคร่าว ๆ ของหน้าเว็บเอง ให้น้ำหนักน้อย) คะแนนเมฆตั้งแต่ 2 = เมฆ, คะแนนควันตั้งแต่ 2 = ควัน, ไม่มีหลักฐานทั้งสองฝั่ง = โปร่ง, ขัดกัน = ไม่แน่ใจ เป็นการประเมินจากกฎ ไม่ใช่ ML ที่ผ่านการฝึก"><b>NASA image: point or drag a box</b>: the page judges clear sky, cloud, smoke or haze, or not sure, from several pieces of evidence at the satellite's overpass hour (about 13:30 local): ECMWF cloud cover in the NWS sky terms (above 7/8 cloud, above 5/8 mostly cloudy, at most 3/8 mostly clear) · satellite aerosol optical depth (retrieved = the satellite found it cloud-free; 1 or more = very hazy, below 0.1 = clear sky, after NASA Earth Observatory) · PM<sub>2.5</sub> of the forecast map in the Thai PCD bands (above 37.5 and 75 µg/m³) · the fire-smoke share in our model (half or more) · hotspots in the previous 24 h within the alert radius and how many lie upwind (3 or more) · the image colour (the page's own rough description, weighted lightly). Cloud score 2 or more = cloud, smoke score 2 or more = smoke, neither = clear, conflicting = not sure. A rule-based assessment, not a trained ML model.</li>
         <li data-th="&lt;b&gt;กล่องรายวัน&lt;/b&gt;: ค่าเฉลี่ยรายวัน (เที่ยงคืนถึงเที่ยงคืน) อุณหภูมิต่ำสุด–สูงสุด และฝนรวมของวัน ไอคอนหน้า = ระดับ PM&lt;sub&gt;2.5&lt;/sub&gt; ไอคอนอากาศ = ฝนรวมของวันตามเกณฑ์กรมอุตุนิยมวิทยา (0.1–10 มม. เล็กน้อย, มากกว่า 10 ปานกลาง, มากกว่า 35 หนัก) ถ้าไม่มีฝน ใช้ปริมาณเมฆเฉลี่ยช่วงกลางวันจาก ECMWF ตามนิยามท้องฟ้าของ National Weather Service สหรัฐฯ"><b>Day boxes</b>: daily average (midnight to midnight), the day's lowest–highest temperature and rain total. Face = PM<sub>2.5</sub> level; weather icon = the day's rain in Thai Meteorological Department amounts (0.1–10 mm light, above 10 moderate, above 35 heavy), or without rain the daytime mean ECMWF cloud cover in the US National Weather Service sky terms.</li>
       </ul>
       <p class="note"><a href="./" data-th="← หน้าสำหรับประชาชนทั่วไป">← Page for the general public</a></p>
@@ -677,6 +689,12 @@ td.num{text-align:right;font-family:var(--font-data);font-variant-numeric:tabula
         <div class="ticks"><span>5</span><span>10</span><span>15</span><span>20</span><span>25</span><span>30</span><span>35</span><span>40 °C</span></div>
         <div class="note" style="font-size:.68rem" data-th="อุณหภูมิอากาศที่ 2 ม. พยากรณ์ ECMWF ย่อส่วนเป็น 0.025° ด้วยความสูงภูมิประเทศ (6.5 °C/กม.) และปรับด้วยค่าตรวจวัดของสถานี Air4Thai เมื่อผ่านการทดสอบแบบตัดทีละสถานีในรอบนั้น">Air temperature at 2 m: ECMWF forecast downscaled to 0.025° with terrain height (6.5 °C/km) and, when it passes a leave-one-out check in that run, corrected with Air4Thai station measurements.</div>
       </div>
+      <div id="legNasa" hidden>
+        <div class="note" style="font-size:.7rem" data-th="ชี้เมาส์หรือแตะที่ภาพ เพื่อดูการประเมินว่าเป็นท้องฟ้าโปร่ง เมฆ หรือควัน/หมอกควัน พร้อมหลักฐาน · หรือกดปุ่มด้านล่างแล้วลากกรอบ เพื่อสรุปสัดส่วนในพื้นที่">Point or tap on the image for an assessment: clear sky, cloud, or smoke/haze, with the evidence · or press the button below and drag a box to summarise an area.</div>
+        <button class="btn" type="button" id="nasaCrop" style="margin-top:5px;width:100%" data-th="▭ เลือกพื้นที่ (ลากกรอบ)">▭ Select an area (drag a box)</button>
+        <div id="nasaArea" class="nasaarea" hidden></div>
+        <div class="note" style="font-size:.64rem;margin-top:4px" data-th="เป็นการประเมินจากกฎที่อธิบายได้ ไม่ใช่แบบจำลอง ML ที่ผ่านการฝึก อาจผิดได้ โดยเฉพาะควันบางกับเมฆบาง ดูเกณฑ์ที่แท็บเกี่ยวกับ">An assessment from stated rules, not a trained ML model; it can be wrong, especially for thin smoke vs thin cloud. Rules: see About.</div>
+      </div>
       <div id="legFire" hidden>
         <div class="pcdbar" id="fireBar"></div>
         <div class="ticks" id="fireTicks"></div>
@@ -712,6 +730,7 @@ td.num{text-align:right;font-family:var(--font-data);font-variant-numeric:tabula
         <option value="sat" data-th="ภาพดาวเทียม">Satellite</option>
         <option value="plain" data-th="เส้นขอบอย่างเดียว (ออฟไลน์)">Plain (offline)</option>
       </select><span id="gibsDate" class="gibsdate" hidden></span></div>
+    <div id="nasaTip" class="nasatip" hidden></div>
     <div class="scrub">
       <button class="btn" id="btnPlay" type="button" aria-label="Play forecast">▶</button>
       <div class="slwrap"><input id="slider" type="range" min="0" max="0" value="0" aria-label="Forecast hour"><div class="daybar" id="dayBar"></div></div>
@@ -1318,6 +1337,103 @@ function setGibs(){
 function gibsDate(){ const now=Date.now(); let ct=null; try{ ct=curT(); }catch(e){} const t=Math.min(ct??now,now), dk=x=>Math.floor((x+BKK_)/864e5);
   let d=dk(t); const hrNow=new Date(now+BKK_).getUTCHours(); if(d===dk(now)&&hrNow<17) d--; return new Date(d*864e5).toISOString().slice(0,10); }
 const BKK_=7*3600e3;
+// ---- NASA image: what is at a point / in a box. Rules on several independent pieces of evidence (not a trained ML model):
+//   sky (cloud)  ECMWF total cloud cover at the overpass hour in the US NWS sky terms (≤ 1/8 … ≥ 7/8 of the sky; weather.gov ForecastTerms)
+//   aerosol      a GIBS aerosol optical depth retrieval exists at the pixel → the retrieval's own cloud screening found the pixel
+//                cloud-free; AOD ≥ 1 "very hazy", < 0.1 "crystal clear sky" (NASA Earth Observatory)
+//   smoke        PM2.5 of our forecast map at the overpass hour in the Thai PCD bands (> 37.5 / > 75 µg/m³), the share from fire
+//                smoke in our model (≥ half), FIRMS hotspots in the 24 h before within the page's alert radius, and how many lie upwind
+//   colour       the true-colour pixel (VIIRS NOAA-20), described in broad terms (bright white, grey, grey-brown, dark surface): the
+//                page's own rough guide, weighted lightly
+// overpass: NOAA-20 crosses the region about 13:30 local time; the hour ending 14:00 Thai time (07 UTC) is used
+const NASA_TC='VIIRS_NOAA20_CorrectedReflectance_TrueColor', AOD_LAYERS=['MODIS_Combined_Value_Added_AOD','VIIRS_NOAA20_Aerosol_Optical_Thickness_550nm','MODIS_Terra_Aerosol_Optical_Depth'];
+const NA={img:new Map(), aod:null, aodTried:false, colourOK:null, layer:null, rect:null, busy:false};
+const NCLS={clear:['Clear sky','ท้องฟ้าโปร่ง','#2f9e60'],cloud:['Cloud','เมฆ','#8d99a0'],smoke:['Smoke or haze','ควันหรือหมอกควัน','#a0522d'],unsure:['Not sure','ไม่แน่ใจ','#c9a227']};
+const wmsUrl=(layer,day,b,w,h,fmt)=>`https://gibs.earthdata.nasa.gov/wms/epsg4326/best/wms.cgi?SERVICE=WMS&REQUEST=GetMap&VERSION=1.1.1&LAYERS=${layer}&STYLES=&SRS=EPSG:4326&BBOX=${b.map(v=>v.toFixed(4)).join(',')}&WIDTH=${w}&HEIGHT=${h}&FORMAT=${encodeURIComponent(fmt)}&TRANSPARENT=TRUE&TIME=${day}`;
+// one image of a box (WMS, any bbox), read into pixels; null when the browser may not read it (cross-origin) or it fails
+function nasaImage(layer,day,b,w,h,fmt){ const key=[layer,day,...b,w,h].join('|'); if(NA.img.has(key)) return NA.img.get(key);
+  const pr=new Promise(res=>{ const im=new Image(); im.crossOrigin='anonymous'; im.onload=()=>{ try{ const c=document.createElement('canvas'); c.width=w; c.height=h; const x=c.getContext('2d',{willReadFrequently:true}); x.drawImage(im,0,0,w,h);
+        const d=x.getImageData(0,0,w,h).data; if(layer===NASA_TC) NA.colourOK=true; res({b,w,h,d}); }catch(e){ if(layer===NASA_TC) NA.colourOK=false; res(null);} };
+      im.onerror=()=>{ if(layer===NASA_TC&&NA.colourOK==null) NA.colourOK=false; res(null); }; im.src=wmsUrl(layer,day,b,w,h,fmt); });
+  if(NA.img.size>60) NA.img.delete(NA.img.keys().next().value); NA.img.set(key,pr); return pr; }
+function px(I,lat,lon){ if(!I) return null; const [w0,s0,e0,n0]=I.b, x=Math.floor((lon-w0)/(e0-w0)*I.w), y=Math.floor((n0-lat)/(n0-s0)*I.h);
+  if(x<0||y<0||x>=I.w||y>=I.h) return null; const k=(y*I.w+x)*4; return [I.d[k],I.d[k+1],I.d[k+2],I.d[k+3]]; }
+// aerosol optical depth: the first GIBS layer whose colour map can be read; values decoded by nearest colour
+async function nasaAod(){ if(NA.aodTried) return NA.aod; NA.aodTried=true;
+  for(const L_ of AOD_LAYERS){ try{ const r=await fetch(`https://gibs.earthdata.nasa.gov/colormaps/v1.3/${L_}.xml`); if(!r.ok) continue;
+      const doc=new DOMParser().parseFromString(await r.text(),'text/xml'), E=[];
+      for(const el of doc.querySelectorAll('[rgb]')){ if(el.getAttribute('transparent')==='true') continue; const rgb=el.getAttribute('rgb').split(',').map(Number);
+        const nums=((el.getAttribute('value')||'')+' '+(el.getAttribute('label')||'')).match(/-?\d*\.?\d+/g)?.map(Number)||[]; if(!nums.length||rgb.length<3) continue;
+        E.push({rgb,v:nums.length>=2?(nums[0]+nums[1])/2:nums[0]}); }
+      if(E.length>3){ NA.aod={layer:L_,E}; break; } }catch(e){} }
+  return NA.aod; }
+function aodOf(p){ if(!p||p[3]<128||!NA.aod) return null; let best=null,bd=1e9; for(const e of NA.aod.E){ const d=(e.rgb[0]-p[0])**2+(e.rgb[1]-p[1])**2+(e.rgb[2]-p[2])**2; if(d<bd){bd=d;best=e;} } return bd<40*40?best.v:null; }
+function colourOf(p){ if(!p||p[3]<128) return null; const [r,g,b]=p, mx=Math.max(r,g,b), mn=Math.min(r,g,b), br=(r+g+b)/765, sat=mx?(mx-mn)/mx:0;
+  if(br>0.6&&sat<0.15) return {k:'white',cloud:1,smoke:0,txt:T('bright white','สว่างขาว')};
+  if(br>0.3&&sat<0.3&&r>b+8) return {k:'greybrown',cloud:0,smoke:1,txt:T('grey-brown','เทาน้ำตาล')};
+  if(br>0.35&&sat<0.2) return {k:'grey',cloud:0,smoke:0,txt:T('pale grey (smoke, haze or thin cloud)','เทาหม่น (ควัน หมอกควัน หรือเมฆบาง)')};
+  if(br<0.3) return {k:'dark',cloud:-1,smoke:-1,txt:T('dark surface seen clearly','เห็นพื้นผิวเข้มชัดเจน')};
+  return {k:'surface',cloud:0,smoke:0,txt:T('surface colours','สีของพื้นผิว')}; }
+// all the evidence at a point (colour and aerosol pixels from images already loaded)
+function nasaEvidence(lat,lon,tOv,IC,IA){
+  const ev={}; ev.col=NA.colourOK===false?null:colourOf(px(IC,lat,lon)); const pa=px(IA,lat,lon); ev.aodTried=!!IA; ev.aod=aodOf(pa); ev.aodPix=!!(pa&&pa[3]>=128);
+  const m=MET?sampleMet(MET,lat,lon,tOv):null; ev.cc=m&&isFinite(m.cc)?m.cc:null;
+  if(m){ ev.wdir=windFrom(m.u,m.v); ev.ws=Math.hypot(m.u,m.v); }
+  ev.pm=totalAt(lat,lon,tOv); ev.fire=fireAt(lat,lon,tOv);
+  const km=+$('warnkm').value||20; let n=0,up=0; for(const h of S.hots){ if(h.t>tOv||h.t<=tOv-24*HR) continue; const d=haversineKm(lat,lon,h.lat,h.lon); if(d>km) continue; n++;
+    if(ev.wdir!=null){ const brg=(Math.atan2((h.lon-lon)*Math.cos(lat*DEG),h.lat-lat)/DEG+360)%360, dd=Math.abs(((brg-ev.wdir)+540)%360-180); if(dd<=45) up++; } }
+  ev.hot=n; ev.hotUp=up; ev.km=km; return ev; }
+function nasaClassify(ev){
+  let cl=0,sm=0; const why=[];
+  if(ev.cc!=null){ const c=cloudCat(ev.cc,true); why.push(`${T('cloud (ECMWF)','เมฆ (ECMWF)')} ${Math.round(ev.cc)}% · ${c?c.label:''}`); if(ev.cc>87.5) cl+=2; else if(ev.cc>62.5) cl+=1; else if(ev.cc<=37.5) cl-=1; }
+  // AOD: < 0.1 "crystal clear sky", 1 "very hazy conditions" (NASA Earth Observatory, Aerosol Optical Depth global maps)
+  if(ev.aodTried){ if(ev.aod!=null){ cl-=2; if(ev.aod>=1) sm+=2; else if(ev.aod<0.1) sm-=1;
+      why.push(`${T('aerosol optical depth','ความหนาแน่นฝุ่นละอองจากดาวเทียม (AOD)')} ${ev.aod.toFixed(2)}${ev.aod>=1?T(' (very hazy)',' (ฟ้าหลัวมาก)'):ev.aod<0.1?T(' (clear sky)',' (ท้องฟ้าใส)'):''} · ${T('retrieved, so the satellite judged it cloud-free','ดาวเทียมวัดได้ แปลว่าไม่มีเมฆ')}`); }
+    else if(!ev.aodPix) why.push(T('no aerosol retrieval here (cloud, bright ground, or outside the swath)','ไม่มีค่า AOD ตรงนี้ (เมฆ พื้นสว่าง หรือนอกแนวถ่าย)')); }
+  if(ev.col){ cl+=ev.col.cloud; sm+=ev.col.smoke; why.push(`${T('image colour','สีในภาพ')}: ${ev.col.txt}`); }
+  if(ev.pm!=null){ why.push(`PM₂.₅ ${T('(forecast map)','(แผนที่พยากรณ์)')} ${fmtN(ev.pm)} µg/m³`); if(ev.pm>75) sm+=2; else if(ev.pm>37.5) sm+=1; else if(ev.pm<=25) sm-=1; }
+  if(ev.fire>=0.5&&ev.pm){ const sh=ev.fire/Math.max(ev.pm,ev.fire); why.push(`${T('fire smoke in our model','ควันไฟจากแบบจำลอง')} ${fmtN(ev.fire)} µg/m³ (${Math.round(sh*100)}%)`); if(sh>=0.5) sm+=1; }
+  why.push(`${T('hotspots','จุดความร้อน')} ${ev.hot} ${T('within','ในรัศมี')} ${ev.km} ${T('km (24 h)','กม. (24 ชม.)')}${ev.hot?`, ${ev.hotUp} ${T('upwind','อยู่เหนือลม')}`:''}`); if(ev.hotUp>=3) sm+=1;
+  const k=cl>=2&&sm<2?'cloud':sm>=2&&cl<2?'smoke':cl<=0&&sm<=0?'clear':'unsure';
+  return {k,why,cl,sm}; }
+function nasaDay(){ const day=gibsDate(); return {day,tOv:Date.parse(day+'T07:00:00Z')}; }
+async function nasaPoint(ll,cp){
+  if(layerMode()!=='nasa'||NA.rect) return; const {day,tOv}=nasaDay(), lat=ll.lat, lon=ll.lng, g=0.5, b=[Math.floor(lon/g)*g,Math.floor(lat/g)*g,Math.floor(lon/g)*g+g,Math.floor(lat/g)*g+g];
+  const tip=$('nasaTip'); const seq=(nasaPoint.seq=(nasaPoint.seq||0)+1);
+  const [IC,aodOn]=await Promise.all([nasaImage(NASA_TC,day,b,128,128,'image/jpeg'),nasaAod()]);
+  const IA=aodOn?await nasaImage(NA.aod.layer,day,b,64,64,'image/png'):null; if(seq!==nasaPoint.seq) return;
+  const r=nasaClassify(nasaEvidence(lat,lon,tOv,IC,IA)), c=NCLS[r.k];
+  tip.innerHTML=`<b class="k" style="color:${c[2]}">${T(c[0],c[1])}</b><span class="note">${T('assessment, image of','การประเมิน ภาพวันที่')} ${day}</span><ul>${r.why.map(w=>`<li>${esc(w)}</li>`).join('')}</ul>${NA.colourOK===false?`<div class="note">${T('Image colours could not be read in this browser: judged without them.','เบราว์เซอร์อ่านสีของภาพไม่ได้ จึงประเมินโดยไม่ใช้สี')}</div>`:''}`;
+  const W=$('map').clientWidth, H=$('map').clientHeight; tip.hidden=false; const tw=tip.offsetWidth, th=tip.offsetHeight;
+  tip.style.left=Math.max(4,Math.min(W-tw-4,cp.x+14))+'px'; tip.style.top=Math.max(4,Math.min(H-th-60,cp.y+14))+'px'; }
+let nasaMoveT=0; map.on('mousemove',e=>{ if(layerMode()!=='nasa'||NA.rect||matchMedia('(hover:none)').matches) return; clearTimeout(nasaMoveT); nasaMoveT=setTimeout(()=>nasaPoint(e.latlng,e.containerPoint),180); });
+map.on('mouseout movestart',()=>{ const t=$('nasaTip'); if(t) t.hidden=true; });
+// area: drag a box; every point of a grid in the box is assessed the same way; shares and a coloured grid on the map
+let nasaGrid=null;
+function nasaReset(){ NA.rect=null; $('nasaTip')&&($('nasaTip').hidden=true); if(nasaGrid){map.removeLayer(nasaGrid);nasaGrid=null;} $('nasaArea')&&($('nasaArea').hidden=true);
+  $('nasaCrop')?.classList.remove('on'); document.querySelector('.mapwrap')?.classList.remove('cropping'); map.dragging.enable(); }
+$('nasaCrop').onclick=()=>{ if($('nasaCrop').classList.contains('on')){ nasaReset(); return; } nasaReset(); $('nasaCrop').classList.add('on'); document.querySelector('.mapwrap').classList.add('cropping'); map.dragging.disable(); NA.rect={}; };
+{ const box=$('map'); let p0=null, rl=null;
+  box.addEventListener('pointerdown',e=>{ if(!NA.rect||layerMode()!=='nasa') return; e.preventDefault(); p0=map.mouseEventToLatLng(e); if(rl) map.removeLayer(rl); rl=L.rectangle([p0,p0],{color:'#c4420f',weight:2,fill:false,interactive:false}).addTo(map); box.setPointerCapture?.(e.pointerId); });
+  box.addEventListener('pointermove',e=>{ if(!p0||!rl) return; rl.setBounds([p0,map.mouseEventToLatLng(e)]); });
+  box.addEventListener('pointerup',async e=>{ if(!p0||!rl) return; const bb=rl.getBounds(); p0=null; const bx=[bb.getWest(),bb.getSouth(),bb.getEast(),bb.getNorth()]; map.removeLayer(rl); rl=null;
+    if(bx[2]-bx[0]<0.02||bx[3]-bx[1]<0.02) return; await nasaArea(bx); });
+}
+async function nasaArea(bx){
+  const out=$('nasaArea'); out.hidden=false; out.innerHTML=T('Assessing…','กำลังประเมิน…'); const {day,tOv}=nasaDay();
+  const asp=(bx[3]-bx[1])/(bx[2]-bx[0]), w=Math.round(Math.min(256,Math.max(32,256/Math.max(1,asp)))), h=Math.round(Math.min(256,Math.max(32,w*asp)));
+  const [IC,aodOn]=await Promise.all([nasaImage(NASA_TC,day,bx,w,h,'image/jpeg'),nasaAod()]); const IA=aodOn?await nasaImage(NA.aod.layer,day,bx,Math.max(16,w>>2),Math.max(16,h>>2),'image/png'):null;
+  const N=16, cnt={clear:0,cloud:0,smoke:0,unsure:0}, cells=[], dx=(bx[2]-bx[0])/N, dy=(bx[3]-bx[1])/N;
+  for(let i=0;i<N;i++) for(let j=0;j<N;j++){ const lat=bx[1]+(j+0.5)*dy, lon=bx[0]+(i+0.5)*dx; const r=nasaClassify(nasaEvidence(lat,lon,tOv,IC,IA)); cnt[r.k]++; cells.push([lat,lon,r.k]); }
+  if(nasaGrid) map.removeLayer(nasaGrid);
+  nasaGrid=L.layerGroup(cells.map(([la,lo,k])=>L.rectangle([[la-dy/2,lo-dx/2],[la+dy/2,lo+dx/2]],{stroke:false,fillColor:NCLS[k][2],fillOpacity:.38,interactive:false}))).addTo(map);
+  const tot=N*N, pc=k=>Math.round(cnt[k]/tot*100);
+  out.innerHTML=`<b>${T('In the box','ในกรอบ')}</b> <span class="note">(${T('image of','ภาพวันที่')} ${day}, ${tot} ${T('points','จุด')})</span>
+    <div class="bar">${Object.keys(NCLS).map(k=>cnt[k]?`<i style="width:${cnt[k]/tot*100}%;background:${NCLS[k][2]}" title="${T(NCLS[k][0],NCLS[k][1])}"></i>`:'').join('')}</div>
+    ${Object.keys(NCLS).map(k=>`<div class="row"><span><i style="display:inline-block;width:9px;height:9px;border-radius:2px;background:${NCLS[k][2]};margin-right:5px"></i>${T(NCLS[k][0],NCLS[k][1])}</span><b>${pc(k)}%</b></div>`).join('')}
+    <div class="note" style="margin-top:3px">${T('Evidence used','หลักฐานที่ใช้')}: ${[NA.colourOK?T('image colour','สีในภาพ'):null,NA.aod?`AOD (${NA.aod.layer})`:null,MET?T('ECMWF cloud cover','เมฆ ECMWF'):null,P.data?T('PM₂.₅ map','แผนที่ PM₂.₅'):null,S.sim?T('fire smoke model','แบบจำลองควันไฟ'):null,T('FIRMS hotspots','จุดความร้อน FIRMS')].filter(Boolean).join(' · ')}</div>
+    <button class="btn" type="button" id="nasaClose" style="margin-top:5px">${T('Clear','ล้าง')}</button>`;
+  $('nasaClose').onclick=nasaReset; $('nasaCrop').classList.remove('on'); document.querySelector('.mapwrap').classList.remove('cropping'); map.dragging.enable(); NA.rect=null; }
 function setTiles(){
   if(tiles){map.removeLayer(tiles);tiles=null;}
   if(bm!=='plain'){const [url,opt]=TILESETS[bm]();let fails=0,ok=0;
@@ -1340,7 +1456,7 @@ matchMedia('(prefers-color-scheme: dark)').addEventListener('change',reTheme);
 new MutationObserver(reTheme).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
 const hotLayer=L.layerGroup().addTo(map), trajLayer=L.layerGroup().addTo(map), townLayer=L.layerGroup().addTo(map);
 let plume=null;
-map.on('click',e=>{const name=`${T('My point','จุดของฉัน')} ${S.myPts.length+1}`;S.myPts.push({name,lat:+e.latlng.lat.toFixed(4),lon:+e.latlng.lng.toFixed(4),cc:'★'});
+map.on('click',e=>{ if(typeof layerMode==='function'&&layerMode()==='nasa'){ nasaPoint(e.latlng,e.containerPoint); return; } const name=`${T('My point','จุดของฉัน')} ${S.myPts.length+1}`;S.myPts.push({name,lat:+e.latlng.lat.toFixed(4),lon:+e.latlng.lng.toFixed(4),cc:'★'});
   store.set('hsw.points',JSON.stringify(S.myPts)); if(S.sim) computeReceptors(); drawTowns(); renderWarnings();});
 $('btnClearPts').onclick=()=>{S.myPts=[];store.set('hsw.points','[]');if(S.sim)computeReceptors();drawTowns();renderWarnings();};
 
@@ -2730,7 +2846,7 @@ setWarnView(store.get('hsw.warnView')||'prov'); $('warnView').addEventListener('
 $('unitSel').addEventListener('change',()=>{store.set('hsw.unitSel',$('unitSel').value); renderLegend(); renderAll(); redrawTime();});
 renderLegend();
 for(const el of document.querySelectorAll('input[name=layer]')) el.addEventListener('change',()=>{
-  $('legTotal').hidden=!gridMode(); $('legFire').hidden=layerMode()!=='fire'; $('legUnc').hidden=layerMode()!=='unc'; $('legRain').hidden=layerMode()!=='rain'; $('legTemp').hidden=layerMode()!=='temp'; redrawTime();});
+  $('legNasa').hidden=layerMode()!=='nasa'; if(layerMode()!=='nasa') nasaReset(); $('legTotal').hidden=!gridMode(); $('legFire').hidden=layerMode()!=='fire'; $('legUnc').hidden=layerMode()!=='unc'; $('legRain').hidden=layerMode()!=='rain'; $('legTemp').hidden=layerMode()!=='temp'; redrawTime();});
 $('rainBar').innerHTML=RAIN_SCALE.slice(1).map(([,c])=>`<i style="background:${c}"></i>`).join(''); $('tempBar').style.background=`linear-gradient(to right,${TEMP_STOPS.map(([v,c])=>`${c} ${((v-5)/35*100).toFixed(1)}%`).join(',')})`;
 $('uncBar').innerHTML=UNC_COL.map(c=>`<i style="background:${c}"></i>`).join('');
 $('alpha').addEventListener('change',()=>{FIELD_CACHE.clear(); redrawTime();});

@@ -139,6 +139,8 @@ td.num{text-align:right;font-family:var(--font-data);font-variant-numeric:tabula
 .trend .chips{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 4px}
 .trend .chip{text-transform:none;border:1px solid var(--line);padding:4px 6px;font:500 .72rem/1.3 var(--font-data);min-width:64px}
 .trend .chip b{display:block;font-weight:600}
+.trend .chip .cwx{display:block;margin-top:3px;color:var(--muted);font-weight:500;font-size:.68rem}
+.trend .wxhead{font:600 .72rem/1.3 var(--font-data);margin:8px 0 2px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
 .trend select{max-width:100%;margin:2px 0 6px}
 .trend .tw{font:600 .8rem/1.3 var(--font-data);text-transform:none}
 .trend .sw{display:inline-block;width:10px;height:10px;margin-left:6px;vertical-align:-1px}
@@ -2153,7 +2155,7 @@ function focusTown(name){
   map.flyTo([r.lat,r.lon],9); showTab('warn'); showMapOnPhone();
   if(r.tot&&r.stT){   // live data: total PM2.5 trend at the town (same chart as the area trends), with the fire part dashed
     const H=P.data.hours, fire=S.sim?H.map(t=>{const k=idxIn(S.sim.hours,t); const v=k>=0?r.series[k]:null; return v!=null&&v>0?v:null;}):null;
-    $('townDetail').innerHTML=`<h3>${esc(townName(r))}: ${T('PM₂.₅ forecast','พยากรณ์ PM₂.₅')}</h3><div class="trend">${trendBlock(H,r.tot,{fire:fire&&fire.some(v=>v!=null&&v>=0.5)?fire:null,label:'PM2.5 trend at '+r.name})}</div>
+    $('townDetail').innerHTML=`<h3>${esc(townName(r))}: ${T('PM₂.₅ forecast','พยากรณ์ PM₂.₅')}</h3><div class="trend">${trendBlock(H,r.tot,{fire:fire&&fire.some(v=>v!=null&&v>=0.5)?fire:null,wx:wxSeries(H,[{la:r.lat,lo:r.lon}]),label:'PM2.5 trend at '+r.name})}</div>
       ${(()=>{const w=wxAt(r.lat,r.lon,Math.floor(Date.now()/HR)*HR); return w?`<p class="note">${T('Weather now','อากาศขณะนี้')}: ${wxText(w)}</p>`:'';})()}
       ${(()=>{const n24=wx24(r.lat,r.lon,Math.floor(Date.now()/HR)*HR+24*HR), p24=wx24(r.lat,r.lon,r.stT.tMean);
         return n24?`<p class="note">${T('Next 24 h','24 ชม. ข้างหน้า')}: ${wx24Text(n24)}${p24&&r.stT.tMean!==Math.floor(Date.now()/HR)*HR+24*HR?` · ${T('during the 24-h PM₂.₅ peak','ช่วงที่ PM₂.₅ เฉลี่ย 24 ชม. สูงสุด')}: ${wx24Text(p24)}`:''}</p>`:'';})()}
@@ -2209,16 +2211,47 @@ function trendSvg(H,v,opt={}){
     ${iNow>=0?`<line x1="${X(iNow)}" x2="${X(iNow)}" y1="6" y2="${Ht-18}" stroke="var(--fg)"/><text x="${X(iNow)+3}" y="12" font-size="8" fill="var(--fg)">${T('now','ขณะนี้')}</text>`:''}
     <line x1="${pad}" x2="${W-6}" y1="${Ht-18}" y2="${Ht-18}" stroke="var(--line)"/>${ticks}</svg></div>`;
 }
+// weather alongside PM2.5: area-mean 2-m temperature (0.025° downscaled) and rain (mm in the hour; observed GSMaP where observed,
+// ECMWF forecast after) at the same points as the PM2.5 series; at most ~300 points per area (evenly thinned) to stay fast
+function wxSeries(H,pts){ if(!MET||!pts||!pts.length) return null; const st=Math.max(1,Math.ceil(pts.length/300)), q=pts.filter((_,i)=>i%st===0);
+  const t2=[],pr=[]; for(const t of H){ let st2=0,n2=0,sp=0,np=0;
+    for(const p of q){ const a=t2At(p.la,p.lo,t); if(a!=null){st2+=a;n2++;} const o=rainObsAt(p.la,p.lo,t); const r=o!=null?o:metVarAt(MET,'pr',p.la,p.lo,t); if(r!=null){sp+=r;np++;} }
+    t2.push(n2?st2/n2:null); pr.push(np?sp/np:null); }
+  return {t2,pr}; }
+function ensureRainObs(after){ const info=P.data?.rainObs; if(!info) return; const key=info.times.join('|');
+  if((RAINOBS&&RAINOBS.key===key)||loadRainObs.busy||loadRainObs.tried===key) return; loadRainObs.busy=1; loadRainObs.tried=key; loadRainObs().then(()=>{loadRainObs.busy=0; if(RAINOBS) after();}); }
+function dailyWx(H,wx,now){ if(!wx) return new Map(); const m=new Map(), today=bkkDay(now);
+  H.forEach((t,i)=>{const d=bkkDay(t-HR); if(d<today) return; let o=m.get(d); if(!o) m.set(d,o={tmin:Infinity,tmax:-Infinity,rain:0,n:0});
+    if(wx.t2[i]!=null){o.tmin=Math.min(o.tmin,wx.t2[i]);o.tmax=Math.max(o.tmax,wx.t2[i]);} if(wx.pr[i]!=null){o.rain+=wx.pr[i];o.n++;}});
+  return m; }
+function wxSvg(H,wx){
+  const now=Date.now(), W=320, Ht=96, pad=26, padR=6, X=i=>pad+i*(W-pad-padR)/(H.length-1||1);
+  const tv=wx.t2.filter(x=>x!=null); if(!tv.length) return '';
+  let tmin=Math.floor(Math.min(...tv)/2)*2, tmax=Math.ceil(Math.max(...tv)/2)*2; if(tmax-tmin<6){const c=(tmax+tmin)/2; tmin=Math.floor(c-3); tmax=Math.ceil(c+3);}
+  const prMax=Math.max(2,...wx.pr.filter(x=>x!=null)), top=8, bot=Ht-18, Yt=c=>bot-(c-tmin)/(tmax-tmin)*(bot-top), Yr=r=>bot-Math.min(1,r/prMax)*(bot-top)*0.85;
+  const bw=Math.max(0.6,(W-pad-padR)/(H.length||1)*0.8);
+  const bars=wx.pr.map((r,i)=>r!=null&&r>=0.05?`<rect x="${(X(i)-bw/2).toFixed(1)}" y="${Yr(r).toFixed(1)}" width="${bw.toFixed(1)}" height="${(bot-Yr(r)).toFixed(1)}" fill="#3a86d6" fill-opacity="${H[i]<=now?0.75:0.45}"/>`:'').join('');
+  let d='',pen=false; wx.t2.forEach((x,i)=>{if(x==null){pen=false;return;} d+=`${pen?'L':'M'}${X(i).toFixed(1)},${Yt(x).toFixed(1)}`; pen=true;});
+  const tl=[tmin,(tmin+tmax)/2,tmax].map(c=>`<text x="${pad-4}" y="${Yt(c)+3}" text-anchor="end" font-size="8" fill="#c0504d">${Math.round(c)}°</text><line x1="${pad}" x2="${W-padR}" y1="${Yt(c)}" y2="${Yt(c)}" stroke="var(--line)" stroke-dasharray="2 3"/>`).join('');
+  const rl=`<text x="${W-padR-2}" y="${top+6}" text-anchor="end" font-size="8" fill="#3a86d6">${T('rain, bar top','ฝน ยอดแท่ง')} ${prMax<10?prMax.toFixed(1):Math.round(prMax)} mm/h</text>`;
+  let ticks=''; H.forEach((t,i)=>{if(((t+BKK)%(24*HR))===0) ticks+=`<line x1="${X(i)}" x2="${X(i)}" y1="${bot}" y2="${bot+4}" stroke="var(--muted)"/><text x="${X(i)+2}" y="${Ht-5}" font-size="7.5" fill="var(--muted)">${esc(new Date(t).toLocaleDateString(LOC(),{weekday:'short',timeZone:'Asia/Bangkok'}))}</text>`;});
+  const iNow=H.findIndex(h=>h>=now);
+  return `<div class="wxhead">${T('Temperature and rain','อุณหภูมิและฝน')}</div><div class="tablewrap"><svg viewBox="0 0 ${W} ${Ht}" width="100%" role="img" aria-label="${esc(T('Temperature and rain trend','แนวโน้มอุณหภูมิและฝน'))}">
+    <rect width="${W}" height="${Ht}" fill="var(--panel)"/>${tl}${bars}<path d="${d}" fill="none" stroke="#c0504d" stroke-width="1.8"/>${rl}
+    ${iNow>=0?`<line x1="${X(iNow)}" x2="${X(iNow)}" y1="4" y2="${bot}" stroke="var(--fg)"/>`:''}
+    <line x1="${pad}" x2="${W-padR}" y1="${bot}" y2="${bot}" stroke="var(--line)"/>${ticks}</svg></div>`;
+}
 function trendBlock(H,v,opt={}){
-  const now=Date.now(), tw=trendWord(H,v,now), days=dailyMeans(H,v,now);
+  const now=Date.now(), tw=trendWord(H,v,now), days=dailyMeans(H,v,now), dw=dailyWx(H,opt.wx,now);
   return `${tw?`<div class="tw">${tw.arr} ${tw.txt} <span class="note">· ${T('next 24 h','24 ชม. ข้างหน้า')} ${fmtN(tw.b)} ${T('vs past 24 h','เทียบกับ 24 ชม. ที่ผ่านมา')} ${fmtN(tw.a)} µg/m³</span></div>`:''}
     ${trendSvg(H,v,opt)}
-    ${days.length?`<div class="chips">${days.map(o=>`<div class="chip">${esc(dayLabel(o.t-HR))}<b>${fmtVal(o.mean)}</b>${pill(o.mean)}</div>`).join('')}</div>`:''}
-    <p class="note" style="font-size:.7rem">${T('Orange: hourly. Blue: 24-hour average (the basis of the Thai AQI).','เส้นส้ม: รายชั่วโมง เส้นน้ำเงิน: ค่าเฉลี่ย 24 ชม. (ใช้คำนวณ AQI ของไทย)')}${opt.lo?T(' Shading: range across the area (most of the area lies inside it).',' แถบสี: ช่วงค่าภายในพื้นที่ (พื้นที่ส่วนใหญ่อยู่ในช่วงนี้)'):''}${opt.fire?T(' Dashed: smoke from fires in our model.',' เส้นประ: ควันจากไฟตามแบบจำลองของเรา'):''} ${T('Day boxes: daily average from midnight to midnight.','กล่องรายวัน: ค่าเฉลี่ยรายวัน (เที่ยงคืนถึงเที่ยงคืน)')}</p>`;
+    ${opt.wx?wxSvg(H,opt.wx):''}
+    ${days.length?`<div class="chips">${days.map(o=>{const w=dw.get(o.d); return `<div class="chip">${esc(dayLabel(o.t-HR))}<b>${fmtVal(o.mean)}</b>${pill(o.mean)}${w&&isFinite(w.tmin)?`<span class="cwx">${Math.round(w.tmin)}–${Math.round(w.tmax)} °C · ${w.rain<0.5?T('no rain','ไม่มีฝน'):(w.rain<10?w.rain.toFixed(1):Math.round(w.rain))+' '+T('mm','มม.')}</span>`:''}</div>`;}).join('')}</div>`:''}
+    <p class="note" style="font-size:.7rem">${T('Orange: hourly. Blue: 24-hour average (the basis of the Thai AQI).','เส้นส้ม: รายชั่วโมง เส้นน้ำเงิน: ค่าเฉลี่ย 24 ชม. (ใช้คำนวณ AQI ของไทย)')}${opt.lo?T(' Shading: range across the area (most of the area lies inside it).',' แถบสี: ช่วงค่าภายในพื้นที่ (พื้นที่ส่วนใหญ่อยู่ในช่วงนี้)'):''}${opt.fire?T(' Dashed: smoke from fires in our model.',' เส้นประ: ควันจากไฟตามแบบจำลองของเรา'):''} ${T('Day boxes: daily average from midnight to midnight.','กล่องรายวัน: ค่าเฉลี่ยรายวัน (เที่ยงคืนถึงเที่ยงคืน)')}${opt.wx?T(' Weather: red line = 2-m temperature (°C, ECMWF downscaled to 0.025°), blue bars = rain in each hour (mm; darker = observed by JAXA GSMaP, lighter = ECMWF forecast); day boxes show the day\'s lowest–highest temperature and rain total.',' สภาพอากาศ: เส้นแดง = อุณหภูมิ 2 ม. (°C, ECMWF ย่อส่วนเป็น 0.025°) แท่งน้ำเงิน = ฝนรายชั่วโมง (มม. สีเข้ม = ตรวจวัดโดย JAXA GSMaP สีอ่อน = พยากรณ์ ECMWF) กล่องรายวันแสดงอุณหภูมิต่ำสุด–สูงสุดและฝนรวมของวัน'):''}</p>`;
 }
 const AREA_CACHE={key:null}, INC_FIELDS={sim:null,map:new Map()};
 function areaSeries(){
-  const k=$('region').value, key=k+'|'+(P.data?P.data.generated:'')+'|'+(S.simInc?S.assimApplied:0)+'|'+(useA()?'A':'-');
+  const k=$('region').value, key=k+'|'+(P.data?P.data.generated:'')+'|'+(S.simInc?S.assimApplied:0)+'|'+(useA()?'A':'-')+'|'+(T2D?T2D.key:'')+'|'+(RAINOBS?RAINOBS.key:'')+'|'+(MET?MET.fetched:'');
   if(AREA_CACHE.key===key) return AREA_CACHE;
   // provinces: 0.1° lattice inside Thai provinces. Area average: the same points, or on the whole-domain map a 0.25° lattice
   // over everything (so Thailand's denser lattice does not dominate the domain mean)
@@ -2236,11 +2269,12 @@ function areaSeries(){
     H.forEach((_,i)=>{const a=g.idx.map(j=>val[i][j]).filter(x=>x!=null).sort((x,y)=>x-y);
       if(a.length<Math.max(1,0.5*g.idx.length)){g.mean.push(null);g.lo.push(null);g.hi.push(null);return;}
       g.mean.push(a.reduce((s,x)=>s+x,0)/a.length); g.lo.push(a[Math.floor(0.1*(a.length-1))]); g.hi.push(a[Math.ceil(0.9*(a.length-1))]);});}
+  for(const g of groups.values()) g.wx=wxSeries(H,g.idx.map(j=>pts[j]));
   return Object.assign(AREA_CACHE,{key,groups,H});
 }
 let areaSel='__all';
 function renderAreaTrend(){
-  const box=$('areaTrend');
+  const box=$('areaTrend'); ensureT2(renderAreaTrend); ensureRainObs(renderAreaTrend);
   if(!P.data||!P.data.grid){box.innerHTML=T('Area trends appear when the page runs from the hosted site.','แนวโน้มรายพื้นที่จะแสดงเมื่อเปิดหน้าเว็บจากเว็บไซต์ที่โฮสต์');return;}
   const A=areaSeries(), H=A.H, now=Date.now(); if(!A.groups.has(areaSel)) areaSel='__all';
   const provs=[...A.groups.entries()].filter(([g])=>g!=='__all'), nm=g=>g.p?provName(g.p):g.name;
@@ -2251,7 +2285,7 @@ function renderAreaTrend(){
   box.className='trend';
   box.innerHTML=`${multi?`<label class="note">${T('Area','พื้นที่')} <select id="areaSel"><option value="__all">${esc(T('Whole region','ทั้งภูมิภาค'))}: ${esc($('region').selectedOptions[0]?.textContent||'')}</option>${provs.map(([id,x])=>`<option value="${esc(id)}"${id===areaSel?' selected':''}>${esc(nm(x))}</option>`).join('')}</select></label>`:''}
     <div><strong>${esc(areaSel==='__all'?($('region').selectedOptions[0]?.textContent||g.name):nm(g))}</strong></div>
-    ${trendBlock(H,g.mean,{lo:g.lo,hi:g.hi,label:'PM2.5 trend, '+(g.p?g.p.n:g.name)})}
+    ${trendBlock(H,g.mean,{lo:g.lo,hi:g.hi,wx:g.wx,label:'PM2.5 trend, '+(g.p?g.p.n:g.name)})}
     ${rows.length?`<div class="tablewrap"><table><thead><tr><th>${T('Province','จังหวัด')}</th><th>${T('Trend','แนวโน้ม')}</th><th class="num">${T('Worst day','วันที่แย่ที่สุด')} <span style="text-transform:none">${unitShort()}</span></th></tr></thead><tbody>${rows.map(r=>`<tr data-area="${esc(r.id)}"><td>${esc(nm(r.x))}</td><td>${r.tw?r.tw.arr+' '+r.tw.txt:'–'}</td><td class="num">${r.worst?`${valNum(r.worst)}<i class="sw" style="background:${bandFor(r.worst).color}" title="${esc(bandFor(r.worst).en)}"></i>`:'–'}</td></tr>`).join('')}</tbody></table></div>`:''}`;
   const sel=$('areaSel'); if(sel){sel.value=areaSel; sel.onchange=()=>{areaSel=sel.value; renderAreaTrend();};}
   box.querySelectorAll('tr[data-area]').forEach(tr=>tr.onclick=()=>{areaSel=tr.dataset.area; renderAreaTrend(); box.scrollIntoView?.({behavior:'smooth',block:'nearest'});});
@@ -2260,7 +2294,7 @@ function hereTrend(lat,lon){
   if(!P.data) return '';
   const H=P.data.hours, v=H.map(t=>totalAt(lat,lon,t)); if(v.filter(x=>x!=null).length<24) return '';
   const fire=S.sim?H.map(t=>{const x=fireAt(lat,lon,t); return x>0?x:null;}):null;
-  return `<div class="trend" style="margin-top:6px">${trendBlock(H,v,{fire:fire&&fire.some(x=>x!=null&&x>=0.5)?fire:null,label:'PM2.5 trend at my location'})}</div>`;
+  return `<div class="trend" style="margin-top:6px">${trendBlock(H,v,{fire:fire&&fire.some(x=>x!=null&&x>=0.5)?fire:null,wx:wxSeries(H,[{la:lat,lo:lon}]),label:'PM2.5 trend at my location'})}</div>`;
 }
 
 // ---- controls

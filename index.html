@@ -1394,6 +1394,12 @@ function metVarAt(M,k,lat,lon,t){ const T=M.times, nt=T.length; let ft=(t-T[0])/
     const ix=Math.floor(fx), iy=Math.floor(fy), ax=fx-ix, ay=fy-iy, n=g.nx*g.ny, a=g.data[k], i=iy*g.nx+ix;
     const f=b=>(1-ax)*(1-ay)*a[b+i]+ax*(1-ay)*a[b+i+1]+(1-ax)*ay*a[b+i+g.nx]+ax*ay*a[b+i+g.nx+1];
     return (1-at)*f(it*n)+at*f((it+1)*n); } return null; }
+// the rain value shown everywhere on the page (map, tooltips, warnings, trends): 0.025°. Hours already observed: GSMaP interpolated ×
+// the month's CHELSA factor (rainFineAt); later hours: ECMWF interpolated × the same factor. The factor is 1 until its file has loaded.
+function rainAt(lat,lon,t){ const o=rainFineAt(lat,lon,t); if(o!==undefined) return o; if(!MET) return null; const v=metVarAt(MET,'pr',lat,lon,t); return v>0?v*rainFactorAt(lat,lon,t):v; }
+function rainIsObs(lat,lon,t){ return rainObsAt(lat,lon,t)!==undefined; }
+function ensureRainFac(after){ const ks=new Set(); const H=P.data?.hours||[]; for(const t of [H[0],H[H.length-1],Date.now()]) if(t) ks.add(String(new Date(t+7*3600e3).getUTCMonth()+1).padStart(2,'0'));
+  for(const k of ks) if(RFAC[k]===undefined) loadRainFac(k).then(f=>{ if(f) after(); }); }
 function rainFactorAt(lat,lon,t){ const F=RFAC[String(new Date(t+7*3600e3).getUTCMonth()+1).padStart(2,'0')], M=RFACmeta; if(!F||!M) return 1;
   const ix=Math.round((lon-M.lon0)/M.step), iy=Math.round((lat-M.lat0)/M.step); return ix>=0&&iy>=0&&ix<M.nx&&iy<M.ny?F[iy*M.nx+ix]/50:1; }
 function rainFineAt(lat,lon,t){
@@ -1634,12 +1640,12 @@ const TEMP_SCALE=[[10,'#3b4cc0'],[15,'#6f8fe3'],[20,'#a8c8f0'],[25,'#f2f0c8'],[3
 const TEMP_STOPS=[[5,'#3b4cc0'],[12.5,'#6f8fe3'],[17.5,'#a8c8f0'],[22.5,'#f2f0c8'],[27.5,'#f4b183'],[32.5,'#e0633f'],[40,'#a50021']];
 function tempRGB(v){const S_=TEMP_STOPS; if(v<=S_[0][0]) return hexRGB(S_[0][1]); for(let i=1;i<S_.length;i++) if(v<=S_[i][0]){const a=hexRGB(S_[i-1][1]),b=hexRGB(S_[i][1]),f=(v-S_[i-1][0])/(S_[i][0]-S_[i-1][0]); return a.map((x,k)=>Math.round(x+(b[k]-x)*f));} return hexRGB(S_[S_.length-1][1]);}
 function wxColor(mode,v){ const sc=mode==='rain'?RAIN_SCALE:TEMP_SCALE; for(const [mx,c] of sc) if(v<=mx) return c; return sc[sc.length-1][1]; }
-function wxAt(lat,lon,t){ if(!MET) return null; const m=sampleMet(MET,lat,lon,t), o=rainObsAt(lat,lon,t), td=t2At(lat,lon,t); return {pr:o!=null?o:m.pr,t2:td!=null?td:m.t2,rh:m.rh,u10:m.u10??m.u,v10:m.v10??m.v,ws100:m.ws,u100:m.u,v100:m.v}; }
+function wxAt(lat,lon,t){ if(!MET) return null; const m=sampleMet(MET,lat,lon,t), o=rainAt(lat,lon,t), td=t2At(lat,lon,t); return {pr:o!=null?o:m.pr,t2:td!=null?td:m.t2,rh:m.rh,u10:m.u10??m.u,v10:m.v10??m.v,ws100:m.ws,u100:m.u,v100:m.v}; }
 // weather over the 24 h ending at tEnd (the window of a 24-h PM2.5 mean): temperature min–max (downscaled, °C) and rain total (mm;
 // observed GSMaP for hours already observed, ECMWF forecast after); null without meteorology
 function wx24(lat,lon,tEnd){ if(!MET||tEnd==null) return null; let tmin=Infinity,tmax=-Infinity,rain=0,n=0,obsH=0;
   for(let k=0;k<24;k++){const t=tEnd-k*3600e3, td=t2At(lat,lon,t); if(td!=null){tmin=Math.min(tmin,td);tmax=Math.max(tmax,td);}
-    const o=rainObsAt(lat,lon,t); let r; if(o!=null){r=o;obsH++;} else {const m=sampleMet(MET,lat,lon,t); r=m?m.pr:null;} if(r!=null){rain+=r;n++;}}
+    const r=rainAt(lat,lon,t); if(rainIsObs(lat,lon,t)) obsH++; if(r!=null){rain+=r;n++;}}
   return n?{tmin:isFinite(tmin)?tmin:null,tmax:isFinite(tmax)?tmax:null,rain,obsH}:null; }
 function wx24Text(w){ if(!w) return ''; const tt=w.tmin!=null?`${Math.round(w.tmin)}–${Math.round(w.tmax)} °C`:'–';
   const rr=w.rain<0.5?T('no rain','ไม่มีฝน'):`${T('rain','ฝน')} ${w.rain<10?w.rain.toFixed(1):Math.round(w.rain)} ${T('mm','มม.')}`;
@@ -1714,7 +1720,7 @@ function drawWind(){
     const len=8+Math.min(16,sp*2.5), col=sp<2?'#8aa0b4':sp<4?'#4f6f91':sp<7?'#1f4e79':'#8b1a1a', sz=2*len+6;
     const html=`<svg viewBox="${-len-3} ${-len-3} ${sz} ${sz}" width="${sz}" height="${sz}" style="transform:rotate(${bearing}deg)"><path d="M0 ${len} L0 ${-len} M-5 ${-len+6} L0 ${-len} L5 ${-len+6}" fill="none" stroke="${col}" stroke-width="${sp<2?1.4:2}" stroke-linecap="round"/></svg>`;
     L.marker([la,lo],{icon:L.divIcon({className:'windarrow',html,iconSize:[sz,sz],iconAnchor:[sz/2,sz/2]}),keyboard:false,interactive:true})
-      .bindTooltip(()=>`${T('Wind (10 m)','ลม (10 ม.)')} ${sp.toFixed(1)} m/s ${T('from','จาก')} ${compass(windFrom(u,v))} (${Math.round(windFrom(u,v))}°)${!PUBLIC?`<br>100 m: ${m.ws.toFixed(1)} m/s ${T('from','จาก')} ${compass(windFrom(m.u,m.v))} · BLH ${Math.round(m.blh)} m`:''}<br>${T('Temp.','อุณหภูมิ')} ${(()=>{const v=t2At(la,lo,t); return v!=null?v.toFixed(1):'–';})()} °C · ${T('rain','ฝน')} ${(()=>{const o=rainObsAt(la,lo,t), r=o!=null?o:m.pr; return (r>=0.05?r.toFixed(1)+' mm/h':T('none','ไม่มี'))+(o!=null?' ('+T('observed','ตรวจวัด')+')':'');})()}`).addTo(windLayer);
+      .bindTooltip(()=>`${T('Wind (10 m)','ลม (10 ม.)')} ${sp.toFixed(1)} m/s ${T('from','จาก')} ${compass(windFrom(u,v))} (${Math.round(windFrom(u,v))}°)${!PUBLIC?`<br>100 m: ${m.ws.toFixed(1)} m/s ${T('from','จาก')} ${compass(windFrom(m.u,m.v))} · BLH ${Math.round(m.blh)} m`:''}<br>${T('Temp.','อุณหภูมิ')} ${(()=>{const v=t2At(la,lo,t); return v!=null?v.toFixed(1):'–';})()} °C · ${T('rain','ฝน')} ${(()=>{const o=rainAt(la,lo,t), r=o!=null?o:m.pr, ob=rainIsObs(la,lo,t); return (r>=0.05?r.toFixed(1)+' mm/h':T('none','ไม่มี'))+(ob?' ('+T('observed','ตรวจวัด')+')':'');})()}`).addTo(windLayer);
   }
 }
 map.on('zoomend moveend',()=>{ if(shown('shWind')) drawWind(); });
@@ -2044,7 +2050,7 @@ function renderSummary(){
   $('sWarn').textContent=S.recep.some(r=>r.stT)?S.recep.filter(r=>r.stT&&(r.stT.mean24>37.5||r.stT.peak>75)).length:S.sim?S.recep.filter(r=>r.st.mean24>37.5||r.st.peak>75).length:'–';
 }
 function renderWarnings(){
-  ensureT2(renderWarnings);
+  ensureT2(renderWarnings); ensureRainObs(renderWarnings); ensureRainFac(renderWarnings);
   if(!S.sim&&!S.hots.length&&!P.data){$('warnList').innerHTML=`<p class="note">${PUBLIC?T('Loading the latest data…','กำลังโหลดข้อมูลล่าสุด…'):T('No run yet. Press <b>Load live data</b>, or <b>Run demo</b> in Settings.','ยังไม่มีผล กด <b>โหลดข้อมูลล่าสุด</b> หรือ <b>ทดลองด้วยข้อมูลจำลอง</b> ในแท็บตั้งค่า')}</p>`;$('nearList').textContent='–';return;}
   const total=S.recep.some(r=>r.stT);   // live data: rank by total PM2.5; demo / no map data: fire smoke only (as before)
   const rows=total?S.recep.filter(r=>r.stT).sort((a,b)=>b.stT.mean24-a.stT.mean24||b.stT.peak-a.stT.peak).slice(0,25)
@@ -2215,7 +2221,7 @@ function trendSvg(H,v,opt={}){
 // ECMWF forecast after) at the same points as the PM2.5 series; at most ~300 points per area (evenly thinned) to stay fast
 function wxSeries(H,pts){ if(!MET||!pts||!pts.length) return null; const st=Math.max(1,Math.ceil(pts.length/300)), q=pts.filter((_,i)=>i%st===0);
   const t2=[],pr=[]; for(const t of H){ let st2=0,n2=0,sp=0,np=0;
-    for(const p of q){ const a=t2At(p.la,p.lo,t); if(a!=null){st2+=a;n2++;} const o=rainObsAt(p.la,p.lo,t); const r=o!=null?o:metVarAt(MET,'pr',p.la,p.lo,t); if(r!=null){sp+=r;np++;} }
+    for(const p of q){ const a=t2At(p.la,p.lo,t); if(a!=null){st2+=a;n2++;} const r=rainAt(p.la,p.lo,t); if(r!=null){sp+=r;np++;} }
     t2.push(n2?st2/n2:null); pr.push(np?sp/np:null); }
   return {t2,pr}; }
 function ensureRainObs(after){ const info=P.data?.rainObs; if(!info) return; const key=info.times.join('|');
@@ -2251,7 +2257,7 @@ function trendBlock(H,v,opt={}){
 }
 const AREA_CACHE={key:null}, INC_FIELDS={sim:null,map:new Map()};
 function areaSeries(){
-  const k=$('region').value, key=k+'|'+(P.data?P.data.generated:'')+'|'+(S.simInc?S.assimApplied:0)+'|'+(useA()?'A':'-')+'|'+(T2D?T2D.key:'')+'|'+(RAINOBS?RAINOBS.key:'')+'|'+(MET?MET.fetched:'');
+  const k=$('region').value, key=k+'|'+(P.data?P.data.generated:'')+'|'+(S.simInc?S.assimApplied:0)+'|'+(useA()?'A':'-')+'|'+(T2D?T2D.key:'')+'|'+(RAINOBS?RAINOBS.key:'')+'|'+(MET?MET.fetched:'')+'|'+Object.keys(RFAC).filter(k=>RFAC[k]).join(',');
   if(AREA_CACHE.key===key) return AREA_CACHE;
   // provinces: 0.1° lattice inside Thai provinces. Area average: the same points, or on the whole-domain map a 0.25° lattice
   // over everything (so Thailand's denser lattice does not dominate the domain mean)
@@ -2274,7 +2280,7 @@ function areaSeries(){
 }
 let areaSel='__all';
 function renderAreaTrend(){
-  const box=$('areaTrend'); ensureT2(renderAreaTrend); ensureRainObs(renderAreaTrend);
+  const box=$('areaTrend'); ensureT2(renderAreaTrend); ensureRainObs(renderAreaTrend); ensureRainFac(renderAreaTrend);
   if(!P.data||!P.data.grid){box.innerHTML=T('Area trends appear when the page runs from the hosted site.','แนวโน้มรายพื้นที่จะแสดงเมื่อเปิดหน้าเว็บจากเว็บไซต์ที่โฮสต์');return;}
   const A=areaSeries(), H=A.H, now=Date.now(); if(!A.groups.has(areaSel)) areaSel='__all';
   const provs=[...A.groups.entries()].filter(([g])=>g!=='__all'), nm=g=>g.p?provName(g.p):g.name;

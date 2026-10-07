@@ -87,3 +87,10 @@ export async function gsmapAt(gcache, dataDir, lat, lon, tStart) {
   let fac = 1; if (F) { const M = F.meta, ix = Math.round((lon - M.lon0) / M.step), iy = Math.round((lat - M.lat0) / M.step); if (ix >= 0 && iy >= 0 && ix < M.nx && iy < M.ny) fac = F.f[iy * M.nx + ix] / 50; }
   return { cell: cell / 10, bil: +bil.toFixed(2), fine: +(bil * fac).toFixed(2), src: h.src };
 }
+
+// the month's CHELSA rain-pattern factor at a point (1 where there is no file), same lookup as the page
+export async function rainFactor(dataDir, lat, lon, t) {
+  const F = await factor(dataDir, new Date(t + 7 * HOUR).getUTCMonth() + 1); if (!F) return 1;
+  const M = F.meta, ix = Math.round((lon - M.lon0) / M.step), iy = Math.round((lat - M.lat0) / M.step);
+  return ix >= 0 && iy >= 0 && ix < M.nx && iy < M.ny ? F.f[iy * M.nx + ix] / 50 : 1;
+}

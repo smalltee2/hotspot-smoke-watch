@@ -2702,7 +2702,7 @@ const WXSTORE=[];   // series of every drawn weather chart, for the tap / click 
 document.addEventListener('click',ev=>{ const svg=ev.target.closest&&ev.target.closest('svg.wxsvg'); if(!svg) return;
   const o=WXSTORE[+svg.dataset.k]; if(!o) return; const b=svg.getBoundingClientRect(), vx=(ev.clientX-b.left)/b.width*o.W;
   const i=Math.max(0,Math.min(o.H.length-1,Math.round((vx-o.pad)/((o.W-o.pad-o.padR)/(o.H.length-1||1))))), t=o.H[i], tv=o.wx.t2[i], rv=o.wx.pr[i];
-  const out=svg.closest('.tablewrap')?.nextElementSibling; if(!out||!out.classList.contains('wxread')) return;
+  let out=svg.closest('.tablewrap')?.nextElementSibling; while(out&&!out.classList.contains('wxread')) out=out.nextElementSibling; if(!out) return;   // the legend sits between chart and readout
   out.textContent=`${fmtT(t)} · ${tv!=null?tv.toFixed(1)+' °C':'–'} · ${T('rain','ฝน')} ${rv!=null?rv.toFixed(1)+' '+T('mm in that hour','มม. ในชั่วโมงนั้น'):'–'} (${t<=Date.now()?T('observed','ตรวจวัด'):T('forecast','พยากรณ์')})`;
   const m=svg.querySelector('.wxmark'); if(m){ const x=(o.pad+i*(o.W-o.pad-o.padR)/(o.H.length-1||1)).toFixed(1); m.setAttribute('x1',x); m.setAttribute('x2',x); m.style.display=''; } });
 function wxSvg(H,wx){

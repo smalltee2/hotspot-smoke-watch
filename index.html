@@ -66,6 +66,9 @@ aside{border-right:1px solid var(--line);background:var(--panel);display:flex;fl
 .summary{display:grid;grid-template-columns:repeat(4,1fr);border-bottom:1px solid var(--line)}
 /* one file, two audiences: the public page is this file with <html data-mode="public"> (built in the workflow) */
 html[data-mode=public] .dev-only{display:none!important}
+html:not([data-mode=public]) .public-only{display:none!important}
+.btn-ico{display:inline-flex;align-items:center;justify-content:center;padding:5px 8px;opacity:.7}
+.btn-ico:hover,.btn-ico:focus-visible{opacity:1}
 html:not([data-mode=public]) .pub-only{display:none!important}
 html[data-mode=public] .summary{grid-template-columns:repeat(2,1fr)}
 .about p,.about li{line-height:1.55}.about .lvl{display:grid;grid-template-columns:14px 1fr;gap:4px 10px;align-items:start;margin:6px 0}.about .lvl i{width:14px;height:14px;border-radius:3px;margin-top:3px}
@@ -324,6 +327,7 @@ td.num{text-align:right;font-family:var(--font-data);font-variant-numeric:tabula
     <span id="modeChip" class="chip">no data</span>
     <span id="updated" class="note"></span><div id="toast" role="status" aria-live="polite"></div>
     <a class="btn dev-only" href="perf.html" title="Live model performance: scores, charts and maps, updated every 3 hours"><span class="lbl-long" data-th="ผลการประเมินแบบจำลอง">Model performance</span><span class="lbl-short" data-th="ผลประเมิน">Scores</span></a>
+    <a class="btn btn-ico public-only" href="dev.html" title="Developer page (sign-in) · หน้าสำหรับผู้พัฒนา (ต้องเข้าสู่ระบบ)" aria-label="Developer page"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></a>
     <button id="btnLang" class="btn" type="button" lang="th" title="ภาษาไทย / English">ไทย</button>
     <button id="btnRun" class="btn primary" type="button" title="Reload the latest data"><span class="lbl-long" data-th="โหลดข้อมูลล่าสุด">Load live data</span><span class="lbl-short" data-th="รีเฟรช">Refresh</span></button>
   </div>

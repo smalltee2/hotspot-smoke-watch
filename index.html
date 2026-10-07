@@ -239,6 +239,7 @@ td.num{text-align:right;font-family:var(--font-data);font-variant-numeric:tabula
 .legend .keys span{display:flex;gap:6px;align-items:center}
 .dot{width:10px;height:10px;border-radius:50%;display:inline-block;flex:none}
 .basemap-switch{position:absolute;left:50px;top:10px;z-index:500}
+.gibsdate{display:block;margin-top:4px;font:500 .68rem var(--font-data);background:var(--panel);border:1px solid var(--line);border-radius:4px;padding:2px 6px;box-shadow:0 1px 4px rgb(0 0 0 / .15);width:max-content;max-width:60vw}
 .basemap-switch select{font-size:.75rem;padding:5px 6px;border:1px solid var(--line);border-radius:4px;background:var(--panel);box-shadow:0 1px 4px rgb(0 0 0 / .15)}
 .vh{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
 .legend summary{cursor:pointer;font-weight:600;font-size:.75rem;list-style:none}
@@ -708,8 +709,9 @@ td.num{text-align:right;font-family:var(--font-data);font-variant-numeric:tabula
         <option value="street" data-th="แผนที่ถนน">Street map</option>
         <option value="terrain" data-th="ภูมิประเทศ">Terrain</option>
         <option value="sat" data-th="ภาพดาวเทียม">Satellite</option>
+        <option value="gibs" data-th="ภาพดาวเทียมรายวัน NASA (เห็นควัน)">NASA daily satellite (shows smoke)</option>
         <option value="plain" data-th="เส้นขอบอย่างเดียว (ออฟไลน์)">Plain (offline)</option>
-      </select></div>
+      </select><span id="gibsDate" class="gibsdate" hidden></span></div>
     <div class="scrub">
       <button class="btn" id="btnPlay" type="button" aria-label="Play forecast">▶</button>
       <div class="slwrap"><input id="slider" type="range" min="0" max="0" value="0" aria-label="Forecast hour"><div class="daybar" id="dayBar"></div></div>
@@ -1297,15 +1299,25 @@ const TILESETS={
   street:()=>['https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap contributors'}],
   terrain:()=>['https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',{subdomains:'abc',maxZoom:17,attribution:'© OpenStreetMap contributors, SRTM · © OpenTopoMap (CC-BY-SA)'}],
   sat:()=>['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:18,attribution:'Imagery © Esri, Maxar, Earthstar Geographics'}],
+  // NASA GIBS daily true-colour (VIIRS NOAA-20, corrected reflectance, 250 m; NOAA-21 then Suomi NPP where a tile is missing): smoke plumes
+  // and haze show as grey-brown veils. One image per day from the early-afternoon overpass (≈13:30 local), available a few hours later
+  gibs:()=>[`https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/VIIRS_NOAA20_CorrectedReflectance_TrueColor/default/${gibsDate()}/GoogleMapsCompatible_Level9/{z}/{y}/{x}.jpg`,
+    {maxZoom:16,maxNativeZoom:9,attribution:'Imagery: NASA GIBS / EOSDIS, VIIRS true colour '+gibsDate()}],
 };
+// day of the NASA image: the day of the slider time, never after today; today's image only from 17:00 Thai time (overpass ≈13:30 + latency)
+function gibsDate(){ const now=Date.now(); let ct=null; try{ ct=curT(); }catch(e){} const t=Math.min(ct??now,now), dk=x=>Math.floor((x+BKK_)/864e5);
+  let d=dk(t); const hrNow=new Date(now+BKK_).getUTCHours(); if(d===dk(now)&&hrNow<17) d--; return new Date(d*864e5).toISOString().slice(0,10); }
+const BKK_=7*3600e3;
 function setTiles(){
   if(tiles){map.removeLayer(tiles);tiles=null;}
   if(bm!=='plain'){const [url,opt]=TILESETS[bm]();let fails=0,ok=0;
     tiles=L.tileLayer(url,{...opt,attribution:opt.attribution+' · Fires: NASA FIRMS · Wind: Open-Meteo · Borders: World Bank Official Boundaries'})
-      .on('tileload',()=>ok++).on('tileerror',()=>{if(++fails>6&&!ok){setBasemap('plain');banner(T('Online map tiles could not load here, so the page switched to the built-in outline map. Fires, wind and smoke still work.','โหลดแผนที่ออนไลน์ไม่ได้ จึงเปลี่ยนเป็นแผนที่เส้นขอบในตัว จุดไฟ ลม และควันยังแสดงได้ตามปกติ'),'info');}}).addTo(map);}
+      .on('tileload',()=>ok++).on('tileerror',e=>{ if(bm==='gibs'){ const im=e.tile, k=+(im.dataset.alt||0), alt=['VIIRS_NOAA21','VIIRS_SNPP'][k];
+          if(alt){ im.dataset.alt=k+1; im.src=im.src.replace(/VIIRS_(NOAA20|NOAA21|SNPP)/,alt); return; } }if(++fails>6&&!ok){setBasemap('plain');banner(T('Online map tiles could not load here, so the page switched to the built-in outline map. Fires, wind and smoke still work.','โหลดแผนที่ออนไลน์ไม่ได้ จึงเปลี่ยนเป็นแผนที่เส้นขอบในตัว จุดไฟ ลม และควันยังแสดงได้ตามปกติ'),'info');}}).addTo(map);}
   else map.attributionControl.addAttribution('Borders: World Bank Official Boundaries');
   styleBase();
-  $('bmSel').value=bm;
+  $('bmSel').value=bm; tiles&&(tiles._gibsDay=bm==='gibs'?gibsDate():null);
+  const gd=$('gibsDate'); if(gd){ gd.hidden=bm!=='gibs'; if(bm==='gibs') gd.textContent=T('NASA image of ','ภาพ NASA วันที่ ')+new Date(gibsDate()+'T12:00:00Z').toLocaleDateString(LOC(),{day:'numeric',month:'short',year:'numeric'}); }
 }
 function setBasemap(k){bm=k;store.set('hsw.basemap2',k);setTiles();}
 $('bmSel').onchange=e=>setBasemap(e.target.value);
@@ -1396,7 +1408,7 @@ function setTimeline(){
   let i=-1; if(i<0) i=iNow;   // every load and refresh shows the current hour (like Windy); the user moves on from there
   S.jumpNow=false; S.nowSel=S.times[iNow]; S.hour=i; sl.value=i;
 }
-function redrawTime(){if(hereLL&&!$('hereBox').hidden) renderHereBox();
+function redrawTime(){if(hereLL&&!$('hereBox').hidden) renderHereBox(); if(bm==='gibs'&&tiles&&tiles._gibsDay!==gibsDate()) setTiles();
   updateTimeLabel();drawPlume();drawGrid();drawContours();drawTowns();drawStations();drawWind();}
 
 // ---- hourly data written by the GitHub Actions pipeline (same site)

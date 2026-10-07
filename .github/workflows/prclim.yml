@@ -1,0 +1,44 @@
+# One-off: monthly rain-pattern factors at 0.025° for downscaling GSMaP rain (live forecast only).
+# Source: CHELSA V2.1 monthly precipitation climatology 1981-2010, 30 arc-s (Karger et al. 2017, Sci. Data 4:170122,
+# doi:10.1038/sdata.2017.122; data doi:10.16904/envidat.228), Cloud-Optimized GeoTIFFs read by window (no full download).
+# Writes data/static/prclim/RR_MM.bin (zlib, uint8, factor×50) + meta.json and commits them to main.
+# Also checks whether the ThaiWater (HAII) public rain API answers from GitHub, for a later gauge check.
+name: Rain climatology factors
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/prclim.yml', 'scripts/prclim.py']
+permissions:
+  contents: write
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.12' }
+      - name: Find the CHELSA files
+        id: list
+        run: |
+          base="https://os.unil.cloud.switch.ch/chelsa02"
+          curl -sS --max-time 60 "$base?prefix=chelsa/global/climatologies/1981-2010/pr/" | grep -i '\.tif$' | sort > files.txt || true
+          n=$(wc -l < files.txt); echo "::notice title=CHELSA listing::$n files; $(head -3 files.txt | tr '\n' ' ')"
+          [ "$n" -ge 12 ] || { echo "::error title=CHELSA::listing gave $n files"; curl -sS -I --max-time 30 "$base?prefix=chelsa/global/climatologies/" | head -5; exit 1; }
+      - name: Build the factors
+        run: |
+          pip -q install rasterio numpy
+          python scripts/prclim.py files.txt data/static/prclim
+      - name: ThaiWater reachability (for a later gauge check)
+        continue-on-error: true
+        run: |
+          for u in "https://api-v3.thaiwater.net/api/v1/thaiwater30/public/rain_24h" "https://api-v3.thaiwater.net/api/v1/thaiwater30/public/thailand_main"; do
+            r=$(curl -sS --max-time 30 -o tw.json -w "%{http_code} %{size_download}" "$u" 2>&1); echo "::notice title=ThaiWater::$u -> $r; $(head -c 400 tw.json | tr -d '\n\r')"; done
+      - name: Commit
+        run: |
+          git config user.name "hotspot-bot"; git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/static/prclim
+          git diff --cached --quiet && exit 0
+          git commit -qm "static: rain climatology factors (CHELSA V2.1, 0.025°)"
+          for i in 1 2 3; do git pull --rebase -q && git push -q && break; sleep 5; done

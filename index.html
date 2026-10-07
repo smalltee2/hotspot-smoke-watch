@@ -154,8 +154,11 @@ td.num{text-align:right;font-family:var(--font-data);font-variant-numeric:tabula
 @keyframes spin{to{transform:rotate(360deg)}}
 #toast{position:fixed;left:50%;top:64px;transform:translateX(-50%);z-index:3000;max-width:min(92vw,520px);padding:9px 14px;border-radius:6px;background:var(--ink,#1d2733);color:#fff;font-size:.85rem;line-height:1.35;box-shadow:0 4px 16px rgba(0,0,0,.25);opacity:0;pointer-events:none;transition:opacity .25s}
 #toast.on{opacity:.96}
-.trend .chips{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 4px}
-.trend .chip{text-transform:none;border:1px solid var(--line);padding:4px 6px;font:500 .72rem/1.3 var(--font-data);min-width:64px}
+.trend .chips{display:grid;grid-template-columns:repeat(auto-fill,minmax(168px,1fr));gap:6px;margin:6px 0 4px}
+.trend .chip{text-transform:none;letter-spacing:0;border:1px solid var(--line);padding:6px 8px;font:500 .72rem/1.3 var(--font-data);min-width:0;display:grid;grid-template-columns:auto minmax(0,1fr);gap:8px;align-items:center;background:var(--bg)}
+.trend .chip .ci{display:flex;flex-direction:column;gap:2px}
+.trend .chip .ci svg{width:34px;height:34px;display:block}
+.trend .chip .ct{min-width:0}
 .trend .chip b{display:block;font-weight:600}
 .trend .chip .cwx{display:block;margin-top:3px;color:var(--muted);font-weight:500;font-size:.68rem}
 .trend .wxhead{font:600 .72rem/1.3 var(--font-data);margin:8px 0 2px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
@@ -2485,17 +2488,26 @@ function trendSvg(H,v,opt={}){
 // weather alongside PM2.5: area-mean 2-m temperature (0.025° downscaled) and rain (mm in the hour; observed GSMaP where observed,
 // ECMWF forecast after) at the same points as the PM2.5 series; at most ~300 points per area (evenly thinned) to stay fast
 function wxSeries(H,pts){ if(!MET||!pts||!pts.length) return null; const st=Math.max(1,Math.ceil(pts.length/300)), q=pts.filter((_,i)=>i%st===0);
-  const t2=[],pr=[]; for(const t of H){ let st2=0,n2=0,sp=0,np=0;
-    for(const p of q){ const a=t2At(p.la,p.lo,t); if(a!=null){st2+=a;n2++;} const r=rainAt(p.la,p.lo,t); if(r!=null){sp+=r;np++;} }
-    t2.push(n2?st2/n2:null); pr.push(np?sp/np:null); }
-  return {t2,pr}; }
+  const t2=[],pr=[],cc=[], stc=Math.max(1,Math.ceil(q.length/30)); for(const t of H){ let st2=0,n2=0,sp=0,np=0,sc=0,nc=0;
+    q.forEach((p,k)=>{ const a=t2At(p.la,p.lo,t); if(a!=null){st2+=a;n2++;} const r=rainAt(p.la,p.lo,t); if(r!=null){sp+=r;np++;}
+      if(k%stc===0){ const c=sampleMet(MET,p.la,p.lo,t)?.cc; if(c!=null&&isFinite(c)){sc+=c;nc++;} } });   // cloud cover is smooth: ≤ 30 points
+    t2.push(n2?st2/n2:null); pr.push(np?sp/np:null); cc.push(nc?sc/nc:null); }
+  return {t2,pr,cc}; }
 function ensureRainObs(after){ const info=P.data?.rainObs; if(!info) return; const key=info.times.join('|');
   if(RAINOBS&&RAINOBS.key===key) return; const Q=(loadRainObs.cbs||=new Set()); if(after) Q.add(after);
   if(loadRainObs.busy||loadRainObs.tried===key) return; loadRainObs.busy=1; loadRainObs.tried=key; loadRainObs().then(()=>{loadRainObs.busy=0; const cb=[...Q]; Q.clear(); if(RAINOBS) cb.forEach(f=>f());}); }
 function dailyWx(H,wx,now){ if(!wx) return new Map(); const m=new Map(), today=bkkDay(now);
   H.forEach((t,i)=>{const d=bkkDay(t-HR); if(d<today) return; let o=m.get(d); if(!o) m.set(d,o={tmin:Infinity,tmax:-Infinity,rain:0,n:0});
-    if(wx.t2[i]!=null){o.tmin=Math.min(o.tmin,wx.t2[i]);o.tmax=Math.max(o.tmax,wx.t2[i]);} if(wx.pr[i]!=null){o.rain+=wx.pr[i];o.n++;}});
+    if(wx.t2[i]!=null){o.tmin=Math.min(o.tmin,wx.t2[i]);o.tmax=Math.max(o.tmax,wx.t2[i]);} if(wx.pr[i]!=null){o.rain+=wx.pr[i];o.n++;}
+    const hr=+new Date(t).toLocaleString('en-GB',{hour:'2-digit',hour12:false,timeZone:'Asia/Bangkok'}); if(wx.cc&&wx.cc[i]!=null&&hr>=7&&hr<=18){o.cs=(o.cs||0)+wx.cc[i];o.cn=(o.cn||0)+1;}});
+  for(const o of m.values()) o.cc=o.cn?o.cs/o.cn:null;
   return m; }
+// icon for a day: rain from the day total (TMD amounts: ≥ 0.1 light, > 10 moderate, > 35 heavy), otherwise the daytime
+// (07–18 h) mean ECMWF cloud cover in the NWS sky terms
+function wxDayIcon(w){ if(!w) return null; let svg,label;
+  if(w.rain>=0.1){ const k=w.rain>35?3:w.rain>10?2:1; svg=WXI.cloud(-8,k===3?'#7d8a90':'#a3adb0')+WXI.drops(k===3?6:k===2?3:1); label=rainDayCat(w.rain); }
+  else { const c=cloudCat(w.cc,true); if(c){svg=c.svg;label=c.label;} else {svg=WXI.sun;label=T('no rain','ไม่มีฝน');} }
+  return `<svg viewBox="0 0 64 64" aria-hidden="true"><title>${esc(label)}</title>${svg}</svg>`; }
 const WXSTORE=[];   // series of every drawn weather chart, for the tap / click readout
 // tap or click anywhere on a weather chart: the hour under the finger with its temperature and rain, written under the chart
 document.addEventListener('click',ev=>{ const svg=ev.target.closest&&ev.target.closest('svg.wxsvg'); if(!svg) return;
@@ -2532,8 +2544,8 @@ function trendBlock(H,v,opt={}){
   return `${tw?`<div class="tw">${tw.arr} ${tw.txt} <span class="note">· ${T('next 24 h','24 ชม. ข้างหน้า')} ${fmtN(tw.b)} ${T('vs past 24 h','เทียบกับ 24 ชม. ที่ผ่านมา')} ${fmtN(tw.a)} µg/m³</span></div>`:''}
     ${trendSvg(H,v,opt)}
     ${opt.wx?wxSvg(H,opt.wx):''}
-    ${days.length?`<div class="chips">${days.map(o=>{const w=dw.get(o.d); return `<div class="chip">${esc(dayLabel(o.t-HR))}<b>${fmtVal(o.mean)}</b>${pill(o.mean)}${w&&isFinite(w.tmin)?`<span class="cwx">${Math.round(w.tmin)}–${Math.round(w.tmax)} °C · ${w.rain<0.1?T('no rain','ไม่มีฝน'):(w.rain<10?w.rain.toFixed(1):Math.round(w.rain))+' '+T('mm','มม.')+' · '+rainDayCat(w.rain)}</span>`:''}</div>`;}).join('')}</div>`:''}
-    <p class="note" style="font-size:.7rem">${T('Orange: hourly. Blue: 24-hour average (the basis of the Thai AQI).','เส้นส้ม: รายชั่วโมง เส้นน้ำเงิน: ค่าเฉลี่ย 24 ชม. (ใช้คำนวณ AQI ของไทย)')}${opt.lo?T(' Shading: range across the area (most of the area lies inside it).',' แถบสี: ช่วงค่าภายในพื้นที่ (พื้นที่ส่วนใหญ่อยู่ในช่วงนี้)'):''}${opt.fire?T(' Dashed: smoke from fires in our model.',' เส้นประ: ควันจากไฟตามแบบจำลองของเรา'):''} ${T('Day boxes: daily average from midnight to midnight.','กล่องรายวัน: ค่าเฉลี่ยรายวัน (เที่ยงคืนถึงเที่ยงคืน)')}${opt.wx?T(' Weather: red line = 2-m temperature (°C, ECMWF downscaled to 0.025°, plus the self-learning correction once it has earned weight), blue bars = rain in each hour, read against the blue scale on the right (mm per hour; darker = observed by JAXA GSMaP, lighter = ECMWF forecast; tap or hover a bar for its value); day boxes show the day\'s lowest–highest temperature and rain total.',' สภาพอากาศ: เส้นแดง = อุณหภูมิ 2 ม. (°C, ECMWF ย่อส่วนเป็น 0.025°) แท่งน้ำเงิน = ฝนรายชั่วโมง อ่านค่าจากสเกลสีน้ำเงินด้านขวา (มม./ชม. สีเข้ม = ตรวจวัดโดย JAXA GSMaP สีอ่อน = พยากรณ์ ECMWF แตะหรือชี้ที่แท่งเพื่อดูค่า) กล่องรายวันแสดงอุณหภูมิต่ำสุด–สูงสุดและฝนรวมของวัน'):''}</p>`;
+    ${days.length?`<div class="chips">${days.map(o=>{const w=dw.get(o.d), wi=wxDayIcon(w); return `<div class="chip"><div class="ci">${pmIcon(o.mean)}${wi||''}</div><div class="ct">${esc(dayLabel(o.t-HR))}<b>${fmtVal(o.mean)}</b>${pill(o.mean)}${w&&isFinite(w.tmin)?`<span class="cwx">${Math.round(w.tmin)}–${Math.round(w.tmax)} °C · ${w.rain<0.1?T('no rain','ไม่มีฝน'):(w.rain<10?w.rain.toFixed(1):Math.round(w.rain))+' '+T('mm','มม.')+' · '+rainDayCat(w.rain)}</span>`:''}</div></div>`;}).join('')}</div>`:''}
+    <p class="note" style="font-size:.7rem">${T('Orange: hourly. Blue: 24-hour average (the basis of the Thai AQI).','เส้นส้ม: รายชั่วโมง เส้นน้ำเงิน: ค่าเฉลี่ย 24 ชม. (ใช้คำนวณ AQI ของไทย)')}${opt.lo?T(' Shading: range across the area (most of the area lies inside it).',' แถบสี: ช่วงค่าภายในพื้นที่ (พื้นที่ส่วนใหญ่อยู่ในช่วงนี้)'):''}${opt.fire?T(' Dashed: smoke from fires in our model.',' เส้นประ: ควันจากไฟตามแบบจำลองของเรา'):''} ${T('Day boxes: daily average from midnight to midnight.','กล่องรายวัน: ค่าเฉลี่ยรายวัน (เที่ยงคืนถึงเที่ยงคืน)')}${opt.wx?T(' Weather: red line = 2-m temperature (°C, ECMWF downscaled to 0.025°, plus the self-learning correction once it has earned weight), blue bars = rain in each hour, read against the blue scale on the right (mm per hour; darker = observed by JAXA GSMaP, lighter = ECMWF forecast; tap or hover a bar for its value); day boxes show the day\'s lowest–highest temperature and rain total; weather icon: the day\'s rain total in Thai Meteorological Department amounts, or without rain the daytime mean ECMWF cloud cover in NWS sky terms.',' สภาพอากาศ: เส้นแดง = อุณหภูมิ 2 ม. (°C, ECMWF ย่อส่วนเป็น 0.025°) แท่งน้ำเงิน = ฝนรายชั่วโมง อ่านค่าจากสเกลสีน้ำเงินด้านขวา (มม./ชม. สีเข้ม = ตรวจวัดโดย JAXA GSMaP สีอ่อน = พยากรณ์ ECMWF แตะหรือชี้ที่แท่งเพื่อดูค่า) กล่องรายวันแสดงอุณหภูมิต่ำสุด–สูงสุดและฝนรวมของวัน ไอคอนอากาศ: ฝนรวมของวันตามเกณฑ์กรมอุตุนิยมวิทยา ถ้าไม่มีฝนใช้ปริมาณเมฆเฉลี่ยช่วงกลางวัน (ECMWF) ตามนิยามของ NWS'):''}</p>`;
 }
 const AREA_CACHE={key:null}, INC_FIELDS={sim:null,map:new Map()};
 function areaSeries(){

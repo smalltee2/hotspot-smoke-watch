@@ -15,7 +15,7 @@ import { regressionKriging, krigeField, clampAux } from './rk.mjs';
 import { fetchMet, sampleMet, packMet, MET_MODEL } from './met.mjs';
 import { updateGsmap, mergeIntoMet, webRain } from './gsmap.mjs';
 import { fetchGauges, scoreGauges } from './thaiwater.mjs';
-import { downscaleT2, packDEM, T2CFG, t2SeaLevel } from './t2down.mjs';
+import { downscaleT2, packDEM, T2CFG, t2SeaLevel, t2Bin } from './t2down.mjs';
 import { buildLandcover, landcoverAt, packLandcover, unpackLandcover } from './landcover.mjs';
 import { loadModel } from './model.mjs';
 import { assimilateFires, assimSummary } from './assim.mjs';
@@ -407,7 +407,7 @@ async function main() {
     state.rainGaugeScore = [...(state.rainGaugeScore || []).filter(r => !sc.some(x => x.hour === r.hour)), ...sc].filter(r => Date.parse(r.hour.replace('Z', ':00Z')) > now - 7 * 24 * HOUR).slice(-200);
     if (state.rainGaugeScore.length) {
       const R = state.rainGaugeScore, N = R.reduce((a, r) => a + r.n, 0), pool = k => +Math.sqrt(R.reduce((a, r) => a + r.n * r[k][0] ** 2, 0) / N).toFixed(3),
-            mr = k => +(R.reduce((a, r) => a + r.n * (r[k][1] ?? 0), 0) / N).toFixed(3);
+            mr = k => { const Rk = R.filter(r => r[k][1] != null), Nk = Rk.reduce((a, r) => a + r.n, 0); return Nk ? +(Rk.reduce((a, r) => a + r.n * r[k][1], 0) / Nk).toFixed(3) : null; };   // hours with no variance (all dry) excluded
       const m = `rain vs ThaiWater gauges, ${R.length} hours, ${N} gauge-hours (${R.reduce((a, r) => a + r.wet, 0)} wet ≥0.5 mm): RMSE / mean hourly r — GSMaP 0.1° cell ${pool('cell')} / ${mr('cell')}, interpolated ${pool('bil')} / ${mr('bil')}, 0.025° with CHELSA pattern ${pool('fine')} / ${mr('fine')} mm/h` + `; cell r by GSMaP hour shift (h): ${JSON.stringify(Object.fromEntries([-2, -1, 1, 2].map(L => [L, +(R.filter(r => r.lag?.[L] != null).reduce((a, r) => a + r.n * r.lag[L], 0) / Math.max(1, R.filter(r => r.lag?.[L] != null).reduce((a, r) => a + r.n, 0))).toFixed(3)])))}` + (sc.length ? `; this run scored ${sc.map(x => x.hour + ' ' + x.src).join(', ')}` : '');
       log(m); if (process.env.GITHUB_ACTIONS) console.log(`::notice title=rain vs gauges::${m}`);
       rainInfo && (rainInfo.gauges = { hours: R.length, gaugeHours: N, rmse: { cell: pool('cell'), bil: pool('bil'), fine: pool('fine') }, r: { cell: mr('cell'), bil: mr('bil'), fine: mr('fine') } });
@@ -440,10 +440,10 @@ async function main() {
     if (r?.cv) {
       const F = r.file, fieldAt = (arr, lat, lon) => { if (!F || !arr) return 0; const fx = Math.round((lon - F.lon0) / F.step), fy = Math.round((lat - F.lat0) / F.step);
         if (fx < 0 || fy < 0 || fx >= F.nx || fy >= F.ny) return 0; let q = 0; for (let ix = 0; ix <= fx; ix++) q += arr[fy * F.nx + ix]; return q / F.scale; };
-      const tA = F?.tA ?? Math.floor(now / HOUR) * HOUR, tv = tA + 24 * HOUR, fade = F?.useAnom ? Math.exp(-24 / T2CFG.efoldH) : 0;
+      const tA = F?.tA ?? Math.floor(now / HOUR) * HOUR, tv = tA + 24 * HOUR, fade = F?.use?.anom ? Math.exp(-24 / T2CFG.efoldH) : 0, meanV = F?.use?.[t2Bin(tv)] ? F[t2Bin(tv) === 'day' ? 'meanDay' : 'meanNight'] : null;
       state.t2fc ||= {}; state.t2fc[tv] = Object.fromEntries(obsT.map(o => { const z = sampleGrid(demV, o.lat, o.lon) ?? 0, sl = t2SeaLevelAt(o.lat, o.lon, tv), b = sampleMet(met, o.lat, o.lon, tv)?.t2;
         if (sl == null || b == null) return null; const ter = sl - T2CFG.lapse * z;
-        return [o.id, [+b.toFixed(2), +ter.toFixed(2), +(ter + fieldAt(F?.mean, o.lat, o.lon) + fade * fieldAt(F?.anom, o.lat, o.lon)).toFixed(2)]]; }).filter(Boolean));
+        return [o.id, [+b.toFixed(2), +ter.toFixed(2), +(ter + fieldAt(meanV, o.lat, o.lon) + fade * fieldAt(F?.anom, o.lat, o.lon)).toFixed(2)]]; }).filter(Boolean));
       state.t2score ||= [];
       for (const k of Object.keys(state.t2fc)) { const tk = +k; if (tk > now - HOUR) continue;
         const e = [[], [], []]; for (const o of obsT) { const p = state.t2fc[k][o.id], ob = o.rows.find(r => r[0] === tk); if (!p || !ob) continue; p.forEach((v, i) => e[i].push(v - ob[1])); }
@@ -453,7 +453,7 @@ async function main() {
           delete state.t2fc[k]; } }
       state.t2score = state.t2score.slice(-400);
     }
-    t2Info = { dem: 'data/static/elev025.json', lapse: T2CFG.lapse, efoldH: T2CFG.efoldH, corr: r?.file ? 'data/t2-corr.json' : null, tA: r?.file?.tA ?? null, cv: r?.cv ?? null, score24: (state.t2score || []).slice(-14) };
+    t2Info = { dem: 'data/static/elev025.json', demKey: key25, lapse: T2CFG.lapse, efoldH: T2CFG.efoldH, corr: r?.file ? 'data/t2-corr.json' : null, tA: r?.file?.tA ?? null, cv: r?.cv ?? null, score24: (state.t2score || []).slice(-14) };
   } catch (e) { log(`t2 downscaling failed: ${e.message}`); if (process.env.GITHUB_ACTIONS) console.log(`::warning title=t2 downscaling::${e.message}`); }
 
   // 3c. hotspots

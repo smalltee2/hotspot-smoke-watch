@@ -28,7 +28,7 @@ export async function fetchGauges(store, now, { get, log = console.log } = {}) {
   let n = 0;
   for (const r of rows) {
     const mm = parseFloat(r.rain_1h), dt = r.rainfall_datetime; if (!isFinite(mm) || mm < 0 || mm > 200 || !dt) continue;
-    const tEnd = Date.parse(dt.replace(' ', 'T') + ':00+07:00'); if (!isFinite(tEnd) || now - tEnd > 6 * HOUR) continue;
+    const dm = /^(\d{4}-\d{2}-\d{2})[ T](\d{2}):(\d{2})/.exec(dt), tEnd = dm ? Date.parse(`${dm[1]}T${dm[2]}:${dm[3]}:00+07:00`) : NaN; if (!isFinite(tEnd) || now - tEnd > 6 * HOUR) continue;
     const [lat, lon] = findLatLon(r); if (lat == null) continue;
     const t0 = tEnd - HOUR; (store[t0] ||= []); if (store[t0].length < 5000 && !store[t0].some(g => g[0] === +lat.toFixed(4) && g[1] === +lon.toFixed(4))) { store[t0].push([+lat.toFixed(4), +lon.toFixed(4), +mm.toFixed(1)]); n++; }
   }
@@ -69,7 +69,7 @@ export async function scoreGauges(store, gcache, dataDir, scored = {}) {
     for (const L of [-2, -1, 1, 2]) { const hL = gcache.hours[+k + L * HOUR]; if (!hL) continue; const aL = unpack(hL.d), p = [], o = [];
       for (const [lat, lon, mm] of G) { const xi = Math.round((lon - c.lon0) / 0.1), yi = Math.round((lat - c.lat0) / 0.1); if (xi < 0 || yi < 0 || xi >= c.nx || yi >= c.ny) continue; const q = aL[yi * c.nx + xi]; if (q < 0) continue; p.push(q / 10); o.push(mm); }
       if (p.length > 30) { const n = p.length, mp = p.reduce((x, y) => x + y, 0) / n, mo = o.reduce((x, y) => x + y, 0) / n; let cv = 0, vp = 0, vo = 0; for (let i = 0; i < n; i++) { cv += (p[i] - mp) * (o[i] - mo); vp += (p[i] - mp) ** 2; vo += (o[i] - mo) ** 2; } lag[L] = vp && vo ? +(cv / Math.sqrt(vp * vo)).toFixed(3) : null; } }
-    out.push({ hour: new Date(+k).toISOString().slice(0, 13) + 'Z', src: h.src, n: ob.length, wet: ob.filter(v => v >= 0.5).length, cell: st(e.cell), bil: st(e.bil), fine: st(e.fine), lag });
+    out.push({ hour: new Date(+k).toISOString().slice(0, 13) + 'Z', src: h.src, n: ob.length, wet: ob.filter(v => v >= 0.5).length, cell: st(e.cell), bil: st(e.bil), fine: st(e.fine), lag });   // lag: cell r with GSMaP shifted, by this hour's src (now/nrt)
     scored[k] = h.src;
   }
   return out;

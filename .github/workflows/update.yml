@@ -47,6 +47,10 @@ jobs:
             data/landcover.bin
             data/verify.json
             data/gsmap-cache.json
+            data/met-web.json
+            data/t2-corr.json
+            data/rain-obs.json
+            data/ml-field.json
           key: pipeline-state-${{ github.run_id }}-${{ github.run_attempt }}
           restore-keys: pipeline-state-
 
@@ -95,6 +99,10 @@ jobs:
             data/landcover.bin
             data/verify.json
             data/gsmap-cache.json
+            data/met-web.json
+            data/t2-corr.json
+            data/rain-obs.json
+            data/ml-field.json
           key: pipeline-state-${{ github.run_id }}-${{ github.run_attempt }}
 
       - name: Commit static files (main) and forecast history (branch "history", last 35 days)

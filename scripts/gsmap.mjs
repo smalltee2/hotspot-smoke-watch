@@ -35,8 +35,8 @@ export const unpack = s => { const b = zlib.inflateSync(Buffer.from(s, 'base64')
 function sftpBatch(lines, cwd) {
   return new Promise((resolve) => {
     const env = { ...process.env, SSHPASS: process.env.GSMAP_PASS };
-    const p = execFile('sshpass', ['-e', 'sftp', '-oBatchMode=no', '-oStrictHostKeyChecking=yes', '-P', '22', '-b', '-', `${process.env.GSMAP_USER}@${GSCFG.host}`],
-      { cwd, env, timeout: 15 * 60e3, maxBuffer: 8 << 20 }, (err, so, se) => resolve({ err, out: String(so) + String(se) }));
+    const p = execFile('sshpass', ['-e', 'sftp', '-oBatchMode=no', '-oStrictHostKeyChecking=yes', '-oConnectTimeout=20', '-P', '22', '-b', '-', `${process.env.GSMAP_USER}@${GSCFG.host}`],
+      { cwd, env, timeout: 6 * 60e3, maxBuffer: 8 << 20 }, (err, so, se) => resolve({ err, out: String(so) + String(se) }));
     p.stdin.end(lines.join('\n') + '\n');
   });
 }
@@ -47,7 +47,8 @@ export async function updateGsmap(cache, now, { log = console.log } = {}) {
   for (const k of Object.keys(cache.hours)) if (+k < now - GSCFG.keepH * HOUR) delete cache.hours[k];
   if (!process.env.GSMAP_USER || !process.env.GSMAP_PASS) { log('GSMaP: no credentials, observed rain skipped'); return cache; }
   const tEnd = Math.floor(now / HOUR) * HOUR - HOUR, want = [];
-  for (let t = tEnd; t >= now - GSCFG.keepH * HOUR; t -= HOUR) { const c = cache.hours[t]; if (!c || c.src !== 'nrt') want.push(t); }
+  const held = Object.keys(cache.hours).length, back = held ? GSCFG.keepH : 24;   // first fill: 24 h only (one file per hour, ~1.3 MB each)
+  for (let t = tEnd; t >= now - back * HOUR; t -= HOUR) { const c = cache.hours[t]; if (!c || c.src !== 'nrt') want.push(t); }
   if (!want.length) return cache;
   const tmp = await fs.mkdtemp(path.join(os.tmpdir(), 'gsmap-')), lines = [];
   for (const t of want) { lines.push(`-get ${nrtPath(t)} nrt_${t}.gz`); if (!cache.hours[t] && now - t < 8 * HOUR) lines.push(`-get ${nowPath(t)} now_${t}.gz`); }
@@ -57,11 +58,20 @@ export async function updateGsmap(cache, now, { log = console.log } = {}) {
   for (const t of want) {
     for (const [src, f] of [['nrt', `nrt_${t}.gz`], ['now', `now_${t}.gz`]]) {
       let b; try { b = await fs.readFile(path.join(tmp, f)); } catch { continue; }
-      try { cache.hours[t] = { src, d: pack(cropGsmap(b)) }; src === 'nrt' ? nN++ : nW++; break; } catch (e) { bad++; log(`GSMaP ${f}: ${e.message}`); }
+      try { const crop = cropGsmap(b);
+        if (src === 'nrt' && cache.hours[t]?.src === 'now') {   // timing check of the NOW product: how the NOW hour matches NRT at t and t ± 1 h
+          const cc = (A, B) => { let n = 0, ma = 0, mb = 0; for (let i = 0; i < A.length; i++) if (A[i] >= 0 && B[i] >= 0) { n++; ma += A[i]; mb += B[i]; } if (n < 100) return null; ma /= n; mb /= n; let c = 0, va = 0, vb = 0;
+            for (let i = 0; i < A.length; i++) if (A[i] >= 0 && B[i] >= 0) { c += (A[i] - ma) * (B[i] - mb); va += (A[i] - ma) ** 2; vb += (B[i] - mb) ** 2; } return va && vb ? +(c / Math.sqrt(va * vb)).toFixed(3) : null; };
+          const nowCrop = unpack(cache.hours[t].d), r0 = cc(nowCrop, crop), rm = cache.hours[t - HOUR]?.src === 'nrt' ? cc(nowCrop, unpack(cache.hours[t - HOUR].d)) : null;
+          (cache.nowCheck ||= []).push([t, r0, rm]); cache.nowCheck = cache.nowCheck.slice(-48);
+        }
+        cache.hours[t] = { src, d: pack(crop) }; src === 'nrt' ? nN++ : nW++; break; } catch (e) { bad++; log(`GSMaP ${f}: ${e.message}`); }
     }
   }
   await fs.rm(tmp, { recursive: true, force: true });
   const ts = Object.keys(cache.hours).map(Number).sort((a, b) => a - b);
+  if (cache.nowCheck?.length) { const R = cache.nowCheck.filter(x => x[1] != null), m = k => R.length ? +(R.reduce((a, x) => a + (x[k] ?? 0), 0) / R.length).toFixed(3) : null;
+    log(`GSMaP NOW timing: over ${R.length} replaced hours, r(NOW at t, NRT at t) ${m(1)}, r(NOW at t, NRT at t−1 h) ${m(2)}`); }
   log(`GSMaP: ${nN} NRT + ${nW} NOW hours read${bad ? `, ${bad} unreadable` : ''}; ${ts.length} hours held, latest hour starting ${ts.length ? new Date(ts[ts.length - 1]).toISOString().slice(0, 13) + 'Z' : '–'}`);
   return cache;
 }

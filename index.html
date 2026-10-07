@@ -134,6 +134,14 @@ td.num{text-align:right;font-family:var(--font-data);font-variant-numeric:tabula
 #map{position:absolute;inset:0;background:var(--bg)}
 .scrub{position:absolute;left:12px;right:12px;bottom:12px;z-index:500;background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:8px 12px;display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;box-shadow:0 2px 10px rgb(0 0 0 / .12)}
 .scrub input{width:100%;accent-color:var(--ember)}
+.slwrap{min-width:0;display:flex;flex-direction:column;gap:3px}
+.slwrap input{margin:0}
+.daybar{position:relative;height:22px;margin:0 8px;border-radius:4px;overflow:hidden;background:var(--bg);border:1px solid var(--line);display:flex}
+.daybar button{position:relative;flex:none;border:0;border-left:1px solid var(--line);background:transparent;font:500 .7rem/20px var(--font-body);color:var(--muted);padding:0 2px;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:clip;min-width:0}
+.daybar button:first-child{border-left:0}
+.daybar button.on{color:var(--fg);font-weight:700;background:color-mix(in srgb,var(--ember) 14%,transparent)}
+.daybar .past{position:absolute;left:0;top:0;bottom:0;background:color-mix(in srgb,var(--muted) 18%,transparent);pointer-events:none}
+.daybar button span{position:relative}
 .scrub .t{font:500 .82rem/1.2 var(--font-data);font-variant-numeric:tabular-nums;text-align:right;min-width:9.5em}
 .scrub .t small{display:block;color:var(--muted);font-size:.7rem}
 .legend{position:absolute;right:12px;top:12px;z-index:500;background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:8px 10px;font-size:.72rem;max-width:210px;
@@ -704,7 +712,7 @@ td.num{text-align:right;font-family:var(--font-data);font-variant-numeric:tabula
       </select></div>
     <div class="scrub">
       <button class="btn" id="btnPlay" type="button" aria-label="Play forecast">▶</button>
-      <input id="slider" type="range" min="0" max="0" value="0" aria-label="Forecast hour">
+      <div class="slwrap"><input id="slider" type="range" min="0" max="0" value="0" aria-label="Forecast hour"><div class="daybar" id="dayBar"></div></div>
       <div class="t" id="tlabel">–<small>&nbsp;</small></div>
     </div>
     <div class="busy" id="busy" hidden><div id="busyMsg">Loading…</div></div>
@@ -1381,11 +1389,11 @@ function setTimeline(){
   const keep=curT();
   S.times=S.sim?S.sim.hours:(P.data?P.data.hours:[]);
   if(S.sim&&P.data&&P.data.hours.length) S.times=S.times.filter(t=>t>=P.data.hours[0]);   // emission may start at local midnight, before the map data
+  { const d0=todayStart(); const f=S.times.filter(t=>t>=d0); if(f.length) S.times=f; }   // forecast view: the time bar starts today
   const sl=$('slider'); sl.max=Math.max(0,S.times.length-1);
   // the hour shown as "now"; a manual refresh, or a view that was on "now", moves to the current hour; a chosen past/forecast hour is kept
   let iNow=S.times.findIndex(h=>h>=Date.now()-HR/2); if(iNow<0) iNow=Math.max(0,S.times.length-1);
-  const wasNow=keep!=null&&keep===S.nowSel;
-  let i=S.jumpNow||wasNow||keep==null?-1:idxIn(S.times,keep); if(i<0) i=iNow;
+  let i=-1; if(i<0) i=iNow;   // every load and refresh shows the current hour (like Windy); the user moves on from there
   S.jumpNow=false; S.nowSel=S.times[iNow]; S.hour=i; sl.value=i;
 }
 function redrawTime(){if(hereLL&&!$('hereBox').hidden) renderHereBox();
@@ -2208,7 +2216,7 @@ function renderStations(){
 }
 function focusStation(id){
   const s=P.data?.stations.find(x=>String(x.id)===String(id)); if(!s) return; map.flyTo([s.lat,s.lon],9); showTab('warn'); showMapOnPhone();
-  const H=P.data.hours, c=sCorr(s).map(v=>v??0), r=s.raw.map(v=>v??0), f24=sFc24(s)||null, max=Math.max(37.5,...c,...r,...(f24||[]).map(v=>v??0),s.obs?.v||0)*1.1, W=320,Ht=120,pad=26;
+  const i0=fromToday(P.data.hours), H=P.data.hours.slice(i0), c=sCorr(s).slice(i0).map(v=>v??0), r=s.raw.slice(i0).map(v=>v??0), f24=sFc24(s)?sFc24(s).slice(i0):null, max=Math.max(37.5,...c,...r,...(f24||[]).map(v=>v??0),s.obs?.v||0)*1.1, W=320,Ht=120,pad=26;
   const X=i=>pad+i*(W-pad-6)/(H.length-1||1), Y=v=>Ht-18-(v/max)*(Ht-28);
   const line=a=>a.map((v,i)=>`${i?'L':'M'}${X(i).toFixed(1)},${Y(v).toFixed(1)}`).join('');
   const lines=[15,25,37.5,75].filter(l=>l<max).map((l,k)=>`<line x1="${pad}" x2="${W-6}" y1="${Y(l)}" y2="${Y(l)}" stroke="var(--${PCD[k].key})" stroke-dasharray="3 3"/><text x="${pad-4}" y="${Y(l)+3}" text-anchor="end" font-size="8" fill="var(--muted)">${l}</text>`).join('');
@@ -2443,7 +2451,21 @@ function drawPlume(){
     const col=rampColor(G[y*nx+x]); return col?[col[0],col[1],col[2],col[3]*255]:null;});
   plume=L.imageOverlay(url,[[so,w],[nTop,eR]],{opacity:1,interactive:false,className:'plume'}).addTo(map);
 }
+// day bar under the time slider (like Windy): one segment per Thai calendar day, width by its hours; hours before now shaded;
+// the day being shown is highlighted; tapping a day keeps the same hour of the day (or the nearest hour that exists)
+function renderDayBar(){
+  const bar=$('dayBar'); if(!bar) return; const Ts=S.times; if(!Ts.length){bar.innerHTML='';return;}
+  const dk=t=>Math.floor((t+BKK)/864e5), groups=[]; Ts.forEach((t,i)=>{const k=dk(t); let g=groups[groups.length-1]; if(!g||g.k!==k) groups.push(g={k,i0:i,n:0}); g.n++;});
+  const now=Date.now(), cur=curT(), n=Ts.length, ck=cur!=null?dk(cur):null;
+  bar.innerHTML=groups.map(g=>{ const t=Ts[g.i0], past=Ts.slice(g.i0,g.i0+g.n).filter(x=>x<now-HR/2).length;
+    const w=(g.n/n*100).toFixed(3), lab=new Date(t).toLocaleDateString(LOC(),{weekday:'short',day:'numeric',timeZone:'Asia/Bangkok'});
+    return `<button type="button" data-k="${g.k}" class="${g.k===ck?'on':''}" style="width:${w}%" title="${esc(new Date(t).toLocaleDateString(LOC(),{weekday:'long',day:'numeric',month:'short',timeZone:'Asia/Bangkok'}))}">${past?`<i class="past" style="width:${(past/g.n*100).toFixed(1)}%"></i>`:''}<span>${esc(lab)}</span></button>`; }).join('');
+  bar.querySelectorAll('button').forEach(b=>b.onclick=()=>{ const k=+b.dataset.k, hod=cur!=null?Math.round(((cur+BKK)%864e5)/HR):12;
+    let best=-1,bd=1e9; Ts.forEach((t,i)=>{ if(dk(t)!==k) return; const d=Math.abs(Math.round(((t+BKK)%864e5)/HR)-hod); if(d<bd){bd=d;best=i;} });
+    if(best>=0){ $('slider').value=best; S.hour=best; redrawTime(); } });
+}
 function updateTimeLabel(){
+  renderDayBar();
   if(!S.times.length){$('tlabel').innerHTML='–<small>&nbsp;</small>';return;}
   const t=curT(), dh=Math.round((t-Date.now())/36e5);
   $('tlabel').innerHTML=`${fmtT(t)}<small>${dh===0?T('now','ขณะนี้'):dh>0?T(`+${dh} h forecast`,`พยากรณ์ +${dh} ชม.`):T(`${dh} h (past)`,`${dh} ชม. (ย้อนหลัง)`)}${typeof avg24==='function'&&avg24()&&gridMode()?T(' · 24-h mean',' · เฉลี่ย 24 ชม.'):''}</small>`;
@@ -2483,6 +2505,9 @@ function focusTown(name){
 // inside each area; the shaded band is the spread across the area (10th–90th percentile of points), not a confidence interval.
 const BKK=7*HR, bkkDay=t=>new Date(t+BKK).toISOString().slice(0,10);
 function dayLabel(t){return new Date(t).toLocaleDateString(LOC(),{weekday:'short',day:'numeric',month:'short',timeZone:'Asia/Bangkok'});}
+// forecast view: charts and the time bar start at today 00:00 Thai time (earlier hours are still used for 24-h means and trends)
+const todayStart=()=>Math.floor((Date.now()+BKK)/864e5)*864e5-BKK;
+const fromToday=H=>{const i=H.findIndex(t=>t>=todayStart()); return i<0?0:i;};
 function mean24Trail(v){return v.map((_,i)=>{let s=0,n=0;for(let j=Math.max(0,i-23);j<=i;j++){if(v[j]!=null){s+=v[j];n++;}}return n>=18?s/n:null;});}
 function trendWord(H,v,now){let a=0,na=0,b=0,nb=0;
   H.forEach((t,i)=>{const x=v[i]; if(x==null) return; if(t>now-24*HR&&t<=now){a+=x;na++;} else if(t>now&&t<=now+24*HR){b+=x;nb++;}});
@@ -2493,7 +2518,9 @@ function dailyMeans(H,v,now){const m=new Map(), today=bkkDay(now);
     let o=m.get(d); if(!o) m.set(d,o={t,s:0,n:0}); o.s+=v[i]; o.n++;});
   return [...m.entries()].filter(([,o])=>o.n>=18).map(([d,o])=>({d,t:o.t,mean:o.s/o.n}));}
 function trendSvg(H,v,opt={}){
-  const now=Date.now(), W=320,Ht=130,pad=26, m24=mean24Trail(v);
+  let m24=mean24Trail(v); const i0=fromToday(H);
+  if(i0>0){ const c=a=>a?a.slice(i0):a; H=H.slice(i0); v=v.slice(i0); m24=m24.slice(i0); opt={...opt,lo:c(opt.lo),hi:c(opt.hi),fire:c(opt.fire)}; }
+  const now=Date.now(), W=320,Ht=130,pad=26;
   const all=[...v,...(opt.hi||[]),...(opt.fire||[])].filter(x=>x!=null), max=Math.max(37.5,...all)*1.1;
   const X=i=>pad+i*(W-pad-6)/(H.length-1||1), Y=c=>Ht-18-(Math.max(0,c)/max)*(Ht-28);
   const path=a=>{let d='',pen=false; a.forEach((x,i)=>{if(x==null){pen=false;return;} d+=`${pen?'L':'M'}${X(i).toFixed(1)},${Y(x).toFixed(1)}`; pen=true;}); return d;};
@@ -2542,6 +2569,7 @@ document.addEventListener('click',ev=>{ const svg=ev.target.closest&&ev.target.c
   out.textContent=`${fmtT(t)} · ${tv!=null?tv.toFixed(1)+' °C':'–'} · ${T('rain','ฝน')} ${rv!=null?rv.toFixed(1)+' '+T('mm in that hour','มม. ในชั่วโมงนั้น'):'–'} (${t<=Date.now()?T('observed','ตรวจวัด'):T('forecast','พยากรณ์')})`;
   const m=svg.querySelector('.wxmark'); if(m){ const x=(o.pad+i*(o.W-o.pad-o.padR)/(o.H.length-1||1)).toFixed(1); m.setAttribute('x1',x); m.setAttribute('x2',x); m.style.display=''; } });
 function wxSvg(H,wx){
+  { const i0=fromToday(H); if(i0>0){ H=H.slice(i0); wx={t2:wx.t2.slice(i0),pr:wx.pr.slice(i0),cc:wx.cc?wx.cc.slice(i0):null}; } }
   const now=Date.now(), W=320, Ht=96, pad=26, padR=6, X=i=>pad+i*(W-pad-padR)/(H.length-1||1);
   const tv=wx.t2.filter(x=>x!=null); if(!tv.length) return '';
   let tmin=Math.floor(Math.min(...tv)/2)*2, tmax=Math.ceil(Math.max(...tv)/2)*2; if(tmax-tmin<6){const c=(tmax+tmin)/2; tmin=Math.floor(c-3); tmax=Math.ceil(c+3);}

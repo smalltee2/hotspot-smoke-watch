@@ -64,7 +64,12 @@ export async function scoreGauges(store, gcache, dataDir, scored = {}) {
     const st = p => { const n = ob.length, mo = ob.reduce((x, y) => x + y, 0) / n, mp = p.reduce((x, y) => x + y, 0) / n; let cv = 0, vo = 0, vp = 0, se = 0;
       for (let i = 0; i < n; i++) { cv += (p[i] - mp) * (ob[i] - mo); vo += (ob[i] - mo) ** 2; vp += (p[i] - mp) ** 2; se += (p[i] - ob[i]) ** 2; }
       return [+Math.sqrt(se / n).toFixed(3), vo && vp ? +(cv / Math.sqrt(vo * vp)).toFixed(3) : null, +(mp - mo).toFixed(3)]; };
-    out.push({ hour: new Date(+k).toISOString().slice(0, 13) + 'Z', src: h.src, n: ob.length, wet: ob.filter(v => v >= 0.5).length, cell: st(e.cell), bil: st(e.bil), fine: st(e.fine) });
+    // timing check: interpolated GSMaP of the neighbouring hours against the same gauge readings
+    const lag = {};
+    for (const L of [-2, -1, 1, 2]) { const hL = gcache.hours[+k + L * HOUR]; if (!hL) continue; const aL = unpack(hL.d), p = [], o = [];
+      for (const [lat, lon, mm] of G) { const xi = Math.round((lon - c.lon0) / 0.1), yi = Math.round((lat - c.lat0) / 0.1); if (xi < 0 || yi < 0 || xi >= c.nx || yi >= c.ny) continue; const q = aL[yi * c.nx + xi]; if (q < 0) continue; p.push(q / 10); o.push(mm); }
+      if (p.length > 30) { const n = p.length, mp = p.reduce((x, y) => x + y, 0) / n, mo = o.reduce((x, y) => x + y, 0) / n; let cv = 0, vp = 0, vo = 0; for (let i = 0; i < n; i++) { cv += (p[i] - mp) * (o[i] - mo); vp += (p[i] - mp) ** 2; vo += (o[i] - mo) ** 2; } lag[L] = vp && vo ? +(cv / Math.sqrt(vp * vo)).toFixed(3) : null; } }
+    out.push({ hour: new Date(+k).toISOString().slice(0, 13) + 'Z', src: h.src, n: ob.length, wet: ob.filter(v => v >= 0.5).length, cell: st(e.cell), bil: st(e.bil), fine: st(e.fine), lag });
     scored[k] = h.src;
   }
   return out;

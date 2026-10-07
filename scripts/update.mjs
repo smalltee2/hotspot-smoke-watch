@@ -408,7 +408,7 @@ async function main() {
     if (state.rainGaugeScore.length) {
       const R = state.rainGaugeScore, N = R.reduce((a, r) => a + r.n, 0), pool = k => +Math.sqrt(R.reduce((a, r) => a + r.n * r[k][0] ** 2, 0) / N).toFixed(3),
             mr = k => +(R.reduce((a, r) => a + r.n * (r[k][1] ?? 0), 0) / N).toFixed(3);
-      const m = `rain vs ThaiWater gauges, ${R.length} hours, ${N} gauge-hours (${R.reduce((a, r) => a + r.wet, 0)} wet ≥0.5 mm): RMSE / mean hourly r — GSMaP 0.1° cell ${pool('cell')} / ${mr('cell')}, interpolated ${pool('bil')} / ${mr('bil')}, 0.025° with CHELSA pattern ${pool('fine')} / ${mr('fine')} mm/h` + (sc.length ? `; this run scored ${sc.map(x => x.hour + ' ' + x.src).join(', ')}` : '');
+      const m = `rain vs ThaiWater gauges, ${R.length} hours, ${N} gauge-hours (${R.reduce((a, r) => a + r.wet, 0)} wet ≥0.5 mm): RMSE / mean hourly r — GSMaP 0.1° cell ${pool('cell')} / ${mr('cell')}, interpolated ${pool('bil')} / ${mr('bil')}, 0.025° with CHELSA pattern ${pool('fine')} / ${mr('fine')} mm/h` + `; cell r by GSMaP hour shift (h): ${JSON.stringify(Object.fromEntries([-2, -1, 1, 2].map(L => [L, +(R.filter(r => r.lag?.[L] != null).reduce((a, r) => a + r.n * r.lag[L], 0) / Math.max(1, R.filter(r => r.lag?.[L] != null).reduce((a, r) => a + r.n, 0))).toFixed(3)])))}` + (sc.length ? `; this run scored ${sc.map(x => x.hour + ' ' + x.src).join(', ')}` : '');
       log(m); if (process.env.GITHUB_ACTIONS) console.log(`::notice title=rain vs gauges::${m}`);
       rainInfo && (rainInfo.gauges = { hours: R.length, gaugeHours: N, rmse: { cell: pool('cell'), bil: pool('bil'), fine: pool('fine') }, r: { cell: mr('cell'), bil: mr('bil'), fine: mr('fine') } });
     }

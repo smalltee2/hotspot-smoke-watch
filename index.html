@@ -95,6 +95,17 @@ html[data-mode=public] .summary{grid-template-columns:repeat(2,1fr)}
 .wxwash{color:var(--fg);opacity:.8}
 .alert .val{text-align:right;font:500 .95rem/1.2 var(--font-data);font-variant-numeric:tabular-nums}
 .alert .val small{display:block;font-size:.7rem;color:var(--muted)}
+.wview{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;margin:2px 0 4px}
+.wview label{font:600 .8rem var(--font-display);text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.wview select{flex:1 1 220px;max-width:380px;font-size:.95rem;padding:7px 8px;min-height:38px}
+.alert.c2{grid-template-columns:8px minmax(0,1fr) 172px}
+.fc2{display:grid;grid-template-columns:1fr 1fr;gap:6px;align-self:center}
+.fc2 .d{border:1px solid var(--line);border-radius:6px;padding:4px 6px 5px;text-align:center;min-width:0;background:var(--bg);overflow:hidden}
+.fc2 .d .h{display:block;font-size:.62rem;color:var(--muted);white-space:nowrap}
+.fc2 .d b{display:block;font:600 1rem/1.15 var(--font-data);font-variant-numeric:tabular-nums}
+.fc2 .d i.bar{display:block;height:4px;border-radius:2px;margin:2px 0 3px}
+.fc2 .d .w{display:block;font-size:.62rem;color:var(--muted);line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+@media (max-width:420px){.alert.c2{grid-template-columns:6px minmax(0,1fr) 142px;gap:8px}.fc2{gap:4px}.fc2 .d{padding:3px 4px 4px}.fc2 .d b{font-size:.9rem}}
 .pill{display:inline-block;font:600 .66rem/1 var(--font-data);padding:3px 5px;border-radius:2px;color:#fff;letter-spacing:.04em;text-transform:uppercase;vertical-align:1px}
 
 table{border-collapse:collapse;width:100%;font-size:.8rem}
@@ -365,17 +376,32 @@ td.num{text-align:right;font-family:var(--font-data);font-variant-numeric:tabula
 
     <section class="pane" id="pane-warn" role="tabpanel">
       <div id="banner"></div>
-      <h3 data-th="แนวโน้ม PM&lt;sub&gt;2.5&lt;/sub&gt; รายพื้นที่">PM<sub>2.5</sub> trend by area</h3>
-      <p class="note" data-th="ค่าพยากรณ์ PM&lt;sub&gt;2.5&lt;/sub&gt; (ทุกแหล่ง) เฉลี่ยทั้งพื้นที่ทุกชั่วโมง ย้อนหลัง 1 วันและล่วงหน้าถึง 4 วัน เลือกจังหวัดหรือกดชื่อในตาราง">Forecast PM<sub>2.5</sub> (all sources) averaged over the area, hour by hour, from yesterday to 4 days ahead. Pick a province, or tap one in the table.</p>
-      <div id="areaTrend" class="note">–</div>
-      <h3 data-th="พยากรณ์ PM&lt;sub&gt;2.5&lt;/sub&gt; รายเมือง">PM<sub>2.5</sub> forecast at towns</h3>
-      <p class="note dev-only" data-th="PM&lt;sub&gt;2.5&lt;/sub&gt; รวมทุกแหล่ง (แผนที่ที่ปรับแก้แล้ว) ค่าเฉลี่ย 24 ชม. สูงสุดในช่วงพยากรณ์ แบ่งระดับตามเกณฑ์กรมควบคุมมลพิษ พร้อมส่วนที่มาจากไฟ คลิกชื่อเมืองเพื่อดูตำแหน่งและกราฟรายชั่วโมง">Total PM<sub>2.5</sub> from all sources (the corrected map), highest 24-h mean in the forecast window, banded on Thailand's PCD scale, with the part that comes from fires. Click a town to fly there and show its time series.</p>
-      <p class="note pub-only" data-th="ค่าฝุ่น PM&lt;sub&gt;2.5&lt;/sub&gt; ที่คาดว่าจะสูงที่สุดในแต่ละเมืองใน 2 วันข้างหน้า (ค่าเฉลี่ย 24 ชม.) และส่วนที่มาจากควันไฟ กดชื่อเมืองเพื่อดูกราฟรายชั่วโมง">The highest PM<sub>2.5</sub> expected at each town in the next two days (24-hour average), and how much of it is smoke from fires. Tap a town for its hourly chart.</p>
-      <div id="warnList"></div>
-      <h3 data-th="สถานีตรวจวัด: 48 ชม. ข้างหน้า">Monitoring stations: next 48 h</h3>
-      <p class="note pub-only" data-th="ค่าฝุ่นที่วัดได้จริงตอนนี้ และค่าพยากรณ์ 2 วันข้างหน้าที่ปรับให้ตรงกับสถานีนั้น">PM<sub>2.5</sub> measured now, and the forecast for the next two days adjusted to each station.</p>
-      <p class="note dev-only" data-th="PM&lt;sub&gt;2.5&lt;/sub&gt; ที่วัดได้ขณะนี้ และค่าพยากรณ์ CAMS ที่ปรับแก้ทุกชั่วโมงด้วยค่าตรวจวัดของสถานีนั้นเอง (PM&lt;sub&gt;2.5&lt;/sub&gt; รวมทุกแหล่ง)">Measured PM<sub>2.5</sub> now, and the CAMS forecast corrected hourly against each station's own readings (total PM<sub>2.5</sub>, all sources).</p>
-      <div id="stList" class="note">Station data appear here when the page runs from the hosted site.</div>
+      <div class="wview"><label for="warnView" data-th="แสดงพยากรณ์">Show forecast</label>
+        <select id="warnView">
+          <option value="prov" data-th="รายจังหวัด (เฉลี่ยทั้งจังหวัด)">By province (province average)</option>
+          <option value="town" data-th="รายเมือง (ที่ตัวเมือง)">By town (at the town)</option>
+          <option value="station" data-th="สถานีตรวจวัด">Monitoring stations</option>
+        </select></div>
+      <p class="note" style="font-size:.74rem" data-th="ทุกแบบแสดงค่าเฉลี่ย 24 ชม. สูงสุดของ PM&lt;sub&gt;2.5&lt;/sub&gt; ใน 24 ชม. แรก และ 24–48 ชม. ข้างหน้าคู่กัน พร้อมอุณหภูมิต่ำสุด–สูงสุดและฝนรวมของช่วงเดียวกัน ค่า PM&lt;sub&gt;2.5&lt;/sub&gt; หน่วย µg/m³ (หรือ AQI ตามที่เลือก) กดรายการเพื่อดูกราฟ">Every view shows the highest 24-h mean PM<sub>2.5</sub> in the next 24 h and in 24–48 h side by side, with the lowest–highest temperature and the rain total of the same periods. PM<sub>2.5</sub> in µg/m³ (or AQI, as chosen). Tap an item for its chart.</p>
+      <div id="wv-prov" class="wv">
+        <h3 data-th="แนวโน้ม PM&lt;sub&gt;2.5&lt;/sub&gt; รายพื้นที่">PM<sub>2.5</sub> trend by area</h3>
+        <p class="note" data-th="ค่าพยากรณ์ PM&lt;sub&gt;2.5&lt;/sub&gt; (ทุกแหล่ง) เฉลี่ยทั้งพื้นที่ทุกชั่วโมง ย้อนหลัง 1 วันและล่วงหน้าถึง 4 วัน เลือกจังหวัด หรือกดชื่อจังหวัดในรายการด้านล่าง">Forecast PM<sub>2.5</sub> (all sources) averaged over the area, hour by hour, from yesterday to 4 days ahead. Pick a province, or tap one in the list below.</p>
+        <div id="areaTrend" class="note">–</div>
+        <h3 data-th="พยากรณ์รายจังหวัด">Forecast by province</h3>
+        <p class="note" data-th="ค่าเฉลี่ยของทุกจุด 0.1° ในจังหวัด เรียงจากค่าสูงสุด">Average over every 0.1° point in the province, highest first.</p>
+        <div id="provList"></div>
+      </div>
+      <div id="wv-town" class="wv" hidden>
+        <h3 data-th="พยากรณ์รายเมือง">Forecast by town</h3>
+        <p class="note" data-th="ค่าที่ตำแหน่งตัวเมือง (PM&lt;sub&gt;2.5&lt;/sub&gt; รวมทุกแหล่งจากแผนที่พยากรณ์) และส่วนที่มาจากควันไฟ เรียงจากค่าสูงสุด">The value at the town itself (total PM<sub>2.5</sub> from the forecast map) and the part from fire smoke, highest first.</p>
+        <div id="warnList"></div>
+      </div>
+      <div id="wv-station" class="wv" hidden>
+        <h3 data-th="สถานีตรวจวัด">Monitoring stations</h3>
+        <p class="note pub-only" data-th="ค่าฝุ่นที่วัดได้จริงตอนนี้ และค่าพยากรณ์ที่ปรับให้ตรงกับสถานีนั้น">PM<sub>2.5</sub> measured now, and the forecast adjusted to each station.</p>
+        <p class="note dev-only" data-th="PM&lt;sub&gt;2.5&lt;/sub&gt; ที่วัดได้ขณะนี้ และค่าพยากรณ์ CAMS ที่ปรับแก้ทุกชั่วโมงด้วยค่าตรวจวัดของสถานีนั้นเอง (PM&lt;sub&gt;2.5&lt;/sub&gt; รวมทุกแหล่ง)">Measured PM<sub>2.5</sub> now, and the CAMS forecast corrected hourly against each station's own readings (total PM<sub>2.5</sub>, all sources).</p>
+        <div id="stList" class="note">Station data appear here when the page runs from the hosted site.</div>
+      </div>
       <h3 data-th="จุดความร้อนใกล้เมือง">Hotspots close to towns</h3>
       <div id="nearList" class="note">–</div>
       <div id="townDetail"></div>
@@ -2146,13 +2172,12 @@ function renderStations(){
   // Air4Thai stations: highest 24-h mean comes from their blended 24-h forecast (persistence + corrected CAMS)
   const st24=s=>{const st=seriesStats(sCorr(s),P.data.hours,now), F=sFc24(s); if(!F) return st;
     let best=0,tB=null; P.data.hours.forEach((t,i)=>{const v=F[i]; if(t>now&&v!=null&&v>best){best=v;tB=t;}}); return best>0?{...st,mean24:best,tMean:tB}:st;};
-  const rows=(ref.length?ref:inReg).map(s=>({s,st:st24(s)}))
-    .sort((a,b)=>b.st.mean24-a.st.mean24).slice(0,15);
-  $('stList').innerHTML=rows.length?rows.map(({s,st})=>{const bd=bandFor(st.mean24);
-    return `<div class="alert" data-sid="${s.id}"><i class="sev" style="background:${bd.color}"></i>
-      <div><div class="name">${esc(stName(s))} <span class="note">${esc(s.cc||'')}${s.monitor?'':T(' · low-cost sensor',' · เซนเซอร์ราคาประหยัด')}</span></div>
-      <div class="sub">${pill(st.mean24)} ${s.obs?`${s.avg24?T('24-h avg now','เฉลี่ย 24 ชม. ขณะนี้'):T('now','ขณะนี้')} ${fmtN(s.obs.v)} µg/m³`:T('no recent reading','ไม่มีค่าล่าสุด')}${s.obs24&&s.obs24.valid&&!s.avg24&&unitMode()!=='ug'?` · ${T('measured 24-h','วัดได้ 24 ชม.')} ${fmtVal(s.obs24.v)}`:''}</div></div>
-      <div class="val">${valNum(st.mean24)}<small>${T('max 24-h','สูงสุด 24 ชม.')} ${unitShort()}</small>${fmtN(st.peak)}<small>${T('1-h max','สูงสุด 1 ชม.')} µg/m³</small></div></div>`;}).join('')
+  const H=P.data.hours, tNow=Math.floor(now/HR)*HR;
+  const rows=(ref.length?ref:inReg).map(s=>{const F=sFc24(s), ws=WIN.map(([a,b])=>F?winMax(H,F,tNow,a,b,true):winMax(H,sCorr(s),tNow,a,b,false)); return {s,ws};})
+    .sort((x,y)=>Math.max(y.ws[0]?.v??0,y.ws[1]?.v??0)-Math.max(x.ws[0]?.v??0,x.ws[1]?.v??0)).slice(0,15);
+  $('stList').innerHTML=rows.length?rows.map(({s,ws})=>card2({attr:`data-sid="${s.id}"`,name:stName(s),tag:(s.cc||'')+(s.monitor?'':T(' · low-cost sensor',' · เซนเซอร์ราคาประหยัด')),ws,
+      wx:WIN.map(([a,b])=>wxWinPt(s.lat,s.lon,tNow,a,b)),
+      sub:s.obs?`${s.avg24?T('measured now (24-h avg)','วัดได้ขณะนี้ (เฉลี่ย 24 ชม.)'):T('measured now','วัดได้ขณะนี้')} ${fmtN(s.obs.v)}`:T('no recent reading','ไม่มีค่าล่าสุด')})).join('')
     :T('No reporting stations in this region.','ไม่มีสถานีที่รายงานข้อมูลในพื้นที่นี้');
   if(ref.length&&lowN) $('stList').insertAdjacentHTML('beforeend',`<p class="note">${T(`Reference monitors only. ${lowN} low-cost sensors are on the map (faded) but not ranked here.`,`จัดอันดับเฉพาะสถานีมาตรฐาน มีเซนเซอร์ราคาประหยัด ${lowN} จุดแสดงบนแผนที่ (สีจาง) แต่ไม่นำมาจัดอันดับ`)}</p>`);
   $('stList').querySelectorAll('.alert').forEach(el=>el.onclick=()=>focusStation(el.dataset.sid));
@@ -2259,19 +2284,49 @@ function renderSummary(){
   $('sFrp').textContent=Math.round([...cells.values()].reduce((a,v)=>a+v,0)).toLocaleString();
   $('sWarn').textContent=S.recep.some(r=>r.stT)?S.recep.filter(r=>r.stT&&(r.stT.mean24>37.5||r.stT.peak>75)).length:S.sim?S.recep.filter(r=>r.st.mean24>37.5||r.st.peak>75).length:'–';
 }
+// ---- the next 24 h and 24–48 h side by side (provinces, towns, stations alike): highest 24-h mean PM2.5 whose 24 h end in the
+// period (a series that already holds 24-h means is used as it is), with the lowest–highest temperature and rain total of the period
+const WIN=[[0,24],[24,48]];
+function winMax(H,ser,tNow,a,b,is24){ let best=null,tB=null;
+  for(let i=0;i<H.length;i++){ const t=H[i]; if(t<=tNow+a*HR||t>tNow+b*HR) continue; let v=null;
+    if(is24) v=ser[i]; else { let s=0,n=0; for(let j=Math.max(0,i-23);j<=i;j++){ const x=ser[j]; if(x!=null){s+=x;n++;} } v=n>=18?s/n:null; }
+    if(v!=null&&(best==null||v>best)){best=v;tB=t;} }
+  return best==null?null:{v:best,t:tB}; }
+function wxWinPt(lat,lon,tNow,a,b){ if(!MET) return null; let lo=Infinity,hi=-Infinity,r=0,n=0;
+  for(let t=tNow+(a+1)*HR;t<=tNow+b*HR;t+=HR){ const x=t2At(lat,lon,t); if(x!=null){lo=Math.min(lo,x);hi=Math.max(hi,x);} const p=rainAt(lat,lon,t); if(p!=null){r+=p;n++;} }
+  return n?{lo:isFinite(lo)?lo:null,hi:isFinite(hi)?hi:null,rain:r}:null; }
+function wxWinArea(H,wx,tNow,a,b){ if(!wx) return null; let lo=Infinity,hi=-Infinity,r=0,n=0;
+  H.forEach((t,i)=>{ if(t<=tNow+a*HR||t>tNow+b*HR) return; const x=wx.t2[i], p=wx.pr[i]; if(x!=null){lo=Math.min(lo,x);hi=Math.max(hi,x);} if(p!=null){r+=p;n++;} });
+  return n?{lo:isFinite(lo)?lo:null,hi:isFinite(hi)?hi:null,rain:r}:null; }
+function fc2(ws,wx){ const lab=[T('Next 24 h','24 ชม. แรก'),T('24–48 h','24–48 ชม.')];
+  return `<div class="fc2">${ws.map((w,k)=>{ const x=wx?.[k];
+    return `<div class="d"><span class="h">${lab[k]}</span>${w?`<b>${valNum(w.v)}</b><i class="bar" style="background:${bandFor(w.v).color}"></i>`:'<b>–</b><i class="bar"></i>'}${x?`${x.lo!=null?`<span class="w">${Math.round(x.lo)}–${Math.round(x.hi)} °C</span>`:''}<span class="w">${x.rain<0.1?T('no rain','ไม่มีฝน'):`${T('rain','ฝน')} ${x.rain<10?x.rain.toFixed(1):Math.round(x.rain)} ${T('mm','มม.')}`}</span>`:''}</div>`; }).join('')}</div>`; }
+function card2({attr,name,tag,sub,ws,wx}){ const worst=ws.reduce((m,w)=>w&&(m==null||w.v>m)?w.v:m,null);
+  return `<div class="alert c2" ${attr}><i class="sev" style="background:${worst!=null?bandFor(worst).color:'var(--line)'}"></i>
+    <div style="min-width:0"><div class="name">${esc(name)} ${tag?`<span class="note">${esc(tag)}</span>`:''}</div><div class="sub">${worst!=null?pill(worst)+' ':''}${sub||''}</div></div>${fc2(ws,wx)}</div>`; }
+function setWarnView(v){ if(!['prov','town','station'].includes(v)) v='prov'; $('warnView').value=v; store.set('hsw.warnView',v);
+  for(const k of ['prov','town','station']) $('wv-'+k).hidden=k!==v; }
+function renderProvList(A){
+  const box=$('provList'); if(!A){box.innerHTML='';return;} const H=A.H, tNow=Math.floor(Date.now()/HR)*HR, iNow=H.findIndex(t=>t>=tNow);
+  const nm=g=>g.p?provName(g.p):g.name;
+  const rows=[...A.groups.entries()].filter(([id])=>id!=='__all').map(([id,g])=>({id,g,ws:WIN.map(([a,b])=>winMax(H,g.mean,tNow,a,b,false))}))
+    .sort((x,y)=>Math.max(y.ws[0]?.v??0,y.ws[1]?.v??0)-Math.max(x.ws[0]?.v??0,x.ws[1]?.v??0));
+  box.innerHTML=rows.length?rows.map(r=>card2({attr:`data-area="${esc(r.id)}"`,name:nm(r.g),tag:CN[r.g.p?.c]||'',
+      sub:iNow>=0&&r.g.mean[iNow]!=null?`${T('now','ขณะนี้')} ${fmtN(r.g.mean[iNow])}`:'',ws:r.ws,wx:WIN.map(([a,b])=>wxWinArea(H,r.g.wx,tNow,a,b))})).join('')
+    :`<p class="note">${T('Pick a region with provinces in Settings to list them here.','เลือกพื้นที่ที่มีจังหวัดในแท็บตั้งค่าเพื่อแสดงรายการจังหวัด')}</p>`;
+  box.querySelectorAll('.alert[data-area]').forEach(el=>el.onclick=()=>{areaSel=el.dataset.area; renderAreaTrend(); $('areaTrend').scrollIntoView?.({behavior:'smooth',block:'start'});});
+}
 function renderWarnings(){
   ensureT2(renderWarnings); ensureRainObs(renderWarnings); ensureRainFac(renderWarnings);
   if(!S.sim&&!S.hots.length&&!P.data){$('warnList').innerHTML=`<p class="note">${PUBLIC?T('Loading the latest data…','กำลังโหลดข้อมูลล่าสุด…'):T('No run yet. Press <b>Load live data</b>, or <b>Run demo</b> in Settings.','ยังไม่มีผล กด <b>โหลดข้อมูลล่าสุด</b> หรือ <b>ทดลองด้วยข้อมูลจำลอง</b> ในแท็บตั้งค่า')}</p>`;$('nearList').textContent='–';return;}
   const total=S.recep.some(r=>r.stT);   // live data: rank by total PM2.5; demo / no map data: fire smoke only (as before)
-  const rows=total?S.recep.filter(r=>r.stT).sort((a,b)=>b.stT.mean24-a.stT.mean24||b.stT.peak-a.stT.peak).slice(0,25)
-                  :S.recep.filter(r=>r.st.peak>=1).sort((a,b)=>b.st.mean24-a.st.mean24||b.st.peak-a.st.peak).slice(0,25);
-  $('warnList').innerHTML = rows.length? rows.map(r=>{const st=total?r.stT:r.st, b=bandFor(st.mean24), fire=r.st.mean24;
-    return `<div class="alert" data-name="${esc(r.name)}"><i class="sev" style="background:${b.color}"></i>
-      <div><div class="name">${esc(townName(r))} <span class="note">${esc(r.cc)}</span></div>
-      <div class="sub">${pill(st.mean24)} ${T('24-h peak','สูงสุด 24 ชม.')} ${fmtT(st.tMean)}${total?` · ${T('from fires','จากไฟ')} ${fire>=0.5?fmtN(fire)+' µg/m³':T('< 0.5 µg/m³','< 0.5 µg/m³')}`:''}</div>
-      ${(()=>{const w=wx24(r.lat,r.lon,st.tMean); return w?`<div class="sub wx">${T('Same 24 h','ช่วง 24 ชม. เดียวกัน')}: ${wx24Text(w)}</div>`:'';})()}</div>
-      <div class="val">${valNum(st.mean24)}<small>${T('max 24-h','สูงสุด 24 ชม.')} ${unitShort()}</small>${fmtN(st.peak)}<small>${T('1-h max','สูงสุด 1 ชม.')} µg/m³</small></div></div>`;}).join('')
-    : `<p class="note">${total?T('No forecast at the towns of this region yet.','ยังไม่มีค่าพยากรณ์ที่เมืองในพื้นที่นี้'):T('No town gets more than 1 µg/m³ of fire smoke in the forecast window (fire smoke only; for total PM₂.₅ see the map and the stations).','ไม่มีเมืองใดได้รับควันไฟเกิน 1 µg/m³ ในช่วงพยากรณ์ (เฉพาะควันไฟ ดูค่าฝุ่นรวมได้จากแผนที่และสถานี)')}</p>`;
+  const HT=total?P.data.hours:(S.sim?S.sim.hours:[]), tNow=Math.floor(Date.now()/HR)*HR, iNow=HT.findIndex(t=>t>=tNow);
+  const items=(total?S.recep.filter(r=>r.stT):S.recep.filter(r=>r.st.peak>=1)).map(r=>{const ser=total?r.tot:r.series; return {r,ws:WIN.map(([a,b])=>winMax(HT,ser,tNow,a,b,false))};})
+    .sort((x,y)=>Math.max(y.ws[0]?.v??0,y.ws[1]?.v??0)-Math.max(x.ws[0]?.v??0,x.ws[1]?.v??0)).slice(0,25);
+  $('warnList').innerHTML = items.length? items.map(({r,ws})=>{const fire=r.st.mean24, ser=total?r.tot:r.series, vn=iNow>=0?ser?.[iNow]:null;
+    return card2({attr:`data-name="${esc(r.name)}"`,name:townName(r),tag:r.cc,ws,wx:WIN.map(([a,b])=>wxWinPt(r.lat,r.lon,tNow,a,b)),
+      sub:`${vn!=null?`${T('now','ขณะนี้')} ${fmtN(vn)}`:''}${total?`${vn!=null?' · ':''}${T('from fires','จากไฟ')} ${fire>=0.5?fmtN(fire):'< 0.5'}`:''}`});}).join('')
+    : `<p class="note">${total?T('No forecast at the towns of this region yet.','ยังไม่มีค่าพยากรณ์ที่เมืองในพื้นที่นี้'):T('No town gets more than 1 µg/m³ of fire smoke in the forecast window (fire smoke only; for total PM₂.₅ see the map and the stations).','ไม่มีเมืองใดได้รับควันไฟเกิน 1 µg/m³ ในช่วงพยากรณ์ (เฉพาะควันไฟ ดูค่ารวมที่แผนที่และสถานีตรวจวัด)')}</p>`;
   $('warnList').querySelectorAll('.alert').forEach(el=>el.onclick=()=>focusTown(el.dataset.name));
   const km=+$('warnkm').value;
   const near=S.recep.filter(r=>r.near>0).sort((a,b)=>b.near-a.near);
@@ -2506,20 +2561,17 @@ function areaSeries(){
 let areaSel='__all';
 function renderAreaTrend(){
   const box=$('areaTrend'); ensureT2(renderAreaTrend); ensureRainObs(renderAreaTrend); ensureRainFac(renderAreaTrend);
-  if(!P.data||!P.data.grid){box.innerHTML=T('Area trends appear when the page runs from the hosted site.','แนวโน้มรายพื้นที่จะแสดงเมื่อเปิดหน้าเว็บจากเว็บไซต์ที่โฮสต์');return;}
+  if(!P.data||!P.data.grid){box.innerHTML=T('Area trends appear when the page runs from the hosted site.','แนวโน้มรายพื้นที่จะแสดงเมื่อเปิดหน้าเว็บจากเว็บไซต์ที่โฮสต์'); renderProvList(null); return;}
   const A=areaSeries(), H=A.H, now=Date.now(); if(!A.groups.has(areaSel)) areaSel='__all';
   const provs=[...A.groups.entries()].filter(([g])=>g!=='__all'), nm=g=>g.p?provName(g.p):g.name;
   provs.sort((a,b)=>nm(a[1]).localeCompare(nm(b[1]),LOC()));
   const g=A.groups.get(areaSel), multi=provs.length>1;
-  const rows=multi?provs.map(([id,x])=>{const tw=trendWord(H,x.mean,now), dm=dailyMeans(H,x.mean,now); return {id,x,tw,worst:dm.reduce((m,o)=>Math.max(m,o.mean),0)};})
-    .sort((a,b)=>b.worst-a.worst).slice(0,15):[];
   box.className='trend';
   box.innerHTML=`${multi?`<label class="note">${T('Area','พื้นที่')} <select id="areaSel"><option value="__all">${esc(T('Whole region','ทั้งภูมิภาค'))}: ${esc($('region').selectedOptions[0]?.textContent||'')}</option>${provs.map(([id,x])=>`<option value="${esc(id)}"${id===areaSel?' selected':''}>${esc(nm(x))}</option>`).join('')}</select></label>`:''}
     <div><strong>${esc(areaSel==='__all'?($('region').selectedOptions[0]?.textContent||g.name):nm(g))}</strong></div>
-    ${trendBlock(H,g.mean,{lo:g.lo,hi:g.hi,wx:g.wx,label:'PM2.5 trend, '+(g.p?g.p.n:g.name)})}
-    ${rows.length?`<div class="tablewrap"><table><thead><tr><th>${T('Province','จังหวัด')}</th><th>${T('Trend','แนวโน้ม')}</th><th class="num">${T('Worst day','วันที่แย่ที่สุด')} <span style="text-transform:none">${unitShort()}</span></th></tr></thead><tbody>${rows.map(r=>`<tr data-area="${esc(r.id)}"><td>${esc(nm(r.x))}</td><td>${r.tw?r.tw.arr+' '+r.tw.txt:'–'}</td><td class="num">${r.worst?`${valNum(r.worst)}<i class="sw" style="background:${bandFor(r.worst).color}" title="${esc(bandFor(r.worst).en)}"></i>`:'–'}</td></tr>`).join('')}</tbody></table></div>`:''}`;
+    ${trendBlock(H,g.mean,{lo:g.lo,hi:g.hi,wx:g.wx,label:'PM2.5 trend, '+(g.p?g.p.n:g.name)})}`;
   const sel=$('areaSel'); if(sel){sel.value=areaSel; sel.onchange=()=>{areaSel=sel.value; renderAreaTrend();};}
-  box.querySelectorAll('tr[data-area]').forEach(tr=>tr.onclick=()=>{areaSel=tr.dataset.area; renderAreaTrend(); box.scrollIntoView?.({behavior:'smooth',block:'nearest'});});
+  renderProvList(A);
 }
 function hereTrend(lat,lon){
   if(!P.data) return '';
@@ -2585,6 +2637,7 @@ $('btnLang').onclick=()=>{ LANG=LANG==='th'?'en':'th'; store.set('hsw.lang',LANG
   {const lb=document.querySelector('.locate-btn'); if(lb){lb.title=T('Show PM2.5 at my location','ดูค่าฝุ่นที่ตำแหน่งของฉัน'); lb.setAttribute('aria-label',lb.title);}} if(S.mode) setMode(S.mode); else $('modeChip').textContent=T('no data','ไม่มีข้อมูล');
   renderLegend(); renderAll(); renderHereBox(); if(LOCPOP) renderLocPop(); drawStations?.(); redrawTime(); };
 {const v=store.get('hsw.unitSel'); if(v) $('unitSel').value=v;}
+setWarnView(store.get('hsw.warnView')||'prov'); $('warnView').addEventListener('change',e=>setWarnView(e.target.value));
 $('unitSel').addEventListener('change',()=>{store.set('hsw.unitSel',$('unitSel').value); renderLegend(); renderAll(); redrawTime();});
 renderLegend();
 for(const el of document.querySelectorAll('input[name=layer]')) el.addEventListener('change',()=>{

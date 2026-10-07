@@ -50,6 +50,7 @@ jobs:
             data/met-web.json
             data/t2-corr.json
             data/rain-obs.json
+            data/wx-ml.json
             data/ml-field.json
           key: pipeline-state-${{ github.run_id }}-${{ github.run_attempt }}
           restore-keys: pipeline-state-
@@ -102,6 +103,7 @@ jobs:
             data/met-web.json
             data/t2-corr.json
             data/rain-obs.json
+            data/wx-ml.json
             data/ml-field.json
           key: pipeline-state-${{ github.run_id }}-${{ github.run_attempt }}
 
@@ -160,7 +162,7 @@ jobs:
           sed -i "s/<meta name=\"build\" content=\"dev\">/<meta name=\"build\" content=\"${BUILD}\">/" _site/index.html _site/dev.html
           grep -q "content=\"${BUILD}\"" _site/index.html && grep -q "content=\"${BUILD}\"" _site/dev.html
           echo "${BUILD}" > _site/build.txt
-          for f in latest.json met-web.json ml-field.json t2-corr.json rain-obs.json rk-bias.json rk-bias-A.json verify.json runlog.json; do [ -f "data/$f" ] && cp "data/$f" _site/data/ || true; done
+          for f in latest.json met-web.json ml-field.json t2-corr.json rain-obs.json wx-ml.json rk-bias.json rk-bias-A.json verify.json runlog.json; do [ -f "data/$f" ] && cp "data/$f" _site/data/ || true; done
           for f in elev.json elev025.json; do [ -f data/static/$f ] && cp data/static/$f _site/data/static/ || true; done
           [ -d data/static/prclim ] && cp -r data/static/prclim _site/data/static/ || true
           ls -la _site _site/data

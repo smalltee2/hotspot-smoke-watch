@@ -15,6 +15,7 @@ import { regressionKriging, krigeField, clampAux } from './rk.mjs';
 import { fetchMet, sampleMet, packMet, MET_MODEL } from './met.mjs';
 import { updateGsmap, mergeIntoMet, webRain } from './gsmap.mjs';
 import { fetchGauges, scoreGauges, gsmapAt, rainFactor } from './thaiwater.mjs';
+import { WXML, T2_NAMES, PR_NAMES, T2ENG, PRENG, t2Features, prFeatures, loadWxDataset, storeWxDay, loadWxSeason } from './mlwx.mjs';
 import { downscaleT2, packDEM, T2CFG, t2SeaLevel, t2Bin, t2Down } from './t2down.mjs';
 import { buildLandcover, landcoverAt, packLandcover, unpackLandcover } from './landcover.mjs';
 import { loadModel } from './model.mjs';
@@ -391,10 +392,11 @@ async function main() {
   // 3b''. observed rain (JAXA GSMaP gauge-calibrated, 0.1°; scripts/gsmap.mjs): replaces the ECMWF rain of the hours already
   //       observed, in memory only (met.json keeps the pure ECMWF fields), so wet removal in the smoke model, the assimilation and
   //       the page use measured rain for the past; the page also draws the 0.1° observed field for those hours
-  let rainInfo = null;
+  let rainInfo = null, gcacheG = null;
   if (met) try {
     let gcache = await readJSON(path.join(DATA, 'gsmap-cache.json'), null);
     gcache = await updateGsmap(gcache, now, { log });
+    gcacheG = gcache;
     await writeJSON(path.join(DATA, 'gsmap-cache.json'), gcache);
     const v = mergeIntoMet(met, gcache), web = webRain(gcache, now);
     if (web) { await writeJSON(path.join(DATA, 'rain-obs.json'), web); rainInfo = { file: 'data/rain-obs.json', times: [web.times[0], web.times[web.times.length - 1]], src: web.source, verify: v }; }
@@ -467,24 +469,77 @@ async function main() {
           delete state.t2fc[k]; } }
       state.t2score = state.t2score.slice(-400);
     }
-    // weather forecast log for the daily evaluation on the Mac (wxf-YYYYMMDDTHH.csv, one per issue hour), Air4Thai stations, same leads
-    // as the PM2.5 log: 2-m temperature at valid − 30 min (Air4Thai TEMP is the hourly mean ending at valid) as ECMWF bilinear,
-    // terrain-corrected and as shown on the page (0.025°); rain = ECMWF mm in the hour ending at valid, interpolated (pr_ecmwf) and × the
-    // CHELSA factor as shown on the page (pr_fine, 0.025°)
+    // self-learning correction of temperature and rain (scripts/mlwx.mjs, same five experts as PM2.5): once a day, from 11:00 Thai time
+    // (the observed-rain archive of yesterday is written from 10:00), score and retrain; every hour, correct the stations' forecasts
+    // when an expert has earned weight, log both versions, and spread the corrections over the map (wx-ml.json)
+    const wxMeta = new Map(a4tSt.map(s => [String(s.id), { lat: s.lat, lon: s.lon }])), thH = new Date(now + 7 * HOUR).getUTCHours(), ydayW = thaiDate(now - 24 * HOUR);
+    state.wxml ||= { t2: {}, pr: {} };
+    if (thH >= 11 && state.wxml.lastDay !== ydayW) {
+      try {
+        const dayStart = Date.parse(ydayW + 'T00:00:00+07:00'), dayEnd = dayStart + 864e5;
+        const D = await loadWxDataset(path.join(DATA, 'history'), wxMeta, { from: dayEnd - 36 * 864e5, to: dayEnd }), recs = {};
+        for (const [v, eng, names] of [['t2', T2ENG, T2_NAMES], ['pr', PRENG, PR_NAMES]]) {
+          const nSt = await storeWxDay(path.join(DATA, 'mltrain'), v, names, D[v], dayStart, zlib.gzipSync);
+          const sea = await loadWxSeason(path.join(DATA, 'mltrain'), v, names, dayStart + 12 * HOUR, zlib.gunzipSync, dayEnd);
+          if (D[v].length) recs[v] = eng.dailyLearn(state.wxml[v], D[v], { now, dayStart, dayEnd, seasonRows: sea, label: v, log });
+          else log(`ML ${v}: no verified rows yet (weather logs start 7 Oct 2026)`);
+          if (recs[v]) recs[v].stored = nSt;
+        }
+        state.wxml.lastDay = ydayW;
+        await writeJSON(path.join(DATA, 'history', ydayW.slice(0, 7), `mlwx-${ydayW.replace(/-/g, '')}.json`), recs);
+      } catch (e) { log(`weather ML daily learning failed: ${e.message}`); }
+    }
+    let wxmlInfo = null;
     try {
       const iso0 = new Date(now).toISOString(), stamp0 = iso0.slice(0, 13).replace(/[-:]/g, ''), wxf = path.join(DATA, 'history', iso0.slice(0, 7), `wxf-${stamp0}.csv`);
+      const tI = Math.floor(now / HOUR) * HOUR, onT = T2ENG.active(state.wxml.t2), onP = PRENG.active(state.wxml.pr);
+      // issue-time inputs: measured temperature of the last full hour and its lead-1 forecast (previous runs' logs); observed rain 2 h back
+      const prevF = new Map(), pIso = new Date(tI - 2 * HOUR).toISOString();
+      try { const txt = await fs.readFile(path.join(DATA, 'history', pIso.slice(0, 7), `wxf-${pIso.slice(0, 13).replace(/[-:]/g, '')}.csv`), 'utf8');
+        for (const l of txt.trim().split('\n').slice(1)) { const v = l.split(','); if (v[3] === '1') prevF.set(v[2], +v[7]); } } catch {}
+      const obsAt = (id, t) => { const row = (a4tH.get(id) || []).find(x => x[0] === t); return row?.[2]?.t2 ?? null; };
+      const leads = [...new Set([...CFG.logLeads, ...WXML.leads])].sort((a, b) => a - b), rowsW = [], corrT = new Map(), corrP = new Map();
+      for (const s of a4tSt) {
+        const z = sampleGrid(demV, s.lat, s.lon) ?? 0, oT = obsAt(s.id, tI - HOUR), fT = prevF.get(String(s.id));
+        let obsLast = NaN, obs6 = 0, k6 = 0;
+        if (gcacheG) { const g = await gsmapAt(gcacheG, DATA, s.lat, s.lon, tI - 3 * HOUR); if (g) obsLast = g.fine;
+          for (let te = tI - 7 * HOUR; te <= tI - 2 * HOUR; te += HOUR) { const q = await gsmapAt(gcacheG, DATA, s.lat, s.lon, te - HOUR); if (q) { obs6 += q.fine; k6++; } } }
+        for (const L of leads) {
+          const tv = tI + L * HOUR, tm = tv - T2CFG.obsOffsetMs, m = sampleMet(met, s.lat, s.lon, tm), mp = sampleMet(met, s.lat, s.lon, tv), d = t2Down(met, demV, r?.file || null, s.lat, s.lon, tm, sampleGrid);
+          const prF = mp?.pr != null ? mp.pr * await rainFactor(DATA, s.lat, s.lon, tv) : null;
+          const o = { lead: L, tValid: tv, lat: s.lat, lon: s.lon, elev: Math.round(z), t2: d.down, t2e: m?.t2, pr: prF, oT2: oT ?? NaN, lastErr: oT != null && fT != null && isFinite(fT) ? oT - fT : NaN, obsLast, obs6: k6 >= 4 ? obs6 * 6 / k6 : NaN };
+          const cT = onT && d.down != null ? T2ENG.correction(state.wxml.t2, { lead: L, hloc: new Date(tv + 7 * HOUR).getUTCHours(), x: t2Features(o) }) : 0;
+          const cP = onP && prF != null ? PRENG.correction(state.wxml.pr, { lead: L, hloc: new Date(tv + 7 * HOUR).getUTCHours(), x: prFeatures(o) }) : 0;
+          if (WXML.leads.includes(L)) { (corrT.get(L) || corrT.set(L, []).get(L)).push({ lat: s.lat, lon: s.lon, y: cT }); (corrP.get(L) || corrP.set(L, []).get(L)).push({ lat: s.lat, lon: s.lon, y: cP }); }
+          if (CFG.logLeads.includes(L)) rowsW.push([new Date(tI).toISOString().slice(0, 13) + ':00Z', new Date(tv).toISOString().slice(0, 13) + ':00Z', s.id, L, Math.round(z),
+            m?.t2 != null ? +m.t2.toFixed(2) : '', d.terrain != null ? +d.terrain.toFixed(2) : '', d.down != null ? +d.down.toFixed(2) : '', mp?.pr != null ? +mp.pr.toFixed(2) : '',
+            prF != null ? +prF.toFixed(2) : '', d.down != null ? +(d.down + cT).toFixed(2) : '', prF != null ? +Math.max(0, (prF + WXML.rainEps) * Math.exp(cP) - WXML.rainEps).toFixed(2) : '']);
+        }
+      }
+      // weather forecast log for the daily evaluation on the Mac (wxf-YYYYMMDDTHH.csv, one per issue hour): 2-m temperature at valid − 30 min
+      // (Air4Thai TEMP is the hourly mean ending at valid) as ECMWF bilinear, terrain-corrected, as shown on the page before learning
+      // (t2_down) and after (t2_ml); rain in the hour ending at valid as ECMWF interpolated (pr_ecmwf), × CHELSA factor (pr_fine), after learning (pr_ml)
       if (await fs.access(wxf).then(() => false, () => true)) {
-        const tI = Math.floor(now / HOUR) * HOUR, rowsW = [];
-        for (const s of a4tSt) { const z = sampleGrid(demV, s.lat, s.lon) ?? 0;
-          for (const L of CFG.logLeads) { const tv = tI + L * HOUR, tm = tv - T2CFG.obsOffsetMs, m = sampleMet(met, s.lat, s.lon, tm), mp = sampleMet(met, s.lat, s.lon, tv), d = t2Down(met, demV, r?.file || null, s.lat, s.lon, tm, sampleGrid);
-            rowsW.push([new Date(tI).toISOString().slice(0, 13) + ':00Z', new Date(tv).toISOString().slice(0, 13) + ':00Z', s.id, L, Math.round(z),
-              m?.t2 != null ? +m.t2.toFixed(2) : '', d.terrain != null ? +d.terrain.toFixed(2) : '', d.down != null ? +d.down.toFixed(2) : '', mp?.pr != null ? +mp.pr.toFixed(2) : '',
-              mp?.pr != null ? +(mp.pr * await rainFactor(DATA, s.lat, s.lon, tv)).toFixed(2) : '']); } }
-        await appendCSV(wxf, 'issued_utc,valid_utc,station_id,lead_h,elev_m,t2_ecmwf,t2_terrain,t2_down,pr_ecmwf,pr_fine', rowsW);
+        await appendCSV(wxf, 'issued_utc,valid_utc,station_id,lead_h,elev_m,t2_ecmwf,t2_terrain,t2_down,pr_ecmwf,pr_fine,t2_ml,pr_ml', rowsW);
         log(`weather forecast log ${path.basename(wxf)}: ${rowsW.length} rows`);
       }
-    } catch (e) { log(`weather forecast log failed: ${e.message}`); }
-    t2Info = { dem: 'data/static/elev025.json', demKey: key25, lapse: T2CFG.lapse, efoldH: T2CFG.efoldH, corr: r?.file ? 'data/t2-corr.json' : null, tA: r?.file?.tA ?? null, cv: r?.cv ?? null, score24: (state.t2score || []).slice(-14) };
+      // map: the stations' corrections kriged to 0.1° for each lead (fading to 0 far from stations); the page adds them (temperature, °C)
+      // or multiplies (rain, (R + 0.2)·e^c − 0.2) on top of its 0.025° values
+      if (onT || onP) {
+        const xs = a4tSt.map(s => s.lon), ys = a4tSt.map(s => s.lat), st_ = WXML.fieldStep, pad = 3;
+        const W0 = Math.floor((Math.min(...xs) - pad) / st_) * st_, S0 = Math.floor((Math.min(...ys) - pad) / st_) * st_, E0 = Math.ceil((Math.max(...xs) + pad) / st_) * st_, N0 = Math.ceil((Math.max(...ys) + pad) / st_) * st_;
+        const spec = { lon0: +W0.toFixed(3), lat0: +S0.toFixed(3), step: st_, nx: Math.round((E0 - W0) / st_) + 1, ny: Math.round((N0 - S0) / st_) + 1 };
+        const enc = (vals, sc) => { const out = new Array(spec.nx * spec.ny); for (let iy = 0; iy < spec.ny; iy++) { let prev = 0; for (let ix = 0; ix < spec.nx; ix++) { const q = Math.round(vals[iy * spec.nx + ix] * sc); out[iy * spec.nx + ix] = q - prev; prev = q; } } return out; };
+        const field = (pts, sc) => { if (pts.every(p => Math.abs(p.y) < 1e-6)) return null; const f = krigeField(pts, spec, { K: 16, declusterDeg: 0.25 }); return f ? enc(f.values, sc) : null; };
+        const file = { t0: tI, ...spec, enc: 'int-dx', leads: WXML.leads, scaleT2: 100, scalePr: 1000, active: { t2: onT, pr: onP },
+          t2: onT ? WXML.leads.map(L => field(corrT.get(L) || [], 100)) : null, pr: onP ? WXML.leads.map(L => field(corrP.get(L) || [], 1000)) : null };
+        await writeJSON(path.join(DATA, 'wx-ml.json'), file);
+        wxmlInfo = { file: 'data/wx-ml.json', t0: tI, active: file.active, weights: { t2: state.wxml.t2.weights, pr: state.wxml.pr.weights } };
+        log(`weather ML field: ${WXML.leads.length} leads at ${st_}°, temperature ${onT ? 'on' : 'off'}, rain ${onP ? 'on' : 'off'}`);
+      }
+      if (!wxmlInfo) wxmlInfo = { file: null, active: { t2: onT, pr: onP }, weights: { t2: state.wxml.t2.weights || null, pr: state.wxml.pr.weights || null } };
+    } catch (e) { log(`weather forecast log / ML failed: ${e.message}`); }
+    t2Info = { wxml: wxmlInfo, dem: 'data/static/elev025.json', demKey: key25, lapse: T2CFG.lapse, efoldH: T2CFG.efoldH, corr: r?.file ? 'data/t2-corr.json' : null, tA: r?.file?.tA ?? null, cv: r?.cv ?? null, score24: (state.t2score || []).slice(-14) };
   } catch (e) { log(`t2 downscaling failed: ${e.message}`); if (process.env.GITHUB_ACTIONS) console.log(`::warning title=t2 downscaling::${e.message}`); }
 
   // 3c. hotspots

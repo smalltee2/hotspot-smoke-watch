@@ -1317,7 +1317,7 @@ async function runAuto(quiet){ try{ await runAuto_(quiet); }catch(e){ busy(null)
 async function runAuto_(quiet){
   if(!quiet) busy(T('Loading the latest hourly data…','กำลังโหลดข้อมูลรายชั่วโมงล่าสุด…'));
   const d=await loadPipeline();
-  if(d){P.data=d; busy(T('Loading meteorology…','กำลังโหลดข้อมูลอุตุนิยมวิทยา…')); await Promise.all([loadDEM(),loadMet(),loadMlField(),loadRkFine()]); await runModel(pipelineHotspots(d),'live',null,quiet); showFreshness(); loadVerify(); renderRK(); renderAssim(); renderML();}
+  if(d){P.data=d; busy(T('Loading meteorology…','กำลังโหลดข้อมูลอุตุนิยมวิทยา…')); await Promise.all([loadDEM(),loadMet(),loadMlField(),loadRkFine(),loadWxml()]); await runModel(pipelineHotspots(d),'live',null,quiet); showFreshness(); loadVerify(); renderRK(); renderAssim(); renderML();}
   else if(!quiet){P.data=null; await runLive();}
 }
 let DEM=null, MET=null;
@@ -1349,6 +1349,18 @@ async function loadT2(){
 function gridAt(G,arr,lat,lon){const fx=(lon-G.lon0)/G.step, fy=(lat-G.lat0)/G.step; if(fx<0||fy<0||fx>G.nx-1||fy>G.ny-1) return 0;
   const x0=Math.min(Math.floor(fx),G.nx-2), y0=Math.min(Math.floor(fy),G.ny-2), ax=fx-x0, ay=fy-y0, i=y0*G.nx+x0;
   return (1-ax)*(1-ay)*arr[i]+ax*(1-ay)*arr[i+1]+(1-ax)*ay*arr[i+G.nx]+ax*ay*arr[i+G.nx+1];}
+// self-learning weather correction (scripts/mlwx.mjs; same five experts as PM2.5), kriged to 0.1° per lead every 3 h to 48 h:
+// temperature + c (°C); rain (R + 0.2)·e^c − 0.2. Applied to forecast hours only, faded to 0 between 48 and 60 h; absent until an expert earns weight.
+let WXML=null;
+async function loadWxml(){ const info=P.data?.t2down?.wxml; if(!info?.file){WXML=null;return;} if(WXML&&WXML.t0===info.t0) return;
+  try{ const o=await (await fetch(info.file+'?t='+info.t0)).json(); const dec=(a,sc)=>a?a.map(f=>{ if(!f) return null; const out=new Float32Array(o.nx*o.ny);
+      for(let y=0;y<o.ny;y++){let q=0; for(let x=0;x<o.nx;x++){q+=f[y*o.nx+x]; out[y*o.nx+x]=q/sc;}} return out;}):null;
+    o.t2=dec(o.t2,o.scaleT2); o.pr=dec(o.pr,o.scalePr); WXML=o; }catch(e){WXML=null;} }
+function wxmlAt(kind,lat,lon,t){ const W=WXML; if(!W||!W[kind]) return 0; const L=(t-W.t0)/3600e3; if(L<=0) return 0;
+  const Ls=W.leads, last=Ls[Ls.length-1]; let fade=1, Lc=L; if(L>last){ fade=Math.max(0,1-(L-last)/12); Lc=last; } if(!fade) return 0;
+  let k=Ls.findIndex(x=>x>=Lc); if(k<0) k=Ls.length-1; const k0=Math.max(0,k-1), a=Ls[k]===Ls[k0]?0:Math.min(1,Math.max(0,(Lc-Ls[k0])/(Ls[k]-Ls[k0])));
+  const at=f=>f?gridAt(W,f,lat,lon):0, v=Lc<=Ls[0]?at(W[kind][0]):(1-a)*at(W[kind][k0])+a*at(W[kind][k]);
+  return v*fade; }
 // downscaled t2 at (lat,lon,t); falls back to the plain ECMWF value when the heights or the DEM are missing
 function t2At(lat,lon,t){
   const M=MET; if(!M) return null; const g0=M.grids[0];
@@ -1364,6 +1376,7 @@ function t2At(lat,lon,t){
   if(sl==null) return null;
   let v=sl-G*(gridAt(T2D.dem,T2D.dem.values,lat,lon)||0);
   const C=T2D.corr; if(C&&C.use){const day=(h=>h>=7&&h<19)(new Date(t+7*3600e3).getUTCHours()); if(C.use[day?'day':'night']) v+=gridAt(C,day?C.meanDay:C.meanNight,lat,lon); if(C.use.anom) v+=Math.exp(-Math.abs(t-C.tA)/3600e3/C.efoldH)*gridAt(C,C.anom,lat,lon);}
+  v+=wxmlAt('t2',lat,lon,t);
   return v;
 }
 // observed rain (JAXA GSMaP gauge-calibrated, 0.1°, hourly; scripts/gsmap.mjs): the last 24 h, drawn instead of the ECMWF forecast
@@ -1396,7 +1409,8 @@ function metVarAt(M,k,lat,lon,t){ const T=M.times, nt=T.length; let ft=(t-T[0])/
     return (1-at)*f(it*n)+at*f((it+1)*n); } return null; }
 // the rain value shown everywhere on the page (map, tooltips, warnings, trends): 0.025°. Hours already observed: GSMaP interpolated ×
 // the month's CHELSA factor (rainFineAt); later hours: ECMWF interpolated × the same factor. The factor is 1 until its file has loaded.
-function rainAt(lat,lon,t){ const o=rainFineAt(lat,lon,t); if(o!==undefined) return o; if(!MET) return null; const v=metVarAt(MET,'pr',lat,lon,t); return v>0?v*rainFactorAt(lat,lon,t):v; }
+function rainAt(lat,lon,t){ const o=rainFineAt(lat,lon,t); if(o!==undefined) return o; if(!MET) return null; let v=metVarAt(MET,'pr',lat,lon,t); if(v==null) return null; if(v>0) v*=rainFactorAt(lat,lon,t);
+  const c=wxmlAt('pr',lat,lon,t); return c?Math.max(0,(v+0.2)*Math.exp(c)-0.2):v; }
 function rainIsObs(lat,lon,t){ return rainObsAt(lat,lon,t)!==undefined; }
 function ensureRainFac(after){ const ks=new Set(); const H=P.data?.hours||[]; for(const t of [H[0],H[H.length-1],Date.now()]) if(t) ks.add(String(new Date(t+7*3600e3).getUTCMonth()+1).padStart(2,'0'));
   for(const k of ks) if(RFAC[k]===undefined) loadRainFac(k).then(f=>{ if(f) after(); }); }
@@ -1671,7 +1685,7 @@ function drawWx(){
   const down=mode==='temp'&&!!T2D&&!!MET.grids[0].elev;
   let cell=(down||fineRain)?0.025:obsRain?0.05:0.1; while(((e-w)/cell)*((n-so)/cell)>((down||fineRain)?650000:obsRain?200000:60000)) cell*=1.25;
   const fx=Math.ceil((e-w)/cell), fy=Math.ceil((n-so)/cell), F=new Float32Array(fx*fy);
-  for(let y=0;y<fy;y++) for(let x=0;x<fx;x++){const la=so+(y+.5)*cell, lo=w+(x+.5)*cell; if(mode==='rain'){ if(obsRain){const v=fineRain?rainFineAt(la,lo,t):rainObsAt(la,lo,t); F[y*fx+x]=v==null?NaN:v;} else {let v=metVarAt(MET,'pr',la,lo,t); if(fineRain&&v>0) v*=rainFactorAt(la,lo,t); F[y*fx+x]=v;}} else {const v=t2At(la,lo,t); F[y*fx+x]=v==null?NaN:v;}}
+  for(let y=0;y<fy;y++) for(let x=0;x<fx;x++){const la=so+(y+.5)*cell, lo=w+(x+.5)*cell; if(mode==='rain'){ if(obsRain){const v=fineRain?rainFineAt(la,lo,t):rainObsAt(la,lo,t); F[y*fx+x]=v==null?NaN:v;} else {let v=metVarAt(MET,'pr',la,lo,t); if(fineRain&&v>0) v*=rainFactorAt(la,lo,t); const c=wxmlAt('pr',la,lo,t); if(c&&v!=null) v=Math.max(0,(v+0.2)*Math.exp(c)-0.2); F[y*fx+x]=v;}} else {const v=t2At(la,lo,t); F[y*fx+x]=v==null?NaN:v;}}
   S.fine={F,w,so,nx:fx,ny:fy,cell};
   S.fieldInfo=mode==='rain'?(obsRain?T(`Observed rain, mm/h: JAXA GSMaP gauge-calibrated${fineRain?`, interpolated to ${cell.toFixed(3)}° and shaped by the CHELSA rain climatology (±7 % typical)`:', 0.1°'} (${RAINOBS.src[RAINOBS.times.indexOf(obsHour(t))]==='nrt'?'Gauge_NRT':'Gauge_NOW'})`,`ฝนที่ตรวจวัด มม./ชม.: JAXA GSMaP ปรับด้วยเครื่องวัดฝน${fineRain?' ประมาณค่าเป็น '+cell.toFixed(3)+'° และปรับรูปแบบด้วยภูมิอากาศฝน CHELSA (ปกติ ±7 %)':' 0.1°'}`):(fineRain?T(`Rain forecast, mm/h: ECMWF (0.25° north, 1° elsewhere) interpolated to ${cell.toFixed(3)}° and shaped by the CHELSA rain climatology`,`ฝนพยากรณ์ มม./ชม.: ECMWF (0.25° ภาคเหนือ 1° พื้นที่อื่น) ประมาณค่าเป็น ${cell.toFixed(3)}° และปรับรูปแบบด้วยภูมิอากาศฝน CHELSA`):T('Rain forecast, mm/h (ECMWF)','ฝนพยากรณ์ มม./ชม. (ECMWF)'))):down?T(`Temperature at 2 m, °C: ECMWF downscaled to ${cell.toFixed(3)}° with terrain${T2D.corr?' and Air4Thai stations':''}`,`อุณหภูมิ 2 ม. °C: ECMWF ย่อส่วนเป็น ${cell.toFixed(3)}° ด้วยภูมิประเทศ${T2D.corr?' และสถานี Air4Thai':''}`):T('Temperature at 2 m, °C (ECMWF)','อุณหภูมิ 2 ม. °C (ECMWF)');
   const W=Math.min(1100,Math.round((e-w)*60)), H=Math.min(1100,Math.round((mercY(n)-mercY(so))/DEG*60));
@@ -2253,11 +2267,11 @@ function trendBlock(H,v,opt={}){
     ${trendSvg(H,v,opt)}
     ${opt.wx?wxSvg(H,opt.wx):''}
     ${days.length?`<div class="chips">${days.map(o=>{const w=dw.get(o.d); return `<div class="chip">${esc(dayLabel(o.t-HR))}<b>${fmtVal(o.mean)}</b>${pill(o.mean)}${w&&isFinite(w.tmin)?`<span class="cwx">${Math.round(w.tmin)}–${Math.round(w.tmax)} °C · ${w.rain<0.5?T('no rain','ไม่มีฝน'):(w.rain<10?w.rain.toFixed(1):Math.round(w.rain))+' '+T('mm','มม.')}</span>`:''}</div>`;}).join('')}</div>`:''}
-    <p class="note" style="font-size:.7rem">${T('Orange: hourly. Blue: 24-hour average (the basis of the Thai AQI).','เส้นส้ม: รายชั่วโมง เส้นน้ำเงิน: ค่าเฉลี่ย 24 ชม. (ใช้คำนวณ AQI ของไทย)')}${opt.lo?T(' Shading: range across the area (most of the area lies inside it).',' แถบสี: ช่วงค่าภายในพื้นที่ (พื้นที่ส่วนใหญ่อยู่ในช่วงนี้)'):''}${opt.fire?T(' Dashed: smoke from fires in our model.',' เส้นประ: ควันจากไฟตามแบบจำลองของเรา'):''} ${T('Day boxes: daily average from midnight to midnight.','กล่องรายวัน: ค่าเฉลี่ยรายวัน (เที่ยงคืนถึงเที่ยงคืน)')}${opt.wx?T(' Weather: red line = 2-m temperature (°C, ECMWF downscaled to 0.025°), blue bars = rain in each hour (mm; darker = observed by JAXA GSMaP, lighter = ECMWF forecast); day boxes show the day\'s lowest–highest temperature and rain total.',' สภาพอากาศ: เส้นแดง = อุณหภูมิ 2 ม. (°C, ECMWF ย่อส่วนเป็น 0.025°) แท่งน้ำเงิน = ฝนรายชั่วโมง (มม. สีเข้ม = ตรวจวัดโดย JAXA GSMaP สีอ่อน = พยากรณ์ ECMWF) กล่องรายวันแสดงอุณหภูมิต่ำสุด–สูงสุดและฝนรวมของวัน'):''}</p>`;
+    <p class="note" style="font-size:.7rem">${T('Orange: hourly. Blue: 24-hour average (the basis of the Thai AQI).','เส้นส้ม: รายชั่วโมง เส้นน้ำเงิน: ค่าเฉลี่ย 24 ชม. (ใช้คำนวณ AQI ของไทย)')}${opt.lo?T(' Shading: range across the area (most of the area lies inside it).',' แถบสี: ช่วงค่าภายในพื้นที่ (พื้นที่ส่วนใหญ่อยู่ในช่วงนี้)'):''}${opt.fire?T(' Dashed: smoke from fires in our model.',' เส้นประ: ควันจากไฟตามแบบจำลองของเรา'):''} ${T('Day boxes: daily average from midnight to midnight.','กล่องรายวัน: ค่าเฉลี่ยรายวัน (เที่ยงคืนถึงเที่ยงคืน)')}${opt.wx?T(' Weather: red line = 2-m temperature (°C, ECMWF downscaled to 0.025°, plus the self-learning correction once it has earned weight), blue bars = rain in each hour (mm; darker = observed by JAXA GSMaP, lighter = ECMWF forecast); day boxes show the day\'s lowest–highest temperature and rain total.',' สภาพอากาศ: เส้นแดง = อุณหภูมิ 2 ม. (°C, ECMWF ย่อส่วนเป็น 0.025°) แท่งน้ำเงิน = ฝนรายชั่วโมง (มม. สีเข้ม = ตรวจวัดโดย JAXA GSMaP สีอ่อน = พยากรณ์ ECMWF) กล่องรายวันแสดงอุณหภูมิต่ำสุด–สูงสุดและฝนรวมของวัน'):''}</p>`;
 }
 const AREA_CACHE={key:null}, INC_FIELDS={sim:null,map:new Map()};
 function areaSeries(){
-  const k=$('region').value, key=k+'|'+(P.data?P.data.generated:'')+'|'+(S.simInc?S.assimApplied:0)+'|'+(useA()?'A':'-')+'|'+(T2D?T2D.key:'')+'|'+(RAINOBS?RAINOBS.key:'')+'|'+(MET?MET.fetched:'')+'|'+Object.keys(RFAC).filter(k=>RFAC[k]).join(',');
+  const k=$('region').value, key=k+'|'+(P.data?P.data.generated:'')+'|'+(S.simInc?S.assimApplied:0)+'|'+(useA()?'A':'-')+'|'+(T2D?T2D.key:'')+'|'+(RAINOBS?RAINOBS.key:'')+'|'+(MET?MET.fetched:'')+'|'+(WXML?WXML.t0:'')+'|'+Object.keys(RFAC).filter(k=>RFAC[k]).join(',');
   if(AREA_CACHE.key===key) return AREA_CACHE;
   // provinces: 0.1° lattice inside Thai provinces. Area average: the same points, or on the whole-domain map a 0.25° lattice
   // over everything (so Thailand's denser lattice does not dominate the domain mean)

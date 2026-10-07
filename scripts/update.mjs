@@ -418,10 +418,10 @@ async function main() {
       rainInfo && (rainInfo.gauges = { hours: R.length, gaugeHours: N, rmse: { cell: pool('cell'), bil: pool('bil'), fine: pool('fine') }, r: { cell: mr('cell'), bil: mr('bil'), fine: mr('fine') } });
     }
     // daily observed-rain archive for the Mac evaluation (rainobs-YYYYMMDD.csv, Thai day, written once from 10:00 Thai time so the
-    // GSMaP NRT hours of the day have arrived): GSMaP (cell, bilinear, 0.025° value) at the Air4Thai stations and at the ThaiWater gauges
+    // GSMaP NRT hours of the day have arrived; from 06:00): GSMaP (cell, bilinear, 0.025° value) at the Air4Thai stations and at the ThaiWater gauges
     try {
       const yday = thaiDate(now - 24 * HOUR), rf = path.join(DATA, 'history', yday.slice(0, 7), `rainobs-${yday.replace(/-/g, '')}.csv`);
-      if (new Date(now + 7 * HOUR).getUTCHours() >= 10 && await fs.access(rf).then(() => false, () => true)) {
+      if (new Date(now + 7 * HOUR).getUTCHours() >= 6 && await fs.access(rf).then(() => false, () => true)) {   // from 06:00 Thai (GSMaP NRT for 24:00 arrives ~05:00; NOW fills any gap), before the Mac's 09:30 evaluation
         const d0 = Date.parse(yday + 'T00:00:00+07:00'), rowsR = []; let nH = 0;
         for (let te = d0 + HOUR; te <= d0 + 24 * HOUR; te += HOUR) { const ts = te - HOUR; if (!gcache.hours?.[ts]) continue; nH++;
           const he = new Date(te).toISOString().slice(0, 13) + ':00Z';
@@ -473,16 +473,17 @@ async function main() {
           delete state.t2fc[k]; } }
       state.t2score = state.t2score.slice(-400);
     }
-    // self-learning correction of temperature and rain (scripts/mlwx.mjs, same five experts as PM2.5): once a day, from 11:00 Thai time
-    // (the observed-rain archive of yesterday is written from 10:00), score and retrain; every hour, correct the stations' forecasts
+    // self-learning correction of temperature and rain (scripts/mlwx.mjs, same five experts as PM2.5): once a day, from 07:00 Thai time
+    // (the observed-rain archive of yesterday is written from 06:00), score and retrain; every hour, correct the stations' forecasts
     // when an expert has earned weight, log both versions, and spread the corrections over the map (wx-ml.json)
     const wxMeta = new Map(a4tSt.map(s => [String(s.id), { lat: s.lat, lon: s.lon }])), thH = new Date(now + 7 * HOUR).getUTCHours(), ydayW = thaiDate(now - 24 * HOUR);
     state.wxml ||= { t2: {}, pr: {} };
-    if (thH >= 11 && state.wxml.lastDay !== ydayW) {
+    if (thH >= 7 && state.wxml.lastDay !== ydayW) {
       try {
         const dayStart = Date.parse(ydayW + 'T00:00:00+07:00'), dayEnd = dayStart + 864e5;
         const D = await loadWxDataset(path.join(DATA, 'history'), wxMeta, { from: dayEnd - 36 * 864e5, to: dayEnd }), recs = {};
         for (const [v, eng, names] of [['t2', T2ENG, T2_NAMES], ['pr', PRENG, PR_NAMES]]) {
+          if (state.wxml[v].lastDay === ydayW) continue;   // already learned this day (a retry after the other variable failed): do not score it twice
           const nSt = await storeWxDay(path.join(DATA, 'mltrain'), v, names, D[v], dayStart, zlib.gzipSync);
           const sea = await loadWxSeason(path.join(DATA, 'mltrain'), v, names, dayStart + 12 * HOUR, zlib.gunzipSync, dayEnd);
           if (D[v].length) recs[v] = eng.dailyLearn(state.wxml[v], D[v], { now, dayStart, dayEnd, seasonRows: sea, label: v, log });
@@ -500,7 +501,7 @@ async function main() {
       // issue-time inputs: measured temperature of the last full hour and its lead-1 forecast (previous runs' logs); observed rain 2 h back
       const prevF = new Map(), pIso = new Date(tI - 2 * HOUR).toISOString();
       try { const txt = await fs.readFile(path.join(DATA, 'history', pIso.slice(0, 7), `wxf-${pIso.slice(0, 13).replace(/[-:]/g, '')}.csv`), 'utf8');
-        for (const l of txt.trim().split('\n').slice(1)) { const v = l.split(','); if (v[3] === '1') prevF.set(v[2], +v[7]); } } catch {}
+        for (const l of txt.trim().split('\n').slice(1)) { const v = l.split(','); if (v[3] === '1' && v[7] !== '' && isFinite(+v[7])) prevF.set(v[2], +v[7]); } } catch {}   // '' stays missing, as in training
       const obsAt = (id, t) => { const row = (a4tH.get(id) || []).find(x => x[0] === t); return row?.[2]?.t2 ?? null; };
       const leads = [...new Set([...CFG.logLeads, ...WXML.leads])].sort((a, b) => a - b), rowsW = [], corrT = new Map(), corrP = new Map();
       for (const s of a4tSt) {
@@ -509,7 +510,7 @@ async function main() {
         if (gcacheG) { const g = await gsmapAt(gcacheG, DATA, s.lat, s.lon, tI - 3 * HOUR); if (g) obsLast = g.fine;
           for (let te = tI - 7 * HOUR; te <= tI - 2 * HOUR; te += HOUR) { const q = await gsmapAt(gcacheG, DATA, s.lat, s.lon, te - HOUR); if (q) { obs6 += q.fine; k6++; } } }
         for (const L of leads) {
-          const tv = tI + L * HOUR, tm = tv - T2CFG.obsOffsetMs, m = sampleMet(met, s.lat, s.lon, tm), mp = sampleMet(met, s.lat, s.lon, tv), d = t2Down(met, demV, r?.file || null, s.lat, s.lon, tm, sampleGrid);
+          const tv = tI + L * HOUR, tm = tv - T2CFG.obsOffsetMs, m = sampleMet(met, s.lat, s.lon, tm), mp = sampleMet(met, s.lat, s.lon, tv), d = t2Down(met, demV, r?.file || null, s.lat, s.lon, tm, sampleGrid, tv);
           const prF = mp?.pr != null ? mp.pr * await rainFactor(DATA, s.lat, s.lon, tv) : null;
           const o = { lead: L, tValid: tv, lat: s.lat, lon: s.lon, elev: Math.round(z), t2: d.down, t2e: m?.t2, pr: prF, oT2: oT ?? NaN, lastErr: oT != null && fT != null && isFinite(fT) ? oT - fT : NaN, obsLast, obs6: k6 >= 4 ? obs6 * 6 / k6 : NaN };
           const cT = onT && d.down != null ? T2ENG.correction(state.wxml.t2, { lead: L, hloc: new Date(tv + 7 * HOUR).getUTCHours(), x: t2Features(o) }) : 0;
@@ -530,7 +531,7 @@ async function main() {
       // map: the stations' corrections kriged to 0.1° for each lead (fading to 0 far from stations); the page adds them (temperature, °C)
       // or multiplies (rain, (R + 0.2)·e^c − 0.2) on top of its 0.025° values
       if (onT || onP) {
-        const xs = a4tSt.map(s => s.lon), ys = a4tSt.map(s => s.lat), st_ = WXML.fieldStep, pad = 3;
+        const xs = a4tSt.map(s => s.lon), ys = a4tSt.map(s => s.lat), st_ = WXML.fieldStep, pad = 3.6;   // kriging fades to 0 within ≤ 400 km
         const W0 = Math.floor((Math.min(...xs) - pad) / st_) * st_, S0 = Math.floor((Math.min(...ys) - pad) / st_) * st_, E0 = Math.ceil((Math.max(...xs) + pad) / st_) * st_, N0 = Math.ceil((Math.max(...ys) + pad) / st_) * st_;
         const spec = { lon0: +W0.toFixed(3), lat0: +S0.toFixed(3), step: st_, nx: Math.round((E0 - W0) / st_) + 1, ny: Math.round((N0 - S0) / st_) + 1 };
         const enc = (vals, sc) => { const out = new Array(spec.nx * spec.ny); for (let iy = 0; iy < spec.ny; iy++) { let prev = 0; for (let ix = 0; ix < spec.nx; ix++) { const q = Math.round(vals[iy * spec.nx + ix] * sc); out[iy * spec.nx + ix] = q - prev; prev = q; } } return out; };

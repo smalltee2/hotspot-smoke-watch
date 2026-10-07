@@ -41,6 +41,7 @@ export function makeEngine(names, clip, cfg = CORECFG) {
   const predRidge = (m, r) => { const z = impute(r.x, m.mu).map((v, j) => (v - m.mu[j]) / m.sd[j]); return m.beta[0] + z.reduce((a, v, j) => a + m.beta[j + 1] * v, 0); };
   let seed = 12345; const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
   function trainGBM(rows, type = 'month', opt = cfg.gbm) {
+    if (rows.length < 2 * opt.minLeaf) return null;   // too few rows: no model (an empty fit would predict NaN and poison the weights)
     seed = 12345;
     if (rows.length > opt.maxRows) { const keep = opt.maxRows / rows.length; rows = rows.filter(() => rnd() < keep); }
     const n = rows.length;
@@ -87,7 +88,7 @@ export function makeEngine(names, clip, cfg = CORECFG) {
     const test = rows.filter(r => r.tValid >= dayStart && r.tValid < dayEnd);
     const active = EXPERTS.filter(e => e === 'base' || st.models[e]), loss = {};
     if (test.length >= 50) {
-      for (const e of active) { let s = 0; for (const r of test) { const q = e === 'base' ? 0 : clipv(predictExpert(st.models[e], r)); s += (r.y - q) ** 2; } loss[e] = s / test.length; }
+      for (const e of active) { let s = 0; for (const r of test) { let q = e === 'base' ? 0 : clipv(predictExpert(st.models[e], r)); if (!isFinite(q)) q = 0; s += (r.y - q) ** 2; } loss[e] = s / test.length; }
       const scale = cfg.eta / Math.max(loss.base, 1e-3);
       const w = Object.fromEntries(active.map(e => [e, (st.weights[e] ?? 0) * Math.exp(-scale * loss[e])]));
       const sw = Object.values(w).reduce((a, v) => a + v, 0) || 1; for (const e in w) w[e] /= sw;
@@ -98,8 +99,8 @@ export function makeEngine(names, clip, cfg = CORECFG) {
     const win = d => train.filter(r => r.tValid >= dayEnd - d * 864e5), nm = {}, info = {};
     if (days >= cfg.minDays.day && win(cfg.windows.day).length >= cfg.minRowsDay) nm.day = trainDay(win(cfg.windows.day));
     if (days >= cfg.minDays.week) { const m = trainRidge(win(cfg.windows.week)); if (m) nm.week = m; }
-    if (days >= cfg.minDays.month) nm.month = trainGBM(win(cfg.windows.month), 'month');
-    if (seasonRows && seasonRows.days >= cfg.minDaysSeason) { const m = trainGBM(seasonRows.rows.filter(r => r.tValid < dayEnd), 'season'); m.season = seasonRows.season; nm.season = m; }
+    if (days >= cfg.minDays.month) { const m = trainGBM(win(cfg.windows.month), 'month'); if (m) nm.month = m; }
+    if (seasonRows && seasonRows.days >= cfg.minDaysSeason) { const m = trainGBM(seasonRows.rows.filter(r => r.tValid < dayEnd), 'season'); if (m) { m.season = seasonRows.season; nm.season = m; } }
     for (const e in nm) { info[e] = { n: nm[e].n, ...(nm[e].importance ? { importance: nm[e].importance } : {}) }; if (st.weights[e] == null) st.weights[e] = 0; }
     st.models = { ...st.models, ...nm }; st.lastDay = new Date(dayStart + 7 * HOUR).toISOString().slice(0, 10);
     const rec = { var: label, day: st.lastDay, at: now, verifiedDays: days, nTest: test.length, loss: Object.fromEntries(Object.entries(loss).map(([k, v]) => [k, +v.toFixed(5)])),
@@ -109,8 +110,8 @@ export function makeEngine(names, clip, cfg = CORECFG) {
   }
   function correction(st, r) {
     if (!st?.weights) return 0; let s = 0;
-    for (const [e, w] of Object.entries(st.weights)) if (w > 0 && e !== 'base' && st.models?.[e]) s += w * predictExpert(st.models[e], r);
-    return clipv(s);
+    for (const [e, w] of Object.entries(st.weights)) if (w > 0 && e !== 'base' && st.models?.[e]) { const q = predictExpert(st.models[e], r); if (isFinite(q)) s += w * q; }
+    return isFinite(s) ? clipv(s) : 0;
   }
   const active = st => !!st?.weights && Object.entries(st.weights).some(([e, w]) => e !== 'base' && w > 0 && !!st.models?.[e]);
   return { dailyLearn, correction, active, predictExpert, trainGBM, trainRidge, trainDay };

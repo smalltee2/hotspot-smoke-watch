@@ -1342,7 +1342,7 @@ async function loadT2(){
   const info=P.data?.t2down; if(!info){T2D=null;return;} if(!info.corr&&T2D){T2D.corr=null;} if(T2D&&T2D.key===(info.tA??'')+'|'+P.data.generated) return;
   try{
     const dem=T2D?.dem||await (await fetch(info.dem+'?k='+(info.demKey||''),{cache:'force-cache'})).json(); if(!T2D?.dem){dem.values=undx(dem,'values');}
-    let corr=null; if(info.corr){const c=await (await fetch(info.corr+'?t='+info.tA)).json(); c.meanDay=undx(c,'meanDay'); c.meanNight=undx(c,'meanNight'); c.anom=undx(c,'anom'); corr=c;}
+    let corr=null; if(info.corr){const c=await (await fetch(info.corr+'?g='+P.data.generated)).json(); c.meanDay=undx(c,'meanDay'); c.meanNight=undx(c,'meanNight'); c.anom=undx(c,'anom'); corr=c;}
     T2D={key:(info.tA??'')+'|'+P.data.generated,dem,corr,lapse:info.lapse,efoldH:info.efoldH};
   }catch(e){T2D=null;}
 }
@@ -1352,10 +1352,10 @@ function gridAt(G,arr,lat,lon){const fx=(lon-G.lon0)/G.step, fy=(lat-G.lat0)/G.s
 // self-learning weather correction (scripts/mlwx.mjs; same five experts as PM2.5), kriged to 0.1° per lead every 3 h to 48 h:
 // temperature + c (°C); rain (R + 0.2)·e^c − 0.2. Applied to forecast hours only, faded to 0 between 48 and 60 h; absent until an expert earns weight.
 let WXML=null;
-async function loadWxml(){ const info=P.data?.t2down?.wxml; if(!info?.file){WXML=null;return;} if(WXML&&WXML.t0===info.t0) return;
-  try{ const o=await (await fetch(info.file+'?t='+info.t0)).json(); const dec=(a,sc)=>a?a.map(f=>{ if(!f) return null; const out=new Float32Array(o.nx*o.ny);
+async function loadWxml(){ const info=P.data?.t2down?.wxml; if(!info?.file){WXML=null;return;} if(WXML&&WXML.gen===P.data.generated) return;
+  try{ const o=await (await fetch(info.file+'?g='+P.data.generated)).json(); const dec=(a,sc)=>a?a.map(f=>{ if(!f) return null; const out=new Float32Array(o.nx*o.ny);
       for(let y=0;y<o.ny;y++){let q=0; for(let x=0;x<o.nx;x++){q+=f[y*o.nx+x]; out[y*o.nx+x]=q/sc;}} return out;}):null;
-    o.t2=dec(o.t2,o.scaleT2); o.pr=dec(o.pr,o.scalePr); WXML=o; }catch(e){WXML=null;} }
+    o.t2=dec(o.t2,o.scaleT2); o.pr=dec(o.pr,o.scalePr); o.gen=P.data.generated; WXML=o; }catch(e){WXML=null;} }
 function wxmlAt(kind,lat,lon,t){ const W=WXML; if(!W||!W[kind]) return 0; const L=(t-W.t0)/3600e3; if(L<=0) return 0;
   const Ls=W.leads, last=Ls[Ls.length-1]; let fade=1, Lc=L; if(L>last){ fade=Math.max(0,1-(L-last)/12); Lc=last; } if(!fade) return 0;
   let k=Ls.findIndex(x=>x>=Lc); if(k<0) k=Ls.length-1; const k0=Math.max(0,k-1), a=Ls[k]===Ls[k0]?0:Math.min(1,Math.max(0,(Lc-Ls[k0])/(Ls[k]-Ls[k0])));
@@ -1385,7 +1385,7 @@ let RAINOBS=null;
 async function inflateB64(b64){const bin=Uint8Array.from(atob(b64),c=>c.charCodeAt(0)); const ds=new Blob([bin]).stream().pipeThrough(new DecompressionStream('deflate')); const buf=await new Response(ds).arrayBuffer(); return new Int16Array(buf);}
 async function loadRainObs(){
   const info=P.data?.rainObs; if(!info){RAINOBS=null;return;} const key=info.times.join('|'); if(RAINOBS&&RAINOBS.key===key) return;
-  try{const r=await fetch(info.file+'?t='+info.times[1]); if(!r.ok) return; const o=await r.json(); o.a=await Promise.all(o.d.map(inflateB64)); delete o.d; o.key=key; RAINOBS=o;}catch(e){RAINOBS=null;}
+  try{const r=await fetch(info.file+'?g='+P.data.generated); if(!r.ok) return; const o=await r.json(); o.a=await Promise.all(o.d.map(inflateB64)); delete o.d; o.key=key; RAINOBS=o;}catch(e){RAINOBS=null;}
 }
 // observed rain rate (mm/h) at (lat,lon) for the hour containing t; undefined = not observed (use the forecast), null = missing cell
 const obsHour=t=>Math.ceil(t/3600e3)*3600e3-3600e3;   // GSMaP file (hour STARTING at HH) for the hour ending at the slider time
@@ -1412,8 +1412,11 @@ function metVarAt(M,k,lat,lon,t){ const T=M.times, nt=T.length; let ft=(t-T[0])/
 function rainAt(lat,lon,t){ const o=rainFineAt(lat,lon,t); if(o!==undefined) return o; if(!MET) return null; let v=metVarAt(MET,'pr',lat,lon,t); if(v==null) return null; if(v>0) v*=rainFactorAt(lat,lon,t);
   const c=wxmlAt('pr',lat,lon,t); return c?Math.max(0,(v+0.2)*Math.exp(c)-0.2):v; }
 function rainIsObs(lat,lon,t){ return rainObsAt(lat,lon,t)!==undefined; }
-function ensureRainFac(after){ const ks=new Set(); const H=P.data?.hours||[]; for(const t of [H[0],H[H.length-1],Date.now()]) if(t) ks.add(String(new Date(t+7*3600e3).getUTCMonth()+1).padStart(2,'0'));
-  for(const k of ks) if(RFAC[k]===undefined) loadRainFac(k).then(f=>{ if(f) after(); }); }
+// every caller's callback runs once the month's file has loaded (a second caller during the load is queued, not dropped)
+const RFACQ={};
+function ensureRainFac(after,keys){ const ks=new Set(keys||[]); const H=P.data?.hours||[]; if(!keys) for(const t of [H[0],H[H.length-1],Date.now()]) if(t) ks.add(String(new Date(t+7*3600e3).getUTCMonth()+1).padStart(2,'0'));
+  for(const k of ks){ if(RFAC[k]) continue; if(RFAC[k]===undefined){ RFACQ[k]=new Set(); loadRainFac(k).then(f=>{ const cb=[...RFACQ[k]]; delete RFACQ[k]; if(f) cb.forEach(g=>g()); }); }
+    if(RFACQ[k]&&after) RFACQ[k].add(after); } }
 function rainFactorAt(lat,lon,t){ const F=RFAC[String(new Date(t+7*3600e3).getUTCMonth()+1).padStart(2,'0')], M=RFACmeta; if(!F||!M) return 1;
   const ix=Math.round((lon-M.lon0)/M.step), iy=Math.round((lat-M.lat0)/M.step); return ix>=0&&iy>=0&&ix<M.nx&&iy<M.ny?F[iy*M.nx+ix]/50:1; }
 function rainFineAt(lat,lon,t){
@@ -1665,8 +1668,11 @@ function wx24Text(w){ if(!w) return ''; const tt=w.tmin!=null?`${Math.round(w.tm
   const rr=w.rain<0.5?T('no rain','ไม่มีฝน'):`${T('rain','ฝน')} ${w.rain<10?w.rain.toFixed(1):Math.round(w.rain)} ${T('mm','มม.')}`;
   return `${tt} · ${rr}${w.rain>=5?` <span class="wxwash" title="${T('Rain washes smoke out of the air','ฝนชะล้างควันออกจากอากาศ')}">${T('(helps clear smoke)','(ช่วยชะล้างควัน)')}</span>`:''}`; }
 // the 0.025° temperature (DEM + station corrections) for the warning list: loaded once, list redrawn when ready
+// one load at a time; callbacks of callers that arrive while it runs are queued and all run when it is done
 function ensureT2(after){ const info=P.data?.t2down; if(!info) return; const key=(info.tA??'')+'|'+P.data.generated;
-  if((T2D&&T2D.key===key)||loadT2.busy||loadT2.tried===key) return; loadT2.busy=1; loadT2.tried=key; loadT2().then(()=>{loadT2.busy=0; if(T2D) after();}); }
+  if(T2D&&T2D.key===key) return; const Q=(loadT2.cbs||=new Set()); if(after) Q.add(after);
+  if(loadT2.busy||loadT2.tried===key) return; loadT2.busy=1; loadT2.tried=key; loadT2().then(()=>{loadT2.busy=0; const cb=[...Q]; Q.clear(); if(T2D) cb.forEach(f=>f());}); }
+function redrawIfLayer(m){ return redrawIfLayer[m]||=(()=>{ if(layerMode()===m) redrawTime(); }); }
 const windFrom=(u,v)=>{ const d=(Math.atan2(-u,-v)/DEG+360)%360; return d; };   // meteorological direction the wind blows FROM (deg)
 const compass=d=>{const n=LANG==='th'?['เหนือ','ตะวันออกเฉียงเหนือ','ตะวันออก','ตะวันออกเฉียงใต้','ใต้','ตะวันตกเฉียงใต้','ตะวันตก','ตะวันตกเฉียงเหนือ']:['N','NE','E','SE','S','SW','W','NW']; return n[Math.round(d/45)%8];};
 function wxText(w){ if(!w) return ''; const sp=Math.hypot(w.u10,w.v10);
@@ -1676,11 +1682,11 @@ function drawWx(){
   const t=curT(); if(t==null||t<MET.times[0]||t>MET.times[MET.times.length-1]){S.fieldInfo=T('No weather forecast for this hour.','ไม่มีพยากรณ์อากาศสำหรับชั่วโมงนี้'); return;}
   const R=regionShape(), B=REGIONS.msea.bbox; let so=B[1], w=B[0], n=B[3], e=B[2];
   if(R){so=Math.max(so,R.bbox[1]-.2); w=Math.max(w,R.bbox[0]-.2); n=Math.min(n,R.bbox[3]+.2); e=Math.min(e,R.bbox[2]+.2);}
-  if(mode==='temp'&&P.data?.t2down&&(!T2D||T2D.key!==(P.data.t2down.tA??'')+'|'+P.data.generated)&&!loadT2.busy&&loadT2.tried!==(P.data.t2down.tA??'')+'|'+P.data.generated){loadT2.busy=1; loadT2.tried=(P.data.t2down.tA??'')+'|'+P.data.generated; loadT2().then(()=>{loadT2.busy=0; if(T2D&&layerMode()==='temp') redrawTime();});}   // the 0.025° DEM loads only for this layer
-  if(mode==='rain'&&P.data?.rainObs&&(!RAINOBS||RAINOBS.key!==P.data.rainObs.times.join('|'))&&!loadRainObs.busy&&loadRainObs.tried!==P.data.rainObs.times.join('|')){loadRainObs.busy=1; loadRainObs.tried=P.data.rainObs.times.join('|'); loadRainObs().then(()=>{loadRainObs.busy=0; if(RAINOBS&&layerMode()==='rain') redrawTime();});}
+  if(mode==='temp') ensureT2(redrawIfLayer('temp'));
+  if(mode==='rain') ensureRainObs(redrawIfLayer('rain'));
   const obsRain=mode==='rain'&&!!RAINOBS&&RAINOBS.times.includes(obsHour(t));
   const facKey=String(new Date(t+7*3600e3).getUTCMonth()+1).padStart(2,'0');
-  if(mode==='rain'&&RFAC[facKey]===undefined){ loadRainFac(facKey).then(f=>{ if(f&&layerMode()==='rain') redrawTime(); }); }
+  if(mode==='rain'&&!RFAC[facKey]) ensureRainFac(redrawIfLayer('rain'),[facKey]);
   const fineRain=mode==='rain'&&!!RFAC[facKey];   // observed and forecast rain both drawn at 0.025° with the month's CHELSA pattern
   const down=mode==='temp'&&!!T2D&&!!MET.grids[0].elev;
   let cell=(down||fineRain)?0.025:obsRain?0.05:0.1; while(((e-w)/cell)*((n-so)/cell)>((down||fineRain)?650000:obsRain?200000:60000)) cell*=1.25;
@@ -2239,7 +2245,8 @@ function wxSeries(H,pts){ if(!MET||!pts||!pts.length) return null; const st=Math
     t2.push(n2?st2/n2:null); pr.push(np?sp/np:null); }
   return {t2,pr}; }
 function ensureRainObs(after){ const info=P.data?.rainObs; if(!info) return; const key=info.times.join('|');
-  if((RAINOBS&&RAINOBS.key===key)||loadRainObs.busy||loadRainObs.tried===key) return; loadRainObs.busy=1; loadRainObs.tried=key; loadRainObs().then(()=>{loadRainObs.busy=0; if(RAINOBS) after();}); }
+  if(RAINOBS&&RAINOBS.key===key) return; const Q=(loadRainObs.cbs||=new Set()); if(after) Q.add(after);
+  if(loadRainObs.busy||loadRainObs.tried===key) return; loadRainObs.busy=1; loadRainObs.tried=key; loadRainObs().then(()=>{loadRainObs.busy=0; const cb=[...Q]; Q.clear(); if(RAINOBS) cb.forEach(f=>f());}); }
 function dailyWx(H,wx,now){ if(!wx) return new Map(); const m=new Map(), today=bkkDay(now);
   H.forEach((t,i)=>{const d=bkkDay(t-HR); if(d<today) return; let o=m.get(d); if(!o) m.set(d,o={tmin:Infinity,tmax:-Infinity,rain:0,n:0});
     if(wx.t2[i]!=null){o.tmin=Math.min(o.tmin,wx.t2[i]);o.tmax=Math.max(o.tmax,wx.t2[i]);} if(wx.pr[i]!=null){o.rain+=wx.pr[i];o.n++;}});

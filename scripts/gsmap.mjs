@@ -53,7 +53,9 @@ export async function updateGsmap(cache, now, { log = console.log } = {}) {
   const tmp = await fs.mkdtemp(path.join(os.tmpdir(), 'gsmap-')), lines = [];
   for (const t of want) { lines.push(`-get ${nrtPath(t)} nrt_${t}.gz`); if (!cache.hours[t] && now - t < 8 * HOUR) lines.push(`-get ${nowPath(t)} now_${t}.gz`); }
   const r = await sftpBatch(lines, tmp);
-  if (r.err && !/Fetching|not found|No such file/i.test(r.out)) log(`GSMaP sftp: ${String(r.err.message).slice(0, 200)}`);
+  if (r.err && !/Fetching|not found|No such file/i.test(r.out)) {   // the message holds the command line (user@host): the run log is published
+    let m = String(r.err.message); for (const k of [process.env.GSMAP_USER, process.env.GSMAP_PASS]) if (k) m = m.split(k).join('***');
+    log(`GSMaP sftp: ${m.slice(0, 200)}`); }
   let nN = 0, nW = 0, bad = 0;
   for (const t of want) {
     for (const [src, f] of [['nrt', `nrt_${t}.gz`], ['now', `now_${t}.gz`]]) {

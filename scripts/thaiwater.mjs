@@ -28,7 +28,7 @@ export async function fetchGauges(store, now, { get, log = console.log } = {}) {
   let n = 0;
   for (const r of rows) {
     const mm = parseFloat(r.rain_1h), dt = r.rainfall_datetime; if (!isFinite(mm) || mm < 0 || mm > 200 || !dt) continue;
-    const dm = /^(\d{4}-\d{2}-\d{2})[ T](\d{2}):(\d{2})/.exec(dt), tEnd = dm ? Date.parse(`${dm[1]}T${dm[2]}:${dm[3]}:00+07:00`) : NaN; if (!isFinite(tEnd) || now - tEnd > 6 * HOUR) continue;
+    const dm = /^(\d{4}-\d{2}-\d{2})[ T](\d{2}):(\d{2})/.exec(dt), tEnd = dm && dm[3] === '00' ? Date.parse(`${dm[1]}T${dm[2]}:00:00+07:00`) : NaN;   // whole hours only (rain_1h = the hour ending then) if (!isFinite(tEnd) || now - tEnd > 6 * HOUR) continue;
     const [lat, lon] = findLatLon(r); if (lat == null) continue;
     const t0 = tEnd - HOUR; (store[t0] ||= []); if (store[t0].length < 5000 && !store[t0].some(g => g[0] === +lat.toFixed(4) && g[1] === +lon.toFixed(4))) { store[t0].push([+lat.toFixed(4), +lon.toFixed(4), +mm.toFixed(1)]); n++; }
   }

@@ -120,7 +120,9 @@ export function packDEM(d) {
 
 // the page's downscaled temperature at (lat, lon, t), for the forecast log: terrain + (station corrections the run published)
 // F = the t2-corr file object (or null), demV = DEM with plain values
-export function t2Down(M, demV, F, lat, lon, t, sampleGrid) {
+// t = model time (valid − obsOffset); tObs = the observation hour (hour end) the value stands for. The station residuals were binned
+// (day/night) and timed (tA) by the observation hour, so the bin and the anomaly fade use tObs, as the page does.
+export function t2Down(M, demV, F, lat, lon, t, sampleGrid, tObs = t) {
   const sl = t2SeaLevel(M, lat, lon, t, T2CFG.lapse); if (sl == null) return { terrain: null, down: null };
   const terrain = sl - T2CFG.lapse * ((demV ? sampleGrid(demV, lat, lon) : null) ?? 0);
   if (!F) return { terrain, down: terrain };
@@ -129,8 +131,8 @@ export function t2Down(M, demV, F, lat, lon, t, sampleGrid) {
   const at = arr => { const fx = (lon - F.lon0) / F.step, fy = (lat - F.lat0) / F.step; if (fx < 0 || fy < 0 || fx > F.nx - 1 || fy > F.ny - 1) return 0;
     const x0 = Math.min(Math.floor(fx), F.nx - 2), y0 = Math.min(Math.floor(fy), F.ny - 2), ax = fx - x0, ay = fy - y0, i = y0 * F.nx + x0;
     return (1 - ax) * (1 - ay) * arr[i] + ax * (1 - ay) * arr[i + 1] + (1 - ax) * ay * arr[i + F.nx] + ax * ay * arr[i + F.nx + 1]; };
-  const b = t2Bin(t); let down = terrain;
+  const b = t2Bin(tObs); let down = terrain;
   if (F.use?.[b]) down += at(F._dec[b === 'day' ? 'meanDay' : 'meanNight']);
-  if (F.use?.anom) down += Math.exp(-Math.abs(t - F.tA) / 3600e3 / F.efoldH) * at(F._dec.anom);
+  if (F.use?.anom) down += Math.exp(-Math.abs(tObs - F.tA) / 3600e3 / F.efoldH) * at(F._dec.anom);
   return { terrain, down };
 }

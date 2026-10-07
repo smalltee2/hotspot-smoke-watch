@@ -491,7 +491,7 @@ async function main() {
         }
         state.wxml.lastDay = ydayW;
         await writeJSON(path.join(DATA, 'history', ydayW.slice(0, 7), `mlwx-${ydayW.replace(/-/g, '')}.json`), recs);
-      } catch (e) { log(`weather ML daily learning failed: ${e.message}`); }
+      } catch (e) { log(`weather ML daily learning failed: ${e.message}`); if (process.env.GITHUB_ACTIONS) console.log(`::warning title=weather ML::${e.message}`); }
     }
     let wxmlInfo = null;
     try {
@@ -542,7 +542,7 @@ async function main() {
         log(`weather ML field: ${WXML.leads.length} leads at ${st_}°, temperature ${onT ? 'on' : 'off'}, rain ${onP ? 'on' : 'off'}`);
       }
       if (!wxmlInfo) wxmlInfo = { file: null, active: { t2: onT, pr: onP }, weights: { t2: state.wxml.t2.weights || null, pr: state.wxml.pr.weights || null } };
-    } catch (e) { log(`weather forecast log / ML failed: ${e.message}`); }
+    } catch (e) { log(`weather forecast log / ML failed: ${e.message}`); if (process.env.GITHUB_ACTIONS) console.log(`::warning title=weather ML::${e.message}`); }
     t2Info = { wxml: wxmlInfo, dem: 'data/static/elev025.json', demKey: key25, lapse: T2CFG.lapse, efoldH: T2CFG.efoldH, corr: r?.file ? 'data/t2-corr.json' : null, tA: r?.file?.tA ?? null, cv: r?.cv ?? null, score24: (state.t2score || []).slice(-14) };
   } catch (e) { log(`t2 downscaling failed: ${e.message}`); if (process.env.GITHUB_ACTIONS) console.log(`::warning title=t2 downscaling::${e.message}`); }
 

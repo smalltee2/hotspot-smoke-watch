@@ -87,6 +87,8 @@ html[data-mode=public] .summary{grid-template-columns:repeat(2,1fr)}
 .sev{align-self:stretch;border-radius:2px}
 .alert .name{font-weight:600}
 .alert .sub{font-size:.78rem;color:var(--muted)}
+.alert .sub.wx{margin-top:1px}
+.wxwash{color:var(--fg);opacity:.8}
 .alert .val{text-align:right;font:500 .95rem/1.2 var(--font-data);font-variant-numeric:tabular-nums}
 .alert .val small{display:block;font-size:.7rem;color:var(--muted)}
 .pill{display:inline-block;font:600 .66rem/1 var(--font-data);padding:3px 5px;border-radius:2px;color:#fff;letter-spacing:.04em;text-transform:uppercase;vertical-align:1px}
@@ -1621,6 +1623,18 @@ const TEMP_STOPS=[[5,'#3b4cc0'],[12.5,'#6f8fe3'],[17.5,'#a8c8f0'],[22.5,'#f2f0c8
 function tempRGB(v){const S_=TEMP_STOPS; if(v<=S_[0][0]) return hexRGB(S_[0][1]); for(let i=1;i<S_.length;i++) if(v<=S_[i][0]){const a=hexRGB(S_[i-1][1]),b=hexRGB(S_[i][1]),f=(v-S_[i-1][0])/(S_[i][0]-S_[i-1][0]); return a.map((x,k)=>Math.round(x+(b[k]-x)*f));} return hexRGB(S_[S_.length-1][1]);}
 function wxColor(mode,v){ const sc=mode==='rain'?RAIN_SCALE:TEMP_SCALE; for(const [mx,c] of sc) if(v<=mx) return c; return sc[sc.length-1][1]; }
 function wxAt(lat,lon,t){ if(!MET) return null; const m=sampleMet(MET,lat,lon,t), o=rainObsAt(lat,lon,t), td=t2At(lat,lon,t); return {pr:o!=null?o:m.pr,t2:td!=null?td:m.t2,rh:m.rh,u10:m.u10??m.u,v10:m.v10??m.v,ws100:m.ws,u100:m.u,v100:m.v}; }
+// weather over the 24 h ending at tEnd (the window of a 24-h PM2.5 mean): temperature min–max (downscaled, °C) and rain total (mm;
+// observed GSMaP for hours already observed, ECMWF forecast after); null without meteorology
+function wx24(lat,lon,tEnd){ if(!MET||tEnd==null) return null; let tmin=Infinity,tmax=-Infinity,rain=0,n=0,obsH=0;
+  for(let k=0;k<24;k++){const t=tEnd-k*3600e3, td=t2At(lat,lon,t); if(td!=null){tmin=Math.min(tmin,td);tmax=Math.max(tmax,td);}
+    const o=rainObsAt(lat,lon,t); let r; if(o!=null){r=o;obsH++;} else {const m=sampleMet(MET,lat,lon,t); r=m?m.pr:null;} if(r!=null){rain+=r;n++;}}
+  return n?{tmin:isFinite(tmin)?tmin:null,tmax:isFinite(tmax)?tmax:null,rain,obsH}:null; }
+function wx24Text(w){ if(!w) return ''; const tt=w.tmin!=null?`${Math.round(w.tmin)}–${Math.round(w.tmax)} °C`:'–';
+  const rr=w.rain<0.5?T('no rain','ไม่มีฝน'):`${T('rain','ฝน')} ${w.rain<10?w.rain.toFixed(1):Math.round(w.rain)} ${T('mm','มม.')}`;
+  return `${tt} · ${rr}${w.rain>=5?` <span class="wxwash" title="${T('Rain washes smoke out of the air','ฝนชะล้างควันออกจากอากาศ')}">${T('(helps clear smoke)','(ช่วยชะล้างควัน)')}</span>`:''}`; }
+// the 0.025° temperature (DEM + station corrections) for the warning list: loaded once, list redrawn when ready
+function ensureT2(after){ const info=P.data?.t2down; if(!info) return; const key=(info.tA??'')+'|'+P.data.generated;
+  if((T2D&&T2D.key===key)||loadT2.busy||loadT2.tried===key) return; loadT2.busy=1; loadT2.tried=key; loadT2().then(()=>{loadT2.busy=0; if(T2D) after();}); }
 const windFrom=(u,v)=>{ const d=(Math.atan2(-u,-v)/DEG+360)%360; return d; };   // meteorological direction the wind blows FROM (deg)
 const compass=d=>{const n=LANG==='th'?['เหนือ','ตะวันออกเฉียงเหนือ','ตะวันออก','ตะวันออกเฉียงใต้','ใต้','ตะวันตกเฉียงใต้','ตะวันตก','ตะวันตกเฉียงเหนือ']:['N','NE','E','SE','S','SW','W','NW']; return n[Math.round(d/45)%8];};
 function wxText(w){ if(!w) return ''; const sp=Math.hypot(w.u10,w.v10);
@@ -2018,6 +2032,7 @@ function renderSummary(){
   $('sWarn').textContent=S.recep.some(r=>r.stT)?S.recep.filter(r=>r.stT&&(r.stT.mean24>37.5||r.stT.peak>75)).length:S.sim?S.recep.filter(r=>r.st.mean24>37.5||r.st.peak>75).length:'–';
 }
 function renderWarnings(){
+  ensureT2(renderWarnings);
   if(!S.sim&&!S.hots.length&&!P.data){$('warnList').innerHTML=`<p class="note">${PUBLIC?T('Loading the latest data…','กำลังโหลดข้อมูลล่าสุด…'):T('No run yet. Press <b>Load live data</b>, or <b>Run demo</b> in Settings.','ยังไม่มีผล กด <b>โหลดข้อมูลล่าสุด</b> หรือ <b>ทดลองด้วยข้อมูลจำลอง</b> ในแท็บตั้งค่า')}</p>`;$('nearList').textContent='–';return;}
   const total=S.recep.some(r=>r.stT);   // live data: rank by total PM2.5; demo / no map data: fire smoke only (as before)
   const rows=total?S.recep.filter(r=>r.stT).sort((a,b)=>b.stT.mean24-a.stT.mean24||b.stT.peak-a.stT.peak).slice(0,25)
@@ -2025,7 +2040,8 @@ function renderWarnings(){
   $('warnList').innerHTML = rows.length? rows.map(r=>{const st=total?r.stT:r.st, b=bandFor(st.mean24), fire=r.st.mean24;
     return `<div class="alert" data-name="${esc(r.name)}"><i class="sev" style="background:${b.color}"></i>
       <div><div class="name">${esc(townName(r))} <span class="note">${esc(r.cc)}</span></div>
-      <div class="sub">${pill(st.mean24)} ${T('24-h peak','สูงสุด 24 ชม.')} ${fmtT(st.tMean)}${total?` · ${T('from fires','จากไฟ')} ${fire>=0.5?fmtN(fire)+' µg/m³':T('< 0.5 µg/m³','< 0.5 µg/m³')}`:''}</div></div>
+      <div class="sub">${pill(st.mean24)} ${T('24-h peak','สูงสุด 24 ชม.')} ${fmtT(st.tMean)}${total?` · ${T('from fires','จากไฟ')} ${fire>=0.5?fmtN(fire)+' µg/m³':T('< 0.5 µg/m³','< 0.5 µg/m³')}`:''}</div>
+      ${(()=>{const w=wx24(r.lat,r.lon,st.tMean); return w?`<div class="sub wx">${T('Same 24 h','ช่วง 24 ชม. เดียวกัน')}: ${wx24Text(w)}</div>`:'';})()}</div>
       <div class="val">${valNum(st.mean24)}<small>${T('max 24-h','สูงสุด 24 ชม.')} ${unitShort()}</small>${fmtN(st.peak)}<small>${T('1-h max','สูงสุด 1 ชม.')} µg/m³</small></div></div>`;}).join('')
     : `<p class="note">${total?T('No forecast at the towns of this region yet.','ยังไม่มีค่าพยากรณ์ที่เมืองในพื้นที่นี้'):T('No town gets more than 1 µg/m³ of fire smoke in the forecast window (fire smoke only; for total PM₂.₅ see the map and the stations).','ไม่มีเมืองใดได้รับควันไฟเกิน 1 µg/m³ ในช่วงพยากรณ์ (เฉพาะควันไฟ ดูค่าฝุ่นรวมได้จากแผนที่และสถานี)')}</p>`;
   $('warnList').querySelectorAll('.alert').forEach(el=>el.onclick=()=>focusTown(el.dataset.name));
@@ -2129,6 +2145,8 @@ function focusTown(name){
     const H=P.data.hours, fire=S.sim?H.map(t=>{const k=idxIn(S.sim.hours,t); const v=k>=0?r.series[k]:null; return v!=null&&v>0?v:null;}):null;
     $('townDetail').innerHTML=`<h3>${esc(townName(r))}: ${T('PM₂.₅ forecast','พยากรณ์ PM₂.₅')}</h3><div class="trend">${trendBlock(H,r.tot,{fire:fire&&fire.some(v=>v!=null&&v>=0.5)?fire:null,label:'PM2.5 trend at '+r.name})}</div>
       ${(()=>{const w=wxAt(r.lat,r.lon,Math.floor(Date.now()/HR)*HR); return w?`<p class="note">${T('Weather now','อากาศขณะนี้')}: ${wxText(w)}</p>`:'';})()}
+      ${(()=>{const n24=wx24(r.lat,r.lon,Math.floor(Date.now()/HR)*HR+24*HR), p24=wx24(r.lat,r.lon,r.stT.tMean);
+        return n24?`<p class="note">${T('Next 24 h','24 ชม. ข้างหน้า')}: ${wx24Text(n24)}${p24&&r.stT.tMean!==Math.floor(Date.now()/HR)*HR+24*HR?` · ${T('during the 24-h PM₂.₅ peak','ช่วงที่ PM₂.₅ เฉลี่ย 24 ชม. สูงสุด')}: ${wx24Text(p24)}`:''}</p>`:'';})()}
       <p class="note">${T(`Highest 24-h mean ${fmtN(r.stT.mean24)} µg/m³ at ${fmtT(r.stT.tMean)}; peak hour ${fmtN(r.stT.peak)} µg/m³. Fire smoke in our model: highest 24-h mean ${fmtN(r.st.mean24)} µg/m³.`,`ค่าเฉลี่ย 24 ชม. สูงสุด ${fmtN(r.stT.mean24)} µg/m³ เมื่อ ${fmtT(r.stT.tMean)} ค่าสูงสุดรายชั่วโมง ${fmtN(r.stT.peak)} µg/m³ ควันไฟตามแบบจำลอง: ค่าเฉลี่ย 24 ชม. สูงสุด ${fmtN(r.st.mean24)} µg/m³`)}</p>`;
     return;
   }

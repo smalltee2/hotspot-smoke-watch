@@ -198,9 +198,7 @@ header {
   letter-spacing: -0.02em;
   margin: 0;
   color: var(--fg);
-  display: flex;
-  align-items: center;
-  gap: 6px;
+  white-space: nowrap;
 }
 .brand h1 span {
   color: var(--ember);
@@ -1044,6 +1042,144 @@ tbody tr:hover {
 .leaflet-tooltip-top:before,.leaflet-tooltip-bottom:before,.leaflet-tooltip-left:before,.leaflet-tooltip-right:before{display:none}
 #btnLang{padding:4px 9px;font-size:.78rem;min-width:0}
 
+
+/* ---- Page parts the redesign had not styled (ported from index.html) ---- */
+.about p,.about li{line-height:1.55}
+.about .lvl{display:grid;grid-template-columns:14px 1fr;gap:4px 10px;align-items:start;margin:6px 0}
+.about .lvl i{width:14px;height:14px;border-radius:3px;margin-top:3px}
+.alert.c2{grid-template-columns:8px minmax(0,1fr) 172px}
+.fc2{display:grid;grid-template-columns:1fr 1fr;gap:6px;align-self:center}
+.fc2 .d{border:1px solid var(--line);border-radius:6px;padding:4px 6px 5px;text-align:center;min-width:0;background:var(--bg);overflow:hidden}
+.fc2 .d .h{display:block;font-size:.62rem;color:var(--muted);white-space:nowrap}
+.fc2 .d .ic{display:flex;justify-content:center;gap:2px;margin:2px 0 1px}
+.fc2 .d .ic svg{width:24px;height:24px;display:block}
+.fc2 .d b{display:block;font:600 1rem/1.15 var(--font-data);font-variant-numeric:tabular-nums}
+.fc2 .d i.bar{display:block;height:4px;border-radius:2px;margin:2px 0 3px}
+.fc2 .d .w{display:block;font-size:.62rem;color:var(--muted);line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+@media (max-width:420px){
+  .alert.c2{grid-template-columns:6px minmax(0,1fr) 142px;gap:8px}
+  .fc2{gap:4px}
+  .fc2 .d{padding:3px 4px 4px}
+  .fc2 .d b{font-size:.9rem}
+}
+.slwrap{min-width:0;display:flex;flex-direction:column;gap:3px}
+.slwrap input{margin:0}
+.daybar{position:relative;height:22px;margin:0 8px;border-radius:4px;overflow:hidden;background:var(--bg);border:1px solid var(--line);display:flex}
+.daybar button{position:relative;flex:none;border:0;border-left:1px solid var(--line);background:transparent;font:500 .7rem/20px var(--font-body);color:var(--muted);padding:0 2px;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:clip;min-width:0}
+.daybar button:first-child{border-left:0}
+.daybar button.on{color:var(--fg);font-weight:700;background:color-mix(in srgb,var(--ember) 14%,transparent)}
+.daybar .past{position:absolute;left:0;top:0;bottom:0;background:color-mix(in srgb,var(--muted) 18%,transparent);pointer-events:none}
+.daybar button span{position:relative}
+.tlg{display:flex;flex-wrap:wrap;gap:3px 12px;font-size:.7rem;color:var(--muted);margin:3px 0 6px}
+.tlg span{display:inline-flex;align-items:center;gap:5px}
+.tlg i{display:inline-block;width:16px;height:2px;border-radius:1px}
+.tlg i.band{height:9px;background:var(--ember);opacity:.18}
+.tlg i.dash{height:0;border-top:2px dashed var(--smoke);background:none}
+.tlg i.bar{width:7px;height:10px;border-radius:1px}
+.trend .chip .ci{display:flex;flex-direction:column;gap:2px}
+.trend .chip .ci svg{width:34px;height:34px;display:block}
+.trend .chip .ct{min-width:0}
+.trend .chip .cwx{display:block;margin-top:3px;color:var(--muted);font-weight:500;font-size:.68rem}
+.trend .wxhead{font:600 .72rem/1.3 var(--font-data);margin:8px 0 2px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.locpop{position:fixed;inset:0;z-index:3000;display:flex;align-items:center;justify-content:center;background:rgba(10,14,12,.5);padding:12px}
+.locpop[hidden]{display:none}
+.locpop .lpcard{background:var(--panel);color:var(--fg);border-radius:10px;width:100%;max-width:600px;max-height:calc(100dvh - 24px);overflow:auto;box-shadow:0 10px 40px rgba(0,0,0,.35);padding:14px 16px 12px;font-size:13px}
+.lphead{display:flex;align-items:flex-start;justify-content:space-between;gap:8px}
+.lphead h2{margin:0;font:600 1.02rem/1.25 var(--font-display);letter-spacing:.02em}
+.lphead .x{border:0;background:none;font-size:1.5rem;line-height:1;cursor:pointer;color:var(--muted);padding:0 4px}
+.lphero{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0 0}
+.lphero>div{display:flex;align-items:center;gap:10px;border:1px solid var(--line);border-radius:9px;padding:10px 12px;background:var(--bg);min-width:0}
+.lphero svg{flex:0 0 auto;width:58px;height:58px}
+.lphero .hv{font:600 1.45rem/1.1 var(--font-data);font-variant-numeric:tabular-nums}
+.lphero .hl{font-weight:600;font-size:.86rem;line-height:1.25;overflow-wrap:anywhere}
+.lphero .obs,.lphero .mod{display:inline-block;font-size:.62rem;padding:0 5px;border-radius:8px;margin-left:3px;vertical-align:1px}
+.lphero .obs{background:#d9efe2;color:#1f6a43}
+.lphero .mod{background:var(--line);color:var(--muted)}
+.lpnow .src{font-size:.66rem;margin-top:2px;opacity:.85}
+.lphero .hs{font-size:.72rem;color:var(--muted);line-height:1.3;overflow-wrap:anywhere}
+@media (max-width:520px){
+  .lphero>div{flex-direction:column;align-items:flex-start;gap:4px;padding:8px 10px}
+  .lphero svg{width:46px;height:46px}
+  .lphero .hv{font-size:1.25rem}
+}
+.lpnow{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:10px 0 4px}
+.lpnow>div{border:1px solid var(--line);border-radius:7px;padding:7px 9px;background:var(--bg);min-width:0}
+.lpnow b{display:block;font:600 1.2rem/1.15 var(--font-data);font-variant-numeric:tabular-nums}
+.lpnow span{display:block;font-size:.72rem;color:var(--muted);overflow-wrap:anywhere}
+.lpnow .pm{grid-column:span 3;display:flex;flex-wrap:wrap;align-items:center;gap:4px 12px}
+.lpnow .pm b{font-size:1.7rem}
+.lpsec{margin:12px 0 4px;font:600 .74rem/1.2 var(--font-display);text-transform:uppercase;letter-spacing:.09em;color:var(--muted)}
+.lpfc{overflow-x:auto}
+.lpfc table{width:100%;border-collapse:collapse;font:12px var(--font-data);font-variant-numeric:tabular-nums}
+.lpfc th,.lpfc td{padding:4px 6px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
+.lpfc th:first-child,.lpfc td:first-child{text-align:left}
+.lpfc th{font:500 .7rem var(--font-body,inherit);color:var(--muted)}
+.lpfc .warr{display:inline-block;font-style:normal;font-weight:700;color:var(--focus)}
+.lpfc td b{font-weight:600}
+.lpfc .dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:5px;vertical-align:-1px;border:1px solid rgba(0,0,0,.2)}
+.lpfc tr.nd td{border-top:2px solid var(--line)}
+.lpfoot{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;margin-top:10px}
+.lpfoot label{font-size:.75rem;color:var(--muted);display:flex;align-items:center;gap:6px}
+.lpfoot .btns{display:flex;gap:8px}
+@media (max-width:520px){
+  .locpop{padding:0;align-items:flex-end}
+  .locpop .lpcard{border-radius:12px 12px 0 0;max-height:92dvh;padding:12px 12px 10px}
+  .lpnow{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .lpnow .pm{grid-column:span 2}
+  .lpfc th,.lpfc td{padding:4px 4px}
+}
+.nasatip{position:absolute;z-index:650;pointer-events:none;background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:6px 8px;font-size:.72rem;max-width:250px;box-shadow:0 2px 10px rgb(0 0 0 / .2)}
+.nasatip b.k{display:block;font-size:.85rem;margin-bottom:2px}
+.nasatip ul,.nasaarea ul{margin:2px 0 0;padding-left:14px}
+.nasatip li,.nasaarea li{margin:1px 0}
+.nasaarea{margin-top:6px;font-size:.7rem}
+.nasaarea .bar{display:flex;height:10px;border-radius:3px;overflow:hidden;margin:4px 0}
+.nasaarea .bar i{display:block;height:100%}
+.nasaarea .row{display:flex;justify-content:space-between;gap:6px}
+.mapwrap.cropping #map{cursor:crosshair}
+.gibsdate{display:block;margin-top:4px;font:500 .68rem var(--font-data);background:var(--panel);border:1px solid var(--line);border-radius:4px;padding:2px 6px;box-shadow:0 1px 4px rgb(0 0 0 / .15);width:max-content;max-width:60vw}
+
+/* ---- Redesign fit-ups ---- */
+:root{--ink:var(--fg)}
+/* warning cards: two-day forecast boxes with small weather icons */
+.alert.c2{grid-template-columns:4px minmax(0,1fr) 172px;gap:12px}
+.alert .sev{width:4px}
+.fc2 .d{border-radius:var(--radius-md,8px);background:var(--sub-panel,var(--bg))}
+.fc2 .d .ic svg,.trend .chip .ci svg{flex:none;max-width:100%}
+/* time bar: slider above the day bar, day buttons on one line */
+.scrub{align-items:center}
+.slwrap{gap:6px}
+.daybar{margin:0;height:24px;border-radius:var(--radius-pill,999px);background:var(--panel-hover,var(--bg))}
+.daybar button{font:500 .7rem/22px var(--font-body);padding:0 4px;text-overflow:ellipsis;transition:background .15s,color .15s}
+.daybar button:hover{color:var(--fg)}
+.daybar button.on{color:var(--ember);background:var(--ember-soft)}
+/* layer panel: scrolls instead of running under the floating time bar (bar height measured into --scrubH) */
+.legend{max-height:calc(100% - 16px - var(--scrubH,58px) - 24px - 12px);overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin}
+.legend summary{position:sticky;top:-12px;z-index:1;background:inherit;padding:2px 0}
+@media (max-width:860px){
+  .legend{top:8px;right:8px;max-width:min(200px,calc(100vw - 120px));padding:8px 10px;font-size:.68rem;max-height:calc(100% - 8px - var(--scrubH,52px) - 14px - 12px)}
+  .legend .keys{display:none}
+  .scrub{gap:8px;padding:6px 10px;border-radius:18px}
+  .scrub .t{min-width:6.8em;font-size:.7rem}
+  #btnPlay{width:32px;height:32px}
+  /* phone: the page scrolls (panel, then map) instead of squeezing both into one screen */
+  html,body{height:auto}
+  body{display:block;min-height:0}
+  main{min-height:0}
+  aside{min-height:0}
+  .pane{overflow:visible;flex:none}
+  /* header: title on its own, the status and buttons wrap below if they need to */
+  header{height:auto;min-height:52px;flex-wrap:wrap;gap:6px 10px;padding:8px 12px}
+  .brand{flex:1 0 auto}
+  .brand small{display:none}
+  .status{margin-left:auto;flex-wrap:wrap;justify-content:flex-end;gap:6px}
+  .status .chip{font-size:.62rem;padding:4px 8px;letter-spacing:.02em}
+  .status .btn,.status button{white-space:nowrap}
+  .basemap-switch{left:52px;top:8px}
+  .basemap-switch select{max-width:116px;font-size:.72rem}
+  .daybar{height:22px}
+  .daybar button{font-size:.62rem;line-height:20px;padding:0 2px}
+}
 </style>
 </head>
 <body>

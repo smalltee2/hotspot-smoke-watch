@@ -6,7 +6,7 @@ on:
   workflow_dispatch: {}    # "Run workflow" button for manual runs
   push:
     branches: [main]
-    paths: ['scripts/**', 'index.html', '.github/workflows/update.yml']   # rerun and redeploy when code or page changes
+    paths: ['scripts/**', 'index.html', 'index_modern.html', '.github/workflows/update.yml']   # rerun and redeploy when code or page changes
 
 # Pages is deployed from this workflow (Settings → Pages → Source: GitHub Actions).
 # Large, constantly changing files (latest/met/state JSON) go only to Pages and the Actions cache.

@@ -6,7 +6,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>SEA-HAF · Southeast Asia Hybrid Air-quality Forecast</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@500;600;700&family=IBM+Plex+Sans+Thai:wght@400;500;600&family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@500;600;700;800&family=IBM+Plex+Sans+Thai:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
 <script>window.L||document.write('<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"><\/script>')</script>
 <style>
@@ -56,9 +56,12 @@
   --glass-border: 1px solid rgba(226, 232, 240, 0.75);
 
   /* Typography */
-  --font-display: "Plus Jakarta Sans", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  --font-body: "Inter", "IBM Plex Sans Thai", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  --font-data: "IBM Plex Mono", "SF Mono", Menlo, Consolas, monospace;
+  /* English: Inter (text) and Plus Jakarta Sans (headings); Thai: IBM Plex Sans Thai (looped); numbers and times: IBM Plex Mono.
+     Every stack names the Thai font, so Thai inside headings and number boxes does not fall back to the system font. */
+  --font-thai: "IBM Plex Sans Thai";
+  --font-display: "Plus Jakarta Sans", var(--font-thai), "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-body: "Inter", var(--font-thai), -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-data: "IBM Plex Mono", var(--font-thai), "SF Mono", Menlo, Consolas, monospace;
   
   /* Radii */
   --radius-sm: 6px;
@@ -1180,6 +1183,10 @@ tbody tr:hover {
   .daybar{height:22px}
   .daybar button{font-size:.62rem;line-height:20px;padding:0 2px}
 }
+/* ---- Type ---- */
+body{font-feature-settings:"ss01";text-rendering:optimizeLegibility}   /* Inter open digits: 3, 4, 6, 9 easier to tell apart at small sizes */
+:lang(th) body,html[lang=th] body{line-height:1.6}
+.summary b,.alert .val,.fc2 .d b,.lpnow b,.lphero .hv,.scrub .t,.lpfc table,.daybar button{font-variant-numeric:tabular-nums}
 </style>
 </head>
 <body>

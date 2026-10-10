@@ -1234,7 +1234,8 @@ if(store.get('hsw.v')!=='2'){$('mapkey').value='';store.set('hsw.mapkey','');sto
 // ---- tabs
 document.querySelectorAll('.tabs button').forEach(b=>b.addEventListener('click',()=>showTab(b.dataset.tab)));
 function showTab(name){document.querySelectorAll('.tabs button').forEach(b=>b.setAttribute('aria-selected',b.dataset.tab===name));
-  for(const p of ['warn','hot','set','method','about']) $('pane-'+p).hidden = p!==name;}
+  for(const p of ['warn','hot','set','method','about']) $('pane-'+p).hidden = p!==name;
+  document.dispatchEvent(new CustomEvent('hsw:tab',{detail:name}));}
 
 // ---- map
 const isDark=()=>{const a=document.documentElement.dataset.theme;return a?a==='dark':matchMedia('(prefers-color-scheme: dark)').matches;};
@@ -2178,6 +2179,7 @@ function showHere(lat,lon,acc,fly){
   const inside=!map.options.maxBounds||map.options.maxBounds.contains([lat,lon]);
   if(fly&&inside) map.setView([lat,lon],Math.max(map.getZoom(),10),{animate:true});
   renderHereBox();
+  if(window.PHONEUI?.active()){ PHONEUI.set('half','map'); PHONEUI.top(); return; }
   if(matchMedia('(max-width:820px)').matches) $('hereBox').scrollIntoView({behavior:'smooth',block:'nearest'});
 }
 const LocateCtl=L.Control.extend({options:{position:'topleft'},onAdd(){
@@ -2336,15 +2338,18 @@ function clickInfoHTML(lat,lon){
 // shown as a card fixed inside the map (top left; above the time bar on phones) with a pin at the place, so the map never has to pan
 // to fit it (the map is held to the region's bounds, which fights a popup's auto-pan near the region's edge)
 let CLICK=null;
-function clickCard(){ let el=document.getElementById('clickCard'); if(el) return el;
-  el=document.createElement('div'); el.id='clickCard'; el.className='clickcard'; el.hidden=true; el.setAttribute('role','dialog'); el.setAttribute('aria-live','polite');
-  document.querySelector('.mapwrap').appendChild(el); L.DomEvent.disableClickPropagation(el); L.DomEvent.disableScrollPropagation(el); return el; }
+function clickCard(){ const host=(window.PHONEUI?.active()&&$('sheetPeek'))||document.querySelector('.mapwrap');   // phones: inside the bottom sheet
+  let el=document.getElementById('clickCard');
+  if(!el){ el=document.createElement('div'); el.id='clickCard'; el.className='clickcard'; el.hidden=true; el.setAttribute('role','dialog'); el.setAttribute('aria-live','polite');
+    L.DomEvent.disableClickPropagation(el); L.DomEvent.disableScrollPropagation(el); }
+  if(el.parentNode!==host) host.appendChild(el); return el; }
 function renderClickInfo(){ if(!CLICK) return; const {lat,lon}=CLICK, el=clickCard();
   el.innerHTML=clickInfoHTML(lat,lon); el.setAttribute('aria-label',T('Summary of the selected place','สรุปข้อมูลจุดที่เลือก')); el.hidden=false;
+  if(window.PHONEUI?.active()&&!CLICK.shown){ CLICK.shown=1; PHONEUI.set('half','map'); PHONEUI.top(); }
   el.querySelector('[data-a=x]')?.addEventListener('click',closeClickInfo);
   el.querySelector('[data-a=more]')?.addEventListener('click',()=>{ closeClickInfo(); openLocPop(lat,lon); });
   el.querySelector('[data-a=pt]')?.addEventListener('click',()=>{ closeClickInfo(); addMyPoint(lat,lon); toast(T('Added to my points (Settings tab).','เพิ่มในจุดของฉันแล้ว (แท็บตั้งค่า)')); }); }
-function closeClickInfo(){ if(CLICK?.pin) map.removeLayer(CLICK.pin); CLICK=null; const el=document.getElementById('clickCard'); if(el) el.hidden=true; }
+function closeClickInfo(){ if(CLICK?.pin) map.removeLayer(CLICK.pin); CLICK=null; const el=document.getElementById('clickCard'); if(el) el.hidden=true; if(window.PHONEUI?.active()) PHONEUI.set('peek'); }
 function clickInfo(lat,lon){
   if(CLICK?.pin) map.removeLayer(CLICK.pin);
   const ember=getComputedStyle(document.documentElement).getPropertyValue('--ember').trim()||'#ea580c';
@@ -2357,9 +2362,12 @@ function refreshClickInfo(){ if(CLICK&&!document.getElementById('clickCard')?.hi
 document.addEventListener('keydown',e=>{ if(e.key==='Escape'&&CLICK) closeClickInfo(); });
 // ---- button that hides the layer panel (redesigned page: #btnLegToggle); the choice is kept on this device
 function initLegToggle(){ const b=$('btnLegToggle'), lg=$('legend'); if(!b||!lg) return;
+  const mq=matchMedia('(max-width:860px)'), key=()=>mq.matches?'hsw.legHiddenM':'hsw.legHidden', hiddenNow=()=>mq.matches?store.get('hsw.legHiddenM')!=='0':store.get('hsw.legHidden')==='1';
   const set=h=>{ lg.hidden=h; b.setAttribute('aria-expanded',String(!h)); b.classList.toggle('on',!h);
-    const l=h?T('Show layers and legend','แสดงชั้นข้อมูลและคำอธิบาย'):T('Hide layers and legend','ซ่อนชั้นข้อมูลและคำอธิบาย'); b.title=l; b.setAttribute('aria-label',l); store.set('hsw.legHidden',h?'1':'0'); };
-  set(store.get('hsw.legHidden')==='1'); b.onclick=()=>set(!lg.hidden); initLegToggle.relabel=()=>set(lg.hidden); }
+    document.body.classList.toggle('leg-open',!h&&mq.matches); if(!h&&mq.matches&&window.PHONEUI&&document.body.dataset.sheet!=='peek') PHONEUI.set('peek');   // phones: the pop-up panel sits over a lowered sheet
+    const l=h?T('Show layers and legend','แสดงชั้นข้อมูลและคำอธิบาย'):T('Hide layers and legend','ซ่อนชั้นข้อมูลและคำอธิบาย'); b.title=l; b.setAttribute('aria-label',l); store.set(key(),h?'1':'0'); };
+  set(hiddenNow()); b.onclick=()=>set(!lg.hidden); initLegToggle.relabel=()=>set(lg.hidden); mq.addEventListener?.('change',()=>set(hiddenNow()));
+  $('legClose')?.addEventListener('click',()=>set(true)); }
 initLegToggle();
 // ---- button that hides the side panel (redesigned page: #btnSideToggle), so the map takes the full width; kept on this device.
 // Wide screens only: on phones the panel sits below the map and the button is hidden by the page's styles.
@@ -2369,6 +2377,36 @@ function initSideToggle(){ const b=$('btnSideToggle'), mn=document.querySelector
     requestAnimationFrame(()=>map.invalidateSize()); };
   set(store.get('hsw.sideHidden')==='1'); b.onclick=()=>set(!mn.classList.contains('side-hidden')); initSideToggle.relabel=()=>set(mn.classList.contains('side-hidden')); }
 initSideToggle();
+// ---- phone app layout (redesigned page: #sheetGrip and #tabbar; screens ≤ 860 px): full-screen map, the side panel as a bottom sheet
+// (peek / half / full: drag or tap the grip) and a bottom tab bar. Elsewhere the page keeps its normal layout.
+window.PHONEUI=(()=>{ const grip=$('sheetGrip'), bar=$('tabbar'), aside=document.querySelector('aside'); if(!grip||!bar||!aside) return null;
+  const mq=matchMedia('(max-width:860px)'), B=document.body, ORDER=['peek','half','full'];
+  let cur='warn', viaMap=false;   // viaMap: the sheet was raised by a map tap or "my location", so the Map tab stays lit
+  const set=(s,from)=>{ viaMap=from==='map'; B.dataset.sheet=s; aside.style.height=''; aside.classList.remove('dragging'); if(s==='peek') aside.scrollTop=0;
+    if(s!=='peek'&&B.classList.contains('leg-open')) $('btnLegToggle')?.click();   // raising the sheet closes the layer pop-up
+    grip.setAttribute('aria-expanded',String(s!=='peek')); grip.setAttribute('aria-label',s==='full'?T('Lower the panel','ย่อแผง'):T('Raise the panel','ขยายแผง')); mark(); };
+  const mark=()=>{ const s=B.dataset.sheet; bar.querySelectorAll('[data-go]').forEach(b=>{ const on=s==='peek'||viaMap?b.dataset.go==='map':b.dataset.go===cur; b.classList.toggle('on',on); on?b.setAttribute('aria-current','page'):b.removeAttribute('aria-current'); }); };
+  const heights=()=>{ const ah=innerHeight, cs=getComputedStyle(B), px=v=>parseFloat(cs.getPropertyValue(v))||0;
+    return {peek:px('--peekH'), half:Math.round(ah*0.55), full:ah-px('--hdrH')-px('--tabH')-8}; };
+  // drag the grip (or the peek area): the sheet follows the finger and snaps to the nearest height; a tap steps up, and from full back to peek
+  let y0=0,h0=0,moved=0,pid=null;
+  const down=e=>{ if(!mq.matches||e.button>0) return; pid=e.pointerId; y0=e.clientY; h0=aside.offsetHeight; moved=0; aside.classList.add('dragging'); grip.setPointerCapture?.(pid); };
+  const move=e=>{ if(pid!==e.pointerId) return; const d=y0-e.clientY; if(Math.abs(d)>4) moved=1; const H=heights(); aside.style.height=Math.max(H.peek,Math.min(H.full,h0+d))+'px'; };
+  const up=e=>{ if(pid!==e.pointerId) return; pid=null; const H=heights(), h=aside.offsetHeight;
+    if(!moved){ const i=ORDER.indexOf(B.dataset.sheet); set(ORDER[(i+1)%3],viaMap?'map':''); return; }
+    const v=h-h0; let best='peek',bd=1e9; for(const k of ORDER){ const dd=Math.abs(H[k]-h)-(Math.sign(H[k]-h0)===Math.sign(v)?40:0); if(dd<bd){bd=dd;best=k;} } set(best,viaMap?'map':''); };
+  grip.addEventListener('pointerdown',down); grip.addEventListener('pointermove',move); grip.addEventListener('pointerup',up); grip.addEventListener('pointercancel',up);
+  grip.addEventListener('keydown',e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); const i=ORDER.indexOf(B.dataset.sheet); set(ORDER[(i+1)%3]); } });
+  bar.querySelectorAll('[data-go]').forEach(b=>b.onclick=()=>{ const g=b.dataset.go; if(g==='map'){ set('peek'); return; }
+    cur=g; showTab(g); if(B.dataset.sheet==='peek') set('half'); else mark(); aside.scrollTop=0; });
+  document.addEventListener('hsw:tab',e=>{ cur=e.detail; mark(); });
+  $('sheetLocate')?.addEventListener('click',()=>document.querySelector('.locate-btn')?.click());
+  const legOpen=()=>{ if(mq.matches&&$('legDet')) $('legDet').open=true; }; legOpen(); mq.addEventListener?.('change',legOpen);   // the pop-up layer panel is never folded
+  set('peek');
+  return { active:()=>mq.matches, set, top:()=>{ aside.scrollTop=0; } };
+})();
+// ---- "advanced" switch in the layer panel (redesigned page, phones): simple by default; on, it shows display options, notes and expert overlays
+{ const a=$('advToggle'); if(a){ const set=v=>{ document.body.classList.toggle('adv',v); store.set('hsw.adv',v?'1':'0'); }; a.checked=store.get('hsw.adv')==='1'; set(a.checked); a.onchange=()=>set(a.checked); } }
 async function autoLocPop(){
   if(store.get('hsw.locPop')==='off'||!navigator.geolocation||!P.data) return;
   try{ const st=await navigator.permissions?.query({name:'geolocation'}); if(st&&st.state==='denied') return; }catch(e){}
@@ -2668,7 +2706,7 @@ function updateTimeLabel(){
   const t=curT(), dh=Math.round((t-Date.now())/36e5);
   $('tlabel').innerHTML=`${fmtT(t)}<small>${dh===0?T('now','ขณะนี้'):dh>0?T(`+${dh} h forecast`,`พยากรณ์ +${dh} ชม.`):T(`${dh} h (past)`,`${dh} ชม. (ย้อนหลัง)`)}${typeof avg24==='function'&&avg24()&&gridMode()?T(' · 24-h mean',' · เฉลี่ย 24 ชม.'):''}</small>`;
 }
-function showMapOnPhone(){ if(matchMedia('(max-width:820px)').matches) document.querySelector('.mapwrap').scrollIntoView({behavior:'smooth',block:'start'}); }
+function showMapOnPhone(){ if(window.PHONEUI?.active()){ PHONEUI.set('peek'); return; } if(matchMedia('(max-width:820px)').matches) document.querySelector('.mapwrap').scrollIntoView({behavior:'smooth',block:'start'}); }
 function focusTown(name){
   const r=S.recep.find(x=>x.name===name)||allReceptors().find(x=>x.name===name); if(!r) return;
   map.flyTo([r.lat,r.lon],9); showTab('warn'); showMapOnPhone();

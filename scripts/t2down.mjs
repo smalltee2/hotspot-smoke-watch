@@ -6,6 +6,7 @@
 //      minus that mean (today's weather) faded with lead, e-folding 6 h. Both fade to 0 far from stations (krigeField).
 //   3. verification: each station left out in turn, latest hour, ECMWF bilinear vs terrain vs terrain + stations.
 import { krigeField, declusterWeights } from './rk.mjs';
+import { metWeights } from './met.mjs';
 
 // Air4Thai TEMP is an hourly mean ending at t; ECMWF temperature_2m is instantaneous: the model is read at t − 30 min (obsOffsetMs).
 // The mean residual is kept in two bins, day (07–18 Thai time) and night, because valley inversions make the night residual differ.
@@ -13,23 +14,21 @@ export const T2CFG = { lapse: 6.5e-3, efoldH: 6, step: 0.1, windowH: 48, minObs:
                        bins: { day: h => h >= 7 && h < 19, night: h => h < 7 || h >= 19 }, north: [96.5, 14.5, 102.5, 21.5] };
 export const t2Bin = t => (T2CFG.bins.day(new Date(t + 7 * 3600e3).getUTCHours()) ? 'day' : 'night');
 
-// sea-level-equivalent temperature T + Γ·z, bilinear in space on the finest grid that contains the point, linear in time
+// sea-level-equivalent temperature T + Γ·z, bilinear in space, linear in time; nested grids blended near the fine grid's edge (met.mjs metWeights)
 export function t2SeaLevel(M, lat, lon, t, lapse = T2CFG.lapse) {
   const T = M.times, nt = T.length;
   let ft = (t - T[0]) / 3600e3; ft = Math.min(Math.max(ft, 0), nt - 1.0001);
   const it = Math.floor(ft), at = ft - it;
-  for (const g of M.grids) {
+  let s = 0, any = false;
+  for (const [g, gw] of metWeights(M, lat, lon)) {
     let fx = (lon - g.lon0) / g.step, fy = (lat - g.lat0) / g.step;
-    const inside = fx >= 0 && fy >= 0 && fx <= g.nx - 1 && fy <= g.ny - 1;
-    if (!inside && g !== M.grids[M.grids.length - 1]) continue;
     fx = Math.min(Math.max(fx, 0), g.nx - 1.0001); fy = Math.min(Math.max(fy, 0), g.ny - 1.0001);
     const ix = Math.floor(fx), iy = Math.floor(fy), ax = fx - ix, ay = fy - iy, nxy = g.nx * g.ny, a = g.data.t2, z = g.elev;
     const P = [[iy * g.nx + ix, (1 - ax) * (1 - ay)], [iy * g.nx + ix + 1, ax * (1 - ay)], [(iy + 1) * g.nx + ix, (1 - ax) * ay], [(iy + 1) * g.nx + ix + 1, ax * ay]];
-    let s = 0;
-    for (const [dt, wt] of [[0, 1 - at], [1, at]]) { const b = (it + dt) * nxy; for (const [p, w] of P) s += wt * w * (a[b + p] + lapse * (z ? z[p] : 0)); }
-    return s;
+    for (const [dt, wt] of [[0, 1 - at], [1, at]]) { const b = (it + dt) * nxy; for (const [p, w] of P) s += gw * wt * w * (a[b + p] + lapse * (z ? z[p] : 0)); }
+    any = true;
   }
-  return null;
+  return any ? s : null;
 }
 
 // plain bilinear t2 (what the page showed before), for the verification

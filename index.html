@@ -1022,22 +1022,31 @@ function sampleWind(W,lat,lon,t){
   return out;
 }
 
-// nested meteorology from the hourly pipeline (data/met.json): finest grid containing the point, bilinear + linear in time
+// nested meteorology from the hourly pipeline (data/met.json): bilinear + linear in time on the finest grid containing the point;
+// within MET_TAPER degrees of a finer grid's edge the finer and the next coarser grid are blended (weight 1 inside, 0 at the edge),
+// so the 0.25° northern grid joins the 1° domain grid without a step (it showed as a frame in rain and temperature)
+const MET_TAPER=0.5;
+function metEdgeW(g,lat,lon){const d=Math.min(lon-g.lon0,g.lon0+(g.nx-1)*g.step-lon,lat-g.lat0,g.lat0+(g.ny-1)*g.step-lat);
+  if(d<=0) return 0; if(d>=MET_TAPER) return 1; const x=d/MET_TAPER; return x*x*(3-2*x);}
+// [grid, weight] pairs for (lat,lon): weights sum to 1, the coarsest grid takes what is left (and covers points outside every grid)
+function metWeights(M,lat,lon){const G=M.grids, out=[]; let r=1;
+  for(let gi=0;gi<G.length&&r>1e-9;gi++){const g=G[gi], w=gi<G.length-1?r*metEdgeW(g,lat,lon):r; if(w>0){out.push([g,w]); r-=w;}}
+  return out;}
 function sampleMet(M,lat,lon,t){
   const T=M.times, nt=T.length; let ft=(t-T[0])/3600e3; ft=Math.min(Math.max(ft,0),nt-1.0001);
-  const it=Math.floor(ft), at=ft-it;
-  for(let gi=0;gi<M.grids.length;gi++){const g=M.grids[gi];
+  const it=Math.floor(ft), at=ft-it, V=M.vars, o={}, GW=metWeights(M,lat,lon);
+  for(let vi=0;vi<V.length;vi++) o[V[vi]]=0;
+  for(const [g,gw] of GW){
     let fx=(lon-g.lon0)/g.step, fy=(lat-g.lat0)/g.step;
-    if(!(fx>=0&&fy>=0&&fx<=g.nx-1&&fy<=g.ny-1)&&gi<M.grids.length-1) continue;
     fx=Math.min(Math.max(fx,0),g.nx-1.0001); fy=Math.min(Math.max(fy,0),g.ny-1.0001);
-    // same trilinear weights as before, computed once per call (this runs for every puff every 10 min)
-    const ix=Math.floor(fx), iy=Math.floor(fy), ax=fx-ix, ay=fy-iy, nxy=g.nx*g.ny, o={};
+    // same trilinear weights as before, computed once per grid (this runs for every puff every 10 min)
+    const ix=Math.floor(fx), iy=Math.floor(fy), ax=fx-ix, ay=fy-iy, nxy=g.nx*g.ny;
     const i00=iy*g.nx+ix, i01=i00+1, i10=i00+g.nx, i11=i10+1, b0=it*nxy, b1=b0+nxy;
-    const w00=(1-ax)*(1-ay), w01=ax*(1-ay), w10=(1-ax)*ay, w11=ax*ay, t0w=1-at, t1w=at;
-    const V=M.vars;
+    const w00=(1-ax)*(1-ay), w01=ax*(1-ay), w10=(1-ax)*ay, w11=ax*ay, t0w=(1-at)*gw, t1w=at*gw;
     for(let vi=0;vi<V.length;vi++){const a=g.data[V[vi]];
-      o[V[vi]]=t0w*(w00*a[b0+i00]+w01*a[b0+i01]+w10*a[b0+i10]+w11*a[b0+i11])+t1w*(w00*a[b1+i00]+w01*a[b1+i01]+w10*a[b1+i10]+w11*a[b1+i11]);}
-    o.cls/=2; o.ws=Math.sqrt(o.u*o.u+o.v*o.v); return o;}
+      o[V[vi]]+=t0w*(w00*a[b0+i00]+w01*a[b0+i01]+w10*a[b0+i10]+w11*a[b0+i11])+t1w*(w00*a[b1+i00]+w01*a[b1+i01]+w10*a[b1+i10]+w11*a[b1+i11]);}
+  }
+  o.cls/=2; o.ws=Math.sqrt(o.u*o.u+o.v*o.v); return o;
 }
 // ---------------------------------------------------------------- stability & sigmas
 // Pasquill-Gifford class (1=A … 6=F) after Turner (1970). Returns a real number; half classes = average.
@@ -1614,14 +1623,12 @@ function t2At(lat,lon,t){
   const M=MET; if(!M) return null; const g0=M.grids[0];
   if(!T2D||!g0.elev) return sampleMet(M,lat,lon,t)?.t2??null;
   const Tt=M.times, nt=Tt.length; let ft=(t-Tt[0])/3600e3; ft=Math.min(Math.max(ft,0),nt-1.0001); const it=Math.floor(ft), at=ft-it, G=T2D.lapse;
-  let sl=null;
-  for(const g of M.grids){ let fx=(lon-g.lon0)/g.step, fy=(lat-g.lat0)/g.step;
-    if(!(fx>=0&&fy>=0&&fx<=g.nx-1&&fy<=g.ny-1)&&g!==M.grids[M.grids.length-1]) continue;
+  let sl=0;   // sea-level-equivalent temperature, nested grids blended near the fine grid's edge (metWeights)
+  for(const [g,gw] of metWeights(M,lat,lon)){ let fx=(lon-g.lon0)/g.step, fy=(lat-g.lat0)/g.step;
     fx=Math.min(Math.max(fx,0),g.nx-1.0001); fy=Math.min(Math.max(fy,0),g.ny-1.0001);
-    const ix=Math.floor(fx), iy=Math.floor(fy), ax=fx-ix, ay=fy-iy, n=g.nx*g.ny, a=g.data.t2, z=g.elev, i=iy*g.nx+ix;
-    const node=(b,p)=>a[b+p]+G*z[p], f=b=>(1-ax)*(1-ay)*node(b,i)+ax*(1-ay)*node(b,i+1)+(1-ax)*ay*node(b,i+g.nx)+ax*ay*node(b,i+g.nx+1);
-    sl=(1-at)*f(it*n)+at*f((it+1)*n); break; }
-  if(sl==null) return null;
+    const ix=Math.floor(fx), iy=Math.floor(fy), ax=fx-ix, ay=fy-iy, n=g.nx*g.ny, a=g.data.t2, z=g.elev||[], i=iy*g.nx+ix;
+    const node=(b,p)=>a[b+p]+G*(z[p]||0), f=b=>(1-ax)*(1-ay)*node(b,i)+ax*(1-ay)*node(b,i+1)+(1-ax)*ay*node(b,i+g.nx)+ax*ay*node(b,i+g.nx+1);
+    sl+=gw*((1-at)*f(it*n)+at*f((it+1)*n)); }
   let v=sl-G*(gridAt(T2D.dem,T2D.dem.values,lat,lon)||0);
   const C=T2D.corr; if(C&&C.use){const day=(h=>h>=7&&h<19)(new Date(t+7*3600e3).getUTCHours()); if(C.use[day?'day':'night']) v+=gridAt(C,day?C.meanDay:C.meanNight,lat,lon); if(C.use.anom) v+=Math.exp(-Math.abs(t-C.tA)/3600e3/C.efoldH)*gridAt(C,C.anom,lat,lon);}
   v+=wxmlAt('t2',lat,lon,t);
@@ -1647,14 +1654,14 @@ async function loadRainFac(m){ const k=String(m).padStart(2,'0'); if(RFAC[k]!==u
     const r=await fetch('data/static/prclim/'+RFACmeta.files[k],{cache:'force-cache'}); if(!r.ok) return null;
     const ds=r.body.pipeThrough(new DecompressionStream('deflate')); RFAC[k]=new Uint8Array(await new Response(ds).arrayBuffer()); }catch(e){RFAC[k]=null;}
   return RFAC[k]; }
-// one variable of the met grids (bilinear in space, linear in time, finest grid containing the point): same as sampleMet, ~10× cheaper
+// one variable of the met grids (bilinear in space, linear in time, nested grids blended as in sampleMet): same as sampleMet, ~10× cheaper
 function metVarAt(M,k,lat,lon,t){ const T=M.times, nt=T.length; let ft=(t-T[0])/3600e3; ft=Math.min(Math.max(ft,0),nt-1.0001); const it=Math.floor(ft), at=ft-it;
-  for(const g of M.grids){ let fx=(lon-g.lon0)/g.step, fy=(lat-g.lat0)/g.step;
-    if(!(fx>=0&&fy>=0&&fx<=g.nx-1&&fy<=g.ny-1)&&g!==M.grids[M.grids.length-1]) continue;
+  let s=0, any=false;
+  for(const [g,gw] of metWeights(M,lat,lon)){ let fx=(lon-g.lon0)/g.step, fy=(lat-g.lat0)/g.step;
     fx=Math.min(Math.max(fx,0),g.nx-1.0001); fy=Math.min(Math.max(fy,0),g.ny-1.0001);
     const ix=Math.floor(fx), iy=Math.floor(fy), ax=fx-ix, ay=fy-iy, n=g.nx*g.ny, a=g.data[k], i=iy*g.nx+ix;
     const f=b=>(1-ax)*(1-ay)*a[b+i]+ax*(1-ay)*a[b+i+1]+(1-ax)*ay*a[b+i+g.nx]+ax*ay*a[b+i+g.nx+1];
-    return (1-at)*f(it*n)+at*f((it+1)*n); } return null; }
+    s+=gw*((1-at)*f(it*n)+at*f((it+1)*n)); any=true; } return any?s:null; }
 // the rain value shown everywhere on the page (map, tooltips, warnings, trends): 0.025°. Hours already observed: GSMaP interpolated ×
 // the month's CHELSA factor (rainFineAt); later hours: ECMWF interpolated × the same factor. The factor is 1 until its file has loaded.
 function rainAt(lat,lon,t){ const o=rainFineAt(lat,lon,t); if(o!==undefined) return o; if(!MET) return null; let v=metVarAt(MET,'pr',lat,lon,t); if(v==null) return null; if(v>0) v*=rainFactorAt(lat,lon,t);

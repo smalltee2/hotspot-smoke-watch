@@ -1183,6 +1183,8 @@ tbody tr:hover {
 </style>
 </head>
 <body>
+<!-- location popup at page level, so it opens above the map (inside the side panel it was drawn under the map) -->
+<div id="locPop" class="locpop" hidden role="dialog" aria-modal="true" aria-labelledby="locPopT"><div class="lpcard" id="locPopCard"></div></div>
 <header>
   <div class="brand">
     <h1>SEA-<span>HAF</span></h1>
@@ -1207,7 +1209,6 @@ tbody tr:hover {
       <div><b id="sWarn">–</b><span data-th="เมืองที่เตือน">Towns warned</span></div>
     </div>
     <section id="hereBox" class="herebox" hidden aria-live="polite"></section>
-    <div id="locPop" class="locpop" hidden role="dialog" aria-modal="true" aria-labelledby="locPopT"><div class="lpcard" id="locPopCard"></div></div>
     <div class="tabs" role="tablist">
       <button role="tab" aria-selected="true" data-tab="warn" id="tab-warn" data-th="คำเตือน">Warnings</button>
       <button role="tab" aria-selected="false" data-tab="hot" id="tab-hot" data-th="จุดความร้อน">Hotspots</button>

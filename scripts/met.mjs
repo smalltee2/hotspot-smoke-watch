@@ -87,24 +87,36 @@ export async function fetchMet(grids, { get, sleep, log, pastDays = 2, forecastD
   return out;
 }
 
-// bilinear in space, linear in time, finest grid that contains the point
+// bilinear in space, linear in time, on the finest grid that contains the point; within MET_TAPER degrees of a finer grid's edge
+// the finer and the next coarser grid are blended (weight 1 inside, smoothly 0 at the edge) so the nested grids join without a step.
+// The page uses the same weights.
+export const MET_TAPER = 0.5;
+export function metEdgeW(g, lat, lon) {
+  const d = Math.min(lon - g.lon0, g.lon0 + (g.nx - 1) * g.step - lon, lat - g.lat0, g.lat0 + (g.ny - 1) * g.step - lat);
+  if (d <= 0) return 0; if (d >= MET_TAPER) return 1; const x = d / MET_TAPER; return x * x * (3 - 2 * x);
+}
+// [grid, weight] pairs summing to 1; the coarsest grid takes the rest (and covers points outside every grid, clamped to its edge)
+export function metWeights(M, lat, lon) {
+  const G = M.grids, out = []; let r = 1;
+  for (let gi = 0; gi < G.length && r > 1e-9; gi++) { const g = G[gi], w = gi < G.length - 1 ? r * metEdgeW(g, lat, lon) : r; if (w > 0) { out.push([g, w]); r -= w; } }
+  return out;
+}
 export function sampleMet(M, lat, lon, t) {
   const T = M.times, nt = T.length;
   let ft = (t - T[0]) / 3600e3; ft = Math.min(Math.max(ft, 0), nt - 1.0001);
-  const it = Math.floor(ft), at = ft - it;
-  for (const g of M.grids) {
+  const it = Math.floor(ft), at = ft - it, o = {};
+  for (const k of M.vars) o[k] = 0;
+  for (const [g, gw] of metWeights(M, lat, lon)) {
     let fx = (lon - g.lon0) / g.step, fy = (lat - g.lat0) / g.step;
-    const inside = fx >= 0 && fy >= 0 && fx <= g.nx - 1 && fy <= g.ny - 1;
-    if (!inside && g !== M.grids[M.grids.length - 1]) continue;
     fx = Math.min(Math.max(fx, 0), g.nx - 1.0001); fy = Math.min(Math.max(fy, 0), g.ny - 1.0001);
-    const ix = Math.floor(fx), iy = Math.floor(fy), ax = fx - ix, ay = fy - iy, nxy = g.nx * g.ny, o = {};
+    const ix = Math.floor(fx), iy = Math.floor(fy), ax = fx - ix, ay = fy - iy, nxy = g.nx * g.ny;
     for (const k of M.vars) { const a = g.data[k]; let s = 0;
       for (const [dt, wt] of [[0, 1 - at], [1, at]]) { const b = (it + dt) * nxy;
         s += wt * ((1 - ax) * (1 - ay) * a[b + iy * g.nx + ix] + ax * (1 - ay) * a[b + iy * g.nx + ix + 1] + (1 - ax) * ay * a[b + (iy + 1) * g.nx + ix] + ax * ay * a[b + (iy + 1) * g.nx + ix + 1]); }
-      o[k] = s; }
-    o.cls /= 2; o.ws = Math.hypot(o.u, o.v);
-    return o;
+      o[k] += gw * s; }
   }
+  o.cls /= 2; o.ws = Math.hypot(o.u, o.v);
+  return o;
 }
 
 // Compact copy for the web page: same values (already rounded to 0.1 m/s, 10 m, 0.1 mm/h), stored as integers and

@@ -1225,6 +1225,17 @@ body{font-feature-settings:"ss01";text-rendering:optimizeLegibility}   /* Inter 
   .legend{top:var(--legTop);max-height:calc(100% - var(--legTop) - var(--scrubH,52px) - 14px - 12px)}
   .clickcard{left:8px;right:8px;width:auto;max-width:none;top:auto;bottom:calc(var(--scrubH,52px) + 24px);max-height:calc(100% - var(--scrubH,52px) - 72px)}
 }
+
+/* ---- Side panel button (wide screens) ---- */
+main{transition:grid-template-columns .22s ease}
+main.side-hidden{grid-template-columns:0 1fr}
+main.side-hidden>aside{visibility:hidden;overflow:hidden;border-right:0}
+.sidetoggle{position:absolute;left:0;top:50%;transform:translateY(-50%);z-index:520;width:22px;height:52px;padding:0;display:grid;place-items:center;cursor:pointer;
+  background:var(--glass-bg);-webkit-backdrop-filter:blur(20px);backdrop-filter:blur(20px);border:var(--glass-border);border-left:0;border-radius:0 10px 10px 0;box-shadow:var(--shadow-md);color:var(--muted);transition:color .15s,width .15s}
+.sidetoggle:hover{color:var(--ember);width:26px}
+.sidetoggle svg{transition:transform .2s}
+main.side-hidden .sidetoggle svg{transform:rotate(180deg)}
+@media (max-width:860px){ .sidetoggle{display:none} main.side-hidden>aside{visibility:visible} }
 </style>
 </head>
 <body data-click="info">
@@ -1509,6 +1520,8 @@ body{font-feature-settings:"ss01";text-rendering:optimizeLegibility}   /* Inter 
 
   <div class="mapwrap">
     <div id="map" aria-label="Map of hotspots and smoke forecast"></div>
+    <!-- hides / shows the side panel (page code: initSideToggle) -->
+    <button type="button" id="btnSideToggle" class="sidetoggle" aria-expanded="true" title="Hide the side panel" aria-label="Hide the side panel"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m14.5 6-6 6 6 6"/></svg></button>
     <!-- hides / shows the layer panel (page code: initLegToggle) -->
     <button type="button" id="btnLegToggle" class="legtoggle on" aria-controls="legend" aria-expanded="true" title="Hide layers and legend" aria-label="Hide layers and legend"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 3 2.5 8 12 13l9.5-5L12 3Z"/><path d="m2.5 12 9.5 5 9.5-5"/><path d="m2.5 16 9.5 5 9.5-5"/></svg></button>
     <div class="legend" id="legend"><details id="legDet" open><summary data-th="ชั้นข้อมูลและคำอธิบาย">Layers and legend</summary>

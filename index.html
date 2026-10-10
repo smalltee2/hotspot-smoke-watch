@@ -2361,6 +2361,14 @@ function initLegToggle(){ const b=$('btnLegToggle'), lg=$('legend'); if(!b||!lg)
     const l=h?T('Show layers and legend','แสดงชั้นข้อมูลและคำอธิบาย'):T('Hide layers and legend','ซ่อนชั้นข้อมูลและคำอธิบาย'); b.title=l; b.setAttribute('aria-label',l); store.set('hsw.legHidden',h?'1':'0'); };
   set(store.get('hsw.legHidden')==='1'); b.onclick=()=>set(!lg.hidden); initLegToggle.relabel=()=>set(lg.hidden); }
 initLegToggle();
+// ---- button that hides the side panel (redesigned page: #btnSideToggle), so the map takes the full width; kept on this device.
+// Wide screens only: on phones the panel sits below the map and the button is hidden by the page's styles.
+function initSideToggle(){ const b=$('btnSideToggle'), mn=document.querySelector('main'); if(!b||!mn) return;
+  const set=h=>{ mn.classList.toggle('side-hidden',h); b.setAttribute('aria-expanded',String(!h));
+    const l=h?T('Show the side panel','แสดงแผงด้านข้าง'):T('Hide the side panel','ซ่อนแผงด้านข้าง'); b.title=l; b.setAttribute('aria-label',l); store.set('hsw.sideHidden',h?'1':'0');
+    requestAnimationFrame(()=>map.invalidateSize()); };
+  set(store.get('hsw.sideHidden')==='1'); b.onclick=()=>set(!mn.classList.contains('side-hidden')); initSideToggle.relabel=()=>set(mn.classList.contains('side-hidden')); }
+initSideToggle();
 async function autoLocPop(){
   if(store.get('hsw.locPop')==='off'||!navigator.geolocation||!P.data) return;
   try{ const st=await navigator.permissions?.query({name:'geolocation'}); if(st&&st.state==='denied') return; }catch(e){}
@@ -2891,7 +2899,7 @@ function renderLegend(){
     ' · bands follow the Thai PCD thresholds (15 / 25 / 37.5 / 75); warm colours from the 37.5 standard; black above 300'+(PUBLIC?' · ':' · CAMS + monitors + low-cost sensors + terrain, 0.025°. ')+'24-h values are the mean of the 24 hours ending at the slider time. Dashed box: forecast area.';
 }
 applyStaticLang(); if(!S.mode) $('modeChip').textContent=T('no data','ไม่มีข้อมูล');
-$('btnLang').onclick=()=>{ LANG=LANG==='th'?'en':'th'; store.set('hsw.lang',LANG); applyStaticLang(); initLegToggle.relabel?.(); refreshClickInfo();
+$('btnLang').onclick=()=>{ LANG=LANG==='th'?'en':'th'; store.set('hsw.lang',LANG); applyStaticLang(); initLegToggle.relabel?.(); initSideToggle.relabel?.(); refreshClickInfo();
   {const lb=document.querySelector('.locate-btn'); if(lb){lb.title=T('Show PM2.5 at my location','ดูค่าฝุ่นที่ตำแหน่งของฉัน'); lb.setAttribute('aria-label',lb.title);}} if(S.mode) setMode(S.mode); else $('modeChip').textContent=T('no data','ไม่มีข้อมูล');
   renderLegend(); renderAll(); renderHereBox(); if(LOCPOP) renderLocPop(); drawStations?.(); redrawTime(); };
 {const v=store.get('hsw.unitSel'); if(v) $('unitSel').value=v;}

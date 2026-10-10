@@ -1187,9 +1187,47 @@ tbody tr:hover {
 body{font-feature-settings:"ss01";text-rendering:optimizeLegibility}   /* Inter open digits: 3, 4, 6, 9 easier to tell apart at small sizes */
 :lang(th) body,html[lang=th] body{line-height:1.6}
 .summary b,.alert .val,.fc2 .d b,.lpnow b,.lphero .hv,.scrub .t,.lpfc table,.daybar button{font-variant-numeric:tabular-nums}
+
+/* ---- Layer panel button and map-click summary ---- */
+.mapwrap{--legTop:62px}
+.legtoggle{position:absolute;top:16px;right:16px;z-index:520;width:38px;height:38px;border-radius:50%;display:grid;place-items:center;cursor:pointer;
+  background:var(--glass-bg);-webkit-backdrop-filter:blur(20px);backdrop-filter:blur(20px);border:var(--glass-border);box-shadow:var(--shadow-lg);color:var(--muted);transition:color .15s,background .15s,transform .15s}
+.legtoggle:hover{color:var(--fg);transform:translateY(-1px)}
+.legtoggle.on{color:var(--ember);background:var(--panel)}
+.legend{top:var(--legTop);max-height:calc(100% - var(--legTop) - var(--scrubH,58px) - 24px - 12px)}
+.legend[hidden]{display:none}
+.clickcard{position:absolute;z-index:560;left:64px;top:64px;width:286px;max-width:calc(100% - 80px);max-height:calc(100% - 64px - var(--scrubH,58px) - 36px);overflow:auto;
+  background:var(--panel);color:var(--fg);border:1px solid var(--line);border-radius:var(--radius-lg,14px);box-shadow:var(--shadow-lg);padding:12px 14px;font:13px/1.4 var(--font-body);animation:cpIn .16s ease-out}
+.clickcard[hidden]{display:none}
+@keyframes cpIn{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
+.cp{position:relative}
+.cp-x{position:absolute;top:-6px;right:-6px;width:28px;height:28px;border:0;border-radius:50%;background:transparent;color:var(--muted);font-size:1.3rem;line-height:1;cursor:pointer}
+.cp-x:hover{background:var(--panel-hover);color:var(--fg)}
+.cp-h{display:flex;flex-direction:column;gap:1px;margin:0 22px 8px 0}
+.cp-h b{font:700 .98rem/1.25 var(--font-display);color:var(--fg)}
+.cp-h span{font-size:.7rem;color:var(--muted)}
+.cp-r{display:flex;align-items:center;gap:10px;padding:7px 0;border-top:1px solid var(--line)}
+.cp-r svg{flex:none;width:40px;height:40px}
+.cp-r>div{display:flex;flex-direction:column;min-width:0}
+.cp-k{font-size:.68rem;color:var(--muted)}
+.cp-r b{font:600 1.15rem/1.15 var(--font-data);font-variant-numeric:tabular-nums;color:var(--fg)}
+.cp-r b small{font:500 .68rem var(--font-body);color:var(--muted)}
+.cp-l{font-size:.74rem;color:var(--fg)}
+.cp-l[style]{display:inline-flex;align-items:center;gap:5px}
+.cp-l[style]::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--c)}
+.cp-w{font-size:.72rem;color:var(--muted);padding:0 0 8px 50px;margin-top:-4px}
+.cp-n{font-size:.78rem;color:var(--muted);padding:6px 0;border-top:1px solid var(--line)}
+.cp-b{display:flex;gap:6px;padding-top:9px;border-top:1px solid var(--line)}
+.cp-b .btn{padding:5px 11px;font-size:.74rem}
+@media (max-width:860px){
+  .mapwrap{--legTop:52px}
+  .legtoggle{top:8px;right:8px;width:36px;height:36px}
+  .legend{top:var(--legTop);max-height:calc(100% - var(--legTop) - var(--scrubH,52px) - 14px - 12px)}
+  .clickcard{left:8px;right:8px;width:auto;max-width:none;top:auto;bottom:calc(var(--scrubH,52px) + 24px);max-height:calc(100% - var(--scrubH,52px) - 72px)}
+}
 </style>
 </head>
-<body>
+<body data-click="info">
 <!-- location popup at page level, so it opens above the map (inside the side panel it was drawn under the map) -->
 <div id="locPop" class="locpop" hidden role="dialog" aria-modal="true" aria-labelledby="locPopT"><div class="lpcard" id="locPopCard"></div></div>
 <header>
@@ -1471,6 +1509,8 @@ body{font-feature-settings:"ss01";text-rendering:optimizeLegibility}   /* Inter 
 
   <div class="mapwrap">
     <div id="map" aria-label="Map of hotspots and smoke forecast"></div>
+    <!-- hides / shows the layer panel (page code: initLegToggle) -->
+    <button type="button" id="btnLegToggle" class="legtoggle on" aria-controls="legend" aria-expanded="true" title="Hide layers and legend" aria-label="Hide layers and legend"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 3 2.5 8 12 13l9.5-5L12 3Z"/><path d="m2.5 12 9.5 5 9.5-5"/><path d="m2.5 16 9.5 5 9.5-5"/></svg></button>
     <div class="legend" id="legend"><details id="legDet" open><summary data-th="ชั้นข้อมูลและคำอธิบาย">Layers and legend</summary>
       <div class="layerpick" role="radiogroup" aria-label="Map layer">
         <label><input type="radio" name="layer" id="lyTotal" value="total" checked> <span data-th="PM&lt;sub&gt;2.5&lt;/sub&gt; รวม (พยากรณ์)">Total PM<sub>2.5</sub> forecast</span></label>

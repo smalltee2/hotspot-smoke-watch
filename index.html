@@ -1465,8 +1465,13 @@ matchMedia('(prefers-color-scheme: dark)').addEventListener('change',reTheme);
 new MutationObserver(reTheme).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
 const hotLayer=L.layerGroup().addTo(map), trajLayer=L.layerGroup().addTo(map), townLayer=L.layerGroup().addTo(map);
 let plume=null;
-map.on('click',e=>{ if(typeof layerMode==='function'&&layerMode()==='nasa'){ nasaPoint(e.latlng,e.containerPoint); return; } const name=`${T('My point','จุดของฉัน')} ${S.myPts.length+1}`;S.myPts.push({name,lat:+e.latlng.lat.toFixed(4),lon:+e.latlng.lng.toFixed(4),cc:'★'});
-  store.set('hsw.points',JSON.stringify(S.myPts)); if(S.sim) computeReceptors(); drawTowns(); renderWarnings();});
+function addMyPoint(lat,lon){ const name=`${T('My point','จุดของฉัน')} ${S.myPts.length+1}`; S.myPts.push({name,lat:+lat.toFixed(4),lon:+lon.toFixed(4),cc:'★'});
+  store.set('hsw.points',JSON.stringify(S.myPts)); if(S.sim) computeReceptors(); drawTowns(); renderWarnings(); }
+// the redesigned page (index_modern.html, <body data-click="info">): a click on the map shows a short summary of that place at the
+// slider time, with buttons for the full location window and for keeping the place as one of "my points"; the original page adds the point
+const CLICK_INFO=document.body?.dataset.click==='info';
+map.on('click',e=>{ if(typeof layerMode==='function'&&layerMode()==='nasa'){ nasaPoint(e.latlng,e.containerPoint); return; }
+  if(CLICK_INFO){ clickInfo(e.latlng.lat,e.latlng.lng); return; } addMyPoint(e.latlng.lat,e.latlng.lng); });
 $('btnClearPts').onclick=()=>{S.myPts=[];store.set('hsw.points','[]');if(S.sim)computeReceptors();drawTowns();renderWarnings();};
 
 function allReceptors(){return TOWNS.filter(t=>inRegion(t.lat,t.lon)&&inBox(t.lat,t.lon,REGIONS.msea.bbox)).concat(S.myPts);}
@@ -1543,7 +1548,7 @@ function setTimeline(){
   S.jumpNow=false; S.nowSel=S.times[iNow]; S.hour=i; sl.value=i; setGibs();
 }
 function redrawTime(){if(hereLL&&!$('hereBox').hidden) renderHereBox(); setGibs();
-  updateTimeLabel();drawPlume();drawGrid();drawContours();drawTowns();drawStations();drawWind();}
+  updateTimeLabel();drawPlume();drawGrid();drawContours();drawTowns();drawStations();drawWind(); if(typeof refreshClickInfo==='function') refreshClickInfo();}
 
 // ---- hourly data written by the GitHub Actions pipeline (same site)
 async function loadPipeline(){
@@ -2315,6 +2320,47 @@ function renderLocPop(){
 function closeLocPop(){ LOCPOP=null; $('locPop').hidden=true; }
 document.addEventListener('keydown',e=>{ if(e.key==='Escape'&&LOCPOP) closeLocPop(); });
 function openLocPop(lat,lon,acc){ LOCPOP={lat,lon,acc}; renderLocPop.focused=0; renderLocPop(); ensureT2(renderLocPop); ensureRainObs(renderLocPop); ensureRainFac(renderLocPop); }
+// ---- short summary of a clicked place (redesigned page): PM2.5 and weather at the slider time
+function clickInfoHTML(lat,lon){
+  const t=curT(); if(t==null||!P.data) return `<div class="cp"><button type="button" class="cp-x" data-a="x" aria-label="${T('Close','ปิด')}">×</button><div class="cp-h"><b>${lat.toFixed(3)}°N ${lon.toFixed(3)}°E</b></div><div class="cp-n">${T('Forecast not loaded yet.','ยังไม่ได้โหลดข้อมูลพยากรณ์')}</div></div>`;
+  const pv=provinceOf(lat,lon), v=totalAt(lat,lon,t), w=wxAt(lat,lon,t), r=rainAt(lat,lon,t), wi=wxIcon(lat,lon,t,r), past=t<=Date.now();
+  const when=new Date(t).toLocaleString(LOC(),{weekday:'short',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit',timeZone:'Asia/Bangkok'});
+  const b=v!=null?bandFor(v):null, ws=w?Math.hypot(w.u10,w.v10):null;
+  const pm=v!=null?`<div class="cp-r">${pmIcon(v)}<div><span class="cp-k">PM₂.₅ ${past?T('(map)','(แผนที่)'):T('(forecast)','(พยากรณ์)')}</span><b>${fmtN(v)} <small>µg/m³</small></b><span class="cp-l" style="--c:${b.color}">${esc(b.en)}</span></div></div>`
+    :`<div class="cp-n">${T('No PM₂.₅ value here at this hour.','ไม่มีค่า PM₂.₅ ที่นี่ในชั่วโมงนี้')}</div>`;
+  const wx=w?`<div class="cp-r">${wi?wi.svg:''}<div><span class="cp-k">${T('Weather','สภาพอากาศ')}</span><b>${w.t2!=null?w.t2.toFixed(1)+' °C':'–'}</b><span class="cp-l">${wi?esc(wi.label):''}${r!=null&&r>=0.1?` · ${r<10?r.toFixed(1):Math.round(r)} ${T('mm/h','มม./ชม.')}`:''}</span></div></div>
+    <div class="cp-w">${ws!=null?`${T('Wind','ลม')} ${ws.toFixed(1)} ${T('m/s','ม./วิ')} ${T('from','จาก')} ${compass(windFrom(w.u10,w.v10))}`:''}${w.rh!=null?` · ${T('humidity','ความชื้น')} ${Math.round(w.rh)} %`:''}</div>`:'';
+  return `<div class="cp"><button type="button" class="cp-x" data-a="x" aria-label="${T('Close','ปิด')}">×</button><div class="cp-h"><b>${pv?esc(provName(pv)):T('Selected point','จุดที่เลือก')}</b><span>${esc(when)} · ${lat.toFixed(3)}°N ${lon.toFixed(3)}°E</span></div>${pm}${wx}
+    <div class="cp-b"><button type="button" class="btn primary" data-a="more">${T('More details','รายละเอียด')}</button><button type="button" class="btn" data-a="pt">${T('Add as my point','เพิ่มเป็นจุดของฉัน')}</button></div></div>`;
+}
+// shown as a card fixed inside the map (top left; above the time bar on phones) with a pin at the place, so the map never has to pan
+// to fit it (the map is held to the region's bounds, which fights a popup's auto-pan near the region's edge)
+let CLICK=null;
+function clickCard(){ let el=document.getElementById('clickCard'); if(el) return el;
+  el=document.createElement('div'); el.id='clickCard'; el.className='clickcard'; el.hidden=true; el.setAttribute('role','dialog'); el.setAttribute('aria-live','polite');
+  document.querySelector('.mapwrap').appendChild(el); L.DomEvent.disableClickPropagation(el); L.DomEvent.disableScrollPropagation(el); return el; }
+function renderClickInfo(){ if(!CLICK) return; const {lat,lon}=CLICK, el=clickCard();
+  el.innerHTML=clickInfoHTML(lat,lon); el.setAttribute('aria-label',T('Summary of the selected place','สรุปข้อมูลจุดที่เลือก')); el.hidden=false;
+  el.querySelector('[data-a=x]')?.addEventListener('click',closeClickInfo);
+  el.querySelector('[data-a=more]')?.addEventListener('click',()=>{ closeClickInfo(); openLocPop(lat,lon); });
+  el.querySelector('[data-a=pt]')?.addEventListener('click',()=>{ closeClickInfo(); addMyPoint(lat,lon); toast(T('Added to my points (Settings tab).','เพิ่มในจุดของฉันแล้ว (แท็บตั้งค่า)')); }); }
+function closeClickInfo(){ if(CLICK?.pin) map.removeLayer(CLICK.pin); CLICK=null; const el=document.getElementById('clickCard'); if(el) el.hidden=true; }
+function clickInfo(lat,lon){
+  if(CLICK?.pin) map.removeLayer(CLICK.pin);
+  const ember=getComputedStyle(document.documentElement).getPropertyValue('--ember').trim()||'#ea580c';
+  CLICK={lat,lon,pin:L.circleMarker([lat,lon],{radius:7,color:'#fff',weight:2.5,fillColor:ember,fillOpacity:1,interactive:false,pane:'markerPane'}).addTo(map)};
+  renderClickInfo();
+  const again=()=>refreshClickInfo(); ensureT2(again); ensureRainObs(again); ensureRainFac(again);   // 0.025° temperature and rain load on first use
+}
+// the slider moved, the language changed or a field arrived while the card is open: show the new values
+function refreshClickInfo(){ if(CLICK&&!document.getElementById('clickCard')?.hidden) renderClickInfo(); }
+document.addEventListener('keydown',e=>{ if(e.key==='Escape'&&CLICK) closeClickInfo(); });
+// ---- button that hides the layer panel (redesigned page: #btnLegToggle); the choice is kept on this device
+function initLegToggle(){ const b=$('btnLegToggle'), lg=$('legend'); if(!b||!lg) return;
+  const set=h=>{ lg.hidden=h; b.setAttribute('aria-expanded',String(!h)); b.classList.toggle('on',!h);
+    const l=h?T('Show layers and legend','แสดงชั้นข้อมูลและคำอธิบาย'):T('Hide layers and legend','ซ่อนชั้นข้อมูลและคำอธิบาย'); b.title=l; b.setAttribute('aria-label',l); store.set('hsw.legHidden',h?'1':'0'); };
+  set(store.get('hsw.legHidden')==='1'); b.onclick=()=>set(!lg.hidden); initLegToggle.relabel=()=>set(lg.hidden); }
+initLegToggle();
 async function autoLocPop(){
   if(store.get('hsw.locPop')==='off'||!navigator.geolocation||!P.data) return;
   try{ const st=await navigator.permissions?.query({name:'geolocation'}); if(st&&st.state==='denied') return; }catch(e){}
@@ -2845,7 +2891,7 @@ function renderLegend(){
     ' · bands follow the Thai PCD thresholds (15 / 25 / 37.5 / 75); warm colours from the 37.5 standard; black above 300'+(PUBLIC?' · ':' · CAMS + monitors + low-cost sensors + terrain, 0.025°. ')+'24-h values are the mean of the 24 hours ending at the slider time. Dashed box: forecast area.';
 }
 applyStaticLang(); if(!S.mode) $('modeChip').textContent=T('no data','ไม่มีข้อมูล');
-$('btnLang').onclick=()=>{ LANG=LANG==='th'?'en':'th'; store.set('hsw.lang',LANG); applyStaticLang();
+$('btnLang').onclick=()=>{ LANG=LANG==='th'?'en':'th'; store.set('hsw.lang',LANG); applyStaticLang(); initLegToggle.relabel?.(); refreshClickInfo();
   {const lb=document.querySelector('.locate-btn'); if(lb){lb.title=T('Show PM2.5 at my location','ดูค่าฝุ่นที่ตำแหน่งของฉัน'); lb.setAttribute('aria-label',lb.title);}} if(S.mode) setMode(S.mode); else $('modeChip').textContent=T('no data','ไม่มีข้อมูล');
   renderLegend(); renderAll(); renderHereBox(); if(LOCPOP) renderLocPop(); drawStations?.(); redrawTime(); };
 {const v=store.get('hsw.unitSel'); if(v) $('unitSel').value=v;}

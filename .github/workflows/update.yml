@@ -171,10 +171,15 @@ jobs:
           cp perf.html _site/perf.html
           sed '0,/<html lang="en">/s//<html lang="en" data-mode="public">/' index.html > _site/index.html
           grep -q 'data-mode="public"' _site/index.html
-          # page version = hash of the page source, so only a change to the page itself counts as a new version
-          BUILD=$(sha1sum index.html | cut -c1-12)
-          sed -i "s/<meta name=\"build\" content=\"dev\">/<meta name=\"build\" content=\"${BUILD}\">/" _site/index.html _site/dev.html
-          grep -q "content=\"${BUILD}\"" _site/index.html && grep -q "content=\"${BUILD}\"" _site/dev.html
+          # redesigned public page at /index_modern.html: its own layout and styles, the page code of index.html (both pages
+          # read the same data files); public mode as the original
+          node scripts/build_modern.mjs index.html index_modern.html _site/index_modern.html
+          sed -i '0,/<html lang="en">/s//<html lang="en" data-mode="public">/' _site/index_modern.html
+          grep -q 'data-mode="public"' _site/index_modern.html
+          # page version = hash of the page sources, so only a change to a page itself counts as a new version
+          BUILD=$(cat index.html index_modern.html | sha1sum | cut -c1-12)
+          sed -i "s/<meta name=\"build\" content=\"dev\">/<meta name=\"build\" content=\"${BUILD}\">/" _site/index.html _site/index_modern.html _site/dev.html
+          grep -q "content=\"${BUILD}\"" _site/index.html && grep -q "content=\"${BUILD}\"" _site/index_modern.html && grep -q "content=\"${BUILD}\"" _site/dev.html
           echo "${BUILD}" > _site/build.txt
           # private pages: the developer page and the performance page are published encrypted (username + password from
           # the DEV_USER / DEV_PASS secrets; without them a notice is published instead of the page)

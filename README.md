@@ -8,6 +8,8 @@ Hourly PM2.5 warning page for Northern Thailand and mainland Southeast Asia.
 - **Fire smoke**: VIIRS hotspots from NASA FIRMS → FRP-based PM2.5 emission (Wooster et al. 2005; Akagi et al. 2011) → Gaussian puff dispersion with Open-Meteo forecast winds (Briggs 1973 σ, Heffter 1965 long-range σy).
 - **Warnings**: towns and stations banded on Thailand's PCD PM2.5 scale (1 June 2023).
 - **Verification**: forecasts are logged and scored against later observations by lead time (`data/verify.json`).
+- **Where the air comes from**: tap a place on the map → *Where is the air from?* draws an ensemble of 27 backward trajectories (48 h or 24 h) arriving at 100, 500 and 1500 m above ground, HYSPLIT-style (9 members per height with the winds read ±0.25° around the parcel), from ECMWF winds at 10 m, 100 m, 925, 850 and 700 hPa (`data/met-traj.json`, loaded on first use), and lists the countries the air passed over and the fire hotspots near the paths.
+- **Automatic refresh**: an open page checks `data/stamp.json` every 3 minutes and loads a new run in place (keeping the chosen hour and place); a new page version reloads the page.
 
 ## How it runs
 
@@ -15,7 +17,7 @@ Hourly PM2.5 warning page for Northern Thailand and mainland Southeast Asia.
 |---|---|---|
 | `scripts/update.mjs` | GitHub Actions, hourly | OpenAQ obs, CAMS, FIRMS → Kalman correction → `data/latest.json` |
 | `scripts/verify.mjs` | same job | RMSE / bias / r by lead time → `data/verify.json` |
-| `index.html` | GitHub Pages (deployed by the workflow) | reads `data/*.json`; runs the fire-smoke model in the browser |
+| `index.html` + `index_modern.html` | GitHub Pages (deployed by the workflow) | the site's default page (`/`) is the redesign (`index_modern.html` layout with the page code of `index.html`, built by `scripts/build_modern.mjs`); the original layout stays at `/classic.html`. Both read `data/*.json` and run the fire-smoke model in the browser |
 
 Large, changing files (`latest.json`, `met.json`, `state.json`) are not committed: they are published to Pages and carried between runs in the Actions cache. Git keeps only the per-run verification CSVs in `data/history/YYYY-MM/` and the static terrain grid `data/static/elev.json`.
 

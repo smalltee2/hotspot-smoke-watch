@@ -12,7 +12,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { buildDEM, sampleGrid } from './dem.mjs';
 import { regressionKriging, krigeField, clampAux } from './rk.mjs';
-import { fetchMet, sampleMet, packMet, MET_MODEL } from './met.mjs';
+import { fetchMet, sampleMet, packMet, packTraj, MET_MODEL } from './met.mjs';
 import { updateGsmap, mergeIntoMet, webRain } from './gsmap.mjs';
 import { fetchGauges, scoreGauges, gsmapAt, rainFactor } from './thaiwater.mjs';
 import { WXML, T2_NAMES, PR_NAMES, T2ENG, PRENG, t2Features, prFeatures, loadWxDataset, storeWxDay, loadWxSeason } from './mlwx.mjs';
@@ -384,10 +384,10 @@ async function main() {
 
   // 3b. meteorology (fixed model, nested grids), refreshed every few hours
   let met = await readJSON(path.join(DATA, 'met.json'), null);
-  const metKey = JSON.stringify(CFG.met.grids) + MET_MODEL + '|n2t2rh|elev|cc';
+  const metKey = JSON.stringify(CFG.met.grids) + MET_MODEL + '|n2t2rh|elev|cc|up60';
   if (!met || met.key !== metKey || now - met.fetched > CFG.met.refreshH * HOUR) {
     try {
-      met = await fetchMet(CFG.met.grids, { get, sleep, log, keepFrom: now - 36 * HOUR });
+      met = await fetchMet(CFG.met.grids, { get, sleep, log, keepFrom: now - 60 * HOUR });   // 60 h back: 48-h backward trajectories (met refreshed every 12 h)
       met.key = metKey; await writeJSON(path.join(DATA, 'met.json'), met);
     } catch (e) { log(`met refresh failed: ${e.message}${met ? ' (keeping previous)' : ''}`); }
   }
@@ -435,7 +435,11 @@ async function main() {
 
   // compact copy for the page: 36 h back (dispersion spin-up) to 75 h ahead (longest forecast option + interpolation)
   if (met) { const web = packMet(met, now - 36 * HOUR, now + 75 * HOUR); await writeJSON(path.join(DATA, 'met-web.json'), web);
-    log(`met-web: ${web.times.length} h, ${(JSON.stringify(web).length / 1024).toFixed(0)} KB (full ${(JSON.stringify(met).length / 1024).toFixed(0)} KB)`); }
+    log(`met-web: ${web.times.length} h, ${(JSON.stringify(web).length / 1024).toFixed(0)} KB (full ${(JSON.stringify(met).length / 1024).toFixed(0)} KB)`);
+    // winds at several heights for the page's backward trajectories: 48 h back from now, to the end of the forecast
+    const tr = packTraj(met, now - 49 * HOUR, now + 75 * HOUR);
+    if (tr) { await writeJSON(path.join(DATA, 'met-traj.json'), tr); log(`met-traj: ${tr.times.length} h, ${(JSON.stringify(tr).length / 1024).toFixed(0)} KB`); }
+    else log('met-traj: no upper winds in met.json yet (written after the next meteorology refresh)'); }
 
   globalThis.TIMER('t2+wxml');
   // 3b'. 2-m temperature downscaled to 0.025° (live forecast only; scripts/t2down.mjs): terrain lapse-rate correction on a 0.025° DEM
@@ -864,6 +868,7 @@ async function main() {
     t2down: t2Info,
     rainObs: rainInfo,
     met: met ? { file: 'data/met-web.json', model: met.model, fetched: met.fetched, grids: met.grids.map(g => ({ step: g.step, bbox: [g.lon0, g.lat0, g.lon0 + (g.nx - 1) * g.step, g.lat0 + (g.ny - 1) * g.step] })) } : null,
+    metTraj: met && met.grids.every(g => g.up) ? { file: 'data/met-traj.json', fetched: met.fetched } : null,
     hours, stations: outStations,
     // latest measured weather at the Air4Thai stations (hour-ending means; ≤ 6 h old): the page's "now" values at the viewer's location
     obsWx: a4tSt.filter(s => state.obsWx?.[s.id]).map(s => { const o = state.obsWx[s.id]; return { id: s.id, lat: s.lat, lon: s.lon, t: o.t, t2: o.t2 ?? null, rh: o.rh ?? null, ws: o.ws ?? null, wd: o.wd ?? null }; }),

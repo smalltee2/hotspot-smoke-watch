@@ -4,9 +4,13 @@
 // Stored per grid as flat arrays [time][iy][ix] for: u, v (100 m wind, m/s), blh (m), cls (Pasquill–Gifford class ×2), pr (mm/h),
 // n2 (Brunt–Väisälä frequency squared between 850 and 700 hPa, s⁻², for the Sofiev et al. 2012 plume height; from ECMWF IFS 0.25°,
 // because the 9 km HRES feed on Open-Meteo has no pressure levels).
+// Upper winds for the backward trajectories (g.up, same nodes and time axis; ECMWF IFS 0.25°): u, v at 925, 850 and 700 hPa (m/s) and
+// the height of those levels above the ground (m, geopotential height minus the node's ground height); the 925 hPa height is not
+// requested (Open-Meteo counts 10 variables as one call) but follows from the 850 hPa height and temperature (hypsometric equation).
 
 export const MET_MODEL = 'ecmwf_ifs';
-const PL_VARS = 'temperature_850hPa,temperature_700hPa,geopotential_height_850hPa,geopotential_height_700hPa';
+const PL_VARS = 'temperature_850hPa,temperature_700hPa,geopotential_height_850hPa,geopotential_height_700hPa,wind_speed_925hPa,wind_direction_925hPa,wind_speed_850hPa,wind_direction_850hPa,wind_speed_700hPa,wind_direction_700hPa';
+export const UP_VARS = ['u925', 'v925', 'u850', 'v850', 'u700', 'v700', 'z925', 'z850', 'z700'];
 export const N2_DEFAULT = 1e-4;   // used if the pressure-level request fails
 const VARS = 'wind_speed_10m,wind_direction_10m,wind_speed_100m,wind_direction_100m,boundary_layer_height,shortwave_radiation,cloud_cover,precipitation,temperature_2m,relative_humidity_2m';
 const DEG = Math.PI / 180;
@@ -23,7 +27,7 @@ export function pgClass(u, sw, cc) {
   if (u < 2) return 6; if (u < 3) return cloudy ? 5 : 6; if (u < 5) return cloudy ? 4 : 5; return 4;
 }
 
-export async function fetchMet(grids, { get, sleep, log, pastDays = 2, forecastDays = 4, keepFrom, keepTo }) {
+export async function fetchMet(grids, { get, sleep, log, pastDays = 3, forecastDays = 4, keepFrom, keepTo }) {
   const out = { model: MET_MODEL, fetched: Date.now(), vars: ['u', 'v', 'blh', 'cls', 'pr', 'n2', 't2', 'u10', 'v10', 'rh', 'cc'], times: null, grids: [] };   // t2 °C, u10/v10 m/s, cc total cloud cover %: shown on the page (weather layers, weather icon)
   for (const gs of grids) {
     const nx = Math.round((gs.bbox[2] - gs.bbox[0]) / gs.step) + 1, ny = Math.round((gs.bbox[3] - gs.bbox[1]) / gs.step) + 1;
@@ -38,27 +42,36 @@ export async function fetchMet(grids, { get, sleep, log, pastDays = 2, forecastD
       if (i + 100 < pts.length) await sleep(12000); // ≤ 500 locations/min
     }
     // free-troposphere stability N² = (g/θ)·dθ/dz between 850 and 700 hPa (ECMWF IFS 0.25°), same time axis
-    const n2At = []; let n2ok = true;
+    const n2At = [], upAt = []; let n2ok = true;
     try {
       for (let i = 0; i < pts.length; i += 100) {
         await sleep(12000);
         const c = pts.slice(i, i + 100);
         const url = `https://api.open-meteo.com/v1/forecast?latitude=${c.map(p => p[0].toFixed(3)).join(',')}&longitude=${c.map(p => p[1].toFixed(3)).join(',')}` +
-          `&hourly=${PL_VARS}&models=ecmwf_ifs025&timeformat=unixtime&timezone=GMT&past_days=${pastDays}&forecast_days=${forecastDays}`;
+          `&hourly=${PL_VARS}&models=ecmwf_ifs025&wind_speed_unit=ms&timeformat=unixtime&timezone=GMT&past_days=${pastDays}&forecast_days=${forecastDays}`;
         let js = await (await get(url)).json(); if (!Array.isArray(js)) js = [js];
         for (const o of js) { const h = o.hourly, T0 = h.time.map(s => s * 1000);
           n2At.push(t => { const k = T0.indexOf(t); if (k < 0) return null;
             const t8 = h.temperature_850hPa?.[k], t7 = h.temperature_700hPa?.[k], z8 = h.geopotential_height_850hPa?.[k], z7 = h.geopotential_height_700hPa?.[k];
             if ([t8, t7, z8, z7].some(x => x == null) || z7 - z8 < 500) return null;
             const th8 = (t8 + 273.15) * Math.pow(1000 / 850, 0.2857), th7 = (t7 + 273.15) * Math.pow(1000 / 700, 0.2857);
-            return Math.min(6e-4, Math.max(0, 9.81 / (0.5 * (th8 + th7)) * (th7 - th8) / (z7 - z8))); }); }
+            return Math.min(6e-4, Math.max(0, 9.81 / (0.5 * (th8 + th7)) * (th7 - th8) / (z7 - z8))); });
+          const zg = o.elevation ?? 0;
+          upAt.push(t => { const k = T0.indexOf(t); if (k < 0) return null; const r = {};
+            for (const L of [925, 850, 700]) { const ws = h[`wind_speed_${L}hPa`]?.[k], wd = h[`wind_direction_${L}hPa`]?.[k];
+              if (ws == null || wd == null) return null; r['u' + L] = -ws * Math.sin(wd * DEG); r['v' + L] = -ws * Math.cos(wd * DEG); }
+            const z8 = h.geopotential_height_850hPa?.[k], z7 = h.geopotential_height_700hPa?.[k], t8 = h.temperature_850hPa?.[k];
+            if (z8 == null || z7 == null || t8 == null) return null;
+            // 925 hPa height: hypsometric equation from 850 hPa with the 850 hPa temperature + 3 K for the warmer layer below (±20 m)
+            r.z925 = z8 - 287.05 / 9.80665 * (t8 + 273.15 + 3) * Math.log(925 / 850) - zg; r.z850 = z8 - zg; r.z700 = z7 - zg;
+            return r; }); }
       }
     } catch (e) { n2ok = false; log(`met ${gs.name}: N² (850–700 hPa) unavailable, using ${N2_DEFAULT} s⁻²: ${e.message}`); }
     await sleep(12000);   // keep under Open-Meteo's per-minute limit before the next grid
     // keep the useful time window
     const T = out.times, a = Math.max(0, T.findIndex(t => t >= keepFrom)), b = keepTo ? Math.max(a + 1, T.findLastIndex(t => t <= keepTo) + 1) : T.length, nt = b - a;
     const N = nt * nx * ny, d = { u: new Array(N), v: new Array(N), blh: new Array(N), cls: new Array(N), pr: new Array(N), n2: new Array(N), t2: new Array(N), u10: new Array(N), v10: new Array(N), rh: new Array(N), cc: new Array(N) };
-    let missBLH = 0, n2miss = 0;
+    let missBLH = 0, n2miss = 0, upMiss = 0; const up = Object.fromEntries(UP_VARS.map(k => [k, new Array(N)]));
     for (let p = 0; p < pts.length; p++) {
       const h = per[p];
       for (let k = 0; k < nt; k++) {
@@ -76,10 +89,14 @@ export async function fetchMet(grids, { get, sleep, log, pastDays = 2, forecastD
         const n2 = n2ok && n2At[p] ? n2At[p](T[t]) : null;
         if (n2 == null) n2miss++;
         d.n2[i] = Math.round((n2 ?? N2_DEFAULT) * 1e6) / 1e6;
+        // upper winds missing (request failed): the 100 m wind and nominal level heights, so trajectories still run (logged)
+        const uq = n2ok && upAt[p] ? upAt[p](T[t]) : null; if (!uq) upMiss++;
+        for (const L of [925, 850, 700]) { up['u' + L][i] = Math.round((uq ? uq['u' + L] : d.u[i]) * 10) / 10; up['v' + L][i] = Math.round((uq ? uq['v' + L] : d.v[i]) * 10) / 10; }
+        up.z925[i] = Math.round(uq ? uq.z925 : 750); up.z850[i] = Math.round(uq ? uq.z850 : 1500); up.z700[i] = Math.round(uq ? uq.z700 : 3100);
       }
     }
-    out.times = T; out.grids.push({ lon0: gs.bbox[0], lat0: gs.bbox[1], step: gs.step, nx, ny, a, nt, data: d, elev });   // elev: m, the height Open-Meteo used for t2 at each node
-    log(`met ${gs.name}: ${pts.length} points × ${nt} h at ${gs.step}° (${MET_MODEL})${missBLH ? `, BLH missing in ${missBLH} values (filled)` : ''}${n2miss ? `, N² default in ${n2miss} of ${N} values` : ''}`);
+    out.times = T; out.grids.push({ lon0: gs.bbox[0], lat0: gs.bbox[1], step: gs.step, nx, ny, a, nt, data: d, up, elev });   // elev: m, the height Open-Meteo used for t2 at each node
+    log(`met ${gs.name}: ${pts.length} points × ${nt} h at ${gs.step}° (${MET_MODEL})${missBLH ? `, BLH missing in ${missBLH} values (filled)` : ''}${n2miss ? `, N² default in ${n2miss} of ${N} values` : ''}${upMiss ? `, upper winds missing in ${upMiss} of ${N} values (100 m wind used)` : ''}`);
   }
   // all grids share one time axis window: use the first grid's
   const g0 = out.grids[0]; out.times = out.times.slice(g0.a, g0.a + g0.nt);
@@ -137,6 +154,27 @@ export function packMet(M, from, to) {
     return { lon0: g.lon0, lat0: g.lat0, step: g.step, nx: g.nx, ny: g.ny, data, ...(g.elev ? { elev: g.elev } : {}) };
   });
   return { model: M.model, fetched: M.fetched, vars: M.vars, enc: 'int-dt', scale: MET_SCALE, times: T.slice(a, b), grids };
+}
+// Winds for the page's backward trajectories (data/met-traj.json, loaded only when a trajectory is asked for): 10 m, 100 m and the
+// 925/850/700 hPa winds with those levels' heights above ground, same packing as met-web.json, over [from, to].
+export const TRAJ_VARS = ['u10', 'v10', 'u', 'v', ...UP_VARS];
+export const TRAJ_SCALE = { u10: 10, v10: 10, u: 10, v: 10, u925: 10, v925: 10, u850: 10, v850: 10, u700: 10, v700: 10, z925: 0.1, z850: 0.1, z700: 0.1 };
+export function packTraj(M, from, to) {
+  if (!M.grids.every(g => g.up)) return null;
+  const T = M.times, a = Math.max(0, T.findIndex(t => t >= from)), b = Math.max(a + 1, T.findLastIndex(t => t <= to) + 1), nt = b - a;
+  const grids = M.grids.map(g => {
+    const n = g.nx * g.ny, data = {};
+    for (const k of TRAJ_VARS) {
+      const src = g.data[k] ?? g.up[k], sc = TRAJ_SCALE[k], out = new Array(nt * n);
+      for (let t = 0; t < nt; t++) for (let p = 0; p < n; p++) {
+        const q = Math.round(src[(a + t) * n + p] * sc);
+        out[t * n + p] = t ? q - Math.round(src[(a + t - 1) * n + p] * sc) : q;
+      }
+      data[k] = out;
+    }
+    return { lon0: g.lon0, lat0: g.lat0, step: g.step, nx: g.nx, ny: g.ny, data };
+  });
+  return { model: M.model + ' (10 m, 100 m) + ecmwf_ifs025 (925/850/700 hPa)', fetched: M.fetched, vars: TRAJ_VARS, enc: 'int-dt', scale: TRAJ_SCALE, times: T.slice(a, b), grids };
 }
 export function unpackMet(P) {
   if (P.enc !== 'int-dt') return P;

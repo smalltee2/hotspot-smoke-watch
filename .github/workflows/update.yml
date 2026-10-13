@@ -166,27 +166,31 @@ jobs:
           DEV_PASS: ${{ secrets.DEV_PASS }}
         run: |
           mkdir -p _site/data/static
-          # developer page = index.html as written; public page = the same file switched to public mode
+          # developer page = index.html as written; the original layout stays public at /classic.html (index.html switched to public mode)
           cp index.html _site/dev.html
           cp perf.html _site/perf.html
-          sed '0,/<html lang="en">/s//<html lang="en" data-mode="public">/' index.html > _site/index.html
+          sed '0,/<html lang="en">/s//<html lang="en" data-mode="public">/' index.html > _site/classic.html
+          grep -q 'data-mode="public"' _site/classic.html
+          # default public page (/ and /index.html) = the redesign: its own layout and styles, the page code of index.html (both
+          # layouts read the same data files), public mode; also published at /index_modern.html so earlier links keep working
+          node scripts/build_modern.mjs index.html index_modern.html _site/index.html
+          sed -i '0,/<html lang="en">/s//<html lang="en" data-mode="public">/' _site/index.html
           grep -q 'data-mode="public"' _site/index.html
-          # redesigned public page at /index_modern.html: its own layout and styles, the page code of index.html (both pages
-          # read the same data files); public mode as the original
-          node scripts/build_modern.mjs index.html index_modern.html _site/index_modern.html
-          sed -i '0,/<html lang="en">/s//<html lang="en" data-mode="public">/' _site/index_modern.html
-          grep -q 'data-mode="public"' _site/index_modern.html
+          cp _site/index.html _site/index_modern.html
           # page version = hash of the page sources, so only a change to a page itself counts as a new version
           BUILD=$(cat index.html index_modern.html | sha1sum | cut -c1-12)
-          sed -i "s/<meta name=\"build\" content=\"dev\">/<meta name=\"build\" content=\"${BUILD}\">/" _site/index.html _site/index_modern.html _site/dev.html
-          grep -q "content=\"${BUILD}\"" _site/index.html && grep -q "content=\"${BUILD}\"" _site/index_modern.html && grep -q "content=\"${BUILD}\"" _site/dev.html
+          sed -i "s/<meta name=\"build\" content=\"dev\">/<meta name=\"build\" content=\"${BUILD}\">/" _site/index.html _site/index_modern.html _site/classic.html _site/dev.html
+          for f in index.html index_modern.html classic.html dev.html; do grep -q "content=\"${BUILD}\"" _site/$f; done
           echo "${BUILD}" > _site/build.txt
+          # stamp.json: run time of latest.json + page version, polled by the pages every 3 min for the automatic refresh
+          BUILD="${BUILD}" node -e 'const fs=require("fs"); let g=null; try{g=JSON.parse(fs.readFileSync("data/latest.json","utf8")).generated??null;}catch(e){}
+            fs.writeFileSync("_site/data/stamp.json", JSON.stringify({generated:g, build:process.env.BUILD}));'
           # private pages: the developer page and the performance page are published encrypted (username + password from
           # the DEV_USER / DEV_PASS secrets; without them a notice is published instead of the page)
           node scripts/lockpage.mjs _site/dev.html _site/dev.html "Developer page"
           node scripts/lockpage.mjs _site/perf.html _site/perf.html "Model performance"
           if grep -q 'data-mode\|id="map"' _site/dev.html; then echo "developer page not encrypted"; exit 1; fi
-          for f in latest.json met-web.json ml-field.json t2-corr.json rain-obs.json wx-ml.json perf.json perf-series.json rk-bias.json rk-bias-A.json verify.json runlog.json; do [ -f "data/$f" ] && cp "data/$f" _site/data/ || true; done
+          for f in latest.json met-web.json met-traj.json ml-field.json t2-corr.json rain-obs.json wx-ml.json perf.json perf-series.json rk-bias.json rk-bias-A.json verify.json runlog.json; do [ -f "data/$f" ] && cp "data/$f" _site/data/ || true; done
           for f in elev.json elev025.json; do [ -f data/static/$f ] && cp data/static/$f _site/data/static/ || true; done
           [ -d data/static/prclim ] && cp -r data/static/prclim _site/data/static/ || true
           ls -la _site _site/data

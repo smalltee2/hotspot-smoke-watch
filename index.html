@@ -1545,8 +1545,9 @@ function setTimeline(){
   const sl=$('slider'); sl.max=Math.max(0,S.times.length-1);
   // the hour shown as "now"; a manual refresh, or a view that was on "now", moves to the current hour; a chosen past/forecast hour is kept
   let iNow=S.times.findIndex(h=>h>=Date.now()-HR/2); if(iNow<0) iNow=Math.max(0,S.times.length-1);
-  let i=-1; if(i<0) i=iNow;   // every load and refresh shows the current hour (like Windy); the user moves on from there
-  S.jumpNow=false; S.nowSel=S.times[iNow]; S.hour=i; sl.value=i; setGibs();
+  // every load and manual refresh shows the current hour (like Windy); an automatic refresh keeps a past or forecast hour the user chose
+  let i=-1; if(S.keepSel&&keep!=null&&S.nowSel!=null&&keep!==S.nowSel) i=S.times.indexOf(keep); if(i<0) i=iNow;
+  S.keepSel=false; S.jumpNow=false; S.nowSel=S.times[iNow]; S.hour=i; sl.value=i; setGibs();
 }
 function redrawTime(){if(hereLL&&!$('hereBox').hidden) renderHereBox(); setGibs();
   updateTimeLabel();drawPlume();drawGrid();drawContours();drawTowns();drawStations();drawWind(); if(typeof refreshClickInfo==='function') refreshClickInfo();}
@@ -2333,6 +2334,7 @@ function clickInfoHTML(lat,lon){
   const wx=w?`<div class="cp-r">${wi?wi.svg:''}<div><span class="cp-k">${T('Weather','สภาพอากาศ')}</span><b>${w.t2!=null?w.t2.toFixed(1)+' °C':'–'}</b><span class="cp-l">${wi?esc(wi.label):''}${r!=null&&r>=0.1?` · ${r<10?r.toFixed(1):Math.round(r)} ${T('mm/h','มม./ชม.')}`:''}</span></div></div>
     <div class="cp-w">${ws!=null?`${T('Wind','ลม')} ${ws.toFixed(1)} ${T('m/s','ม./วิ')} ${T('from','จาก')} ${compass(windFrom(w.u10,w.v10))}`:''}${w.rh!=null?` · ${T('humidity','ความชื้น')} ${Math.round(w.rh)} %`:''}</div>`:'';
   return `<div class="cp"><button type="button" class="cp-x" data-a="x" aria-label="${T('Close','ปิด')}">×</button><div class="cp-h"><b>${pv?esc(provName(pv)):T('Selected point','จุดที่เลือก')}</b><span>${esc(when)} · ${lat.toFixed(3)}°N ${lon.toFixed(3)}°E</span></div>${pm}${wx}
+    ${trajHTML()}
     <div class="cp-b"><button type="button" class="btn primary" data-a="more">${T('More details','รายละเอียด')}</button><button type="button" class="btn" data-a="pt">${T('Add as my point','เพิ่มเป็นจุดของฉัน')}</button></div></div>`;
 }
 // shown as a card fixed inside the map (top left; above the time bar on phones) with a pin at the place, so the map never has to pan
@@ -2348,10 +2350,13 @@ function renderClickInfo(){ if(!CLICK) return; const {lat,lon}=CLICK, el=clickCa
   if(window.PHONEUI?.active()&&!CLICK.shown){ CLICK.shown=1; PHONEUI.set('half','map'); PHONEUI.top(); }
   el.querySelector('[data-a=x]')?.addEventListener('click',closeClickInfo);
   el.querySelector('[data-a=more]')?.addEventListener('click',()=>{ closeClickInfo(); openLocPop(lat,lon); });
-  el.querySelector('[data-a=pt]')?.addEventListener('click',()=>{ closeClickInfo(); addMyPoint(lat,lon); toast(T('Added to my points (Settings tab).','เพิ่มในจุดของฉันแล้ว (แท็บตั้งค่า)')); }); }
-function closeClickInfo(){ if(CLICK?.pin) map.removeLayer(CLICK.pin); CLICK=null; const el=document.getElementById('clickCard'); if(el) el.hidden=true; if(window.PHONEUI?.active()) PHONEUI.set('peek'); }
+  el.querySelector('[data-a=pt]')?.addEventListener('click',()=>{ closeClickInfo(); addMyPoint(lat,lon); toast(T('Added to my points (Settings tab).','เพิ่มในจุดของฉันแล้ว (แท็บตั้งค่า)')); });
+  el.querySelector('[data-a=traj]')?.addEventListener('click',()=>runTraj());
+  el.querySelector('[data-a=trajH]')?.addEventListener('change',e=>{ store.set('hsw.trajH',e.target.value); runTraj(); });
+  el.querySelector('[data-a=trajX]')?.addEventListener('click',()=>{ clearTraj(); renderClickInfo(); }); }
+function closeClickInfo(){ if(CLICK?.pin) map.removeLayer(CLICK.pin); clearTraj(); CLICK=null; const el=document.getElementById('clickCard'); if(el) el.hidden=true; if(window.PHONEUI?.active()) PHONEUI.set('peek'); }
 function clickInfo(lat,lon){
-  if(CLICK?.pin) map.removeLayer(CLICK.pin);
+  if(CLICK?.pin) map.removeLayer(CLICK.pin); clearTraj();
   const ember=getComputedStyle(document.documentElement).getPropertyValue('--ember').trim()||'#ea580c';
   CLICK={lat,lon,pin:L.circleMarker([lat,lon],{radius:7,color:'#fff',weight:2.5,fillColor:ember,fillOpacity:1,interactive:false,pane:'markerPane'}).addTo(map)};
   renderClickInfo();
@@ -2360,6 +2365,95 @@ function clickInfo(lat,lon){
 // the slider moved, the language changed or a field arrived while the card is open: show the new values
 function refreshClickInfo(){ if(CLICK&&!document.getElementById('clickCard')?.hidden) renderClickInfo(); }
 document.addEventListener('keydown',e=>{ if(e.key==='Escape'&&CLICK) closeClickInfo(); });
+// ---- ensemble backward trajectories from the clicked place ("Where is the air from?" in the place card)
+// Winds: data/met-traj.json (scripts/met.mjs packTraj), loaded on first use: 10 m and 100 m (ECMWF IFS HRES) and 925, 850, 700 hPa
+// (ECMWF IFS 0.25°) with those levels' heights above ground; the wind at a height is interpolated linearly in height between them.
+// Each trajectory keeps its height above ground (no vertical motion: the forecast has no vertical wind on the page) and is integrated
+// backwards in 10-min steps with the predictor–corrector scheme of HYSPLIT (Stein et al. 2015). Ensemble as in HYSPLIT: the winds are
+// read ±0.25° (one ECMWF grid length) east–west and north–south of the parcel, 9 members for each of three arrival heights.
+const TRAJ_H=[100,500,1500], TRAJ_OFF=0.25, TRAJ_DT=600, TRAJ_FIRE_KM=20, TRAJ_FIRE_H=12;
+const TRAJ_COL={100:'#e8590c',500:'#1971c2',1500:'#7048e8'};
+const CTRY_TH={THA:'ไทย',MMR:'เมียนมา',LAO:'ลาว',KHM:'กัมพูชา',VNM:'เวียดนาม',CHN:'จีน',IND:'อินเดีย',BGD:'บังกลาเทศ',MYS:'มาเลเซีย',IDN:'อินโดนีเซีย',BTN:'ภูฏาน'};
+const CTRY_EN={LAO:'Laos',VNM:'Vietnam'};
+const CTRY_IDX=GEO_C.features.map(f=>{const polys=f.geometry.type==='Polygon'?[f.geometry.coordinates]:f.geometry.coordinates; let b=[180,90,-180,-90];
+  for(const pg of polys) for(const [x,y] of pg[0]){b[0]=Math.min(b[0],x);b[1]=Math.min(b[1],y);b[2]=Math.max(b[2],x);b[3]=Math.max(b[3],y);}
+  return {iso:f.properties.iso,n:f.properties.n,polys,b};});
+function countryOf(lat,lon){for(const q of CTRY_IDX){if(lon<q.b[0]||lon>q.b[2]||lat<q.b[1]||lat>q.b[3])continue;
+  for(const pg of q.polys) if(inRing(lon,lat,pg[0])&&!pg.slice(1).some(h=>inRing(lon,lat,h))) return q.iso;} return null;}
+const ctryName=iso=>iso?(LANG==='th'?CTRY_TH[iso]:CTRY_EN[iso]||CTRY_IDX.find(q=>q.iso===iso)?.n)||iso:T('sea','ทะเล');
+let TRAJMET=null; const trajBkLayer=L.layerGroup().addTo(map);
+async function loadTrajMet(){ const m=P.data?.metTraj; if(!m) return null; if(TRAJMET&&TRAJMET.fetched===m.fetched) return TRAJMET;
+  const r=await fetch(m.file+'?f='+m.fetched); if(!r.ok) throw new Error('HTTP '+r.status); TRAJMET=unpackMet(await r.json()); return TRAJMET; }
+// u, v (m/s) at h metres above ground from one sample of the trajectory winds
+function windAtH(s,h){ const lv=[[10,s.u10,s.v10],[100,s.u,s.v]];
+  for(const L of [925,850,700]){const z=s['z'+L]; if(z>lv[lv.length-1][0]+50) lv.push([z,s['u'+L],s['v'+L]]);}   // a level below or near the ground is skipped
+  if(h<=lv[0][0]) return [lv[0][1],lv[0][2]];
+  for(let i=1;i<lv.length;i++) if(h<=lv[i][0]){const a=(h-lv[i-1][0])/(lv[i][0]-lv[i-1][0]); return [lv[i-1][1]+a*(lv[i][1]-lv[i-1][1]),lv[i-1][2]+a*(lv[i][2]-lv[i-1][2])];}
+  const top=lv[lv.length-1]; return [top[1],top[2]]; }
+// one backward trajectory: hourly points [lat, lon, t] from the arrival back to `hours` earlier (shorter if it leaves the winds' area or time)
+function backTraj(M,lat,lon,h,t0,hours,dx,dy){
+  const G=M.grids[M.grids.length-1], W=G.lon0, S_=G.lat0, E=G.lon0+(G.nx-1)*G.step, N=G.lat0+(G.ny-1)*G.step, T0=M.times[0];
+  const V=(la,lo,t)=>windAtH(sampleMet(M,la+dy,lo+dx,t),h), dt=-TRAJ_DT, per=3600/TRAJ_DT;
+  const pts=[[lat,lon,t0]]; let la=lat, lo=lon, t=t0;
+  for(let k=0;k<hours*per;k++){
+    const t1=t+dt*1e3; if(t1<T0) break;
+    const [u1,v1]=V(la,lo,t), la1=la+v1*dt/MPD, lo1=lo+u1*dt/(MPD*Math.cos(la*DEG));
+    const [u2,v2]=V(la1,lo1,t1); la+=0.5*(v1+v2)*dt/MPD; lo+=0.5*(u1+u2)*dt/(MPD*Math.cos(0.5*(la+la1)*DEG)); t=t1;
+    if(lo<W||lo>E||la<S_||la>N) break;
+    if((k+1)%per===0) pts.push([la,lo,t]);
+  }
+  return pts; }
+function clearTraj(){ trajBkLayer.clearLayers(); if(CLICK) CLICK.traj=null; if(TRAJVIEW){ TRAJVIEW=false; lockRegion(); } }
+// the map is held to the chosen region: while trajectories are shown it may also pan and zoom out over them; fitted beside the card
+let TRAJVIEW=false;
+function showTrajView(){ const tr=CLICK?.traj; if(!tr?.mem) return;
+  const TB=L.latLngBounds([[CLICK.lat,CLICK.lon]]); for(const m of tr.mem) for(const p of m.pts) TB.extend([p[0],p[1]]);
+  const R=lockRegion(), U=L.latLngBounds(R.getSouthWest(),R.getNorthEast()).extend(TB);
+  map.setMaxBounds(null); map.setMinZoom(2); TRAJVIEW=true;
+  const pd=mapPads(), card=$('clickCard'), lg=$('legend'), mr=map.getContainer().getBoundingClientRect();   // keep the paths clear of the card and the layer panel
+  if(!window.PHONEUI?.active()){ if(card&&!card.hidden) pd.paddingTopLeft=L.point(card.getBoundingClientRect().right-mr.left+16,48);
+    if(lg&&!lg.hidden&&lg.offsetParent){ const r=lg.getBoundingClientRect(); if(r.left>mr.left+mr.width/2) pd.paddingBottomRight=L.point(mr.right-r.left+16,pd.paddingBottomRight.y); } }
+  else { const sh=$('sheetPeek')?.closest('.sheet,[class*=sheet]')||$('sheetPeek'); if(sh){ const top=sh.getBoundingClientRect().top; if(top>mr.top+80&&top<mr.bottom) pd.paddingBottomRight=L.point(12,mr.bottom-top+12); } }   // phones: above the bottom sheet
+  map.fitBounds(TB,{...pd,maxZoom:8,animate:false}); map.setMaxBounds(map.getBounds().extend(U).pad(0.1)); }
+async function runTraj(){ if(!CLICK) return; const c=CLICK; let t0=curT(); if(t0==null) return;
+  c.traj={busy:true}; renderClickInfo();
+  let M=null; try{ M=await loadTrajMet(); }catch(e){ console.error(e); }
+  if(CLICK!==c) return;
+  if(!M){ c.traj={err:T('Winds at several heights are not published yet; they arrive with the next weather update (every 12 h).','ยังไม่มีข้อมูลลมหลายระดับความสูง จะมาพร้อมข้อมูลอากาศรอบถัดไป (ทุก 12 ชม.)')}; renderClickInfo(); return; }
+  t0=Math.min(Math.max(t0,M.times[0]),M.times[M.times.length-1]);
+  const want=+(store.get('hsw.trajH')||48), hours=Math.min(want,Math.floor((t0-M.times[0])/HR));
+  const mem=[]; for(const h of TRAJ_H) for(const dy of [0,-TRAJ_OFF,TRAJ_OFF]) for(const dx of [0,-TRAJ_OFF,TRAJ_OFF]) mem.push({h,c:!dx&&!dy,pts:backTraj(M,c.lat,c.lon,h,t0,hours,dx,dy)});
+  // fires near the paths: hotspots within 20 km of an hourly point, detected within 12 h of the air passing
+  const fires=TRAJ_H.map(()=>new Set()), hit=TRAJ_H.map(()=>0);
+  mem.forEach(m=>{const gi=TRAJ_H.indexOf(m.h); let any=false;
+    S.hots.forEach((f,fi)=>{ for(const [la,lo,t] of m.pts){ if(Math.abs(f.t-t)>TRAJ_FIRE_H*HR||Math.abs(f.lat-la)>0.25||haversineKm(la,lo,f.lat,f.lon)>TRAJ_FIRE_KM) continue; fires[gi].add(fi); any=true; break; } });
+    if(any) hit[gi]++; });
+  const groups=TRAJ_H.map((h,gi)=>{ const ms=mem.filter(m=>m.h===h), at=k=>{const n={}; let tot=0; for(const m of ms){const p=m.pts[k]; if(!p) continue; tot++; const iso=countryOf(p[0],p[1])||'-'; n[iso]=(n[iso]||0)+1;}
+      const best=Object.entries(n).sort((a,b)=>b[1]-a[1])[0]; return best?{iso:best[0]==='-'?null:best[0],n:best[1],tot}:null; };
+    const fc={}; let frp=0; for(const fi of fires[gi]){const f=S.hots[fi]; frp+=f.frp||0; const iso=countryOf(f.lat,f.lon)||'-'; fc[iso]=(fc[iso]||0)+1;}
+    const fTop=Object.entries(fc).sort((a,b)=>b[1]-a[1])[0];
+    return {h,n:ms.length,a24:at(Math.min(24,hours)),aEnd:at(hours),fires:fires[gi].size,frp,hit:hit[gi],fTop:fTop?(fTop[0]==='-'?null:fTop[0]):null}; });
+  c.traj={t0,hours,want,mem,groups}; drawTrajBk(); renderClickInfo(); showTrajView(); }
+function drawTrajBk(){ trajBkLayer.clearLayers(); const tr=CLICK?.traj; if(!tr?.mem) return;
+  for(const m of tr.mem){ if(m.pts.length<2) continue; const col=TRAJ_COL[m.h];
+    L.polyline(m.pts.map(p=>[p[0],p[1]]),{color:col,weight:m.c?3:1.4,opacity:m.c?.95:.5,interactive:false}).addTo(trajBkLayer);
+    if(m.c) m.pts.forEach((p,i)=>{ if(!i||i%6) return;
+      L.circleMarker([p[0],p[1]],{radius:i%24?3:4.5,color:'#fff',weight:1.2,fillColor:col,fillOpacity:1}).bindTooltip(`−${i} h · ${m.h} m`,{direction:'top'}).addTo(trajBkLayer); }); } }
+function trajHTML(){ const tr=CLICK?.traj, H=store.get('hsw.trajH')||'48';
+  const btn=`<div class="cp-tb"><button type="button" class="btn" data-a="traj">${T('Where is the air from?','อากาศมาจากไหน?')}</button></div>`;
+  if(!tr) return P.data?.metTraj?btn:'';
+  if(tr.busy) return `<div class="cp-n">${T('Computing 27 backward trajectories…','กำลังคำนวณย้อนเส้นทางอากาศ 27 เส้น…')}</div>`;
+  if(tr.err) return `<div class="cp-n">${esc(tr.err)}</div>`;
+  const when=new Date(tr.t0).toLocaleString(LOC(),{weekday:'short',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit',timeZone:'Asia/Bangkok'});
+  const frac=(a,h)=>`<small>−${h} h</small> `+(a?`${esc(ctryName(a.iso))} (${a.n}/${a.tot})`:T('outside the map','นอกพื้นที่แผนที่'));
+  const rows=tr.groups.map(g=>`<tr><td><i style="background:${TRAJ_COL[g.h]}"></i>${g.h} m</td><td>${tr.hours>24?frac(g.a24,24)+'<br>':''}${frac(g.aEnd,tr.hours)}</td><td>${g.fires?`${g.fires}${g.fTop?` · ${esc(ctryName(g.fTop))}`:''}<br><small>${g.hit}/${g.n} ${T('paths','เส้น')}</small>`:'0'}</td></tr>`).join('');
+  const stale=curT()!=null&&Math.abs(curT()-tr.t0)>=HR;
+  return `<div class="cp-tr"><div class="cp-k">${T(`Air arriving ${when}, traced back ${tr.hours} h`,`อากาศที่มาถึง ${when} ย้อนหลัง ${tr.hours} ชม.`)}${tr.hours<tr.want?T(' (winds start later)',' (ข้อมูลลมเริ่มหลังจากนั้น)'):''}</div>
+    <table><thead><tr><th>${T('Height','ความสูง')}</th><th>${T('Air was over','อากาศอยู่เหนือ')}</th><th>${T('Fires passed','ไฟที่ผ่าน')}</th></tr></thead><tbody>${rows}</tbody></table>
+    <div class="cp-tc"><label>${T('Back','ย้อนหลัง')} <select data-a="trajH"><option value="24"${H==='24'?' selected':''}>24 h</option><option value="48"${H!=='24'?' selected':''}>48 h</option></select></label>
+      ${stale?`<button type="button" class="btn" data-a="traj">${T('Recompute for this hour','คำนวณใหม่สำหรับชั่วโมงนี้')}</button>`:''}<button type="button" class="btn" data-a="trajX">${T('Clear','ล้าง')}</button></div>
+    <p class="cp-tn">${T(`9 paths for each height above ground (bold line: dots every 6 h); where the paths spread apart the source is less certain. Fires: hotspots within ${TRAJ_FIRE_KM} km of a path, detected within ${TRAJ_FIRE_H} h of the air passing. Winds ECMWF; height above ground kept fixed (no vertical motion), so treat as a guide.`,`9 เส้นต่อความสูงเหนือพื้นดิน (เส้นหนา: จุดทุก 6 ชม.) ถ้าเส้นกระจายออกจากกันมาก แหล่งที่มาจะไม่แน่นอน ไฟ: จุดความร้อนที่ห่างจากเส้นทางไม่เกิน ${TRAJ_FIRE_KM} กม. และตรวจพบภายใน ${TRAJ_FIRE_H} ชม. ของเวลาที่อากาศผ่าน ลมจาก ECMWF ความสูงเหนือพื้นคงที่ (ไม่คิดการเคลื่อนที่แนวตั้ง) ใช้เป็นแนวทางเท่านั้น`)}</p></div>`; }
+
 // ---- button that hides the layer panel (redesigned page: #btnLegToggle); the choice is kept on this device
 function initLegToggle(){ const b=$('btnLegToggle'), lg=$('legend'); if(!b||!lg) return;
   const mq=matchMedia('(max-width:860px)'), key=()=>mq.matches?'hsw.legHiddenM':'hsw.legHidden', hiddenNow=()=>mq.matches?store.get('hsw.legHiddenM')!=='0':store.get('hsw.legHidden')==='1';
@@ -2950,11 +3044,33 @@ $('rainBar').innerHTML=RAIN_SCALE.slice(1).map(([,c])=>`<i style="background:${c
 $('uncBar').innerHTML=UNC_COL.map(c=>`<i style="background:${c}"></i>`).join('');
 $('alpha').addEventListener('change',()=>{FIELD_CACHE.clear(); redrawTime();});
 {const u=new URL(location.href); if(u.searchParams.has('v')){u.searchParams.delete('v'); history.replaceState(null,'',u.toString());}}
-// first paint, then refresh every 30 minutes while the tab is open
+// first paint, then automatic refresh while the tab is open
 computeReceptors(); renderAll(); applyVisibility();
 runAuto(false).then(()=>{ if(P.data) autoLocPop(); if(!P.data){ $('lyFire').checked=true; $('legTotal').hidden=true; $('legUnc').hidden=true; $('legFire').hidden=false; redrawTime(); } });
-setInterval(async()=>{ if(document.visibilityState!=='visible'||!P.data) return; await runAuto(true); if(LOCPOP) renderLocPop();
-  if(await newBuild()) toast(T('A new version of the page is available — press Refresh.','มีหน้าเว็บเวอร์ชันใหม่ — กดปุ่มรีเฟรช'),15000); },30*60e3);
+// Automatic refresh: every 3 min (and when the tab comes back into view or the device goes online) the page reads data/stamp.json,
+// a few bytes the workflow writes at each deployment with the run time of latest.json and the page version. New data are loaded
+// in place (the chosen hour, the place card and the map view stay); a new page version reloads the page. Without stamp.json
+// (local copy) the data are reloaded every 30 min as before.
+let AUTO={busy:false,full:Date.now(),hour:Math.floor(Date.now()/HR),wait:0};
+async function readStamp(){ if(location.protocol==='file:') return null;
+  try{const r=await fetch('data/stamp.json?ts='+Date.now(),{cache:'no-store'}); if(!r.ok) return null; return await r.json();}catch(e){return null;} }
+async function autoCheck(){
+  if(AUTO.busy||document.visibilityState!=='visible'||!P.data||playT) return; AUTO.busy=true;
+  try{
+    const st=await readStamp();
+    if(st?.build&&BUILD!=='dev'&&st.build!==BUILD){ toast(T('New version of the page — reloading…','มีหน้าเว็บเวอร์ชันใหม่ — กำลังโหลดใหม่…'),6000);
+      setTimeout(()=>{const u=new URL(location.href); u.searchParams.set('v',st.build); location.replace(u.toString());},3000); return; }
+    const fresh=st?(st.generated&&st.generated!==P.data.generated&&Date.now()>AUTO.wait):Date.now()-AUTO.full>30*60e3;
+    if(fresh){ const before=P.data.generated; S.keepSel=true; await runAuto(true); AUTO.full=Date.now(); if(LOCPOP) renderLocPop();
+      if(P.data&&P.data.generated!==before) toast(T(`New data loaded: run of ${hm(P.data.generated)}.`,`โหลดข้อมูลใหม่แล้ว: รอบ ${hm(P.data.generated)}`),6000);
+      else AUTO.wait=Date.now()+15*60e3; }   // stamp ahead of the cached data file: try again later
+    else if(Math.floor(Date.now()/HR)!==AUTO.hour){ S.keepSel=true; setTimeline(); redrawTime(); }   // a new hour: "now" moves on
+    AUTO.hour=Math.floor(Date.now()/HR);
+  }finally{ AUTO.busy=false; }
+}
+setInterval(autoCheck,3*60e3);
+document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='visible') autoCheck(); });
+window.addEventListener('online',()=>autoCheck());
 </script>
 </body>
 </html>

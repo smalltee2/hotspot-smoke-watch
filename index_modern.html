@@ -1685,7 +1685,7 @@ main.side-hidden .sidetoggle svg{transform:rotate(180deg)}
       <div id="legVent" hidden>
         <div class="pcdbar" id="ventBar" style="grid-template-columns:repeat(6,1fr)"></div>
         <div class="ticks"><span>0</span><span>1k</span><span>2k</span><span>4k</span><span>6k</span><span>10k</span><span>m²/s</span></div>
-        <div class="note" style="font-size:.68rem" data-th="ดัชนีการระบายอากาศ = ความสูงชั้นผสม × ความเร็วลมพัดพา (ECMWF: ความสูงชั้นบรรยากาศขอบเขต × ลมที่ 100 ม.) ยิ่งต่ำ ฝุ่นยิ่งสะสมใกล้พื้น: ต่ำกว่า 2,000 ระบายอากาศไม่ดี, 2,000–6,000 ปานกลาง, สูงกว่า 6,000 ดี (เกณฑ์ศักยภาพมลพิษอากาศของ US National Meteorological Center: ต่ำกว่า 6,000 ม.²/วินาที = ศักยภาพมลพิษสูง, Stackpole 1967; Gross 1970) ต่ำสุดกลางคืนและเช้ามืด สูงสุดบ่าย">Ventilation index = mixing height × transport wind (ECMWF boundary-layer height × 100-m wind). The lower, the more smoke and dust build up near the ground: below 2,000 poor, 2,000–6,000 moderate, above 6,000 good (US National Meteorological Center air-pollution-potential criterion: below 6,000 m²/s = high potential; Stackpole 1967, Gross 1970). Lowest at night and early morning, highest in the afternoon.</div>
+        <div class="note" style="font-size:.68rem" data-th="ดัชนีการระบายอากาศ = ความสูงชั้นผสม × ความเร็วลมพัดพา (ECMWF: ความสูงชั้นบรรยากาศขอบเขต × ลมที่ 100 ม.) ยิ่งต่ำ ฝุ่นยิ่งสะสมใกล้พื้น: ต่ำกว่า 2,000 ระบายอากาศไม่ดี, 2,000–6,000 ปานกลาง, สูงกว่า 6,000 ดี (เกณฑ์ศักยภาพมลพิษอากาศของ US National Meteorological Center: ต่ำกว่า 6,000 ม.²/วินาที = ศักยภาพมลพิษสูง, Stackpole 1967; Gross 1970) ต่ำสุดกลางคืนและเช้ามืด สูงสุดบ่าย วาดที่ 0.025°: ปรับลมตามภูมิประเทศ เพิ่มบนสันเขาและด้านรับลม ลดในหุบเขาและด้านอับลม (น้ำหนักแบบ MicroMet, Liston &amp; Elder 2006 ไม่เกิน ±40%) ส่วนความสูงชั้นผสมใช้ค่า ECMWF เหนือพื้น จึงยังไม่แยกแอ่งอากาศเย็นในหุบเขา">Ventilation index = mixing height × transport wind (ECMWF boundary-layer height × 100-m wind). The lower, the more smoke and dust build up near the ground: below 2,000 poor, 2,000–6,000 moderate, above 6,000 good (US National Meteorological Center air-pollution-potential criterion: below 6,000 m²/s = high potential; Stackpole 1967, Gross 1970). Lowest at night and early morning, highest in the afternoon. Drawn at 0.025°: the wind is raised on ridges and windward slopes and lowered in valleys and on lee slopes from the terrain (MicroMet weighting, Liston &amp; Elder 2006, within ±40 %); the mixing height is the ECMWF value above ground, so valley cold pools are not resolved.</div>
       </div>
       <div id="legNasa" hidden>
         <div class="note" style="font-size:.7rem" data-th="ชี้เมาส์หรือแตะที่ภาพ เพื่อดูการประเมินว่าเป็นท้องฟ้าโปร่ง เมฆ หรือควัน/หมอกควัน พร้อมหลักฐาน · หรือกดปุ่มด้านล่างแล้วลากกรอบ เพื่อสรุปสัดส่วนในพื้นที่">Point or tap on the image for an assessment: clear sky, cloud, or smoke/haze, with the evidence · or press the button below and drag a box to summarise an area.</div>
@@ -2929,7 +2929,27 @@ function drawGrid(){
 // ---- weather layers (ECMWF forecast from the pipeline): rain and 2-m temperature as shaded fields, 10-m wind as arrows
 // ventilation index (m²/s) = boundary-layer height × 100-m wind speed (ECMWF): dark where smoke is trapped
 const VENT_SCALE=[[1000,'#5e1d6e'],[2000,'#b03a7a'],[4000,'#e8845a'],[6000,'#f5d26a'],[10000,'#b9e3a4'],[Infinity,'#5bb27a']];
-const ventAt=(lat,lon,t)=>{ if(!MET) return null; const m=sampleMet(MET,lat,lon,t); if(!m||m.blh==null) return null; return m.blh*Math.hypot(m.u,m.v); };
+// At 0.025° the transport wind is adjusted for the terrain with the MicroMet weighting of Liston & Elder (2006, J. Hydrometeor. 7, 217):
+// W = 1 + 0.5·Ωs + 0.5·Ωc, Ωs the slope along the wind (uphill flow speeds up, lee slopes slow down) and Ωc the curvature (ridges
+// exposed, valleys sheltered), both scaled to −0.5…0.5 over the domain (curvature length 0.1°); W kept within 0.6–1.4.
+// The mixing height stays the ECMWF value above ground (nothing on the page can resolve it finer).
+let VT=null;   // terrain fields on the 0.025° DEM: curvature (scaled) and slope components (scaled)
+function ventTerrain(){ const D=T2D?.dem; if(!D||!D.values) return null; if(VT&&VT.dem===D) return VT;
+  const {nx,ny,values:z}=D, n=nx*ny, cur=new Float32Array(n), gx=new Float32Array(n), gy=new Float32Array(n), k=4;   // 4 cells = 0.1°
+  const Z=(x,y)=>z[Math.min(ny-1,Math.max(0,y))*nx+Math.min(nx-1,Math.max(0,x))];
+  const dx=MPD*D.step*Math.cos((D.lat0+D.ny*D.step/2)*DEG), dy=MPD*D.step;
+  for(let y=0;y<ny;y++) for(let x=0;x<nx;x++){ const i=y*nx+x, c=z[i];
+    cur[i]=0.25*((c-(Z(x-k,y)+Z(x+k,y))/2)/(2*k*dx)+(c-(Z(x,y-k)+Z(x,y+k))/2)/(2*k*dy)+(c-(Z(x-k,y-k)+Z(x+k,y+k))/2)/(2*Math.SQRT2*k*dx)+(c-(Z(x-k,y+k)+Z(x+k,y-k))/2)/(2*Math.SQRT2*k*dx));
+    gx[i]=(Z(x+1,y)-Z(x-1,y))/(2*dx); gy[i]=(Z(x,y+1)-Z(x,y-1))/(2*dy); }
+  const p95=a=>{ const b=Array.from(a,Math.abs).filter(v=>v>0).sort((u,v)=>u-v); return b.length?b[Math.floor(0.95*(b.length-1))]:1; };
+  const sc=2*p95(cur), sg=2*p95(Float32Array.from(gx,(v,i)=>Math.hypot(v,gy[i])));
+  return VT={dem:D,cur,gx,gy,sc:sc||1,sg:sg||1}; }
+function ventFactor(lat,lon,u,v){ const T_=ventTerrain(); if(!T_) return 1; const D=T_.dem; const fx=(lon-D.lon0)/D.step, fy=(lat-D.lat0)/D.step;
+  if(fx<0||fy<0||fx>D.nx-1||fy>D.ny-1) return 1; const x=Math.round(fx), y=Math.round(fy), i=y*D.nx+x, sp=Math.hypot(u,v);
+  const oc=Math.max(-0.5,Math.min(0.5,T_.cur[i]/T_.sc)), os=sp>0.1?Math.max(-0.5,Math.min(0.5,(T_.gx[i]*u+T_.gy[i]*v)/sp/T_.sg)):0;
+  return Math.max(0.6,Math.min(1.4,1+0.5*os+0.5*oc)); }
+const ventAt=(lat,lon,t,fine=true)=>{ if(!MET) return null; const m=sampleMet(MET,lat,lon,t); if(!m||m.blh==null) return null;
+  return m.blh*Math.hypot(m.u,m.v)*(fine?ventFactor(lat,lon,m.u,m.v):1); };
 const ventCat=v=>v==null?null:v<2000?{k:'poor',en:'poor',th:'ไม่ดี'}:v<6000?{k:'mod',en:'moderate',th:'ปานกลาง'}:{k:'good',en:'good',th:'ดี'};
 const RAIN_SCALE=[[0.1,null],[0.5,'#c7e3f7'],[1,'#8fc3ea'],[2,'#4a97d6'],[5,'#1f63b5'],[10,'#0b3a86'],[Infinity,'#4a1a7a']];
 const TEMP_SCALE=[[10,'#3b4cc0'],[15,'#6f8fe3'],[20,'#a8c8f0'],[25,'#f2f0c8'],[30,'#f4b183'],[35,'#e0633f'],[Infinity,'#a50021']];
@@ -2962,18 +2982,18 @@ function drawWx(){
   const t=curT(); if(t==null||t<MET.times[0]||t>MET.times[MET.times.length-1]){S.fieldInfo=T('No weather forecast for this hour.','ไม่มีพยากรณ์อากาศสำหรับชั่วโมงนี้'); return;}
   const R=regionShape(), B=REGIONS.msea.bbox; let so=B[1], w=B[0], n=B[3], e=B[2];
   if(R){so=Math.max(so,R.bbox[1]-.2); w=Math.max(w,R.bbox[0]-.2); n=Math.min(n,R.bbox[3]+.2); e=Math.min(e,R.bbox[2]+.2);}
-  if(mode==='temp') ensureT2(redrawIfLayer('temp'));
+  if(mode==='temp'||mode==='vent') ensureT2(redrawIfLayer(mode));
   if(mode==='rain') ensureRainObs(redrawIfLayer('rain'));
   const obsRain=mode==='rain'&&!!RAINOBS&&RAINOBS.times.includes(obsHour(t));
   const facKey=String(new Date(t+7*3600e3).getUTCMonth()+1).padStart(2,'0');
   if(mode==='rain'&&!RFAC[facKey]) ensureRainFac(redrawIfLayer('rain'),[facKey]);
   const fineRain=mode==='rain'&&!!RFAC[facKey];   // observed and forecast rain both drawn at 0.025° with the month's CHELSA pattern
-  const down=mode==='temp'&&!!T2D&&!!MET.grids[0].elev;
+  const down=(mode==='temp'&&!!T2D&&!!MET.grids[0].elev)||(mode==='vent'&&!!T2D?.dem);
   let cell=(down||fineRain)?0.025:obsRain?0.05:0.1; while(((e-w)/cell)*((n-so)/cell)>((down||fineRain)?650000:obsRain?200000:60000)) cell*=1.25;
   const fx=Math.ceil((e-w)/cell), fy=Math.ceil((n-so)/cell), F=new Float32Array(fx*fy);
   for(let y=0;y<fy;y++) for(let x=0;x<fx;x++){const la=so+(y+.5)*cell, lo=w+(x+.5)*cell; if(mode==='vent'){ const v=ventAt(la,lo,t); F[y*fx+x]=v==null?NaN:v; } else if(mode==='rain'){ if(obsRain){const v=fineRain?rainFineAt(la,lo,t):rainObsAt(la,lo,t); F[y*fx+x]=v==null?NaN:v;} else {let v=metVarAt(MET,'pr',la,lo,t); if(fineRain&&v>0) v*=rainFactorAt(la,lo,t); const c=wxmlAt('pr',la,lo,t); if(c&&v!=null) v=Math.max(0,(v+0.2)*Math.exp(c)-0.2); F[y*fx+x]=v;}} else {const v=t2At(la,lo,t); F[y*fx+x]=v==null?NaN:v;}}
   S.fine={F,w,so,nx:fx,ny:fy,cell};
-  S.fieldInfo=mode==='vent'?T('Ventilation index, m²/s: ECMWF boundary-layer height × 100-m wind, 0.1° (0.25° over northern Thailand)','ดัชนีการระบายอากาศ ม.²/วินาที: ความสูงชั้นบรรยากาศขอบเขต ECMWF × ลมที่ 100 ม. ความละเอียด 0.1° (0.25° ในภาคเหนือ)'):mode==='rain'?(obsRain?T(`Observed rain, mm/h: JAXA GSMaP gauge-calibrated${fineRain?`, interpolated to ${cell.toFixed(3)}° and shaped by the CHELSA rain climatology (±7 % typical)`:', 0.1°'} (${RAINOBS.src[RAINOBS.times.indexOf(obsHour(t))]==='nrt'?'Gauge_NRT':'Gauge_NOW'})`,`ฝนที่ตรวจวัด มม./ชม.: JAXA GSMaP ปรับด้วยเครื่องวัดฝน${fineRain?' ประมาณค่าเป็น '+cell.toFixed(3)+'° และปรับรูปแบบด้วยภูมิอากาศฝน CHELSA (ปกติ ±7 %)':' 0.1°'}`):(fineRain?T(`Rain forecast, mm/h: ECMWF (0.25° north, 1° elsewhere) interpolated to ${cell.toFixed(3)}° and shaped by the CHELSA rain climatology`,`ฝนพยากรณ์ มม./ชม.: ECMWF (0.25° ภาคเหนือ 1° พื้นที่อื่น) ประมาณค่าเป็น ${cell.toFixed(3)}° และปรับรูปแบบด้วยภูมิอากาศฝน CHELSA`):T('Rain forecast, mm/h (ECMWF)','ฝนพยากรณ์ มม./ชม. (ECMWF)'))):down?T(`Temperature at 2 m, °C: ECMWF downscaled to ${cell.toFixed(3)}° with terrain${T2D.corr?' and Air4Thai stations':''}`,`อุณหภูมิ 2 ม. °C: ECMWF ย่อส่วนเป็น ${cell.toFixed(3)}° ด้วยภูมิประเทศ${T2D.corr?' และสถานี Air4Thai':''}`):T('Temperature at 2 m, °C (ECMWF)','อุณหภูมิ 2 ม. °C (ECMWF)');
+  S.fieldInfo=mode==='vent'?(down?T(`Ventilation index, m²/s: ECMWF boundary-layer height × 100-m wind, the wind adjusted for terrain exposure and sheltering on the 0.025° DEM (MicroMet weighting, ±40 % at most), drawn at ${cell.toFixed(3)}°`,`ดัชนีการระบายอากาศ ม.²/วินาที: ความสูงชั้นบรรยากาศขอบเขต ECMWF × ลมที่ 100 ม. ปรับลมตามการเปิดรับและกำบังของภูมิประเทศบน DEM 0.025° (น้ำหนักแบบ MicroMet ไม่เกิน ±40%) วาดที่ ${cell.toFixed(3)}°`):T('Ventilation index, m²/s: ECMWF boundary-layer height × 100-m wind, 0.1° (0.25° over northern Thailand)','ดัชนีการระบายอากาศ ม.²/วินาที: ความสูงชั้นบรรยากาศขอบเขต ECMWF × ลมที่ 100 ม. ความละเอียด 0.1° (0.25° ในภาคเหนือ)')):mode==='rain'?(obsRain?T(`Observed rain, mm/h: JAXA GSMaP gauge-calibrated${fineRain?`, interpolated to ${cell.toFixed(3)}° and shaped by the CHELSA rain climatology (±7 % typical)`:', 0.1°'} (${RAINOBS.src[RAINOBS.times.indexOf(obsHour(t))]==='nrt'?'Gauge_NRT':'Gauge_NOW'})`,`ฝนที่ตรวจวัด มม./ชม.: JAXA GSMaP ปรับด้วยเครื่องวัดฝน${fineRain?' ประมาณค่าเป็น '+cell.toFixed(3)+'° และปรับรูปแบบด้วยภูมิอากาศฝน CHELSA (ปกติ ±7 %)':' 0.1°'}`):(fineRain?T(`Rain forecast, mm/h: ECMWF (0.25° north, 1° elsewhere) interpolated to ${cell.toFixed(3)}° and shaped by the CHELSA rain climatology`,`ฝนพยากรณ์ มม./ชม.: ECMWF (0.25° ภาคเหนือ 1° พื้นที่อื่น) ประมาณค่าเป็น ${cell.toFixed(3)}° และปรับรูปแบบด้วยภูมิอากาศฝน CHELSA`):T('Rain forecast, mm/h (ECMWF)','ฝนพยากรณ์ มม./ชม. (ECMWF)'))):down?T(`Temperature at 2 m, °C: ECMWF downscaled to ${cell.toFixed(3)}° with terrain${T2D.corr?' and Air4Thai stations':''}`,`อุณหภูมิ 2 ม. °C: ECMWF ย่อส่วนเป็น ${cell.toFixed(3)}° ด้วยภูมิประเทศ${T2D.corr?' และสถานี Air4Thai':''}`):T('Temperature at 2 m, °C (ECMWF)','อุณหภูมิ 2 ม. °C (ECMWF)');
   const W=Math.min(1100,Math.round((e-w)*60)), H=Math.min(1100,Math.round((mercY(n)-mercY(so))/DEG*60));
   const url=regionCanvas(so,w,n,e,W,H,(lat,lon)=>{const x=Math.floor((lon-w)/cell), y=Math.floor((lat-so)/cell); if(x<0||y<0||x>=fx||y>=fy) return null;
     const v=F[y*fx+x]; if(v!==v) return null; if(mode==='temp'){const rgb=tempRGB(v); return [rgb[0],rgb[1],rgb[2],150];} const c=wxColor(mode,v); if(!c) return null; const rgb=hexRGB(c); return [rgb[0],rgb[1],rgb[2],150];});

@@ -196,6 +196,11 @@ td.num{text-align:right;font-family:var(--font-data);font-variant-numeric:tabula
 /* pop-up at page open: all parameters and their forecast at the viewer's location */
 .locpop{position:fixed;inset:0;z-index:3000;display:flex;align-items:center;justify-content:center;background:rgba(10,14,12,.5);padding:12px}
 .locpop[hidden]{display:none}
+.radarleg{margin:2px 0 6px 22px}
+.radarctl{display:flex;align-items:center;gap:6px;margin:4px 0 3px}
+.radarctl .btn{padding:2px 9px;font-size:.72rem;line-height:1.4}
+.radarctl input[type=range]{flex:1;min-width:60px}
+.radarctl .note{font-size:.68rem;white-space:nowrap}
 .btn-sum{display:inline-flex;align-items:center;gap:6px}
 .btn-sum svg,.sum-cta svg{flex:none}
 .sum-cta{margin:4px 0 12px}
@@ -730,6 +735,11 @@ td.num{text-align:right;font-family:var(--font-data);font-variant-numeric:tabula
       <div class="showpick"><strong data-th="แสดงบนแผนที่">Show on map</strong>
         <label><input type="checkbox" id="shContour" checked> <span data-th="เส้นแบ่งระดับ">Contour lines</span></label>
         <label><input type="checkbox" id="shWind"> <span data-th="ลม 10 ม. (อนุภาคเคลื่อนที่)">Wind, 10 m (moving particles)</span></label>
+        <label><input type="checkbox" id="shRadar"> <span data-th="เรดาร์ตรวจอากาศ (ฝน 2 ชม. ล่าสุด)">Weather radar (rain, last 2 h)</span></label>
+        <div id="legRadar" class="radarleg" hidden><div class="pcdbar" id="radarBar" style="grid-template-columns:repeat(6,1fr)"></div>
+          <div class="ticks"><span>10</span><span>20</span><span>30</span><span>40</span><span>50</span><span>60</span><span>dBZ</span></div>
+          <div class="radarctl"><button type="button" class="btn" id="radarPlay" aria-label="Play the last 2 hours">▶</button><input type="range" id="radarSlider" min="0" max="0" value="0" aria-label="Radar time"><span id="radarTime" class="note"></span></div>
+          <div class="note" id="radarNote" style="font-size:.66rem" data-th="เรดาร์ของกรมอุตุนิยมวิทยา ผ่าน RainViewer ทุก 10 นาที ย้อนหลัง 2 ชม. (ไม่ใช่เวลาบนแถบเวลาพยากรณ์) ครอบคลุมเฉพาะประเทศไทย และบางสถานีอาจปิดอยู่ ประมาณฝน: 20 dBZ ≈ 0.6, 30 ≈ 3, 40 ≈ 12, 50 ≈ 50 มม./ชม. (Marshall–Palmer)">Thai Meteorological Department radars via RainViewer, every 10 min for the last 2 h (not the forecast hour on the time bar). Covers Thailand only; some radars may be offline. Rain rate roughly: 20 dBZ ≈ 0.6, 30 ≈ 3, 40 ≈ 12, 50 ≈ 50 mm/h (Marshall–Palmer).</div></div>
         <label class="dev-only"><input type="checkbox" id="shWindArr"> <span data-th="ลูกศรลมพร้อมค่า (ชี้ดู)">Wind arrows with values (hover)</span></label>
         <label><input type="checkbox" id="shProv"> <span data-th="เขตและชื่อจังหวัด">Province borders and names</span></label>
         <label><input type="checkbox" id="shA4t" checked> <span data-th="Air4Thai: ค่าตรวจวัดเทียบแบบจำลอง">Air4Thai: measured vs model</span></label>
@@ -2097,6 +2107,42 @@ for(const id of ['shContour','shSt','shA4t','shHot','shTown','shWind','shWindArr
 }
 $('windBar').innerHTML=WIND_BFT.map(([,c])=>`<i style="background:${c};box-shadow:inset 0 0 0 1px rgba(0,0,0,.25)"></i>`).join('');
 {const f=()=>{$('legWind').hidden=!$('shWind').checked;}; f(); $('shWind').addEventListener('change',f);}
+
+// ---- weather radar (RainViewer public API: Thai Meteorological Department radars, past 2 h every 10 min). Shown on its own clock,
+// not tied to the forecast time bar; latest frame when switched on, ▶ loops the 2 h. Free API limits (2026): tile zoom ≤ 7 (512-px tiles one zoom down, maxNativeZoom 8; 
+// enlarged above), colour scheme "Universal Blue" (2), 100 requests per minute per IP, so 512-px tiles and frames loaded one by one.
+map.createPane('radar').style.zIndex=405; map.getPane('radar').style.pointerEvents='none';
+const RADAR={host:null,frames:[],i:-1,layers:new Map(),play:null,fetched:0,busy:false};
+const RADAR_COL=['#cec087','#00a3e0','#005588','#ffaa00','#c10000','#ff77ff'];   // Universal Blue at 10, 20, 30, 40, 50, 60 dBZ
+$('radarBar').innerHTML=RADAR_COL.map(c=>`<i style="background:${c}"></i>`).join('');
+async function radarFetch(){ if(RADAR.busy) return; RADAR.busy=true;
+  try{ const r=await fetch('https://api.rainviewer.com/public/weather-maps.json',{cache:'no-store'}); if(!r.ok) throw new Error('HTTP '+r.status);
+    const j=await r.json(), fr=(j.radar?.past||[]).filter(f=>f&&f.path&&f.time); if(!j.host||!fr.length) throw new Error('no frames');
+    const keep=new Set(fr.map(f=>f.path)); for(const [k,l] of RADAR.layers) if(!keep.has(k)){ map.removeLayer(l); RADAR.layers.delete(k); }
+    const latest=RADAR.i<0||RADAR.i>=RADAR.frames.length-1; RADAR.host=j.host; RADAR.frames=fr; RADAR.fetched=Date.now();
+    $('radarSlider').max=fr.length-1; radarShow(latest?fr.length-1:Math.min(RADAR.i,fr.length-1));
+  }catch(e){ console.error('radar',e); $('radarTime').textContent=T('radar unavailable','ไม่มีข้อมูลเรดาร์'); }
+  finally{ RADAR.busy=false; } }
+function radarLayer(f){ let l=RADAR.layers.get(f.path);
+  if(!l){ l=L.tileLayer(`${RADAR.host}${f.path}/512/{z}/{x}/{y}/2/1_0.png`,{pane:'radar',tileSize:512,zoomOffset:-1,maxNativeZoom:8,maxZoom:19,opacity:0,
+      attribution:'Radar: <a href="https://www.rainviewer.com/" target="_blank" rel="noopener">RainViewer</a> · Thai Meteorological Department'}); RADAR.layers.set(f.path,l); l.addTo(map); }
+  return l; }
+function radarShow(i){ const f=RADAR.frames[i]; if(!f||!shown('shRadar')) return; RADAR.i=i; $('radarSlider').value=i;
+  const cur=radarLayer(f); for(const [k,l] of RADAR.layers) l.setOpacity(k===f.path?0.8:0);
+  const t=f.time*1e3, ago=Math.round((Date.now()-t)/60e3);
+  $('radarTime').textContent=`${new Date(t).toLocaleTimeString(LOC(),{hour:'2-digit',minute:'2-digit',timeZone:'Asia/Bangkok'})} · ${ago<1?T('now','ล่าสุด'):T(`${ago} min ago`,`${ago} นาทีที่แล้ว`)}`; }
+function radarStop(){ if(RADAR.play){ clearInterval(RADAR.play); RADAR.play=null; } $('radarPlay').textContent='▶'; }
+function radarApply(){ const on=shown('shRadar'); $('legRadar').hidden=!on;
+  if(!on){ radarStop(); for(const l of RADAR.layers.values()) map.removeLayer(l); RADAR.layers.clear(); RADAR.i=-1; return; }
+  if(!RADAR.frames.length||Date.now()-RADAR.fetched>5*60e3) radarFetch(); else radarShow(RADAR.i<0?RADAR.frames.length-1:RADAR.i); }
+$('radarPlay').onclick=()=>{ if(RADAR.play){ radarStop(); return; } if(!RADAR.frames.length) return; $('radarPlay').textContent='❚❚';
+  RADAR.play=setInterval(()=>{ const n=RADAR.frames.length; radarShow((RADAR.i+1)%n); },900); };
+$('radarSlider').oninput=e=>{ radarStop(); radarShow(+e.target.value); };
+{const v=store.get('hsw.shRadar'); if(v!=null) $('shRadar').checked=v==='1';}
+$('shRadar').addEventListener('change',()=>{ store.set('hsw.shRadar',$('shRadar').checked?'1':'0'); radarApply(); });
+setInterval(()=>{ if(shown('shRadar')&&document.visibilityState==='visible'&&!RADAR.play) radarFetch(); },5*60e3);   // new frames every 10 min
+document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='visible'&&shown('shRadar')&&Date.now()-RADAR.fetched>5*60e3) radarFetch(); });
+radarApply();
 function stationNow(s,t){const i=gIdx(t);return i>=0?sCorr(s)[i]:null;}
 // ---- Air4Thai layer: measured value (inside) against the model at the same place and hour (ring). Both on the same basis:
 // hourly view → 1-h values (Bangkok BMA stations only report 24-h means, so for them both sides are 24-h means); 24-h/AQI views → 24-h means.
@@ -3078,7 +3124,7 @@ function summaryText(S_){ const L_=[T('PM₂.₅ forecast summary','สรุป
   for(const s of S_.secs){ if(s.sub){ L_.push(s.label); for(const x of s.sub){ L_.push(`• ${x.label}${x.band?` (${x.band.name})`:''}: `+x.text.join(' ')); } }
     else L_.push(`${s.label}${s.band?` (${s.band.name})`:''}: `+s.text.join(' ')); L_.push(''); }
   L_.push(S_.foot); return L_.join('\n'); }
-function renderSummary(){ const box=$('sumPop'), card=$('sumCard'); const S_=buildSummary();
+function renderFcSummary(){ const box=$('sumPop'), card=$('sumCard'); const S_=buildSummary();
   const pillB=b=>b?`<span class="pill" style="background:var(--${b.key});color:#fff">${esc(b.name)}</span>`:'';
   const head=`<div class="lphead"><h2 id="sumT">${T('Forecast summary','สรุปพยากรณ์')}</h2><button class="x" type="button" id="sumX" aria-label="${T('Close','ปิด')}">×</button></div>`;
   if(!S_){ card.innerHTML=head+`<p class="note">${T('The summary needs the hourly forecast data; load the live data first.','ต้องมีข้อมูลพยากรณ์รายชั่วโมงก่อน กรุณาโหลดข้อมูลล่าสุด')}</p>`; }
@@ -3090,12 +3136,12 @@ function renderSummary(){ const box=$('sumPop'), card=$('sumCard'); const S_=bui
     <div class="sumbtns"><button class="btn" type="button" id="sumCopy">${T('Copy text','คัดลอกข้อความ')}</button><button class="btn primary" type="button" id="sumClose">${T('Close','ปิด')}</button></div>`;
   box.hidden=false;
   const close=()=>{box.hidden=true;}; $('sumX').onclick=close; if($('sumClose')) $('sumClose').onclick=close; box.onclick=e=>{ if(e.target===box) close(); };
-  const sel=$('sumArea'); if(sel){ sel.value=SUMAREA; sel.onchange=()=>{SUMAREA=sel.value; renderSummary();}; }
+  const sel=$('sumArea'); if(sel){ sel.value=SUMAREA; sel.onchange=()=>{SUMAREA=sel.value; renderFcSummary();}; }
   const cp=$('sumCopy'); if(cp) cp.onclick=async()=>{ const txt=summaryText(S_);
     try{ await navigator.clipboard.writeText(txt); toast(T('Summary copied.','คัดลอกสรุปแล้ว')); }
     catch(e){ const ta=document.createElement('textarea'); ta.value=txt; document.body.appendChild(ta); ta.select(); try{document.execCommand('copy'); toast(T('Summary copied.','คัดลอกสรุปแล้ว'));}catch(_){ } ta.remove(); } };
 }
-function openSummary(){ SUMAREA=areaSel||'__all'; renderSummary(); ensureT2(()=>{ if(!$('sumPop').hidden) renderSummary(); }); ensureRainObs(()=>{ if(!$('sumPop').hidden) renderSummary(); }); ensureRainFac(()=>{ if(!$('sumPop').hidden) renderSummary(); }); $('sumX')?.focus({preventScroll:true}); }
+function openSummary(){ SUMAREA=areaSel||'__all'; renderFcSummary(); ensureT2(()=>{ if(!$('sumPop').hidden) renderFcSummary(); }); ensureRainObs(()=>{ if(!$('sumPop').hidden) renderFcSummary(); }); ensureRainFac(()=>{ if(!$('sumPop').hidden) renderFcSummary(); }); $('sumX')?.focus({preventScroll:true}); }
 for(const id of ['btnSum','btnSum2']) $(id)?.addEventListener('click',openSummary);
 document.addEventListener('keydown',e=>{ if(e.key==='Escape'&&!$('sumPop').hidden) $('sumPop').hidden=true; });
 

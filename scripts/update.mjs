@@ -13,6 +13,7 @@ import path from 'node:path';
 import { buildDEM, sampleGrid } from './dem.mjs';
 import { regressionKriging, krigeField, clampAux } from './rk.mjs';
 import { fetchMet, sampleMet, packMet, packTraj, MET_MODEL } from './met.mjs';
+import { updateRadar, scoreRadar, mergeRadarIntoMet, nowcast as radarNowcast, webRadar, radarAt } from './radar.mjs';
 import { updateGsmap, mergeIntoMet, webRain } from './gsmap.mjs';
 import { fetchGauges, scoreGauges, gsmapAt, rainFactor } from './thaiwater.mjs';
 import { WXML, T2_NAMES, PR_NAMES, T2ENG, PRENG, t2Features, prFeatures, loadWxDataset, storeWxDay, loadWxSeason } from './mlwx.mjs';
@@ -391,11 +392,17 @@ async function main() {
       met.key = metKey; await writeJSON(path.join(DATA, 'met.json'), met);
     } catch (e) { log(`met refresh failed: ${e.message}${met ? ' (keeping previous)' : ''}`); }
   }
-  globalThis.TIMER('rain');
   // 3b''. observed rain (JAXA GSMaP gauge-calibrated, 0.1°; scripts/gsmap.mjs): replaces the ECMWF rain of the hours already
   //       observed, in memory only (met.json keeps the pure ECMWF fields), so wet removal in the smoke model, the assimilation and
   //       the page use measured rain for the past; the page also draws the 0.1° observed field for those hours
   let rainInfo = null, gcacheG = null;
+  // 3b'. weather radar (scripts/radar.mjs): frames of the last 2 h -> hourly 0.025° means in radar-cache.json; scored, merged and
+  //      extrapolated below once the gauges are in. The factor of the previous run adjusts the archive values written this run.
+  globalThis.TIMER('radar');
+  let rcache = await readJSON(path.join(DATA, 'radar-cache.json'), null); const RADAR_F0 = state.radarFactor || 1;
+  try { rcache = await updateRadar(rcache, now, { get, sleep, log }); await writeJSON(path.join(DATA, 'radar-cache.json'), rcache); }
+  catch (e) { log(`radar update failed: ${e.message}${rcache ? ' (keeping previous frames)' : ''}`); if (process.env.GITHUB_ACTIONS) console.log(`::warning title=radar::${e.message}`); }
+  globalThis.TIMER('rain');
   if (met) try {
     let gcache = await readJSON(path.join(DATA, 'gsmap-cache.json'), null);
     gcache = await updateGsmap(gcache, now, { log });
@@ -425,13 +432,38 @@ async function main() {
         const d0 = Date.parse(yday + 'T00:00:00+07:00'), rowsR = []; let nH = 0;
         for (let te = d0 + HOUR; te <= d0 + 24 * HOUR; te += HOUR) { const ts = te - HOUR; if (!gcache.hours?.[ts]) continue; nH++;
           const he = new Date(te).toISOString().slice(0, 13) + ':00Z';
-          for (const s of a4tSt) { const g = await gsmapAt(gcache, DATA, s.lat, s.lon, ts); if (g) rowsR.push([he, 'a4t', s.id, s.lat, s.lon, '', g.cell, g.bil, g.fine, g.src]); }
-          for (const [la, lo, mm] of state.gaugeRain?.[ts] || []) { const g = await gsmapAt(gcache, DATA, la, lo, ts); rowsR.push([he, 'gauge', '', la, lo, mm, g?.cell ?? '', g?.bil ?? '', g?.fine ?? '', g?.src ?? '']); } }
-        if (nH >= 20) { await appendCSV(rf, 'hour_end_utc,kind,station_id,lat,lon,gauge_mm,gsmap_cell,gsmap_bil,gsmap_fine,gsmap_src', rowsR); log(`observed-rain archive ${path.basename(rf)}: ${nH} hours, ${rowsR.length} rows`); }
+          for (const s of a4tSt) { const g = await gsmapAt(gcache, DATA, s.lat, s.lon, ts); if (g) rowsR.push([he, 'a4t', s.id, s.lat, s.lon, '', g.cell, g.bil, g.fine, g.src, radarAt(rcache, s.lat, s.lon, ts, RADAR_F0) ?? '']); }
+          for (const [la, lo, mm] of state.gaugeRain?.[ts] || []) { const g = await gsmapAt(gcache, DATA, la, lo, ts); rowsR.push([he, 'gauge', '', la, lo, mm, g?.cell ?? '', g?.bil ?? '', g?.fine ?? '', g?.src ?? '', radarAt(rcache, la, lo, ts, RADAR_F0) ?? '']); } }
+        if (nH >= 20) { await appendCSV(rf, 'hour_end_utc,kind,station_id,lat,lon,gauge_mm,gsmap_cell,gsmap_bil,gsmap_fine,gsmap_src,radar_mmh', rowsR); log(`observed-rain archive ${path.basename(rf)}: ${nH} hours, ${rowsR.length} rows`); }
         else log(`observed-rain archive for ${yday}: only ${nH} GSMaP hours held, not written`);
       }
     } catch (e) { log(`observed-rain archive failed: ${e.message}`); }
   } catch (e) { log(`GSMaP observed rain failed: ${e.message}`); if (process.env.GITHUB_ACTIONS) console.log(`::warning title=GSMaP rain::${e.message}`); }
+
+  // 3b'''. radar: score against the gauges (adjustment factor gauge/radar over 7 days), replace ECMWF rain in the met grids where the
+  //        radar sees (after GSMaP, so the radar wins inside its coverage), nowcast for the next 3 h, page file and the station log
+  //        used to fit the blend weights (radarnow-YYYYMMDD.csv: nowcast and ECMWF at the Air4Thai stations by lead)
+  if (rcache?.hours) try {
+    state.radarScored ||= {}; for (const k of Object.keys(state.radarScored)) if (+k < now - 48 * HOUR) delete state.radarScored[k];
+    state.radarScore = (state.radarScore || []).filter(r => Date.parse(r.hour.replace('Z', ':00Z')) > now - 7 * 24 * HOUR);
+    const sc = scoreRadar(state.gaugeRain, rcache, state.radarScored, state.radarScore); state.radarScore = [...state.radarScore, ...sc.rows].slice(-200); state.radarFactor = sc.factor;
+    const R = state.radarScore, N = R.reduce((a, r) => a + r.n, 0);
+    if (R.length) { const m = `radar vs ThaiWater gauges, ${R.length} hours, ${N} gauge-hours (${sc.nWet} wet ≥0.5 mm): RMSE ${+Math.sqrt(R.reduce((a, r) => a + r.n * r.rmse ** 2, 0) / N).toFixed(3)} mm/h, mean hourly r ${+(R.filter(r => r.r != null).reduce((a, r) => a + r.n * r.r, 0) / Math.max(1, R.filter(r => r.r != null).reduce((a, r) => a + r.n, 0))).toFixed(3)}, hits ${+(R.reduce((a, r) => a + (r.pod ?? 0) * r.wet, 0) / Math.max(1, R.reduce((a, r) => a + r.wet, 0))).toFixed(2)}, false alarms ${+(R.filter(r => r.far != null).reduce((a, r) => a + r.far, 0) / Math.max(1, R.filter(r => r.far != null).length)).toFixed(2)}; gauge/radar factor ${sc.factor}${sc.nWet < 200 ? ' (1 until 200 wet pairs)' : ''}`;
+      log(m); if (process.env.GITHUB_ACTIONS) console.log(`::notice title=radar vs gauges::${m}`); }
+    let nRep = 0; if (met) nRep = mergeRadarIntoMet(met, rcache, sc.factor);
+    const nc = radarNowcast(rcache);
+    log(`radar: ECMWF rain replaced at ${nRep} node-hours; nowcast ${nc ? `${nc.hours.length} h from ${new Date(nc.t0).toISOString().slice(11, 16)}Z, echo motion ${nc.motion.u} / ${nc.motion.v} km/h E/N (${nc.motion.blocks} of ${nc.motion.of} blocks)` : 'not possible (fewer than 3 consecutive frames)'}`);
+    const webR = webRadar(rcache, now, sc.factor, nc);
+    if (webR) { const ro = await readJSON(path.join(DATA, 'rain-obs.json'), null) || { times: [], d: [], src: [] }; ro.radar = webR; await writeJSON(path.join(DATA, 'rain-obs.json'), ro);
+      rainInfo ||= { file: 'data/rain-obs.json', times: [], src: null }; rainInfo.radar = { latest: rcache.latest, factor: sc.factor, hours: webR.times.length, nowcast: nc ? { t0: nc.t0, hours: nc.hours, motion: nc.motion } : null, covered: rcache.mask?.covered ?? null }; }
+    // station log for fitting the blend weights: nowcast (adjusted) and ECMWF at the hourly stations, hours fully ahead of the latest frame
+    if (nc && met && a4tSt.length) { const rows = [], iss = new Date(now).toISOString().slice(0, 16) + 'Z';
+      nc.hours.forEach((H, k) => { if (H < nc.t0) return; const lead = +((H + 30 * 60e3 - nc.t0) / HOUR).toFixed(2), a = nc.fields[k], G = webR;
+        for (const st of a4tSt) { const ix = Math.round((st.lon - G.lon0) / G.step), iy = Math.round((st.lat - G.lat0) / G.step); if (ix < 0 || iy < 0 || ix >= G.nx || iy >= G.ny) continue; const q = a[iy * G.nx + ix]; if (q < 0) continue;
+          rows.push([iss, new Date(H).toISOString().slice(0, 13) + ':00Z', lead, st.id, st.lat, st.lon, +(q / 10 * sc.factor).toFixed(2), +(sampleMet(met, st.lat, st.lon, H + HOUR)?.pr ?? 0).toFixed(2)]); } });
+      const d = thaiDate(now); await appendCSV(path.join(DATA, 'history', d.slice(0, 7), `radarnow-${d.replace(/-/g, '')}.csv`), 'issued_utc,hour_start_utc,lead_h,station_id,lat,lon,nowcast_mmh,ecmwf_mmh', rows);
+      log(`radar nowcast log: ${rows.length} station-hours`); }
+  } catch (e) { log(`radar scoring/nowcast failed: ${e.message}`); if (process.env.GITHUB_ACTIONS) console.log(`::warning title=radar::${e.message}`); }
 
   // compact copy for the page: 36 h back (dispersion spin-up) to 75 h ahead (longest forecast option + interpolation)
   if (met) { const web = packMet(met, now - 36 * HOUR, now + 75 * HOUR); await writeJSON(path.join(DATA, 'met-web.json'), web);

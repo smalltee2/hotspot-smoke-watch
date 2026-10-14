@@ -707,7 +707,7 @@ td.num{text-align:right;font-family:var(--font-data);font-variant-numeric:tabula
       <div id="legRain" hidden>
         <div class="pcdbar" id="rainBar" style="grid-template-columns:1fr 1fr 1fr 1fr 1fr 1fr"></div>
         <div class="ticks"><span>0.1</span><span>0.5</span><span>1</span><span>2</span><span>5</span><span>10</span><span>mm/h</span></div>
-        <div class="note" style="font-size:.68rem" data-th="ฝนรายชั่วโมง 24 ชม. ที่ผ่านมา: ฝนที่ตรวจวัดจากดาวเทียมปรับด้วยเครื่องวัดฝน (JAXA GSMaP 0.1°) ประมาณค่าเป็น 0.025° และปรับรูปแบบด้วยฝนรายเดือน 1981–2010 (CHELSA V2.1 ปกติ ±7 %) ใช้คำนวณการชะล้างควันด้วย ชั่วโมงถัดไป: พยากรณ์ ECMWF ประมาณค่าเป็น 0.025° และปรับรูปแบบแบบเดียวกัน ฝนชะล้างฝุ่นออกจากอากาศ">Hourly rain. Past 24 h: observed by satellite and calibrated with rain gauges (JAXA GSMaP, 0.1°), interpolated to 0.025° and shaped by the month's 1981–2010 rain pattern (CHELSA V2.1; typically ±7 %) and also used for wet removal of smoke; later hours: ECMWF forecast, interpolated to 0.025° and shaped the same way. Rain washes particles out of the air.</div>
+        <div class="note" style="font-size:.68rem" data-th="ฝนรายชั่วโมง ชั่วโมงที่ผ่านมา: เรดาร์ตรวจอากาศ (กรมอุตุนิยมวิทยา ผ่าน RainViewer เฉลี่ยรายชั่วโมงที่ 0.025° ปรับด้วยเครื่องวัดฝน ThaiWater) ในพื้นที่ที่เรดาร์มองเห็น ที่อื่น: ดาวเทียมปรับด้วยเครื่องวัดฝน (JAXA GSMaP 0.1°) ประมาณค่าเป็น 0.025° และปรับรูปแบบด้วยฝนรายเดือน 1981–2010 (CHELSA V2.1) ใช้คำนวณการชะล้างควันด้วย 3 ชม. ถัดไป: ECMWF ผสมกับการต่อขยายการเคลื่อนที่ของกลุ่มฝนจากเรดาร์ (น้ำหนักชั่วคราว 0.9 → 0.1 จาก 0.5 ถึง 3.5 ชม. จนกว่าจะปรับจากบันทึก) หลังจากนั้น: พยากรณ์ ECMWF ประมาณค่าเป็น 0.025° และปรับรูปแบบแบบเดียวกัน ฝนชะล้างฝุ่นออกจากอากาศ">Hourly rain. Past hours: weather radar (Thai Meteorological Department via RainViewer, hourly means on 0.025°, adjusted with the ThaiWater rain gauges) where a radar sees; elsewhere satellite calibrated with rain gauges (JAXA GSMaP, 0.1°), interpolated to 0.025° and shaped by the month's 1981–2010 rain pattern (CHELSA V2.1), also used for wet removal of smoke. Next 3 h: ECMWF blended with the radar echoes extrapolated along their motion (provisional weights 0.9 → 0.1 from 0.5 to 3.5 h until fitted on the logs). Later: ECMWF forecast, interpolated to 0.025° and shaped the same way. Rain washes particles out of the air.</div>
       </div>
       <div id="legTemp" hidden>
         <div class="pcdbar" id="tempBar" style="grid-template-columns:repeat(7,1fr)"></div>
@@ -1684,7 +1684,11 @@ let RAINOBS=null;
 async function inflateB64(b64){const bin=Uint8Array.from(atob(b64),c=>c.charCodeAt(0)); const ds=new Blob([bin]).stream().pipeThrough(new DecompressionStream('deflate')); const buf=await new Response(ds).arrayBuffer(); return new Int16Array(buf);}
 async function loadRainObs(){
   const info=P.data?.rainObs; if(!info){RAINOBS=null;return;} const key=info.times.join('|'); if(RAINOBS&&RAINOBS.key===key) return;
-  try{const r=await fetch(info.file+'?g='+P.data.generated); if(!r.ok) return; const o=await r.json(); o.a=await Promise.all(o.d.map(inflateB64)); delete o.d; o.key=key; RAINOBS=o;}catch(e){RAINOBS=null;}
+  try{const r=await fetch(info.file+'?g='+P.data.generated); if(!r.ok) return; const o=await r.json(); o.a=await Promise.all(o.d.map(inflateB64)); delete o.d; o.key=key;
+    // weather radar part (scripts/radar.mjs): hourly 0.025° fields, the coverage mask and the nowcast
+    if(o.radar){ const R=o.radar; R.a=await Promise.all(R.d.map(inflateB64)); delete R.d; if(R.mask){ const bin=Uint8Array.from(atob(R.mask),c=>c.charCodeAt(0)); R.m=new Uint8Array(await new Response(new Blob([bin]).stream().pipeThrough(new DecompressionStream('deflate'))).arrayBuffer()); }
+      if(R.nowcast){ R.nowcast.a=await Promise.all(R.nowcast.d.map(inflateB64)); delete R.nowcast.d; } }
+    RAINOBS=o;}catch(e){RAINOBS=null;}
 }
 // observed rain rate (mm/h) at (lat,lon) for the hour containing t; undefined = not observed (use the forecast), null = missing cell
 const obsHour=t=>Math.ceil(t/3600e3)*3600e3-3600e3;   // GSMaP file (hour STARTING at HH) for the hour ending at the slider time
@@ -1709,8 +1713,8 @@ function metVarAt(M,k,lat,lon,t){ const T=M.times, nt=T.length; let ft=(t-T[0])/
 // the rain value shown everywhere on the page (map, tooltips, warnings, trends): 0.025°. Hours already observed: GSMaP interpolated ×
 // the month's CHELSA factor (rainFineAt); later hours: ECMWF interpolated × the same factor. The factor is 1 until its file has loaded.
 function rainAt(lat,lon,t){ const o=rainFineAt(lat,lon,t); if(o!==undefined) return o; if(!MET) return null; let v=metVarAt(MET,'pr',lat,lon,t); if(v==null) return null; if(v>0) v*=rainFactorAt(lat,lon,t);
-  const c=wxmlAt('pr',lat,lon,t); return c?Math.max(0,(v+0.2)*Math.exp(c)-0.2):v; }
-function rainIsObs(lat,lon,t){ return rainObsAt(lat,lon,t)!==undefined; }
+  const c=wxmlAt('pr',lat,lon,t); return nowcastBlend(lat,lon,t,c?Math.max(0,(v+0.2)*Math.exp(c)-0.2):v); }
+function rainIsObs(lat,lon,t){ return rainObsAt(lat,lon,t)!==undefined||radarObsAt(lat,lon,t)!==undefined; }
 // every caller's callback runs once the month's file has loaded (a second caller during the load is queued, not dropped)
 const RFACQ={};
 function ensureRainFac(after,keys){ const ks=new Set(keys||[]); const H=P.data?.hours||[]; if(!keys) for(const t of [H[0],H[H.length-1],Date.now()]) if(t) ks.add(String(new Date(t+7*3600e3).getUTCMonth()+1).padStart(2,'0'));
@@ -1718,7 +1722,22 @@ function ensureRainFac(after,keys){ const ks=new Set(keys||[]); const H=P.data?.
     if(RFACQ[k]&&after) RFACQ[k].add(after); } }
 function rainFactorAt(lat,lon,t){ const F=RFAC[String(new Date(t+7*3600e3).getUTCMonth()+1).padStart(2,'0')], M=RFACmeta; if(!F||!M) return 1;
   const ix=Math.round((lon-M.lon0)/M.step), iy=Math.round((lat-M.lat0)/M.step); return ix>=0&&iy>=0&&ix<M.nx&&iy<M.ny?F[iy*M.nx+ix]/50:1; }
+// radar: the hourly mean (adjusted by the gauge factor) where a radar sees the cell; undefined elsewhere / for other hours
+function radarCell(R,lat,lon){ const ix=Math.round((lon-R.lon0)/R.step), iy=Math.round((lat-R.lat0)/R.step); return ix<0||iy<0||ix>=R.nx||iy>=R.ny?-1:iy*R.nx+ix; }
+function radarObsAt(lat,lon,t){ const R=RAINOBS?.radar; if(!R) return undefined; const k=R.times.indexOf(obsHour(t)); if(k<0) return undefined;
+  const i=radarCell(R,lat,lon); if(i<0) return undefined; const q=R.a[k][i]; return q<0?undefined:q/R.scale*(R.factor||1); }
+function radarCovered(lat,lon){ const R=RAINOBS?.radar; if(!R?.m) return false; const i=radarCell(R,lat,lon); return i>=0&&R.m[i]===1; }
+// nowcast (radar echoes extrapolated, hourly means): value for the hour containing t and the lead in hours from the latest frame
+function radarNowAt(lat,lon,t){ const N=RAINOBS?.radar?.nowcast; if(!N) return undefined; const H=obsHour(t), k=N.hours.indexOf(H); if(k<0) return undefined;
+  const i=radarCell(RAINOBS.radar,lat,lon); if(i<0) return undefined; const q=N.a[k][i]; if(q<0) return undefined; return {v:q/RAINOBS.radar.scale*(RAINOBS.radar.factor||1),lead:(H+1800e3-N.t0)/3600e3}; }
+// weight of the nowcast against the ECMWF forecast by lead (hours from the latest radar frame to the middle of the hour).
+// PROVISIONAL until fitted on the station log (data/history/radarnow-*.csv joined with the radar truth in rainobs-*.csv),
+// as the PM2.5 persistence weights were (replay/fit_blend.py): 0.9 at 0.5 h, 0.55 at 1.5 h, 0.3 at 2.5 h, 0.1 at 3.5 h, 0 beyond.
+const NOWCAST_W=[[0.5,0.9],[1.5,0.55],[2.5,0.3],[3.5,0.1],[4.5,0]];
+function nowcastW(L){ if(L<=NOWCAST_W[0][0]) return NOWCAST_W[0][1]; for(let i=1;i<NOWCAST_W.length;i++) if(L<=NOWCAST_W[i][0]){const [a,wa]=NOWCAST_W[i-1],[b,wb]=NOWCAST_W[i]; return wa+(wb-wa)*(L-a)/(b-a);} return 0; }
+function nowcastBlend(lat,lon,t,v){ const n=radarNowAt(lat,lon,t); if(!n||v==null) return v; const w=nowcastW(n.lead); return w>0?w*n.v+(1-w)*v:v; }
 function rainFineAt(lat,lon,t){
+  const rd=radarObsAt(lat,lon,t); if(rd!==undefined) return rd;
   const R=RAINOBS; if(!R) return undefined; const k=R.times.indexOf(obsHour(t)); if(k<0) return undefined;
   const a=R.a[k], fx=(lon-R.lon0)/R.step, fy=(lat-R.lat0)/R.step; if(fx<-0.5||fy<-0.5||fx>R.nx-0.5||fy>R.ny-0.5) return undefined;
   const x0=Math.max(0,Math.min(R.nx-2,Math.floor(fx))), y0=Math.max(0,Math.min(R.ny-2,Math.floor(fy))), ax=Math.min(1,Math.max(0,fx-x0)), ay=Math.min(1,Math.max(0,fy-y0));
@@ -2007,16 +2026,19 @@ function drawWx(){
   if(R){so=Math.max(so,R.bbox[1]-.2); w=Math.max(w,R.bbox[0]-.2); n=Math.min(n,R.bbox[3]+.2); e=Math.min(e,R.bbox[2]+.2);}
   if(mode==='temp'||mode==='vent') ensureT2(redrawIfLayer(mode));
   if(mode==='rain') ensureRainObs(redrawIfLayer('rain'));
-  const obsRain=mode==='rain'&&!!RAINOBS&&RAINOBS.times.includes(obsHour(t));
+  const radarH=mode==='rain'&&!!RAINOBS?.radar&&RAINOBS.radar.times.includes(obsHour(t)), obsRain=mode==='rain'&&!!RAINOBS&&(RAINOBS.times.includes(obsHour(t))||radarH);
+  const nowH=mode==='rain'&&!obsRain&&!!RAINOBS?.radar?.nowcast&&RAINOBS.radar.nowcast.hours.includes(obsHour(t));
   const facKey=String(new Date(t+7*3600e3).getUTCMonth()+1).padStart(2,'0');
   if(mode==='rain'&&!RFAC[facKey]) ensureRainFac(redrawIfLayer('rain'),[facKey]);
   const fineRain=mode==='rain'&&!!RFAC[facKey];   // observed and forecast rain both drawn at 0.025° with the month's CHELSA pattern
   const down=(mode==='temp'&&!!T2D&&!!MET.grids[0].elev)||(mode==='vent'&&!!T2D?.dem);
-  let cell=(down||fineRain)?0.025:obsRain?0.05:0.1; while(((e-w)/cell)*((n-so)/cell)>((down||fineRain)?650000:obsRain?200000:60000)) cell*=1.25;
+  const fine=down||fineRain||radarH||nowH; let cell=fine?0.025:obsRain?0.05:0.1; while(((e-w)/cell)*((n-so)/cell)>(fine?650000:obsRain?200000:60000)) cell*=1.25;
   const fx=Math.ceil((e-w)/cell), fy=Math.ceil((n-so)/cell), F=new Float32Array(fx*fy);
-  for(let y=0;y<fy;y++) for(let x=0;x<fx;x++){const la=so+(y+.5)*cell, lo=w+(x+.5)*cell; if(mode==='vent'){ const v=ventAt(la,lo,t); F[y*fx+x]=v==null?NaN:v; } else if(mode==='rain'){ if(obsRain){const v=fineRain?rainFineAt(la,lo,t):rainObsAt(la,lo,t); F[y*fx+x]=v==null?NaN:v;} else {let v=metVarAt(MET,'pr',la,lo,t); if(fineRain&&v>0) v*=rainFactorAt(la,lo,t); const c=wxmlAt('pr',la,lo,t); if(c&&v!=null) v=Math.max(0,(v+0.2)*Math.exp(c)-0.2); F[y*fx+x]=v;}} else {const v=t2At(la,lo,t); F[y*fx+x]=v==null?NaN:v;}}
+  for(let y=0;y<fy;y++) for(let x=0;x<fx;x++){const la=so+(y+.5)*cell, lo=w+(x+.5)*cell; if(mode==='vent'){ const v=ventAt(la,lo,t); F[y*fx+x]=v==null?NaN:v; } else if(mode==='rain'){ let v=obsRain?(fineRain?rainFineAt(la,lo,t):(radarObsAt(la,lo,t)??rainObsAt(la,lo,t))):undefined;
+      if(v===undefined){ v=metVarAt(MET,'pr',la,lo,t); if(fineRain&&v>0) v*=rainFactorAt(la,lo,t); const c=wxmlAt('pr',la,lo,t); if(c&&v!=null) v=Math.max(0,(v+0.2)*Math.exp(c)-0.2); if(nowH) v=nowcastBlend(la,lo,t,v); }   // not observed here: forecast (+ nowcast)
+      F[y*fx+x]=v==null?NaN:v;} else {const v=t2At(la,lo,t); F[y*fx+x]=v==null?NaN:v;}}
   S.fine={F,w,so,nx:fx,ny:fy,cell};
-  S.fieldInfo=mode==='vent'?(down?T(`Ventilation index, m²/s: ECMWF boundary-layer height × 100-m wind, the wind adjusted for terrain exposure and sheltering on the 0.025° DEM (MicroMet weighting, ±40 % at most), drawn at ${cell.toFixed(3)}°`,`ดัชนีการระบายอากาศ ม.²/วินาที: ความสูงชั้นบรรยากาศขอบเขต ECMWF × ลมที่ 100 ม. ปรับลมตามการเปิดรับและกำบังของภูมิประเทศบน DEM 0.025° (น้ำหนักแบบ MicroMet ไม่เกิน ±40%) วาดที่ ${cell.toFixed(3)}°`):T('Ventilation index, m²/s: ECMWF boundary-layer height × 100-m wind, 0.1° (0.25° over northern Thailand)','ดัชนีการระบายอากาศ ม.²/วินาที: ความสูงชั้นบรรยากาศขอบเขต ECMWF × ลมที่ 100 ม. ความละเอียด 0.1° (0.25° ในภาคเหนือ)')):mode==='rain'?(obsRain?T(`Observed rain, mm/h: JAXA GSMaP gauge-calibrated${fineRain?`, interpolated to ${cell.toFixed(3)}° and shaped by the CHELSA rain climatology (±7 % typical)`:', 0.1°'} (${RAINOBS.src[RAINOBS.times.indexOf(obsHour(t))]==='nrt'?'Gauge_NRT':'Gauge_NOW'})`,`ฝนที่ตรวจวัด มม./ชม.: JAXA GSMaP ปรับด้วยเครื่องวัดฝน${fineRain?' ประมาณค่าเป็น '+cell.toFixed(3)+'° และปรับรูปแบบด้วยภูมิอากาศฝน CHELSA (ปกติ ±7 %)':' 0.1°'}`):(fineRain?T(`Rain forecast, mm/h: ECMWF (0.25° north, 1° elsewhere) interpolated to ${cell.toFixed(3)}° and shaped by the CHELSA rain climatology`,`ฝนพยากรณ์ มม./ชม.: ECMWF (0.25° ภาคเหนือ 1° พื้นที่อื่น) ประมาณค่าเป็น ${cell.toFixed(3)}° และปรับรูปแบบด้วยภูมิอากาศฝน CHELSA`):T('Rain forecast, mm/h (ECMWF)','ฝนพยากรณ์ มม./ชม. (ECMWF)'))):down?T(`Temperature at 2 m, °C: ECMWF downscaled to ${cell.toFixed(3)}° with terrain${T2D.corr?' and Air4Thai stations':''}`,`อุณหภูมิ 2 ม. °C: ECMWF ย่อส่วนเป็น ${cell.toFixed(3)}° ด้วยภูมิประเทศ${T2D.corr?' และสถานี Air4Thai':''}`):T('Temperature at 2 m, °C (ECMWF)','อุณหภูมิ 2 ม. °C (ECMWF)');
+  S.fieldInfo=mode==='vent'?(down?T(`Ventilation index, m²/s: ECMWF boundary-layer height × 100-m wind, the wind adjusted for terrain exposure and sheltering on the 0.025° DEM (MicroMet weighting, ±40 % at most), drawn at ${cell.toFixed(3)}°`,`ดัชนีการระบายอากาศ ม.²/วินาที: ความสูงชั้นบรรยากาศขอบเขต ECMWF × ลมที่ 100 ม. ปรับลมตามการเปิดรับและกำบังของภูมิประเทศบน DEM 0.025° (น้ำหนักแบบ MicroMet ไม่เกิน ±40%) วาดที่ ${cell.toFixed(3)}°`):T('Ventilation index, m²/s: ECMWF boundary-layer height × 100-m wind, 0.1° (0.25° over northern Thailand)','ดัชนีการระบายอากาศ ม.²/วินาที: ความสูงชั้นบรรยากาศขอบเขต ECMWF × ลมที่ 100 ม. ความละเอียด 0.1° (0.25° ในภาคเหนือ)')):mode==='rain'?(radarH?T(`Observed rain, mm/h: weather radar where a radar sees (hourly mean, gauge factor ${RAINOBS.radar.factor}), JAXA GSMaP elsewhere, ${cell.toFixed(3)}°`,`ฝนที่ตรวจวัด มม./ชม.: เรดาร์ตรวจอากาศในพื้นที่ที่เรดาร์มองเห็น (เฉลี่ยรายชั่วโมง ปรับด้วยเครื่องวัดฝน ×${RAINOBS.radar.factor}) ที่อื่นใช้ JAXA GSMaP ${cell.toFixed(3)}°`):nowH?T(`Rain, mm/h: ECMWF blended with the radar nowcast (echoes extrapolated from the latest frames) where a radar sees, weight ${nowcastW((obsHour(t)+1800e3-RAINOBS.radar.nowcast.t0)/3600e3).toFixed(2)} at this lead (provisional weights), ${cell.toFixed(3)}°`,`ฝน มม./ชม.: ECMWF ผสมกับการคาดการณ์ระยะสั้นจากเรดาร์ (ต่อขยายการเคลื่อนที่ของกลุ่มฝน) ในพื้นที่ที่เรดาร์มองเห็น น้ำหนัก ${nowcastW((obsHour(t)+1800e3-RAINOBS.radar.nowcast.t0)/3600e3).toFixed(2)} ที่ระยะนี้ (น้ำหนักชั่วคราว) ${cell.toFixed(3)}°`):obsRain?T(`Observed rain, mm/h: JAXA GSMaP gauge-calibrated${fineRain?`, interpolated to ${cell.toFixed(3)}° and shaped by the CHELSA rain climatology (±7 % typical)`:', 0.1°'} (${RAINOBS.src[RAINOBS.times.indexOf(obsHour(t))]==='nrt'?'Gauge_NRT':'Gauge_NOW'})`,`ฝนที่ตรวจวัด มม./ชม.: JAXA GSMaP ปรับด้วยเครื่องวัดฝน${fineRain?' ประมาณค่าเป็น '+cell.toFixed(3)+'° และปรับรูปแบบด้วยภูมิอากาศฝน CHELSA (ปกติ ±7 %)':' 0.1°'}`):(fineRain?T(`Rain forecast, mm/h: ECMWF (0.25° north, 1° elsewhere) interpolated to ${cell.toFixed(3)}° and shaped by the CHELSA rain climatology`,`ฝนพยากรณ์ มม./ชม.: ECMWF (0.25° ภาคเหนือ 1° พื้นที่อื่น) ประมาณค่าเป็น ${cell.toFixed(3)}° และปรับรูปแบบด้วยภูมิอากาศฝน CHELSA`):T('Rain forecast, mm/h (ECMWF)','ฝนพยากรณ์ มม./ชม. (ECMWF)'))):down?T(`Temperature at 2 m, °C: ECMWF downscaled to ${cell.toFixed(3)}° with terrain${T2D.corr?' and Air4Thai stations':''}`,`อุณหภูมิ 2 ม. °C: ECMWF ย่อส่วนเป็น ${cell.toFixed(3)}° ด้วยภูมิประเทศ${T2D.corr?' และสถานี Air4Thai':''}`):T('Temperature at 2 m, °C (ECMWF)','อุณหภูมิ 2 ม. °C (ECMWF)');
   const W=Math.min(1100,Math.round((e-w)*60)), H=Math.min(1100,Math.round((mercY(n)-mercY(so))/DEG*60));
   const url=regionCanvas(so,w,n,e,W,H,(lat,lon)=>{const x=Math.floor((lon-w)/cell), y=Math.floor((lat-so)/cell); if(x<0||y<0||x>=fx||y>=fy) return null;
     const v=F[y*fx+x]; if(v!==v) return null; if(mode==='temp'){const rgb=tempRGB(v); return [rgb[0],rgb[1],rgb[2],150];} const c=wxColor(mode,v); if(!c) return null; const rgb=hexRGB(c); return [rgb[0],rgb[1],rgb[2],150];});

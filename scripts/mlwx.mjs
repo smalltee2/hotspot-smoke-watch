@@ -1,6 +1,7 @@
 // Live forecast only: self-learning correction of the weather layers, the same five experts as PM2.5 (scripts/mlcore.mjs):
 //   2-m temperature  target y = T_obs − T_page (°C; T_page = the 0.025° value the page shows, t2_down), correction limited to ±5 °C
-//   rain             target y = ln(R_obs + 0.2) − ln(R_page + 0.2), R_obs = GSMaP gauge-calibrated at 0.025° (rainobs gsmap_fine),
+//   rain             target y = ln(R_obs + 0.2) − ln(R_page + 0.2), R_obs = weather radar (gauge-adjusted hourly mean, rainobs radar_mmh) where
+//                    a radar sees the station, else GSMaP gauge-calibrated at 0.025° (rainobs gsmap_fine),
 //                    R_page = ECMWF × CHELSA factor (pr_fine); correction limited to a factor of 4 either way
 // Training rows: the weather forecast logs (wxf-*.csv, Air4Thai stations, leads 1–48 h) joined with the measured temperature
 // (a4tw-*.csv) and the observed rain (rainobs-*.csv) of the valid hour. Features are values known at issue time only.
@@ -37,7 +38,7 @@ async function listFiles(dir) { const out = [];
 export async function loadWxObs(histDir) {
   const files = await listFiles(histDir), T = new Map(), R = new Map();
   for (const f of files.filter(f => /a4tw-\d{8}\.csv$/.test(f))) for (const r of parseCSV(await fs.readFile(f, 'utf8'))) { const t = Date.parse(r.hour_end_utc), v = n(r.temp_c); if (isFinite(t) && isFinite(v)) T.set(`${r.station_id}|${t}`, v); }
-  for (const f of files.filter(f => /rainobs-\d{8}\.csv$/.test(f))) for (const r of parseCSV(await fs.readFile(f, 'utf8'))) { if (r.kind !== 'a4t') continue; const t = Date.parse(r.hour_end_utc), v = n(r.gsmap_fine); if (isFinite(t) && isFinite(v)) R.set(`${r.station_id}|${t}`, v); }
+  for (const f of files.filter(f => /rainobs-\d{8}\.csv$/.test(f))) for (const r of parseCSV(await fs.readFile(f, 'utf8'))) { if (r.kind !== 'a4t') continue; const t = Date.parse(r.hour_end_utc), rd = n(r.radar_mmh), v = isFinite(rd) ? rd : n(r.gsmap_fine); if (isFinite(t) && isFinite(v)) R.set(`${r.station_id}|${t}`, v); }   // truth: the gauge-adjusted radar where a radar sees the station (column radar_mmh, from Oct 2026), GSMaP otherwise
   return { T, R, files };
 }
 const rain6 = (R, id, tEnd) => { let s = 0, k = 0; for (let t = tEnd - 5 * HOUR; t <= tEnd; t += HOUR) { const v = R.get(`${id}|${t}`); if (v != null) { s += v; k++; } } return k >= 4 ? s * 6 / k : NaN; };

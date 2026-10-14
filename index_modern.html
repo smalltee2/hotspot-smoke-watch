@@ -1086,6 +1086,20 @@ tbody tr:hover {
 .trend .wxhead{font:600 .72rem/1.3 var(--font-data);margin:8px 0 2px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
 .locpop{position:fixed;inset:0;z-index:3000;display:flex;align-items:center;justify-content:center;background:rgba(10,14,12,.5);padding:12px}
 .locpop[hidden]{display:none}
+.btn-sum{display:inline-flex;align-items:center;gap:6px}
+.btn-sum svg,.sum-cta svg{flex:none}
+.sum-cta{margin:4px 0 12px}
+.sum-cta .btn{display:inline-flex;align-items:center;gap:7px;width:100%;justify-content:center;text-align:left}
+.sumcard .sumctl{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:10px 0 4px;font-size:.8rem}
+.sumcard .sumctl select{font:inherit;max-width:100%}
+.sumcard .sumbody{margin-top:6px}
+.sumcard .sumsec{border-top:1px solid var(--line);padding:10px 0 4px}
+.sumcard .sumsec h3{margin:0 0 4px;font-size:.92rem;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.sumcard .sumsec h3 .pill{font-size:.68rem}
+.sumcard .sumsec p{margin:0 0 6px;font-size:.86rem;line-height:1.55}
+.sumcard .sumov{font-size:.9rem;line-height:1.55;margin:4px 0 10px}
+.sumcard .sumfoot{font-size:.7rem;color:var(--muted);line-height:1.45;margin:8px 0 0}
+.sumcard .sumbtns{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;margin-top:10px}
 .locpop .lpcard{background:var(--panel);color:var(--fg);border-radius:10px;width:100%;max-width:600px;max-height:calc(100dvh - 24px);overflow:auto;box-shadow:0 10px 40px rgba(0,0,0,.35);padding:14px 16px 12px;font-size:13px}
 .lphead{display:flex;align-items:flex-start;justify-content:space-between;gap:8px}
 .lphead h2{margin:0;font:600 1.02rem/1.25 var(--font-display);letter-spacing:.02em}
@@ -1328,6 +1342,7 @@ main.side-hidden .sidetoggle svg{transform:rotate(180deg)}
 </head>
 <body data-click="info">
 <!-- location popup at page level, so it opens above the map (inside the side panel it was drawn under the map) -->
+<div id="sumPop" class="locpop" hidden role="dialog" aria-modal="true" aria-labelledby="sumT"><div class="lpcard sumcard" id="sumCard"></div></div>
 <div id="locPop" class="locpop" hidden role="dialog" aria-modal="true" aria-labelledby="locPopT"><div class="lpcard" id="locPopCard"></div></div>
 <header>
   <div class="brand">
@@ -1339,6 +1354,7 @@ main.side-hidden .sidetoggle svg{transform:rotate(180deg)}
     <span id="updated" class="note"></span><div id="toast" role="status" aria-live="polite"></div>
     <a class="btn dev-only" href="perf.html" title="Live model performance: scores, charts and maps, updated every 3 hours"><span class="lbl-long" data-th="ผลการประเมินแบบจำลอง">Model performance</span><span class="lbl-short" data-th="ผลประเมิน">Scores</span></a>
     <a class="btn btn-ico public-only" href="dev.html" title="Developer page (sign-in) · หน้าสำหรับผู้พัฒนา (ต้องเข้าสู่ระบบ)" aria-label="Developer page"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></a>
+    <button id="btnSum" class="btn btn-sum" type="button" title="Forecast summary: today, tomorrow and the next two days"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 3h9l4 4v14H6z"/><path d="M9 11h7M9 15h7M9 7h3"/></svg><span class="lbl-long" data-th="สรุปพยากรณ์">Forecast summary</span><span class="lbl-short" data-th="สรุป">Summary</span></button>
     <button id="btnLang" class="btn" type="button" lang="th" title="ภาษาไทย / English">ไทย</button>
     <button id="btnRun" class="btn primary" type="button" title="Reload the latest data"><span class="lbl-long" data-th="โหลดข้อมูลล่าสุด">Load live data</span><span class="lbl-short" data-th="รีเฟรช">Refresh</span></button>
   </div>
@@ -1376,6 +1392,7 @@ main.side-hidden .sidetoggle svg{transform:rotate(180deg)}
           <option value="station" data-th="สถานีตรวจวัด">Monitoring stations</option>
         </select></div>
       <div id="wv-prov" class="wv">
+        <div class="sum-cta"><button class="btn" id="btnSum2" type="button"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 3h9l4 4v14H6z"/><path d="M9 11h7M9 15h7M9 7h3"/></svg><span data-th="สรุปพยากรณ์ วันนี้ พรุ่งนี้ และอีก 2 วัน">Forecast summary: today, tomorrow and the next two days</span></button></div>
         <h3 data-th="แนวโน้ม PM&lt;sub&gt;2.5&lt;/sub&gt; รายพื้นที่">PM<sub>2.5</sub> trend by area</h3>
         <p class="note" id="areaNote"></p>
         <div id="areaTrend" class="note">–</div>
@@ -3954,6 +3971,110 @@ function hereTrend(lat,lon){
   const fire=S.sim?H.map(t=>{const x=fireAt(lat,lon,t); return x>0?x:null;}):null;
   return `<div class="trend" style="margin-top:6px">${trendBlock(H,v,{fire:fire&&fire.some(x=>x!=null&&x>=0.5)?fire:null,wx:wxSeries(H,[{la:lat,lo:lon}]),label:'PM2.5 trend at my location'})}</div>`;
 }
+
+// ---- forecast summary (header button "Forecast summary" and the button above the area trend): a text drafted from the forecast data
+// for today, tomorrow and the next two days, for the chosen region or one province. Same numbers as the area trend (areaSeries):
+// area mean of the corrected PM2.5 map, Thai calendar days (hour-ending), 24-h means need ≥ 18 hours; bands are the PCD 24-h bands.
+// Weather from the same area points (temperature 0.025°, rain observed / forecast), wind from ECMWF at the area's centre.
+let SUMAREA='__all';
+function sumDays(H,v){ const m=new Map();
+  H.forEach((t,i)=>{ if(v[i]==null) return; const d=bkkDay(t-HR); let o=m.get(d); if(!o) m.set(d,o={s:0,n:0,max:-1,tmax:null,t0:t,t1:t}); o.s+=v[i]; o.n++; o.t1=t;
+    if(v[i]>o.max){o.max=v[i];o.tmax=t;} });
+  for(const o of m.values()) o.mean=o.s/o.n; return m; }
+function sumWind(R,H,d){ if(!MET) return null; const b=R?R.bbox:REGIONS.msea.bbox, la=(b[1]+b[3])/2, lo=(b[0]+b[2])/2; let u=0,v=0,n=0;
+  for(const t of H){ if(bkkDay(t-HR)!==d) continue; const w=sampleMet(MET,la,lo,t); if(w&&isFinite(w.u10)){u+=w.u10;v+=w.v10;n++;} }
+  if(!n) return null; u/=n; v/=n; return {spd:Math.hypot(u,v),dir:windFrom(u,v)}; }
+function buildSummary(){
+  if(!P.data||!P.data.grid) return null;
+  const A=areaSeries(), H=A.H, now=Date.now(), R=regionShape(); if(!A.groups.has(SUMAREA)) SUMAREA='__all';
+  const g=A.groups.get(SUMAREA), isAll=SUMAREA==='__all', regionName=$('region').selectedOptions[0]?.textContent||g.name, area=isAll?regionName:provName(g.p);
+  const provs=[...A.groups.entries()].filter(([k])=>k!=='__all').map(([,x])=>({name:provName(x.p),days:sumDays(H,x.mean)}));
+  const D=sumDays(H,g.mean), WX=dailyWx(H,g.wx,now), keys=[0,1,2,3].map(k=>bkkDay(now+k*864e5));
+  const full=d=>D.get(d)&&D.get(d).n>=18;
+  const band=v=>{const b=pcdBand(v); return {name:T(b.en,b.th),key:b.key};};
+  const hmB=t=>new Date(t).toLocaleTimeString(LOC(),{hour:'2-digit',minute:'2-digit',timeZone:'Asia/Bangkok'});
+  const dLong=d=>new Date(Date.parse(d+'T12:00:00+07:00')).toLocaleDateString(LOC(),{weekday:'long',day:'numeric',month:'long',timeZone:'Asia/Bangkok'});
+  const n1=x=>fmtN(x), th=LANG==='th';
+  // weather of one day over the area (needs ≥ 12 hours of the day)
+  const wxText=d=>{ const w=WX.get(d), wd=sumWind(R,H,d), bits=[]; if(w&&w.n<12) return null;
+    if(w&&isFinite(w.tmin)) bits.push(`${Math.round(w.tmin)}–${Math.round(w.tmax)} °C`);
+    if(w&&w.n) bits.push(rainDayCat(w.rain)+(w.rain>=0.1?T(` (area mean ${w.rain<10?w.rain.toFixed(1):Math.round(w.rain)} mm)`,` (เฉลี่ยทั้งพื้นที่ ${w.rain<10?w.rain.toFixed(1):Math.round(w.rain)} มม.)`):''));
+    if(wd) bits.push(wd.spd<0.5?T('calm','ลมสงบ'):T(`wind from the ${compass(wd.dir)} at ${wd.spd.toFixed(1)} m/s`,`ลมจากทิศ${compass(wd.dir)} ${wd.spd.toFixed(1)} ม./วินาที`));
+    if(!bits.length) return null; let s=T('Weather: ','สภาพอากาศ: ')+bits.join(th?' ':', ')+(th?'':'.');
+    if(w&&w.rain>=10) s+=T(' Rain helps wash particles out of the air.',' ฝนช่วยชะล้างฝุ่นออกจากอากาศ');
+    else if(wd&&wd.spd<1.5&&(!w||w.rain<0.1)) s+=T(' Light winds and no rain let smoke and dust build up near the ground.',' ลมอ่อนและไม่มีฝน ทำให้ควันและฝุ่นสะสมใกล้พื้นได้ง่าย');
+    return s; };
+  let lastPM=null; for(const v of D.values()) lastPM=v.t1;
+  // one day's paragraph(s); a day past the end of the PM2.5 forecast gets the weather only
+  const dayText=(d,prev,label)=>{ const o=D.get(d);
+    if(!o){ const ws=wxText(d); if(!ws||lastPM==null) return null; const until=new Date(lastPM).toLocaleString(LOC(),{weekday:'short',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit',timeZone:'Asia/Bangkok'});
+      return {label,d,mean:null,band:null,text:[T(`No PM₂.₅ forecast for this day yet (the PM₂.₅ forecast currently runs to ${until}).`,`ยังไม่มีพยากรณ์ PM₂.₅ ของวันดังกล่าว (พยากรณ์ PM₂.₅ ขณะนี้มีถึง ${until} น.)`),ws]}; }
+    const out=[], b=band(o.mean), part=o.n<18;
+    if(part){ const end=hmB(o.t1);
+      out.push(T(`The PM₂.₅ forecast reaches only to ${end} on this day, so there is no daily mean yet; over those hours PM₂.₅ averaged ${n1(o.mean)} µg/m³ across ${area}, at most ${n1(o.max)} µg/m³.`,
+        `พยากรณ์ PM₂.₅ ของวันดังกล่าวมีถึงเวลา ${end} น. เท่านั้น จึงยังไม่มีค่าเฉลี่ยรายวัน ช่วงเวลาดังกล่าว PM₂.₅ เฉลี่ยทั้ง${area} ${n1(o.mean)} µg/m³ สูงสุด ${n1(o.max)} µg/m³`));
+      const ws=wxText(d); if(ws) out.push(ws);
+      return {label,d,mean:null,band:null,text:out}; }
+    let chg=''; const p=prev&&full(prev)?D.get(prev).mean:null;
+    if(p!=null){ const r=(o.mean-p)/p; chg=Math.abs(r)<0.1?T(', similar to the day before',' ใกล้เคียงกับวันก่อนหน้า'):r>0?T(`, up ${Math.round(r*100)} % on the day before`,` เพิ่มขึ้น ${Math.round(r*100)}% จากวันก่อนหน้า`):T(`, down ${Math.round(-r*100)} % on the day before`,` ลดลง ${Math.round(-r*100)}% จากวันก่อนหน้า`); }
+    out.push(T(`PM₂.₅ averaged over ${area} ${d===keys[0]?'is':'is forecast at'} ${n1(o.mean)} µg/m³ for the day (${b.name})${chg}. The highest hourly value is around ${hmB(o.tmax)} (${n1(o.max)} µg/m³).`,
+      `PM₂.₅ เฉลี่ยทั้ง${area} ${d===keys[0]?'วันนี้อยู่ที่':'คาดว่าอยู่ที่'} ${n1(o.mean)} µg/m³ (${b.name})${chg} ค่ารายชั่วโมงสูงสุดราว ${hmB(o.tmax)} น. (${n1(o.max)} µg/m³)`));
+    if(isAll&&provs.length>1){ const ps=provs.map(x=>({name:x.name,o:x.days.get(d)})).filter(x=>x.o&&x.o.n>=18).sort((a,b)=>b.o.mean-a.o.mean);
+      if(ps.length){ const over=ps.filter(x=>x.o.mean>37.5), over75=ps.filter(x=>x.o.mean>75), top=(over.length?over:ps).slice(0,3).map(x=>`${x.name} ${n1(x.o.mean)}`), list=top.length>1?top.slice(0,-1).join(', ')+T(' and ',' และ ')+top.at(-1):top[0];
+        out.push(over.length
+          ? T(`${over.length} of ${ps.length} provinces ${over.length>1?'are':'is'} above the Thai 24-h standard of 37.5 µg/m³${over75.length?`, ${over75.length} of them above 75 µg/m³ (affects health)`:''}; highest: ${list} µg/m³.`,
+              `${over.length} จาก ${ps.length} จังหวัดเกินค่ามาตรฐาน 24 ชม. ของไทย 37.5 µg/m³${over75.length?` ในจำนวนนี้ ${over75.length} จังหวัดเกิน 75 µg/m³ (มีผลต่อสุขภาพ)`:''} สูงสุด: ${list} µg/m³`)
+          : T(`No province is above the Thai 24-h standard of 37.5 µg/m³; highest: ${list} µg/m³.`,`ไม่มีจังหวัดใดเกินค่ามาตรฐาน 24 ชม. ของไทย 37.5 µg/m³ สูงสุด: ${list} µg/m³`)); } }
+    const ws=wxText(d); if(ws) out.push(ws);
+    return {label,d,mean:o.mean,band:b,text:out}; };
+  const secs=[];
+  const s0=dayText(keys[0],null,T('Today','วันนี้')); if(s0){
+    // fire hotspots seen by satellite in the last 24 h inside the area
+    const inA=h=>isAll?inRegion(h.lat,h.lon):(provinceOf(h.lat,h.lon)?.n===g.p.n), hs=S.hots.filter(h=>h.t>now-24*HR&&inA(h));
+    if(hs.length){ const c={}; for(const h of hs){ const pv=provinceOf(h.lat,h.lon), k=pv&&pv.c==='THA'?provName(pv):ctryName(countryOf(h.lat,h.lon)); c[k]=(c[k]||0)+1; }
+      const top=Object.entries(c).sort((a,b)=>b[1]-a[1]).slice(0,3).map(([k,n])=>`${k} ${n}`).join(', ');
+      s0.text.push(T(`Fires: ${hs.length} hotspots detected by satellite in the last 24 h${isAll?` (most in ${top})`:''}.`,`ไฟ: ดาวเทียมตรวจพบจุดความร้อน ${hs.length} จุดใน 24 ชม. ที่ผ่านมา${isAll?` (มากที่สุดที่ ${top})`:''}`)); }
+    else s0.text.push(T('Fires: no hotspots detected by satellite in the last 24 h.','ไฟ: ดาวเทียมไม่พบจุดความร้อนใน 24 ชม. ที่ผ่านมา'));
+    secs.push(s0); }
+  const s1=dayText(keys[1],keys[0],T('Tomorrow','พรุ่งนี้')); if(s1) secs.push(s1);
+  const n2=[dayText(keys[2],keys[1],''),dayText(keys[3],keys[2],'')].filter(Boolean);
+  if(n2.length) secs.push({label:T('Next two days','อีก 2 วันถัดไป'),sub:n2.map(x=>({...x,label:dLong(x.d)}))});
+  // overview: worst full day and the direction over the forecast
+  const fd=keys.filter(full), worst=fd.slice().sort((a,b)=>D.get(b).mean-D.get(a).mean)[0];
+  const lab=d=>d===keys[0]?T('today','วันนี้'):d===keys[1]?T('tomorrow','พรุ่งนี้'):dLong(d);
+  let ov=''; if(fd.length){ const a=D.get(fd[0]).mean, z=D.get(fd.at(-1)).mean, r=(z-a)/a, wv=D.get(worst).mean;
+    const dir=fd.length<2?'':Math.abs(r)<0.15?T('stays about the same','ทรงตัว'):r>0?T('worsens','แย่ลง'):T('improves','ดีขึ้น');
+    ov=T(`${area}: air quality is ${band(a).name.toLowerCase()} today${dir?` and ${dir} over the following days`:''}; the highest daily mean in the forecast is ${lab(worst)} at ${n1(wv)} µg/m³ (${band(wv).name}).`,
+      `${area}: คุณภาพอากาศวันนี้อยู่ในระดับ${band(a).name}${dir?` และ${dir}ในวันต่อ ๆ ไป`:''} ค่าเฉลี่ยรายวันสูงสุดในช่วงพยากรณ์คือ${lab(worst)} ${n1(wv)} µg/m³ (${band(wv).name})`); }
+  const run=new Date(P.data.generated).toLocaleString(LOC(),{day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit',timeZone:'Asia/Bangkok'});
+  const foot=T(`SEA-HAF forecast, run of ${run} (Thai time). PM₂.₅: CAMS forecast corrected with monitoring stations, 0.025° map; daily values are the means of the 24 hours of each Thai calendar day; bands follow the Thai Pollution Control Department. Weather: ECMWF, with observed rain (JAXA GSMaP) for past hours. Drafted automatically from the forecast data; please check before publishing.`,
+    `พยากรณ์ SEA-HAF รอบ ${run} (เวลาประเทศไทย) PM₂.₅: พยากรณ์ CAMS ปรับแก้ด้วยสถานีตรวจวัด แผนที่ 0.025° ค่ารายวันคือค่าเฉลี่ย 24 ชั่วโมงของแต่ละวันตามเวลาไทย ระดับตามเกณฑ์กรมควบคุมมลพิษ สภาพอากาศ: ECMWF และฝนตรวจวัด (JAXA GSMaP) สำหรับชั่วโมงที่ผ่านมา ข้อความนี้ร่างอัตโนมัติจากข้อมูลพยากรณ์ โปรดตรวจทานก่อนเผยแพร่`);
+  return {area,ov,secs,foot,provs:[...A.groups.entries()].filter(([k])=>k!=='__all').map(([k,x])=>[k,provName(x.p)]).sort((a,b)=>a[1].localeCompare(b[1],LOC())),regionName};
+}
+function summaryText(S_){ const L_=[T('PM₂.₅ forecast summary','สรุปพยากรณ์ PM₂.₅')+' — '+S_.area,'',S_.ov,''];
+  for(const s of S_.secs){ if(s.sub){ L_.push(s.label); for(const x of s.sub){ L_.push(`• ${x.label}${x.band?` (${x.band.name})`:''}: `+x.text.join(' ')); } }
+    else L_.push(`${s.label}${s.band?` (${s.band.name})`:''}: `+s.text.join(' ')); L_.push(''); }
+  L_.push(S_.foot); return L_.join('\n'); }
+function renderSummary(){ const box=$('sumPop'), card=$('sumCard'); const S_=buildSummary();
+  const pillB=b=>b?`<span class="pill" style="background:var(--${b.key});color:#fff">${esc(b.name)}</span>`:'';
+  const head=`<div class="lphead"><h2 id="sumT">${T('Forecast summary','สรุปพยากรณ์')}</h2><button class="x" type="button" id="sumX" aria-label="${T('Close','ปิด')}">×</button></div>`;
+  if(!S_){ card.innerHTML=head+`<p class="note">${T('The summary needs the hourly forecast data; load the live data first.','ต้องมีข้อมูลพยากรณ์รายชั่วโมงก่อน กรุณาโหลดข้อมูลล่าสุด')}</p>`; }
+  else card.innerHTML=head+`<div class="sumctl"><label>${T('Area','พื้นที่')} <select id="sumArea"><option value="__all">${esc(T('Whole region','ทั้งภูมิภาค'))}: ${esc(S_.regionName)}</option>${S_.provs.map(([k,n])=>`<option value="${esc(k)}"${k===SUMAREA?' selected':''}>${esc(n)}</option>`).join('')}</select></label></div>
+    <div class="sumbody"><p class="sumov">${esc(S_.ov)}</p>
+    ${S_.secs.map(s=>s.sub?`<div class="sumsec"><h3>${esc(s.label)}</h3>${s.sub.map(x=>`<p><b>${esc(x.label)}</b> ${pillB(x.band)}<br>${x.text.map(esc).join(' ')}</p>`).join('')}</div>`
+      :`<div class="sumsec"><h3>${esc(s.label)} <span class="note">${esc(dayLabel(Date.parse(s.d+'T12:00:00+07:00')))}</span> ${pillB(s.band)}</h3><p>${s.text.map(esc).join(' ')}</p></div>`).join('')}
+    <p class="sumfoot">${esc(S_.foot)}</p></div>
+    <div class="sumbtns"><button class="btn" type="button" id="sumCopy">${T('Copy text','คัดลอกข้อความ')}</button><button class="btn primary" type="button" id="sumClose">${T('Close','ปิด')}</button></div>`;
+  box.hidden=false;
+  const close=()=>{box.hidden=true;}; $('sumX').onclick=close; if($('sumClose')) $('sumClose').onclick=close; box.onclick=e=>{ if(e.target===box) close(); };
+  const sel=$('sumArea'); if(sel){ sel.value=SUMAREA; sel.onchange=()=>{SUMAREA=sel.value; renderSummary();}; }
+  const cp=$('sumCopy'); if(cp) cp.onclick=async()=>{ const txt=summaryText(S_);
+    try{ await navigator.clipboard.writeText(txt); toast(T('Summary copied.','คัดลอกสรุปแล้ว')); }
+    catch(e){ const ta=document.createElement('textarea'); ta.value=txt; document.body.appendChild(ta); ta.select(); try{document.execCommand('copy'); toast(T('Summary copied.','คัดลอกสรุปแล้ว'));}catch(_){ } ta.remove(); } };
+}
+function openSummary(){ SUMAREA=areaSel||'__all'; renderSummary(); ensureT2(()=>{ if(!$('sumPop').hidden) renderSummary(); }); ensureRainObs(()=>{ if(!$('sumPop').hidden) renderSummary(); }); ensureRainFac(()=>{ if(!$('sumPop').hidden) renderSummary(); }); $('sumX')?.focus({preventScroll:true}); }
+for(const id of ['btnSum','btnSum2']) $(id)?.addEventListener('click',openSummary);
+document.addEventListener('keydown',e=>{ if(e.key==='Escape'&&!$('sumPop').hidden) $('sumPop').hidden=true; });
 
 // ---- controls
 $('btnRun').onclick=refreshClick; $('btnRun2').onclick=refreshClick;

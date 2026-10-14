@@ -9,6 +9,7 @@ Hourly PM2.5 warning page for Northern Thailand and mainland Southeast Asia.
 - **Warnings**: towns and stations banded on Thailand's PCD PM2.5 scale (1 June 2023).
 - **Verification**: forecasts are logged and scored against later observations by lead time (`data/verify.json`).
 - **Where the air comes from**: tap a place on the map → *Where is the air from?* draws an ensemble of 27 backward trajectories (48 h or 24 h) arriving at 100, 500 and 1500 m above ground, HYSPLIT-style (9 members per height with the winds read ±0.25° around the parcel), from ECMWF winds at 10 m, 100 m, 925, 850 and 700 hPa (`data/met-traj.json`, loaded on first use), and lists the countries the air passed over and the fire hotspots near the paths.
+- **Ventilation**: map layer and place-card readout of the ventilation index (ECMWF boundary-layer height × 100-m wind, m²/s; below 2,000 poor, 2,000–6,000 moderate, above 6,000 good — the US NMC air-pollution-potential criterion of Stackpole 1967 / Gross 1970); the forecast summary gives each day's mean.
 - **Automatic refresh**: an open page checks `data/stamp.json` every 3 minutes and loads a new run in place (keeping the chosen hour and place); a new page version reloads the page.
 
 ## How it runs

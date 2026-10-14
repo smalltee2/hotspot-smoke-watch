@@ -1086,6 +1086,7 @@ tbody tr:hover {
 .trend .wxhead{font:600 .72rem/1.3 var(--font-data);margin:8px 0 2px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
 .locpop{position:fixed;inset:0;z-index:3000;display:flex;align-items:center;justify-content:center;background:rgba(10,14,12,.5);padding:12px}
 .locpop[hidden]{display:none}
+.vent-poor{color:#b03a7a;font-weight:600}.vent-mod{color:#c77a2a;font-weight:600}.vent-good{color:#2f8f5b;font-weight:600}
 .radarleg{margin:2px 0 6px;min-width:0;max-width:100%;overflow:hidden}
 .radarleg .pcdbar,.radarleg .ticks{width:100%;box-sizing:border-box}
 .radarctl{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:4px 0 3px;min-width:0}
@@ -1650,6 +1651,7 @@ main.side-hidden .sidetoggle svg{transform:rotate(180deg)}
         <label class="dev-only"><input type="radio" name="layer" id="lyUnc" value="unc"> <span data-th="ความไม่แน่นอนของแผนที่ (±1σ)">Map uncertainty (±1σ)</span></label>
         <label><input type="radio" name="layer" id="lyRain" value="rain"> <span data-th="ฝน (มม./ชม.)">Rain, mm/h</span></label>
         <label><input type="radio" name="layer" id="lyTemp" value="temp"> <span data-th="อุณหภูมิ (°C)">Temperature, °C</span></label>
+        <label><input type="radio" name="layer" id="lyVent" value="vent"> <span data-th="การระบายอากาศ (ม.²/วินาที)">Ventilation, m²/s</span></label>
         <label><input type="radio" name="layer" id="lyNasa" value="nasa"> <span data-th="ภาพดาวเทียมรายวัน NASA (เห็นควัน)">NASA daily satellite image (shows smoke)</span></label>
         <div id="assimNote" class="note dev-only" style="font-size:.68rem;color:var(--focus)" hidden></div>
       </div>
@@ -1679,6 +1681,11 @@ main.side-hidden .sidetoggle svg{transform:rotate(180deg)}
         <div class="pcdbar" id="tempBar" style="grid-template-columns:repeat(7,1fr)"></div>
         <div class="ticks"><span>5</span><span>10</span><span>15</span><span>20</span><span>25</span><span>30</span><span>35</span><span>40 °C</span></div>
         <div class="note" style="font-size:.68rem" data-th="อุณหภูมิอากาศที่ 2 ม. พยากรณ์ ECMWF ย่อส่วนเป็น 0.025° ด้วยความสูงภูมิประเทศ (6.5 °C/กม.) และปรับด้วยค่าตรวจวัดของสถานี Air4Thai เมื่อผ่านการทดสอบแบบตัดทีละสถานีในรอบนั้น">Air temperature at 2 m: ECMWF forecast downscaled to 0.025° with terrain height (6.5 °C/km) and, when it passes a leave-one-out check in that run, corrected with Air4Thai station measurements.</div>
+      </div>
+      <div id="legVent" hidden>
+        <div class="pcdbar" id="ventBar" style="grid-template-columns:repeat(6,1fr)"></div>
+        <div class="ticks"><span>0</span><span>1k</span><span>2k</span><span>4k</span><span>6k</span><span>10k</span><span>m²/s</span></div>
+        <div class="note" style="font-size:.68rem" data-th="ดัชนีการระบายอากาศ = ความสูงชั้นผสม × ความเร็วลมพัดพา (ECMWF: ความสูงชั้นบรรยากาศขอบเขต × ลมที่ 100 ม.) ยิ่งต่ำ ฝุ่นยิ่งสะสมใกล้พื้น: ต่ำกว่า 2,000 ระบายอากาศไม่ดี, 2,000–6,000 ปานกลาง, สูงกว่า 6,000 ดี (เกณฑ์ศักยภาพมลพิษอากาศของ US National Meteorological Center: ต่ำกว่า 6,000 ม.²/วินาที = ศักยภาพมลพิษสูง, Stackpole 1967; Gross 1970) ต่ำสุดกลางคืนและเช้ามืด สูงสุดบ่าย">Ventilation index = mixing height × transport wind (ECMWF boundary-layer height × 100-m wind). The lower, the more smoke and dust build up near the ground: below 2,000 poor, 2,000–6,000 moderate, above 6,000 good (US National Meteorological Center air-pollution-potential criterion: below 6,000 m²/s = high potential; Stackpole 1967, Gross 1970). Lowest at night and early morning, highest in the afternoon.</div>
       </div>
       <div id="legNasa" hidden>
         <div class="note" style="font-size:.7rem" data-th="ชี้เมาส์หรือแตะที่ภาพ เพื่อดูการประเมินว่าเป็นท้องฟ้าโปร่ง เมฆ หรือควัน/หมอกควัน พร้อมหลักฐาน · หรือกดปุ่มด้านล่างแล้วลากกรอบ เพื่อสรุปสัดส่วนในพื้นที่">Point or tap on the image for an assessment: clear sky, cloud, or smoke/haze, with the evidence · or press the button below and drag a box to summarise an area.</div>
@@ -2828,8 +2835,8 @@ async function loadVerify(){
 
 // ---- total PM2.5 grid layer and station markers
 let gridLayer=null; const stationLayer=L.layerGroup().addTo(map), a4tLayer=L.layerGroup().addTo(map);
-const layerMode=()=>$('lyNasa').checked?'nasa':$('lyUnc').checked?'unc':$('lyFire').checked?'fire':$('lyFine').checked?'fine':$('lyRain').checked?'rain':$('lyTemp').checked?'temp':'total';
-const wxMode=()=>layerMode()==='rain'||layerMode()==='temp';
+const layerMode=()=>$('lyNasa').checked?'nasa':$('lyUnc').checked?'unc':$('lyFire').checked?'fire':$('lyFine').checked?'fine':$('lyRain').checked?'rain':$('lyTemp').checked?'temp':$('lyVent').checked?'vent':'total';
+const wxMode=()=>layerMode()==='rain'||layerMode()==='temp'||layerMode()==='vent';
 const gridMode=()=>layerMode()==='total'||layerMode()==='fine';
 const unitMode=()=>$('unitSel').value;   // 'ug' | 'ug24' | 'th' | 'us'
 const avg24=()=>unitMode()!=='ug';
@@ -2920,12 +2927,16 @@ function drawGrid(){
   gridLayer=L.layerGroup(parts).addTo(map);
 }
 // ---- weather layers (ECMWF forecast from the pipeline): rain and 2-m temperature as shaded fields, 10-m wind as arrows
+// ventilation index (m²/s) = boundary-layer height × 100-m wind speed (ECMWF): dark where smoke is trapped
+const VENT_SCALE=[[1000,'#5e1d6e'],[2000,'#b03a7a'],[4000,'#e8845a'],[6000,'#f5d26a'],[10000,'#b9e3a4'],[Infinity,'#5bb27a']];
+const ventAt=(lat,lon,t)=>{ if(!MET) return null; const m=sampleMet(MET,lat,lon,t); if(!m||m.blh==null) return null; return m.blh*Math.hypot(m.u,m.v); };
+const ventCat=v=>v==null?null:v<2000?{k:'poor',en:'poor',th:'ไม่ดี'}:v<6000?{k:'mod',en:'moderate',th:'ปานกลาง'}:{k:'good',en:'good',th:'ดี'};
 const RAIN_SCALE=[[0.1,null],[0.5,'#c7e3f7'],[1,'#8fc3ea'],[2,'#4a97d6'],[5,'#1f63b5'],[10,'#0b3a86'],[Infinity,'#4a1a7a']];
 const TEMP_SCALE=[[10,'#3b4cc0'],[15,'#6f8fe3'],[20,'#a8c8f0'],[25,'#f2f0c8'],[30,'#f4b183'],[35,'#e0633f'],[Infinity,'#a50021']];
 // temperature: continuous between the stops (5 → 40 °C) so that terrain detail shows; rain keeps its classes
 const TEMP_STOPS=[[5,'#3b4cc0'],[12.5,'#6f8fe3'],[17.5,'#a8c8f0'],[22.5,'#f2f0c8'],[27.5,'#f4b183'],[32.5,'#e0633f'],[40,'#a50021']];
 function tempRGB(v){const S_=TEMP_STOPS; if(v<=S_[0][0]) return hexRGB(S_[0][1]); for(let i=1;i<S_.length;i++) if(v<=S_[i][0]){const a=hexRGB(S_[i-1][1]),b=hexRGB(S_[i][1]),f=(v-S_[i-1][0])/(S_[i][0]-S_[i-1][0]); return a.map((x,k)=>Math.round(x+(b[k]-x)*f));} return hexRGB(S_[S_.length-1][1]);}
-function wxColor(mode,v){ const sc=mode==='rain'?RAIN_SCALE:TEMP_SCALE; for(const [mx,c] of sc) if(v<=mx) return c; return sc[sc.length-1][1]; }
+function wxColor(mode,v){ const sc=mode==='rain'?RAIN_SCALE:mode==='vent'?VENT_SCALE:TEMP_SCALE; for(const [mx,c] of sc) if(v<=mx) return c; return sc[sc.length-1][1]; }
 function wxAt(lat,lon,t){ if(!MET) return null; const m=sampleMet(MET,lat,lon,t), o=rainAt(lat,lon,t), td=t2At(lat,lon,t); return {pr:o!=null?o:m.pr,t2:td!=null?td:m.t2,rh:m.rh,u10:m.u10??m.u,v10:m.v10??m.v,ws100:m.ws,u100:m.u,v100:m.v}; }
 // weather over the 24 h ending at tEnd (the window of a 24-h PM2.5 mean): temperature min–max (downscaled, °C) and rain total (mm;
 // observed GSMaP for hours already observed, ECMWF forecast after); null without meteorology
@@ -2960,9 +2971,9 @@ function drawWx(){
   const down=mode==='temp'&&!!T2D&&!!MET.grids[0].elev;
   let cell=(down||fineRain)?0.025:obsRain?0.05:0.1; while(((e-w)/cell)*((n-so)/cell)>((down||fineRain)?650000:obsRain?200000:60000)) cell*=1.25;
   const fx=Math.ceil((e-w)/cell), fy=Math.ceil((n-so)/cell), F=new Float32Array(fx*fy);
-  for(let y=0;y<fy;y++) for(let x=0;x<fx;x++){const la=so+(y+.5)*cell, lo=w+(x+.5)*cell; if(mode==='rain'){ if(obsRain){const v=fineRain?rainFineAt(la,lo,t):rainObsAt(la,lo,t); F[y*fx+x]=v==null?NaN:v;} else {let v=metVarAt(MET,'pr',la,lo,t); if(fineRain&&v>0) v*=rainFactorAt(la,lo,t); const c=wxmlAt('pr',la,lo,t); if(c&&v!=null) v=Math.max(0,(v+0.2)*Math.exp(c)-0.2); F[y*fx+x]=v;}} else {const v=t2At(la,lo,t); F[y*fx+x]=v==null?NaN:v;}}
+  for(let y=0;y<fy;y++) for(let x=0;x<fx;x++){const la=so+(y+.5)*cell, lo=w+(x+.5)*cell; if(mode==='vent'){ const v=ventAt(la,lo,t); F[y*fx+x]=v==null?NaN:v; } else if(mode==='rain'){ if(obsRain){const v=fineRain?rainFineAt(la,lo,t):rainObsAt(la,lo,t); F[y*fx+x]=v==null?NaN:v;} else {let v=metVarAt(MET,'pr',la,lo,t); if(fineRain&&v>0) v*=rainFactorAt(la,lo,t); const c=wxmlAt('pr',la,lo,t); if(c&&v!=null) v=Math.max(0,(v+0.2)*Math.exp(c)-0.2); F[y*fx+x]=v;}} else {const v=t2At(la,lo,t); F[y*fx+x]=v==null?NaN:v;}}
   S.fine={F,w,so,nx:fx,ny:fy,cell};
-  S.fieldInfo=mode==='rain'?(obsRain?T(`Observed rain, mm/h: JAXA GSMaP gauge-calibrated${fineRain?`, interpolated to ${cell.toFixed(3)}° and shaped by the CHELSA rain climatology (±7 % typical)`:', 0.1°'} (${RAINOBS.src[RAINOBS.times.indexOf(obsHour(t))]==='nrt'?'Gauge_NRT':'Gauge_NOW'})`,`ฝนที่ตรวจวัด มม./ชม.: JAXA GSMaP ปรับด้วยเครื่องวัดฝน${fineRain?' ประมาณค่าเป็น '+cell.toFixed(3)+'° และปรับรูปแบบด้วยภูมิอากาศฝน CHELSA (ปกติ ±7 %)':' 0.1°'}`):(fineRain?T(`Rain forecast, mm/h: ECMWF (0.25° north, 1° elsewhere) interpolated to ${cell.toFixed(3)}° and shaped by the CHELSA rain climatology`,`ฝนพยากรณ์ มม./ชม.: ECMWF (0.25° ภาคเหนือ 1° พื้นที่อื่น) ประมาณค่าเป็น ${cell.toFixed(3)}° และปรับรูปแบบด้วยภูมิอากาศฝน CHELSA`):T('Rain forecast, mm/h (ECMWF)','ฝนพยากรณ์ มม./ชม. (ECMWF)'))):down?T(`Temperature at 2 m, °C: ECMWF downscaled to ${cell.toFixed(3)}° with terrain${T2D.corr?' and Air4Thai stations':''}`,`อุณหภูมิ 2 ม. °C: ECMWF ย่อส่วนเป็น ${cell.toFixed(3)}° ด้วยภูมิประเทศ${T2D.corr?' และสถานี Air4Thai':''}`):T('Temperature at 2 m, °C (ECMWF)','อุณหภูมิ 2 ม. °C (ECMWF)');
+  S.fieldInfo=mode==='vent'?T('Ventilation index, m²/s: ECMWF boundary-layer height × 100-m wind, 0.1° (0.25° over northern Thailand)','ดัชนีการระบายอากาศ ม.²/วินาที: ความสูงชั้นบรรยากาศขอบเขต ECMWF × ลมที่ 100 ม. ความละเอียด 0.1° (0.25° ในภาคเหนือ)'):mode==='rain'?(obsRain?T(`Observed rain, mm/h: JAXA GSMaP gauge-calibrated${fineRain?`, interpolated to ${cell.toFixed(3)}° and shaped by the CHELSA rain climatology (±7 % typical)`:', 0.1°'} (${RAINOBS.src[RAINOBS.times.indexOf(obsHour(t))]==='nrt'?'Gauge_NRT':'Gauge_NOW'})`,`ฝนที่ตรวจวัด มม./ชม.: JAXA GSMaP ปรับด้วยเครื่องวัดฝน${fineRain?' ประมาณค่าเป็น '+cell.toFixed(3)+'° และปรับรูปแบบด้วยภูมิอากาศฝน CHELSA (ปกติ ±7 %)':' 0.1°'}`):(fineRain?T(`Rain forecast, mm/h: ECMWF (0.25° north, 1° elsewhere) interpolated to ${cell.toFixed(3)}° and shaped by the CHELSA rain climatology`,`ฝนพยากรณ์ มม./ชม.: ECMWF (0.25° ภาคเหนือ 1° พื้นที่อื่น) ประมาณค่าเป็น ${cell.toFixed(3)}° และปรับรูปแบบด้วยภูมิอากาศฝน CHELSA`):T('Rain forecast, mm/h (ECMWF)','ฝนพยากรณ์ มม./ชม. (ECMWF)'))):down?T(`Temperature at 2 m, °C: ECMWF downscaled to ${cell.toFixed(3)}° with terrain${T2D.corr?' and Air4Thai stations':''}`,`อุณหภูมิ 2 ม. °C: ECMWF ย่อส่วนเป็น ${cell.toFixed(3)}° ด้วยภูมิประเทศ${T2D.corr?' และสถานี Air4Thai':''}`):T('Temperature at 2 m, °C (ECMWF)','อุณหภูมิ 2 ม. °C (ECMWF)');
   const W=Math.min(1100,Math.round((e-w)*60)), H=Math.min(1100,Math.round((mercY(n)-mercY(so))/DEG*60));
   const url=regionCanvas(so,w,n,e,W,H,(lat,lon)=>{const x=Math.floor((lon-w)/cell), y=Math.floor((lat-so)/cell); if(x<0||y<0||x>=fx||y>=fy) return null;
     const v=F[y*fx+x]; if(v!==v) return null; if(mode==='temp'){const rgb=tempRGB(v); return [rgb[0],rgb[1],rgb[2],150];} const c=wxColor(mode,v); if(!c) return null; const rgb=hexRGB(c); return [rgb[0],rgb[1],rgb[2],150];});
@@ -3375,7 +3386,8 @@ function clickInfoHTML(lat,lon){
   const pm=v!=null?`<div class="cp-r">${pmIcon(v)}<div><span class="cp-k">PM₂.₅ ${past?T('(map)','(แผนที่)'):T('(forecast)','(พยากรณ์)')}</span><b>${fmtN(v)} <small>µg/m³</small></b><span class="cp-l" style="--c:${b.color}">${esc(b.en)}</span></div></div>`
     :`<div class="cp-n">${T('No PM₂.₅ value here at this hour.','ไม่มีค่า PM₂.₅ ที่นี่ในชั่วโมงนี้')}</div>`;
   const wx=w?`<div class="cp-r">${wi?wi.svg:''}<div><span class="cp-k">${T('Weather','สภาพอากาศ')}</span><b>${w.t2!=null?w.t2.toFixed(1)+' °C':'–'}</b><span class="cp-l">${wi?esc(wi.label):''}${r!=null&&r>=0.1?` · ${r<10?r.toFixed(1):Math.round(r)} ${T('mm/h','มม./ชม.')}`:''}</span></div></div>
-    <div class="cp-w">${ws!=null?`${T('Wind','ลม')} ${ws.toFixed(1)} ${T('m/s','ม./วิ')} ${T('from','จาก')} ${compass(windFrom(w.u10,w.v10))}`:''}${w.rh!=null?` · ${T('humidity','ความชื้น')} ${Math.round(w.rh)} %`:''}</div>`:'';
+    <div class="cp-w">${ws!=null?`${T('Wind','ลม')} ${ws.toFixed(1)} ${T('m/s','ม./วิ')} ${T('from','จาก')} ${compass(windFrom(w.u10,w.v10))}`:''}${w.rh!=null?` · ${T('humidity','ความชื้น')} ${Math.round(w.rh)} %`:''}</div>
+    ${(()=>{const vi=ventAt(lat,lon,t), c=ventCat(vi); return vi==null?'':`<div class="cp-w">${T('Ventilation','การระบายอากาศ')} ${Math.round(vi).toLocaleString()} m²/s · <span class="vent-${c.k}">${T(c.en,c.th)}</span>${c.k==='poor'?T(' — smoke and dust stay near the ground',' — ควันและฝุ่นสะสมใกล้พื้น'):''}</div>`;})()}`:'';
   return `<div class="cp"><button type="button" class="cp-x" data-a="x" aria-label="${T('Close','ปิด')}">×</button><div class="cp-h"><b>${pv?esc(provName(pv)):T('Selected point','จุดที่เลือก')}</b><span>${esc(when)} · ${lat.toFixed(3)}°N ${lon.toFixed(3)}°E</span></div>${pm}${wx}
     ${trajHTML()}
     <div class="cp-b"><button type="button" class="btn primary" data-a="more">${T('More details','รายละเอียด')}</button><button type="button" class="btn" data-a="pt">${T('Add as my point','เพิ่มเป็นจุดของฉัน')}</button></div></div>`;
@@ -4030,9 +4042,9 @@ function sumDays(H,v){ const m=new Map();
   H.forEach((t,i)=>{ if(v[i]==null) return; const d=bkkDay(t-HR); let o=m.get(d); if(!o) m.set(d,o={s:0,n:0,max:-1,tmax:null,t0:t,t1:t}); o.s+=v[i]; o.n++; o.t1=t;
     if(v[i]>o.max){o.max=v[i];o.tmax=t;} });
   for(const o of m.values()) o.mean=o.s/o.n; return m; }
-function sumWind(R,H,d){ if(!MET) return null; const b=R?R.bbox:REGIONS.msea.bbox, la=(b[1]+b[3])/2, lo=(b[0]+b[2])/2; let u=0,v=0,n=0;
-  for(const t of H){ if(bkkDay(t-HR)!==d) continue; const w=sampleMet(MET,la,lo,t); if(w&&isFinite(w.u10)){u+=w.u10;v+=w.v10;n++;} }
-  if(!n) return null; u/=n; v/=n; return {spd:Math.hypot(u,v),dir:windFrom(u,v)}; }
+function sumWind(R,H,d){ if(!MET) return null; const b=R?R.bbox:REGIONS.msea.bbox, la=(b[1]+b[3])/2, lo=(b[0]+b[2])/2; let u=0,v=0,n=0,vs=0,nv=0,vmin=Infinity;
+  for(const t of H){ if(bkkDay(t-HR)!==d) continue; const w=sampleMet(MET,la,lo,t); if(w&&isFinite(w.u10)){u+=w.u10;v+=w.v10;n++;} const vi=ventAt(la,lo,t); if(vi!=null){vs+=vi;nv++;vmin=Math.min(vmin,vi);} }
+  if(!n) return null; u/=n; v/=n; return {spd:Math.hypot(u,v),dir:windFrom(u,v),vent:nv>=12?vs/nv:null,ventMin:nv>=12?vmin:null}; }   // the day mean needs at least half the day
 function buildSummary(){
   if(!P.data||!P.data.grid) return null;
   const A=areaSeries(), H=A.H, now=Date.now(), R=regionShape(); if(!A.groups.has(SUMAREA)) SUMAREA='__all';
@@ -4049,9 +4061,10 @@ function buildSummary(){
     if(w&&isFinite(w.tmin)) bits.push(`${Math.round(w.tmin)}–${Math.round(w.tmax)} °C`);
     if(w&&w.n) bits.push(rainDayCat(w.rain)+(w.rain>=0.1?T(` (area mean ${w.rain<10?w.rain.toFixed(1):Math.round(w.rain)} mm)`,` (เฉลี่ยทั้งพื้นที่ ${w.rain<10?w.rain.toFixed(1):Math.round(w.rain)} มม.)`):''));
     if(wd) bits.push(wd.spd<0.5?T('calm','ลมสงบ'):T(`wind from the ${compass(wd.dir)} at ${wd.spd.toFixed(1)} m/s`,`ลมจากทิศ${compass(wd.dir)} ${wd.spd.toFixed(1)} ม./วินาที`));
+    if(wd&&wd.vent!=null){ const c=ventCat(wd.vent); bits.push(T(`ventilation ${c.en} (day mean ${Math.round(wd.vent).toLocaleString()} m²/s)`,`การระบายอากาศ${c.th} (เฉลี่ยทั้งวัน ${Math.round(wd.vent).toLocaleString()} ม.²/วินาที)`)); }
     if(!bits.length) return null; let s=T('Weather: ','สภาพอากาศ: ')+bits.join(th?' ':', ')+(th?'':'.');
     if(w&&w.rain>=10) s+=T(' Rain helps wash particles out of the air.',' ฝนช่วยชะล้างฝุ่นออกจากอากาศ');
-    else if(wd&&wd.spd<1.5&&(!w||w.rain<0.1)) s+=T(' Light winds and no rain let smoke and dust build up near the ground.',' ลมอ่อนและไม่มีฝน ทำให้ควันและฝุ่นสะสมใกล้พื้นได้ง่าย');
+    else if((wd&&wd.vent!=null&&wd.vent<2000)||(wd&&wd.spd<1.5&&(!w||w.rain<0.1))) s+=T(' Poor ventilation: smoke and dust build up near the ground.',' การระบายอากาศไม่ดี ควันและฝุ่นสะสมใกล้พื้น');
     return s; };
   let lastPM=null; for(const v of D.values()) lastPM=v.t1;
   // one day's paragraph(s); a day past the end of the PM2.5 forecast gets the weather only
@@ -4186,9 +4199,10 @@ setWarnView(store.get('hsw.warnView')||'prov'); $('warnView').addEventListener('
 $('unitSel').addEventListener('change',()=>{store.set('hsw.unitSel',$('unitSel').value); renderLegend(); renderAll(); redrawTime();});
 renderLegend();
 for(const el of document.querySelectorAll('input[name=layer]')) el.addEventListener('change',()=>{
-  $('legNasa').hidden=layerMode()!=='nasa'; if(layerMode()!=='nasa') nasaReset(); $('legTotal').hidden=!gridMode(); $('legFire').hidden=layerMode()!=='fire'; $('legUnc').hidden=layerMode()!=='unc'; $('legRain').hidden=layerMode()!=='rain'; $('legTemp').hidden=layerMode()!=='temp'; redrawTime();});
+  $('legNasa').hidden=layerMode()!=='nasa'; if(layerMode()!=='nasa') nasaReset(); $('legTotal').hidden=!gridMode(); $('legFire').hidden=layerMode()!=='fire'; $('legUnc').hidden=layerMode()!=='unc'; $('legRain').hidden=layerMode()!=='rain'; $('legTemp').hidden=layerMode()!=='temp'; $('legVent').hidden=layerMode()!=='vent'; redrawTime();});
 $('rainBar').innerHTML=RAIN_SCALE.slice(1).map(([,c])=>`<i style="background:${c}"></i>`).join(''); $('tempBar').style.background=`linear-gradient(to right,${TEMP_STOPS.map(([v,c])=>`${c} ${((v-5)/35*100).toFixed(1)}%`).join(',')})`;
 $('uncBar').innerHTML=UNC_COL.map(c=>`<i style="background:${c}"></i>`).join('');
+$('ventBar').innerHTML=VENT_SCALE.map(([,c])=>`<i style="background:${c}"></i>`).join('');
 $('alpha').addEventListener('change',()=>{FIELD_CACHE.clear(); redrawTime();});
 {const u=new URL(location.href); if(u.searchParams.has('v')){u.searchParams.delete('v'); history.replaceState(null,'',u.toString());}}
 // first paint, then automatic refresh while the tab is open

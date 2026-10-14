@@ -740,7 +740,7 @@ td.num{text-align:right;font-family:var(--font-data);font-variant-numeric:tabula
         <div id="legRadar" class="radarleg" hidden><div class="pcdbar" id="radarBar" style="grid-template-columns:repeat(6,1fr)"></div>
           <div class="ticks"><span>10</span><span>20</span><span>30</span><span>40</span><span>50</span><span>60</span><span>dBZ</span></div>
           <div class="radarctl"><button type="button" class="btn" id="radarPlay" aria-label="Play the last 2 hours">▶</button><input type="range" id="radarSlider" min="0" max="0" value="0" aria-label="Radar time"><span id="radarTime" class="note"></span></div>
-          <div class="note" id="radarNote" style="font-size:.66rem" data-th="เรดาร์ของกรมอุตุนิยมวิทยา ผ่าน RainViewer ทุก 10 นาที ย้อนหลัง 2 ชม. (ไม่ใช่เวลาบนแถบเวลาพยากรณ์) ครอบคลุมเฉพาะประเทศไทย และบางสถานีอาจปิดอยู่ ประมาณฝน: 20 dBZ ≈ 0.6, 30 ≈ 3, 40 ≈ 12, 50 ≈ 50 มม./ชม. (Marshall–Palmer)">Thai Meteorological Department radars via RainViewer, every 10 min for the last 2 h (not the forecast hour on the time bar). Covers Thailand only; some radars may be offline. Rain rate roughly: 20 dBZ ≈ 0.6, 30 ≈ 3, 40 ≈ 12, 50 ≈ 50 mm/h (Marshall–Palmer).</div></div>
+          <div class="note" id="radarNote" style="font-size:.66rem" data-th="เรดาร์ตรวจอากาศผ่าน RainViewer (ไทย: กรมอุตุนิยมวิทยา) ทุก 10 นาที ย้อนหลัง 2 ชม. (ไม่ใช่เวลาบนแถบเวลาพยากรณ์) รวมเรดาร์ของหลายประเทศที่ RainViewer ได้รับ (ไทย เวียดนาม มาเลเซีย ฯลฯ ไม่มีในลาว กัมพูชา และส่วนใหญ่ของเมียนมา) บางสถานีอาจปิดอยู่ ประมาณฝน: 20 dBZ ≈ 0.6, 30 ≈ 3, 40 ≈ 12, 50 ≈ 50 มม./ชม. (Marshall–Palmer)">Weather radar via RainViewer (Thailand: Thai Meteorological Department), every 10 min for the last 2 h (not the forecast hour on the time bar). Composite of the national radar networks RainViewer receives (Thailand, Viet Nam, Malaysia and others; none over Laos, Cambodia or most of Myanmar); some radars may be offline. Rain rate roughly: 20 dBZ ≈ 0.6, 30 ≈ 3, 40 ≈ 12, 50 ≈ 50 mm/h (Marshall–Palmer).</div></div>
         <label class="dev-only"><input type="checkbox" id="shWindArr"> <span data-th="ลูกศรลมพร้อมค่า (ชี้ดู)">Wind arrows with values (hover)</span></label>
         <label><input type="checkbox" id="shProv"> <span data-th="เขตและชื่อจังหวัด">Province borders and names</span></label>
         <label><input type="checkbox" id="shA4t" checked> <span data-th="Air4Thai: ค่าตรวจวัดเทียบแบบจำลอง">Air4Thai: measured vs model</span></label>
@@ -1273,6 +1273,8 @@ const map=L.map('map',{zoomControl:true,preferCanvas:true,zoomSnap:0.25,zoomDelt
 map.createPane('land').style.zIndex=150;
 map.createPane('lines').style.zIndex=380; map.getPane('lines').style.pointerEvents='none';
 map.createPane('regionmask').style.zIndex=395; map.getPane('regionmask').style.pointerEvents='none';
+// PM2.5 / smoke / weather fields in their own pane, below the markers and contours of the overlay pane (400) and below the radar
+map.createPane('field').style.zIndex=396; map.getPane('field').style.pointerEvents='none';
 const GEO_P=JSON.parse($('geoProv').textContent), GEO_C=JSON.parse($('geoCtry').textContent);
 // ---- display region: the model always runs on the whole domain; the region only limits what is drawn
 // Thai regions as used by the Thai Meteorological Department in its forecasts (77 provinces: 17 + 20 + 16 + 8 + 16)
@@ -1936,7 +1938,7 @@ function drawGrid(){
   const url=regionCanvas(so,w,n,e,W,H,(lat,lon)=>{const v=value(lat,lon); if(v<0) return null;
     if(ms){const c=rampColor(v); return c?[c[0],c[1],c[2],c[3]*255]:null;}   // µg/m³: EPA colours, same as the fire-smoke layer
     const rgb=scheme.find(b=>v<=b.max).rgb; return [rgb[0],rgb[1],rgb[2],v<15?40+v*2:Math.min(160,70+v*1.2)];});
-  const parts=[L.imageOverlay(url,[[so,w],[n,e]],{interactive:false})];
+  const parts=[L.imageOverlay(url,[[so,w],[n,e]],{interactive:false,pane:'field'})];
   if(!R) parts.push(L.rectangle([[so,w],[n,e]],{color:cssVar('--muted'),weight:1,dashArray:'4 4',fill:false,interactive:false}));
   gridLayer=L.layerGroup(parts).addTo(map);
 }
@@ -1987,7 +1989,7 @@ function drawWx(){
   const W=Math.min(1100,Math.round((e-w)*60)), H=Math.min(1100,Math.round((mercY(n)-mercY(so))/DEG*60));
   const url=regionCanvas(so,w,n,e,W,H,(lat,lon)=>{const x=Math.floor((lon-w)/cell), y=Math.floor((lat-so)/cell); if(x<0||y<0||x>=fx||y>=fy) return null;
     const v=F[y*fx+x]; if(v!==v) return null; if(mode==='temp'){const rgb=tempRGB(v); return [rgb[0],rgb[1],rgb[2],150];} const c=wxColor(mode,v); if(!c) return null; const rgb=hexRGB(c); return [rgb[0],rgb[1],rgb[2],150];});
-  gridLayer=L.layerGroup([L.imageOverlay(url,[[so,w],[n,e]],{interactive:false})]).addTo(map);
+  gridLayer=L.layerGroup([L.imageOverlay(url,[[so,w],[n,e]],{interactive:false,pane:'field'})]).addTo(map);
 }
 let windLayer=L.layerGroup().addTo(map);
 // moving particles like Windy: each particle drifts with the 10-m wind at the slider time, leaving a fading trail;
@@ -2055,7 +2057,7 @@ function drawUnc(){
   const F=S.unc.F;
   const url=regionCanvas(so,w,n,e,W,H,(lat,lon)=>{const x=Math.floor((lon-w)/cell), y=Math.floor((lat-so)/cell); if(x<0||y<0||x>=fx||y>=fy) return null;
     const pct=F[y*fx+x]; if(pct!==pct) return null; const c=rgb[UNC_BINS.findIndex(b=>pct<b)]; return [c[0],c[1],c[2],150];});
-  const parts=[L.imageOverlay(url,[[so,w],[n,e]],{interactive:false})];
+  const parts=[L.imageOverlay(url,[[so,w],[n,e]],{interactive:false,pane:'field'})];
   if(!R) parts.push(L.rectangle([[so,w],[n,e]],{color:cssVar('--muted'),weight:1,dashArray:'4 4',fill:false,interactive:false}));
   gridLayer=L.layerGroup(parts).addTo(map);
   S.fieldInfo=`Uncertainty at the analysis hour ${fmtT(rk.t)}`;
@@ -2112,7 +2114,7 @@ $('windBar').innerHTML=WIND_BFT.map(([,c])=>`<i style="background:${c};box-shado
 // ---- weather radar (RainViewer public API: Thai Meteorological Department radars, past 2 h every 10 min). Shown on its own clock,
 // not tied to the forecast time bar; latest frame when switched on, ▶ loops the 2 h. Free API limits (2026): tile zoom ≤ 7 (512-px tiles one zoom down, maxNativeZoom 8; 
 // enlarged above), colour scheme "Universal Blue" (2), 100 requests per minute per IP, so 512-px tiles and frames loaded one by one.
-map.createPane('radar').style.zIndex=405; map.getPane('radar').style.pointerEvents='none';
+map.createPane('radar').style.zIndex=398; map.getPane('radar').style.pointerEvents='none';   // above the fields, below markers, contours and borders' labels
 const RADAR={host:null,frames:[],i:-1,layers:new Map(),play:null,fetched:0,busy:false};
 const RADAR_COL=['#cec087','#00a3e0','#005588','#ffaa00','#c10000','#ff77ff'];   // Universal Blue at 10, 20, 30, 40, 50, 60 dBZ
 $('radarBar').innerHTML=RADAR_COL.map(c=>`<i style="background:${c}"></i>`).join('');
@@ -2126,7 +2128,7 @@ async function radarFetch(){ if(RADAR.busy) return; RADAR.busy=true;
   finally{ RADAR.busy=false; } }
 function radarLayer(f){ let l=RADAR.layers.get(f.path);
   if(!l){ l=L.tileLayer(`${RADAR.host}${f.path}/512/{z}/{x}/{y}/2/1_0.png`,{pane:'radar',tileSize:512,zoomOffset:-1,maxNativeZoom:8,maxZoom:19,opacity:0,
-      attribution:'Radar: <a href="https://www.rainviewer.com/" target="_blank" rel="noopener">RainViewer</a> · Thai Meteorological Department'}); RADAR.layers.set(f.path,l); l.addTo(map); }
+      attribution:'Radar: <a href="https://www.rainviewer.com/" target="_blank" rel="noopener">RainViewer</a> (Thailand: Thai Meteorological Department)'}); RADAR.layers.set(f.path,l); l.addTo(map); }
   return l; }
 function radarShow(i){ const f=RADAR.frames[i]; if(!f||!shown('shRadar')) return; RADAR.i=i; $('radarSlider').value=i;
   const cur=radarLayer(f); for(const [k,l] of RADAR.layers) l.setOpacity(k===f.path?0.8:0);
@@ -2843,7 +2845,7 @@ function drawPlume(){
   const url=regionCanvas(so,w,nTop,eR,nx,Math.max(1,Math.round(ny*(mercY(nTop)-mercY(so))/((nTop-so)*DEG))),(lat,lon)=>{
     const x=Math.floor((lon-w)/cell), y=Math.floor((lat-so)/cell); if(x<0||y<0||x>=nx||y>=ny) return null;
     const col=rampColor(G[y*nx+x]); return col?[col[0],col[1],col[2],col[3]*255]:null;});
-  plume=L.imageOverlay(url,[[so,w],[nTop,eR]],{opacity:1,interactive:false,className:'plume'}).addTo(map);
+  plume=L.imageOverlay(url,[[so,w],[nTop,eR]],{opacity:1,interactive:false,className:'plume',pane:'field'}).addTo(map);
 }
 // day bar under the time slider (like Windy): one segment per Thai calendar day, width by its hours; hours before now shaded;
 // the day being shown is highlighted; tapping a day keeps the same hour of the day (or the nearest hour that exists)

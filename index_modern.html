@@ -1086,6 +1086,10 @@ tbody tr:hover {
 .trend .wxhead{font:600 .72rem/1.3 var(--font-data);margin:8px 0 2px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
 .locpop{position:fixed;inset:0;z-index:3000;display:flex;align-items:center;justify-content:center;background:rgba(10,14,12,.5);padding:12px}
 .locpop[hidden]{display:none}
+.sumplain{font-size:.92rem;line-height:1.6;margin:0 0 8px}
+.sumdet{margin:6px 0 4px}
+.sumdet>summary{cursor:pointer;font-size:.78rem;color:var(--muted);margin:0 0 6px}
+.sumdet>summary:hover{color:var(--fg)}
 .sumcard .sumwhy{background:var(--bg);border-left:3px solid var(--ember);padding:6px 9px;border-radius:4px;margin:4px 0 6px!important}
 .lpsum p{margin:0 0 7px;font-size:.84rem;line-height:1.55}
 .lpsum p b{font-weight:600}
@@ -3426,6 +3430,36 @@ function dayFactors(d,H,v,wx,la,lo,prev,isArea,inA){
         o.upwind={n:nf,iso:g.aEnd?g.aEnd.iso:null,over:g.aEnd}; if(prev?.upwind){ o.fireTrend=(nf+5)/(prev.upwind.n+5); if(prev.upwind.iso!==o.upwind.iso&&o.upwind.iso) o.originChange=o.upwind.iso; } } }catch(e){} }
   return o;
 }
+// ---- plain-language summary for a general audience: PM2.5 up or down and the weather, in a few short sentences; the reasons
+// come from the same analysis (dayFactors / explainPM) but are said in everyday words.
+function plainDriver(f){ const pm=f.pm, up=f.upwind, th=LANG==='th';
+  const stag=f.vent&&f.vent.mean!=null&&f.vent.mean<2000, wk=f.wind&&f.wind.spd!=null&&f.wind.spd<2, wet=f.rain&&f.rain.mm!=null&&f.rain.mm>=5, far=up&&up.iso&&up.iso!=='THA';
+  if(wet) return T('rain is washing the dust out of the air','ฝนกำลังชะล้างฝุ่นออกจากอากาศ');
+  if(up&&up.n>=20&&pm!=null&&pm>25) return far?T(`smoke from fires in ${ctryName(up.iso)} is drifting in on the wind`,`ควันจากไฟใน${ctryName(up.iso)}ลอยมาตามลม`):T('smoke from fires upwind in Thailand is drifting in','ควันจากไฟต้นลมในประเทศไทยลอยมาถึง');
+  if(f.firesLocal>=10&&pm!=null&&pm>25) return T('fires nearby are adding smoke','ไฟในพื้นที่ใกล้เคียงเพิ่มควัน');
+  if(stag) return T(`the air is ${wk?'calm':'still at night'}, so dust collects near the ground overnight and in the morning`,`อากาศ${wk?'นิ่ง':'นิ่งตอนกลางคืน'} ฝุ่นจึงสะสมใกล้พื้นช่วงกลางคืนถึงเช้า`);
+  if(f.vent&&f.vent.mean!=null&&f.vent.mean>=6000) return T('wind and afternoon sunshine disperse the dust well','ลมและแดดช่วงบ่ายช่วยกระจายฝุ่นได้ดี');
+  return T('the dust is mostly the usual regional haze; sunshine disperses it by day and the still night air lets it build again','ฝุ่นส่วนใหญ่เป็นหมอกควันพื้นหลังของภูมิภาค แดดช่วยกระจายตอนกลางวัน และอากาศนิ่งตอนกลางคืนทำให้สะสมใหม่'); }
+function plainTrend(cur,prev){ if(cur==null||prev==null) return null; const r=(cur-prev)/Math.max(5,prev); return Math.abs(r)<0.06?'same':Math.abs(r)<0.15?(r>0?'up1':'down1'):r>0?'up':'down'; }
+// words for a trend: kind 'day' (vs the day before), 'next' (tomorrow vs today), 'short' (one word)
+function trendTxt(tr,kind){ if(!tr) return ''; const M={
+  day:{same:['about the same as the day before','ใกล้เคียงวันก่อน'],up1:['a little higher than the day before','สูงกว่าวันก่อนเล็กน้อย'],down1:['a little lower than the day before','ต่ำกว่าวันก่อนเล็กน้อย'],up:['higher than the day before','สูงกว่าวันก่อน'],down:['lower than the day before','ต่ำกว่าวันก่อน']},
+  next:{same:['about the same tomorrow','พรุ่งนี้ใกล้เคียงเดิม'],up1:['a little worse tomorrow','พรุ่งนี้แย่ลงเล็กน้อย'],down1:['a little better tomorrow','พรุ่งนี้ดีขึ้นเล็กน้อย'],up:['worse tomorrow','พรุ่งนี้แย่ลง'],down:['better tomorrow','พรุ่งนี้ดีขึ้น']},
+  short:{same:['about the same','ใกล้เคียงเดิม'],up1:['a little higher','สูงขึ้นเล็กน้อย'],down1:['a little lower','ต่ำลงเล็กน้อย'],up:['higher','สูงขึ้น'],down:['lower','ต่ำลง']},
+  hours:{same:['steady for the next hours','ทรงตัวในชั่วโมงข้างหน้า'],up1:['edging up over the next hours','ค่อย ๆ เพิ่มขึ้นในชั่วโมงข้างหน้า'],down1:['easing a little over the next hours','ค่อย ๆ ลดลงในชั่วโมงข้างหน้า'],up:['rising over the next hours','กำลังเพิ่มขึ้นในชั่วโมงข้างหน้า'],down:['easing over the next hours','กำลังลดลงในชั่วโมงข้างหน้า']}}[kind][tr]; return T(M[0],M[1]); }
+function plainWx(w,wd,nowMax){ const th=LANG==='th', b=[]; if(w&&isFinite(w.tmin)) b.push(`${Math.round(w.tmin)}–${Math.round(w.tmax)} °C`);
+  if(nowMax!=null&&nowMax>=0.5) b.push(T('rain on the way within the next few hours (radar)','ฝนกำลังมาในไม่กี่ชั่วโมงข้างหน้า (เรดาร์)'));
+  else if(w&&w.n) b.push(rainDayCat(w.rain));
+  if(wd) b.push(wd.spd<1?T('calm','ลมสงบ'):wd.spd<4?T(`light wind from the ${compass(wd.dir)}`,`ลมอ่อนจากทิศ${compass(wd.dir)}`):wd.spd<8?T(`breezy from the ${compass(wd.dir)}`,`ลมปานกลางจากทิศ${compass(wd.dir)}`):T(`windy from the ${compass(wd.dir)}`,`ลมแรงจากทิศ${compass(wd.dir)}`));
+  return b.length?T('Weather: ','อากาศ: ')+b.join(th?' ':', ')+(th?'':'.'):''; }
+// one day in two or three short sentences. f: dayFactors; w: dailyWx entry; label: Today/Tomorrow/weekday; prev: previous day's mean
+function plainDay(f,w,label,prev,extra){ if(f.pm==null) return null; const th=LANG==='th', b=pcdBand(f.pm), lvl=T(b.en,b.th), tr=plainTrend(f.pm,prev);
+  const trw=tr?trendTxt(tr,'day'):null;
+  const pk=f.peakT!=null?(h=>h>=4&&h<=10?T('worst in the early morning','แย่ที่สุดช่วงเช้ามืด'):h>=17||h<=2?T('worst in the evening and night','แย่ที่สุดช่วงเย็นถึงกลางคืน'):null)(new Date(f.peakT+7*HR).getUTCHours()):null;
+  let s=`<b>${label}:</b> PM₂.₅ ${lvl.toLowerCase()}${trw?` (${trw})`:''}${pk?`, ${pk}`:''}${th?' ':': '}${plainDriver(f)}${th?'':'.'}`;
+  if(extra) s+=' '+extra; const wx=plainWx(w,f.wind,f.rain?.nowMax); if(wx) s+=' '+wx;
+  if(f.pm>37.5) s+=' '+T(`Above the Thai standard${f.pm>75?' — avoid long outdoor activity':' — people with asthma, children and older people should take it easy outdoors'}.`,`เกินค่ามาตรฐานไทย${f.pm>75?' ควรเลี่ยงกิจกรรมกลางแจ้งนาน ๆ':' ผู้ป่วยหอบหืด เด็ก และผู้สูงอายุควรลดกิจกรรมกลางแจ้ง'}`);
+  return s; }
 function placeSummary(lat,lon,after){
   if(!P.data||!P.data.hours?.length) return '';
   const now=Date.now(), tNow=Math.floor(now/HR)*HR, H=P.data.hours, th=LANG==='th', pv=provinceOf(lat,lon), name=pv?provName(pv):T('this place','ที่นี่');
@@ -3474,8 +3508,18 @@ function placeSummary(lat,lon,after){
         `อากาศใกล้พื้นที่มาถึงขณะนี้อยู่เหนือ${over||'ทะเล'}เมื่อ 24 ชม. ก่อน${tr.hours<24?` (ย้อนได้ ${tr.hours} ชม.)`:''}${fires?` ผ่านจุดความร้อน ${fires} จุด${top?` ส่วนใหญ่ใน${ctryName(top)}`:''}`:' ไม่ผ่านจุดความร้อน'}`)); }
     else if(P.data.metTraj&&!tr) bits.push(T('tracing where the air came from…','กำลังย้อนรอยที่มาของอากาศ…'));
     paras.push(`<b>${T('Fires and origin:','ไฟและที่มาของอากาศ:')}</b> ${bits.join(th?' ':'; ')}${th?'':'.'}`); }
+  // plain version (shown); the detailed paragraphs above go under "More detail"
+  const plain=[]; { const v=H.map(t=>totalAt(lat,lon,t)), wx=wxSeries(H,[{la:lat,lo:lon}]), dw=dailyWx(H,wx,now), dY=bkkDay(now-864e5), d0=bkkDay(now), d1=bkkDay(now+864e5);
+    const ok=ensureTrajMet(after)||!P.data.metTraj;
+    const fY=dayFactors(dY,H,v,wx,lat,lon,null,false), f0=dayFactors(d0,H,v,wx,lat,lon,fY,false), f1=dayFactors(d1,H,v,wx,lat,lon,f0,false);
+    const pmNow=O.pm?O.pm.v:vNow; let nowLine=''; if(pmNow!=null){ const b=pcdBand(pmNow); let s6=0,n6=0,p6=0,m6=0; for(let k=1;k<=6;k++){const a=totalAt(lat,lon,tNow+k*HR); if(a!=null){s6+=a;n6++;} const u=totalAt(lat,lon,tNow-k*HR); if(u!=null){p6+=u;m6++;}}
+      const tr=n6>=4&&m6>=4?plainTrend(s6/n6,p6/m6):null; nowLine=`<b>${T('Now','ขณะนี้')}:</b> PM₂.₅ ${T(b.en,b.th).toLowerCase()} (${fmtN(pmNow)} µg/m³)${tr?`, ${trendTxt(tr,'hours')}`:''}${w&&w.t2!=null?`${th?' ':'. '}${w.t2.toFixed(1)} °C`:''}${th?'':'.'}`; }
+    if(nowLine) plain.push(nowLine); const t0=plainDay(f0,dw.get(d0),T('Today','วันนี้'),fY.pm); if(t0) plain.push(t0); const t1=plainDay(f1,dw.get(d1),T('Tomorrow','พรุ่งนี้'),f0.pm); if(t1) plain.push(t1);
+    if(!ok&&P.data.metTraj) plain.push(`<span class="note">${T('(checking where the air comes from…)','(กำลังตรวจสอบที่มาของอากาศ…)')}</span>`); }
   return `<div class="lpsec">${T('Forecast summary for this place','สรุปพยากรณ์สำหรับที่นี่')} <span class="note" style="font-weight:400">· ${esc(name)}</span></div>
-    <div class="lpsum">${paras.map(x=>`<p>${x}</p>`).join('')}<p class="note" style="font-size:.66rem;margin:4px 0 0">${T('Drafted automatically from the forecast data; please check before passing on.','ร่างอัตโนมัติจากข้อมูลพยากรณ์ โปรดตรวจทานก่อนส่งต่อ')}</p></div>`;
+    <div class="lpsum">${plain.map(x=>`<p>${x}</p>`).join('')}
+    <details class="sumdet"><summary>${T('More detail','รายละเอียดเพิ่มเติม')}</summary>${paras.map(x=>`<p>${x}</p>`).join('')}</details>
+    <p class="note" style="font-size:.66rem;margin:4px 0 0">${T('Drafted automatically from the forecast data; please check before passing on.','ร่างอัตโนมัติจากข้อมูลพยากรณ์ โปรดตรวจทานก่อนส่งต่อ')}</p></div>`;
 }
 function locPopHTML(lat,lon,acc){
   const now=Date.now(), tNow=Math.floor(now/HR)*HR, pv=provinceOf(lat,lon), H=P.data?.hours||[], tEnd=H.length?H[H.length-1]:tNow;
@@ -4277,7 +4321,11 @@ function buildSummary(){
   { const b=R?R.bbox:REGIONS.msea.bbox; let la=(b[1]+b[3])/2, lo=(b[0]+b[2])/2; if(!isAll&&g.p){ const c=provCentroid(GEO_P.features.find(f=>f.properties.n===g.p.n)); if(c){la=c[0];lo=c[1];} }
     const inA=(a,o)=>isAll?inRegion(a,o):(provinceOf(a,o)?.n===g.p?.n); ensureTrajMet(()=>{ if(!$('sumPop').hidden) renderFcSummary(); });
     const fY=dayFactors(bkkDay(now-864e5),H,g.mean,g.wx,la,lo,null,true,inA), f0=dayFactors(keys[0],H,g.mean,g.wx,la,lo,fY,true,inA), f1=dayFactors(keys[1],H,g.mean,g.wx,la,lo,f0,true,inA);
-    if(s0&&f0.pm!=null) s0.why=explainPM(f0); if(f1.pm!=null) f1.why=explainPM(f1); var whyTomorrow=f1.why||''; }
+    if(s0&&f0.pm!=null) s0.why=explainPM(f0); if(f1.pm!=null) f1.why=explainPM(f1); var whyTomorrow=f1.why||'';
+    // plain lines (general audience); province count as the one extra fact for a region
+    var plainToday=null, plainTomorrow=null; { const WXd=dailyWx(H,g.wx,now);
+      const provLine=d=>{ if(!isAll||provs.length<2) return ''; const ps=provs.map(x=>x.days.get(d)).filter(o=>o&&o.n>=18), over=ps.filter(o=>o.mean>37.5).length; return over?T(`${over} of ${ps.length} provinces above the standard.`,`${over} จาก ${ps.length} จังหวัดเกินค่ามาตรฐาน`):''; };
+      plainToday=plainDay(f0,WXd.get(keys[0]),T('Today','วันนี้'),fY.pm,provLine(keys[0])); plainTomorrow=plainDay(f1,WXd.get(keys[1]),T('Tomorrow','พรุ่งนี้'),f0.pm,provLine(keys[1])); } }
   const s1=dayText(keys[1],keys[0],T('Tomorrow','พรุ่งนี้')); if(s1){ if(whyTomorrow) s1.why=whyTomorrow; secs.push(s1); }
   const n2=[dayText(keys[2],keys[1],''),dayText(keys[3],keys[2],'')].filter(Boolean);
   if(n2.length) secs.push({label:T('Next two days','อีก 2 วันถัดไป'),sub:n2.map(x=>({...x,label:dLong(x.d)}))});
@@ -4291,9 +4339,15 @@ function buildSummary(){
   const run=new Date(P.data.generated).toLocaleString(LOC(),{day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit',timeZone:'Asia/Bangkok'});
   const foot=T(`SEA-HAF forecast, run of ${run} (Thai time). PM₂.₅: CAMS forecast corrected with monitoring stations, 0.025° map; daily values are the means of the 24 hours of each Thai calendar day; bands follow the Thai Pollution Control Department. Weather: ECMWF, with observed rain (JAXA GSMaP) for past hours. Drafted automatically from the forecast data; please check before publishing.`,
     `พยากรณ์ SEA-HAF รอบ ${run} (เวลาประเทศไทย) PM₂.₅: พยากรณ์ CAMS ปรับแก้ด้วยสถานีตรวจวัด แผนที่ 0.025° ค่ารายวันคือค่าเฉลี่ย 24 ชั่วโมงของแต่ละวันตามเวลาไทย ระดับตามเกณฑ์กรมควบคุมมลพิษ สภาพอากาศ: ECMWF และฝนตรวจวัด (JAXA GSMaP) สำหรับชั่วโมงที่ผ่านมา ข้อความนี้ร่างอัตโนมัติจากข้อมูลพยากรณ์ โปรดตรวจทานก่อนเผยแพร่`);
-  return {area,ov,secs,foot,provs:[...A.groups.entries()].filter(([k])=>k!=='__all').map(([k,x])=>[k,provName(x.p)]).sort((a,b)=>a[1].localeCompare(b[1],LOC())),regionName};
+  // plain headline and the next two days in one line each
+  const plain=[]; { const b0=full(keys[0])?pcdBand(D.get(keys[0]).mean):null, tr=full(keys[1])&&full(keys[0])?plainTrend(D.get(keys[1]).mean,D.get(keys[0]).mean):null;
+    if(b0) plain.push(`<b>${esc(area)}:</b> ${T(`${b0.en} air today`,`อากาศ${b0.th}วันนี้`)}${tr?(th?' ':', ')+trendTxt(tr,'next'):''}${th?'':'.'}`);
+    if(plainToday) plain.push(plainToday); if(plainTomorrow) plain.push(plainTomorrow);
+    const WXd=dailyWx(H,g.wx,now); for(const d of [keys[2],keys[3]]){ const o=D.get(d); if(!o||o.n<18) continue; const b=pcdBand(o.mean), w=WXd.get(d), prev=D.get(keys[keys.indexOf(d)-1]);
+      plain.push(`<b>${esc(dLong(d))}:</b> PM₂.₅ ${T(b.en,b.th).toLowerCase()}${prev&&prev.n>=18?` (${trendTxt(plainTrend(o.mean,prev.mean),'short')})`:''}${w&&isFinite(w.tmin)?`${th?' ':'; '}${Math.round(w.tmin)}–${Math.round(w.tmax)} °C, ${rainDayCat(w.rain)}`:''}${th?'':'.'}`); } }
+  return {area,ov,secs,foot,plain,provs:[...A.groups.entries()].filter(([k])=>k!=='__all').map(([k,x])=>[k,provName(x.p)]).sort((a,b)=>a[1].localeCompare(b[1],LOC())),regionName};
 }
-function summaryText(S_){ const L_=[T('PM₂.₅ forecast summary','สรุปพยากรณ์ PM₂.₅')+' — '+S_.area,'',S_.ov,''];
+function summaryText(S_){ const strip=h=>h.replace(/<[^>]+>/g,''); const L_=[T('PM₂.₅ forecast summary','สรุปพยากรณ์ PM₂.₅')+' — '+S_.area,'',...(S_.plain||[]).map(strip),'',T('— More detail —','— รายละเอียดเพิ่มเติม —'),S_.ov,''];
   for(const s of S_.secs){ if(s.sub){ L_.push(s.label); for(const x of s.sub){ L_.push(`• ${x.label}${x.band?` (${x.band.name})`:''}: `+x.text.join(' ')); } }
     else { L_.push(`${s.label}${s.band?` (${s.band.name})`:''}: `+s.text.join(' ')); if(s.why) L_.push(T('Why: ','เหตุผล: ')+s.why); } L_.push(''); }
   L_.push(S_.foot); return L_.join('\n'); }
@@ -4302,10 +4356,11 @@ function renderFcSummary(){ const box=$('sumPop'), card=$('sumCard'); const S_=b
   const head=`<div class="lphead"><h2 id="sumT">${T('Forecast summary','สรุปพยากรณ์')}</h2><button class="x" type="button" id="sumX" aria-label="${T('Close','ปิด')}">×</button></div>`;
   if(!S_){ card.innerHTML=head+`<p class="note">${T('The summary needs the hourly forecast data; load the live data first.','ต้องมีข้อมูลพยากรณ์รายชั่วโมงก่อน กรุณาโหลดข้อมูลล่าสุด')}</p>`; }
   else card.innerHTML=head+`<div class="sumctl"><label>${T('Area','พื้นที่')} <select id="sumArea"><option value="__all">${esc(T('Whole region','ทั้งภูมิภาค'))}: ${esc(S_.regionName)}</option>${S_.provs.map(([k,n])=>`<option value="${esc(k)}"${k===SUMAREA?' selected':''}>${esc(n)}</option>`).join('')}</select></label></div>
-    <div class="sumbody"><p class="sumov">${esc(S_.ov)}</p>
+    <div class="sumbody">${(S_.plain||[]).map(x=>`<p class="sumplain">${x}</p>`).join('')}
+    <details class="sumdet"><summary>${T('More detail','รายละเอียดเพิ่มเติม')}</summary><p class="sumov">${esc(S_.ov)}</p>
     ${S_.secs.map(s=>s.sub?`<div class="sumsec"><h3>${esc(s.label)}</h3>${s.sub.map(x=>`<p><b>${esc(x.label)}</b> ${pillB(x.band)}<br>${x.text.map(esc).join(' ')}</p>`).join('')}</div>`
       :`<div class="sumsec"><h3>${esc(s.label)} <span class="note">${esc(dayLabel(Date.parse(s.d+'T12:00:00+07:00')))}</span> ${pillB(s.band)}</h3><p>${s.text.map(esc).join(' ')}</p>${s.why?`<p class="sumwhy"><b>${T('Why:','เหตุผล:')}</b> ${esc(s.why)}</p>`:''}</div>`).join('')}
-    <p class="sumfoot">${esc(S_.foot)}</p></div>
+    </details><p class="sumfoot">${esc(S_.foot)}</p></div>
     <div class="sumbtns"><button class="btn" type="button" id="sumCopy">${T('Copy text','คัดลอกข้อความ')}</button><button class="btn primary" type="button" id="sumClose">${T('Close','ปิด')}</button></div>`;
   box.hidden=false;
   const close=()=>{box.hidden=true;}; $('sumX').onclick=close; if($('sumClose')) $('sumClose').onclick=close; box.onclick=e=>{ if(e.target===box) close(); };

@@ -93,7 +93,7 @@ const log = (...a) => { let line = a.join(' '); for (const k of SECRETS) line = 
 
 // ------------------------------------------------------------------ helpers
 async function readJSON(p, dflt) { try { return JSON.parse(await fs.readFile(p, 'utf8')); } catch { return dflt; } }
-async function writeJSON(p, o) { await fs.mkdir(path.dirname(p), { recursive: true }); await fs.writeFile(p, JSON.stringify(o)); }
+async function writeJSON(p, o) { await fs.mkdir(path.dirname(p), { recursive: true }); await fs.writeFile(p + '.tmp', JSON.stringify(o)); await fs.rename(p + '.tmp', p); }   // atomic: a run killed mid-write must not leave a truncated state.json for the cache
 async function appendCSV(p, header, rows) {
   if (!rows.length) return;
   await fs.mkdir(path.dirname(p), { recursive: true });
@@ -478,8 +478,10 @@ async function main() {
           const es = D ? sampleMet(met, st.lat, st.lon, H + HOUR + D.shiftH * HOUR)?.pr : null, fa = D ? diagFactorAt(D, st.lat, st.lon) : null, pe = persistAt(rcache, sc.factor, st.lat, st.lon, H, Hobs);
           let nv = ''; if (ki >= 0 && H >= nc.t0) { const G = webR, ix = Math.round((st.lon - G.lon0) / G.step), iy = Math.round((st.lat - G.lat0) / G.step); if (ix >= 0 && iy >= 0 && ix < G.nx && iy < G.ny) { const q = nc.fields[ki][iy * G.nx + ix]; if (q >= 0) nv = +(q / 10 * sc.factor).toFixed(2); } }
           rows.push([iss, new Date(H).toISOString().slice(0, 13) + ':00Z', L, st.id, st.lat, st.lon, +e.toFixed(2), es == null ? '' : +es.toFixed(2), fa == null ? '' : +(e * fa).toFixed(2), pe ?? '', nv, +(await rainFactor(DATA, st.lat, st.lon, H)).toFixed(3)]); } }
-      const d = thaiDate(now); await appendCSV(path.join(DATA, 'history', d.slice(0, 7), `rainfc-${d.replace(/-/g, '')}.csv`), 'issued_utc,hour_start_utc,lead_h,station_id,lat,lon,ecmwf_mmh,ecmwf_shift_mmh,ecmwf_amount_mmh,persist_mmh,nowcast_mmh,chelsa_factor', rows);
-      log(`rain forecast log: ${rows.length} station-leads`); }
+      const d = thaiDate(now), rfc = path.join(DATA, 'history', d.slice(0, 7), `rainfc-${d.replace(/-/g, '')}.csv`);
+      if (await fs.readFile(rfc, 'utf8').then(s => s.includes('\n' + iss.slice(0, 13)), () => false)) log('rain forecast log: this issue hour is already logged (second run in the hour)');   // fit_rain_blend.py does not dedupe
+      else { await appendCSV(rfc,'issued_utc,hour_start_utc,lead_h,station_id,lat,lon,ecmwf_mmh,ecmwf_shift_mmh,ecmwf_amount_mmh,persist_mmh,nowcast_mmh,chelsa_factor', rows);
+      log(`rain forecast log: ${rows.length} station-leads`); } }
     if (D) rainInfo && (rainInfo.corr = { t: D.t, shiftH: D.shiftH, lon0: D.lon0, lat0: D.lat0, step: D.step, nx: D.nx, ny: D.ny, lnf100: D.lnf100, w: CFG.rainBlend, latestH: rcache.latest ? Math.floor(rcache.latest / HOUR) * HOUR - HOUR : null });
   } catch (e) { log(`radar scoring/nowcast failed: ${e.message}`); if (process.env.GITHUB_ACTIONS) console.log(`::warning title=radar::${e.message}`); }
 
@@ -930,11 +932,12 @@ async function main() {
   // history: one small new file per run (never rewritten), so git stores each row once
   const iso = new Date(now).toISOString(), ym = iso.slice(0, 7), stamp = iso.slice(0, 13).replace(/[-:]/g, '');
   const hdir = path.join(DATA, 'history', ym);
-  await appendCSV(path.join(hdir, `obs-${stamp}.csv`), 'time_utc,station_id,obs_pm25,cams_raw,cams_plus_inc', obsRows);
+  const newRun = await fs.access(path.join(hdir, `obs-${stamp}.csv`)).then(() => false, () => true);   // a second run in the same hour (backup cron, manual run) must not append the rows again
+  if (newRun) await appendCSV(path.join(hdir, `obs-${stamp}.csv`), 'time_utc,station_id,obs_pm25,cams_raw,cams_plus_inc', obsRows);
   // map: leave-one-out value of the 0.025° analysis at every input site (24-h means at the analysis hour), for the daily evaluation (map vs CAMS)
   const mapRows = [];
   for (const [ver, r] of [['map', rk], ['mapA', rkA]]) if (r && r.cvRows) for (const row of r.cvRows) mapRows.push([iso.slice(0, 13) + ':00Z', new Date(r.t).toISOString().slice(0, 13) + ':00Z', ver, ...row]);
-  await appendCSV(path.join(hdir, `map-${stamp}.csv`), 'run_utc,analysis_utc,version,station_id,monitor,obs24,cams24,map_loo', mapRows);
+  if (newRun) await appendCSV(path.join(hdir, `map-${stamp}.csv`), 'run_utc,analysis_utc,version,station_id,monitor,obs24,cams24,map_loo', mapRows);
   // forecast log: without and with the fire assimilation (corrA, blend24A), so verify.mjs scores both on the same rows
   const fRows = [], stIndex = new Map(stations.map((s, i) => [s.id, i]));
   const m24 = (arr, j) => { if (!arr) return ''; let su = 0, n = 0; for (let q = j - 23; q <= j; q++) { const v = q >= 0 ? arr[q] : null; if (v != null) { su += v; n++; } } return n >= 18 ? r1(su / n) : ''; };

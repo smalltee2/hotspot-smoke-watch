@@ -3414,7 +3414,7 @@ function explainPM(f){
 // factors for one calendar day at a point or over an area (series v on hours H; wx from wxSeries; centre for wind/vent/trajectory)
 function dayFactors(d,H,v,wx,la,lo,prev,isArea,inA){
   const now=Date.now(), o={pm:null,pmPrev:prev?prev.pm:null,peakT:null,firesLocal:0,frpLocal:0,upwind:null,wind:null,vent:null,rain:null,fireTrend:null,ventPrev:prev?.vent?.mean??null,rainPrev:prev?.rain?.mm??null,originChange:null};
-  let s=0,n=0,pk=-1; H.forEach((t,i)=>{ if(bkkDay(t-HR)!==d||v[i]==null) return; s+=v[i]; n++; if(v[i]>pk){pk=v[i];o.peakT=t;} }); if(n>=18) o.pm=s/n; else if(n) o.pm=s/n;
+  let s=0,n=0,pk=-1; H.forEach((t,i)=>{ if(bkkDay(t-HR)!==d||v[i]==null) return; s+=v[i]; n++; if(v[i]>pk){pk=v[i];o.peakT=t;} }); if(n>=18) o.pm=s/n;   // a day with fewer than 18 hours in the data (yesterday, the last forecast day) gives no mean
   if(MET){ let u=0,vv=0,m=0,vs=0,vn=0,vmin=Infinity; for(const t of H){ if(bkkDay(t-HR)!==d) continue; const w=sampleMet(MET,la,lo,t); if(w&&isFinite(w.u10)){u+=w.u10;vv+=w.v10;m++;} const vi=ventAt(la,lo,t); if(vi!=null){vs+=vi;vn++;vmin=Math.min(vmin,vi);} }
     if(m) o.wind={spd:Math.hypot(u/m,vv/m),dir:windFrom(u/m,vv/m)}; if(vn>=6) o.vent={mean:vs/vn,min:vmin}; }
   if(wx){ let mm=0,k=0; H.forEach((t,i)=>{ if(bkkDay(t-HR)===d&&wx.pr[i]!=null){mm+=wx.pr[i];k++;} }); o.rain={mm:k>=12?mm:null,nowMax:null};

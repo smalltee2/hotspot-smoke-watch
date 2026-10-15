@@ -21,7 +21,8 @@ export const RVCFG = {
   api: 'https://api.rainviewer.com/public/weather-maps.json',
   z: 6, size: 512, color: 2, opts: '0_0',          // zoom 6 × 512 px ≈ 1.2 km; colour 2 = Universal Blue; 0_0 = no smoothing, no snow colours
   bbox: [97, 5.5, 106, 21], step: 0.025,            // Thailand; cell centres from (lon0, lat0)
-  keepFramesH: 3, keepHoursH: 36, webH: 12,          // frames and hourly fields held in the cache; hours published to the page
+  keepFramesH: 3, keepHoursH: 72, webH: 24,          // frames and hourly fields held in the cache (72 h: the ECMWF diagnostics and
+                                                     // the 48-h diurnal persistence); hours published to the page (24 h covers persistence at every lead)
   minFrames: 4,                                      // frames (of 6) an hourly mean needs
   nowLeadH: 3, block: 40, search: 8,                 // nowcast: 3 h; motion blocks of 40 cells (1°), search ±8 cells (±0.2°) per 10 min
   minDbz: 10, maxRate: 100,                          // below 10 dBZ no rain; rates capped (hail, clutter)
@@ -230,3 +231,50 @@ export function webRadar(cache, now, factor, nc) {
            latest: cache.latest || null, mask: cache.mask ? cache.mask.d : null, times: ts, d: ts.map(t => cache.hours[t].d),
            nowcast: nc ? { t0: nc.t0, hours: nc.hours, frames: nc.frames, d: nc.fields.map(packI16), motion: nc.motion } : null };
 }
+
+// ---- ECMWF against the radar over the last DIAG.windowH hours (the rain analogue of the Kalman filter for CAMS): on a 0.25° lattice
+// over the radar box, from ECMWF as issued (met.json, not merged with observations) and the gauge-adjusted radar hourly means:
+//   timing: shiftH (h, −6…+6) = how many hours LATE ECMWF's rain is: the s that best correlates ECMWF(t + s) with the radar at t over all
+//           covered node-hours; the corrected forecast at t reads ECMWF at t + shiftH
+//   amount: per node, ln((R + 1)/(E + 1)) of the window totals (mm), shrunk toward 0 with the node's wet hours (n/(n + 10)), smoothed
+//           over 3 × 3 nodes and limited to ±ln 4
+// The page applies both with weights by lead fitted on the station log (rainfc-*.csv; scripts/fit_rain_blend.py); zero until fitted.
+export const DIAG = { windowH: 72, step: 0.25, maxShiftH: 6, wetMm: 0.2, shrinkN: 10, maxLn: Math.log(4), minWet: 200 };
+export function rainDiag(metPure, cache, factor, now, sample) {
+  const hours = Object.keys(cache?.hours || {}).map(Number).filter(t => t >= now - DIAG.windowH * HOUR && t + HOUR <= now).sort((a, b) => a - b);
+  if (hours.length < 24) return null;
+  const [W, S, E, N] = RVCFG.bbox, st = DIAG.step, nx = Math.round((E - W) / st) + 1, ny = Math.round((N - S) / st) + 1, G = GRID, half = Math.round(st / 2 / G.step);
+  const R = new Float32Array(nx * ny * hours.length).fill(NaN), Ev = new Map();   // radar at node-hour; ECMWF series per node (hour index −6…+6)
+  hours.forEach((H, k) => { const h = cache.hours[H], a = h._a || (h._a = unpackI16(h.d));
+    for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) { const cx = Math.round((W + i * st - G.lon0) / G.step), cy = Math.round((S + j * st - G.lat0) / G.step); let s = 0, n = 0, all = 0;
+      for (let y = cy - half; y <= cy + half; y++) for (let x = cx - half; x <= cx + half; x++) { if (x < 0 || y < 0 || x >= G.nx || y >= G.ny) continue; all++; const q = a[y * G.nx + x]; if (q >= 0) { s += q / 10; n++; } }
+      if (all && n >= 0.5 * all) R[(k * ny + j) * nx + i] = s / n * factor; } });
+  const ecm = (i, j) => { const key = j * nx + i; let e = Ev.get(key); if (e) return e; e = new Float32Array(hours.length + 2 * DIAG.maxShiftH);
+    for (let q = 0; q < e.length; q++) { const t = hours[0] + (q - DIAG.maxShiftH) * HOUR + HOUR; const m = sample(metPure, S + j * st, W + i * st, t); e[q] = m && isFinite(m.pr) ? m.pr : NaN; }   // pr at t = rain of the hour ending t
+    Ev.set(key, e); return e; };
+  // timing
+  const rBy = {}; let best = 0, bestR = -2, nWet = 0;
+  for (let s = -DIAG.maxShiftH; s <= DIAG.maxShiftH; s++) { let n = 0, sx = 0, sy = 0, sxx = 0, syy = 0, sxy = 0;
+    for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) { let e = null; for (let k = 0; k < hours.length; k++) { const r = R[(k * ny + j) * nx + i]; if (!(r === r)) continue; e ||= ecm(i, j); const x = e[k + DIAG.maxShiftH - s]; if (!(x === x)) continue;
+        n++; sx += x; sy += r; sxx += x * x; syy += r * r; sxy += x * r; if (s === 0 && r >= 0.5) nWet++; } }
+    const cv = sxy / n - sx / n * sy / n, vx = sxx / n - (sx / n) ** 2, vy = syy / n - (sy / n) ** 2, r = n > 100 && vx > 0 && vy > 0 ? cv / Math.sqrt(vx * vy) : null;
+    rBy[s] = r == null ? null : +r.toFixed(3); if (r != null && r > bestR) { bestR = r; best = s; } }
+  const sIdx = nWet >= DIAG.minWet && rBy[0] != null && bestR - rBy[0] >= 0.02 ? best : 0, shiftH = -sIdx;   // kept only with enough rain and a clear gain; index s reads ECMWF(t − s)
+  // amount field
+  const lnf = new Float32Array(nx * ny).fill(NaN);
+  for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) { let sr = 0, se = 0, n = 0, w = 0; const e = ecm(i, j);
+    for (let k = 0; k < hours.length; k++) { const r = R[(k * ny + j) * nx + i]; if (!(r === r)) continue; const x = e[k + DIAG.maxShiftH - sIdx]; if (!(x === x)) continue; sr += r; se += x; n++; if (r >= DIAG.wetMm || x >= DIAG.wetMm) w++; }
+    if (n >= 24) lnf[j * nx + i] = Math.log((sr + 1) / (se + 1)) * w / (w + DIAG.shrinkN); }
+  const out = new Int16Array(nx * ny); let nNodes = 0, sum = 0;
+  for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) { let s = 0, n = 0; for (let dj = -1; dj <= 1; dj++) for (let di = -1; di <= 1; di++) { const ii = i + di, jj = j + dj; if (ii < 0 || jj < 0 || ii >= nx || jj >= ny) continue; const v = lnf[jj * nx + ii]; if (v === v) { s += v; n++; } }
+    const v = n ? Math.max(-DIAG.maxLn, Math.min(DIAG.maxLn, s / n)) : 0; out[j * nx + i] = Math.round(v * 100); if (n) { nNodes++; sum += v; } }
+  const rByLate = Object.fromEntries(Object.entries(rBy).map(([k, v]) => [-k, v]));   // keyed by hours late
+  return { t: now, hours: hours.length, shiftH, rByShift: rByLate, nWet, lon0: W, lat0: S, step: st, nx, ny, lnf100: Array.from(out), meanFactor: nNodes ? +Math.exp(sum / nNodes).toFixed(2) : 1, nNodes };
+}
+// ln-factor at a point (bilinear on the lattice; 0 outside)
+export function diagFactorAt(D, lat, lon) { if (!D) return 1; const fx = (lon - D.lon0) / D.step, fy = (lat - D.lat0) / D.step; if (fx < 0 || fy < 0 || fx > D.nx - 1 || fy > D.ny - 1) return 1;
+  const x0 = Math.min(Math.floor(fx), D.nx - 2), y0 = Math.min(Math.floor(fy), D.ny - 2), ax = fx - x0, ay = fy - y0, a = D.lnf100, i = y0 * D.nx + x0;
+  return Math.exp(((1 - ax) * (1 - ay) * a[i] + ax * (1 - ay) * a[i + 1] + (1 - ax) * ay * a[i + D.nx] + ax * ay * a[i + D.nx + 1]) / 100); }
+// diurnal persistence: the gauge-adjusted radar of the same hour on the latest day already observed (valid hour H, latest radar hour
+// Hobs): H − 24·ceil((H − Hobs)/24 h); null where no radar
+export function persistAt(cache, factor, lat, lon, H, Hobs) { const back = Math.max(1, Math.ceil((H - Hobs) / (24 * HOUR))) * 24 * HOUR; return radarAt(cache, lat, lon, H - back, factor); }

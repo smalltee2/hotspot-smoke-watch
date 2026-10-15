@@ -13,7 +13,7 @@ import path from 'node:path';
 import { buildDEM, sampleGrid } from './dem.mjs';
 import { regressionKriging, krigeField, clampAux } from './rk.mjs';
 import { fetchMet, sampleMet, packMet, packTraj, MET_MODEL } from './met.mjs';
-import { updateRadar, scoreRadar, mergeRadarIntoMet, nowcast as radarNowcast, webRadar, radarAt } from './radar.mjs';
+import { updateRadar, scoreRadar, mergeRadarIntoMet, nowcast as radarNowcast, webRadar, radarAt, rainDiag, diagFactorAt, persistAt } from './radar.mjs';
 import { updateGsmap, mergeIntoMet, webRain } from './gsmap.mjs';
 import { fetchGauges, scoreGauges, gsmapAt, rainFactor } from './thaiwater.mjs';
 import { WXML, T2_NAMES, PR_NAMES, T2ENG, PRENG, t2Features, prFeatures, loadWxDataset, storeWxDay, loadWxSeason } from './mlwx.mjs';
@@ -72,6 +72,12 @@ const CFG = {
   // 12 h keep the weights above (the 6-h refit, pure persistence, lost to them). Leave-one-season-out over the belt (all sites, 24-h
   // means): 48-h MSE −12 % [7, 17], sites beating persistence at 48 h 55 % → 87 %; 24 h unchanged; outside the belt nothing changes.
   blendBelt: { box: [97, 17.5, 105.5, 22.5], byLead: [[1, 0.97], [3, 0.94], [6, 0.89], [12, 0.78], [24, 0.74], [48, 0.65]] },
+  // rain forecast, the PM2.5 way (scripts/radar.mjs rainDiag; page rainBlend): weights by lead (h) of the members blended with ECMWF on
+  // ln(R + 0.2): ECMWF read shiftH earlier (timing), ECMWF × the 72-h radar/ECMWF factor (amount), the radar of the same hour on the
+  // latest observed day (diurnal persistence). ZERO until fitted on the station log rainfc-*.csv with scripts/fit_rain_blend.py; the
+  // radar nowcast (0–3 h) keeps the page's provisional weights until then (null = page default).
+  rainBlend: { shift: [[1, 0], [48, 0]], amount: [[1, 0], [48, 0]], persist: [[1, 0], [48, 0]], nowcast: null },
+  rainLogLeads: [1, 2, 3, 6, 9, 12, 18, 24, 30, 36, 42, 48],   // leads (h) logged every 3 h at the hourly stations
 };
 const PM25_ID = 2; // OpenAQ parameter id for pm25
 const inBelt = (lat, lon) => { const B = CFG.blendBelt.box; return lon >= B[0] && lon <= B[2] && lat >= B[1] && lat <= B[3]; };
@@ -441,8 +447,8 @@ async function main() {
   } catch (e) { log(`GSMaP observed rain failed: ${e.message}`); if (process.env.GITHUB_ACTIONS) console.log(`::warning title=GSMaP rain::${e.message}`); }
 
   // 3b'''. radar: score against the gauges (adjustment factor gauge/radar over 7 days), replace ECMWF rain in the met grids where the
-  //        radar sees (after GSMaP, so the radar wins inside its coverage), nowcast for the next 3 h, page file and the station log
-  //        used to fit the blend weights (radarnow-YYYYMMDD.csv: nowcast and ECMWF at the Air4Thai stations by lead)
+  //        radar sees (after GSMaP, so the radar wins inside its coverage), nowcast for the next 3 h, ECMWF timing and amount against
+  //        the radar, page file, and the station log used to fit the rain blend (rainfc-YYYYMMDD.csv)
   if (rcache?.hours) try {
     state.radarScored ||= {}; for (const k of Object.keys(state.radarScored)) if (+k < now - 48 * HOUR) delete state.radarScored[k];
     state.radarScore = (state.radarScore || []).filter(r => Date.parse(r.hour.replace('Z', ':00Z')) > now - 7 * 24 * HOUR);
@@ -456,13 +462,25 @@ async function main() {
     const webR = webRadar(rcache, now, sc.factor, nc);
     if (webR) { const ro = await readJSON(path.join(DATA, 'rain-obs.json'), null) || { times: [], d: [], src: [] }; ro.radar = webR; await writeJSON(path.join(DATA, 'rain-obs.json'), ro);
       rainInfo ||= { file: 'data/rain-obs.json', times: [], src: null }; rainInfo.radar = { latest: rcache.latest, factor: sc.factor, hours: webR.times.length, nowcast: nc ? { t0: nc.t0, hours: nc.hours, motion: nc.motion } : null, covered: rcache.mask?.covered ?? null }; }
-    // station log for fitting the blend weights: nowcast (adjusted) and ECMWF at the hourly stations, hours fully ahead of the latest frame
-    if (nc && met && a4tSt.length) { const rows = [], iss = new Date(now).toISOString().slice(0, 16) + 'Z';
-      nc.hours.forEach((H, k) => { if (H < nc.t0) return; const lead = +((H + 30 * 60e3 - nc.t0) / HOUR).toFixed(2), a = nc.fields[k], G = webR;
-        for (const st of a4tSt) { const ix = Math.round((st.lon - G.lon0) / G.step), iy = Math.round((st.lat - G.lat0) / G.step); if (ix < 0 || iy < 0 || ix >= G.nx || iy >= G.ny) continue; const q = a[iy * G.nx + ix]; if (q < 0) continue;
-          rows.push([iss, new Date(H).toISOString().slice(0, 13) + ':00Z', lead, st.id, st.lat, st.lon, +(q / 10 * sc.factor).toFixed(2), +(sampleMet(met, st.lat, st.lon, H + HOUR)?.pr ?? 0).toFixed(2)]); } });
-      const d = thaiDate(now); await appendCSV(path.join(DATA, 'history', d.slice(0, 7), `radarnow-${d.replace(/-/g, '')}.csv`), 'issued_utc,hour_start_utc,lead_h,station_id,lat,lon,nowcast_mmh,ecmwf_mmh', rows);
-      log(`radar nowcast log: ${rows.length} station-hours`); }
+    // ECMWF against the radar over the last 72 h: timing shift and amount factor field (published; applied by the page with CFG.rainBlend)
+    let D = null;
+    if (met) { const metPure = await readJSON(path.join(DATA, 'met.json'), null);   // as issued: met.json is written before any observation is merged
+      if (metPure) { D = rainDiag(metPure, rcache, sc.factor, now, sampleMet);
+        if (D) { state.rainDiag = D; const m = `ECMWF vs radar, last ${D.hours} h: best timing shift ${D.shiftH} h (r by shift ${JSON.stringify(D.rByShift)}; kept only with ≥ ${200} wet node-hours and a gain ≥ 0.02, ${D.nWet} wet), amount factor radar/ECMWF ${D.meanFactor} (mean over ${D.nNodes} nodes)`;
+          log(m); if (process.env.GITHUB_ACTIONS) console.log(`::notice title=ECMWF vs radar::${m}`); } } }
+    D ||= state.rainDiag || null;
+    // station log for fitting the rain blend (every 3 h): ECMWF, ECMWF shifted, ECMWF × amount factor, diurnal persistence and nowcast
+    // at the hourly stations by lead; the truth is the gauge-adjusted radar of the hour in rainobs-*.csv (radar_mmh)
+    if (met && a4tSt.length && new Date(now).getUTCHours() % 3 === 0) { const rows = [], iss = new Date(now).toISOString().slice(0, 16) + 'Z', H0 = Math.floor(now / HOUR) * HOUR;
+      const Hobs = rcache.latest ? Math.floor(rcache.latest / HOUR) * HOUR - HOUR : H0 - 2 * HOUR;   // latest complete radar hour (start)
+      for (const L of CFG.rainLogLeads) { const H = H0 + (L - 1) * HOUR, ki = nc ? nc.hours.indexOf(H) : -1;
+        for (const st of a4tSt) { const e = sampleMet(met, st.lat, st.lon, H + HOUR)?.pr; if (e == null) continue;
+          const es = D ? sampleMet(met, st.lat, st.lon, H + HOUR + D.shiftH * HOUR)?.pr : null, fa = D ? diagFactorAt(D, st.lat, st.lon) : null, pe = persistAt(rcache, sc.factor, st.lat, st.lon, H, Hobs);
+          let nv = ''; if (ki >= 0 && H >= nc.t0) { const G = webR, ix = Math.round((st.lon - G.lon0) / G.step), iy = Math.round((st.lat - G.lat0) / G.step); if (ix >= 0 && iy >= 0 && ix < G.nx && iy < G.ny) { const q = nc.fields[ki][iy * G.nx + ix]; if (q >= 0) nv = +(q / 10 * sc.factor).toFixed(2); } }
+          rows.push([iss, new Date(H).toISOString().slice(0, 13) + ':00Z', L, st.id, st.lat, st.lon, +e.toFixed(2), es == null ? '' : +es.toFixed(2), fa == null ? '' : +(e * fa).toFixed(2), pe ?? '', nv, +(await rainFactor(DATA, st.lat, st.lon, H)).toFixed(3)]); } }
+      const d = thaiDate(now); await appendCSV(path.join(DATA, 'history', d.slice(0, 7), `rainfc-${d.replace(/-/g, '')}.csv`), 'issued_utc,hour_start_utc,lead_h,station_id,lat,lon,ecmwf_mmh,ecmwf_shift_mmh,ecmwf_amount_mmh,persist_mmh,nowcast_mmh,chelsa_factor', rows);
+      log(`rain forecast log: ${rows.length} station-leads`); }
+    if (D) rainInfo && (rainInfo.corr = { t: D.t, shiftH: D.shiftH, lon0: D.lon0, lat0: D.lat0, step: D.step, nx: D.nx, ny: D.ny, lnf100: D.lnf100, w: CFG.rainBlend, latestH: rcache.latest ? Math.floor(rcache.latest / HOUR) * HOUR - HOUR : null });
   } catch (e) { log(`radar scoring/nowcast failed: ${e.message}`); if (process.env.GITHUB_ACTIONS) console.log(`::warning title=radar::${e.message}`); }
 
   // compact copy for the page: 36 h back (dispersion spin-up) to 75 h ahead (longest forecast option + interpolation)

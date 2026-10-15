@@ -436,12 +436,12 @@ async function main() {
       const yday = thaiDate(now - 24 * HOUR), rf = path.join(DATA, 'history', yday.slice(0, 7), `rainobs-${yday.replace(/-/g, '')}.csv`);
       if (new Date(now + 7 * HOUR).getUTCHours() >= 6 && await fs.access(rf).then(() => false, () => true)) {   // from 06:00 Thai (GSMaP NRT for 24:00 arrives ~05:00; NOW fills any gap), before the Mac's 09:30 evaluation
         const d0 = Date.parse(yday + 'T00:00:00+07:00'), rowsR = []; let nH = 0;
-        for (let te = d0 + HOUR; te <= d0 + 24 * HOUR; te += HOUR) { const ts = te - HOUR; if (!gcache.hours?.[ts]) continue; nH++;
+        for (let te = d0 + HOUR; te <= d0 + 24 * HOUR; te += HOUR) { const ts = te - HOUR, hasG = !!gcache.hours?.[ts]; if (!hasG && !rcache?.hours?.[ts]) continue; nH++;   // an hour counts with GSMaP or the radar: the radar truth is written even when GSMaP is missing
           const he = new Date(te).toISOString().slice(0, 13) + ':00Z';
-          for (const s of a4tSt) { const g = await gsmapAt(gcache, DATA, s.lat, s.lon, ts); if (g) rowsR.push([he, 'a4t', s.id, s.lat, s.lon, '', g.cell, g.bil, g.fine, g.src, radarAt(rcache, s.lat, s.lon, ts, RADAR_F0) ?? '']); }
+          for (const s of a4tSt) { const g = hasG ? await gsmapAt(gcache, DATA, s.lat, s.lon, ts) : null, rd = radarAt(rcache, s.lat, s.lon, ts, RADAR_F0); if (g || rd != null) rowsR.push([he, 'a4t', s.id, s.lat, s.lon, '', g?.cell ?? '', g?.bil ?? '', g?.fine ?? '', g?.src ?? '', rd ?? '']); }
           for (const [la, lo, mm] of state.gaugeRain?.[ts] || []) { const g = await gsmapAt(gcache, DATA, la, lo, ts); rowsR.push([he, 'gauge', '', la, lo, mm, g?.cell ?? '', g?.bil ?? '', g?.fine ?? '', g?.src ?? '', radarAt(rcache, la, lo, ts, RADAR_F0) ?? '']); } }
         if (nH >= 20) { await appendCSV(rf, 'hour_end_utc,kind,station_id,lat,lon,gauge_mm,gsmap_cell,gsmap_bil,gsmap_fine,gsmap_src,radar_mmh', rowsR); log(`observed-rain archive ${path.basename(rf)}: ${nH} hours, ${rowsR.length} rows`); }
-        else log(`observed-rain archive for ${yday}: only ${nH} GSMaP hours held, not written`);
+        else log(`observed-rain archive for ${yday}: only ${nH} GSMaP/radar hours held, not written`);
       }
     } catch (e) { log(`observed-rain archive failed: ${e.message}`); }
   } catch (e) { log(`GSMaP observed rain failed: ${e.message}`); if (process.env.GITHUB_ACTIONS) console.log(`::warning title=GSMaP rain::${e.message}`); }
@@ -452,7 +452,7 @@ async function main() {
   if (rcache?.hours) try {
     state.radarScored ||= {}; for (const k of Object.keys(state.radarScored)) if (+k < now - 48 * HOUR) delete state.radarScored[k];
     state.radarScore = (state.radarScore || []).filter(r => Date.parse(r.hour.replace('Z', ':00Z')) > now - 7 * 24 * HOUR);
-    const sc = scoreRadar(state.gaugeRain, rcache, state.radarScored, state.radarScore); state.radarScore = [...state.radarScore, ...sc.rows].slice(-200); state.radarFactor = sc.factor;
+    const sc = scoreRadar(state.gaugeRain, rcache, state.radarScored, state.radarScore); state.radarScore = [...state.radarScore.filter(r => !sc.rows.some(x => x.hour === r.hour)), ...sc.rows].slice(-200); state.radarFactor = sc.factor;
     const R = state.radarScore, N = R.reduce((a, r) => a + r.n, 0);
     if (R.length) { const m = `radar vs ThaiWater gauges, ${R.length} hours, ${N} gauge-hours (${sc.nWet} wet ≥0.5 mm): RMSE ${+Math.sqrt(R.reduce((a, r) => a + r.n * r.rmse ** 2, 0) / N).toFixed(3)} mm/h, mean hourly r ${+(R.filter(r => r.r != null).reduce((a, r) => a + r.n * r.r, 0) / Math.max(1, R.filter(r => r.r != null).reduce((a, r) => a + r.n, 0))).toFixed(3)}, hits ${+(R.reduce((a, r) => a + (r.pod ?? 0) * r.wet, 0) / Math.max(1, R.reduce((a, r) => a + r.wet, 0))).toFixed(2)}, false alarms ${+(R.filter(r => r.far != null).reduce((a, r) => a + r.far, 0) / Math.max(1, R.filter(r => r.far != null).length)).toFixed(2)}; gauge/radar factor ${sc.factor}${sc.nWet < 200 ? ' (1 until 200 wet pairs)' : ''}`;
       log(m); if (process.env.GITHUB_ACTIONS) console.log(`::notice title=radar vs gauges::${m}`); }
@@ -561,8 +561,10 @@ async function main() {
       for (const s of a4tSt) {
         const z = sampleGrid(demV, s.lat, s.lon) ?? 0, oT = obsAt(s.id, tI - HOUR), fT = prevF.get(String(s.id));
         let obsLast = NaN, obs6 = 0, k6 = 0;
-        if (gcacheG) { const g = await gsmapAt(gcacheG, DATA, s.lat, s.lon, tI - 3 * HOUR); if (g) obsLast = g.fine;
-          for (let te = tI - 7 * HOUR; te <= tI - 2 * HOUR; te += HOUR) { const q = await gsmapAt(gcacheG, DATA, s.lat, s.lon, te - HOUR); if (q) { obs6 += q.fine; k6++; } } }
+        // recent rain as in training (mlwx loadWxObs): the gauge-adjusted radar where it sees the station, GSMaP otherwise
+        { const rd = radarAt(rcache, s.lat, s.lon, tI - 3 * HOUR, RADAR_F0); if (rd != null) obsLast = rd; else if (gcacheG) { const g = await gsmapAt(gcacheG, DATA, s.lat, s.lon, tI - 3 * HOUR); if (g) obsLast = g.fine; }
+          for (let te = tI - 7 * HOUR; te <= tI - 2 * HOUR; te += HOUR) { const r6 = radarAt(rcache, s.lat, s.lon, te - HOUR, RADAR_F0); if (r6 != null) { obs6 += r6; k6++; continue; }
+            if (gcacheG) { const q = await gsmapAt(gcacheG, DATA, s.lat, s.lon, te - HOUR); if (q) { obs6 += q.fine; k6++; } } } }
         for (const L of leads) {
           const tv = tI + L * HOUR, tm = tv - T2CFG.obsOffsetMs, m = sampleMet(met, s.lat, s.lon, tm), mp = sampleMet(met, s.lat, s.lon, tv), d = t2Down(met, demV, r?.file || null, s.lat, s.lon, tm, sampleGrid, tv);
           const prF = mp?.pr != null ? mp.pr * await rainFactor(DATA, s.lat, s.lon, tv) : null;

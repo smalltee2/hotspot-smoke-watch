@@ -2211,7 +2211,7 @@ const PUBLIC=document.documentElement.dataset.mode==='public';
 let LANG=store.get('hsw.lang')||'th';   // Thai by default; a choice made with the language button is remembered on the device
 const T=(en,th)=>LANG==='th'?th:en;
 const LOC=()=>LANG==='th'?'th-TH':undefined;
-const hm=t=>new Date(t).toLocaleTimeString(LOC(),{hour:'2-digit',minute:'2-digit'});
+const hm=t=>new Date(t).toLocaleTimeString(LOC(),{hour:'2-digit',minute:'2-digit',timeZone:'Asia/Bangkok'});
 function applyStaticLang(){
   document.documentElement.lang=LANG;
   document.querySelectorAll('[data-th]').forEach(el=>{ if(el.dataset.en==null) el.dataset.en=el.innerHTML; el.innerHTML=LANG==='th'?el.dataset.th:el.dataset.en; });
@@ -2230,7 +2230,7 @@ function townName(r){ const mp=/^(?:My point|จุดของฉัน) (\d+)$
   if(r.kind==='cap'&&r.cc==='TH'&&typeof provinceOf==='function'){ if(!_townTH.has(r.name)){const p=provinceOf(r.lat,r.lon); _townTH.set(r.name,p&&p.th||r.name);} return _townTH.get(r.name); }
   return r.name; }
 const provName=p=>LANG==='th'&&p.th?p.th:p.n;
-const fmtT=t=>t==null?'–':new Date(t).toLocaleString(LOC(),{weekday:'short',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
+const fmtT=t=>t==null?'–':new Date(t).toLocaleString(LOC(),{weekday:'short',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit',timeZone:'Asia/Bangkok'});   // page times are Thai time, like the day bar
 const fmtN=(x,d=1)=>x>=100?Math.round(x).toLocaleString():x.toFixed(d);
 const cssVar=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
 
@@ -2488,13 +2488,13 @@ new MutationObserver(reTheme).observe(document.documentElement,{attributes:true,
 const hotLayer=L.layerGroup().addTo(map), trajLayer=L.layerGroup().addTo(map), townLayer=L.layerGroup().addTo(map);
 let plume=null;
 function addMyPoint(lat,lon){ const name=`${T('My point','จุดของฉัน')} ${S.myPts.length+1}`; S.myPts.push({name,lat:+lat.toFixed(4),lon:+lon.toFixed(4),cc:'★'});
-  store.set('hsw.points',JSON.stringify(S.myPts)); if(S.sim) computeReceptors(); drawTowns(); renderWarnings(); }
+  store.set('hsw.points',JSON.stringify(S.myPts)); computeReceptors(); drawTowns(); renderWarnings(); }   // also without a fire simulation (no hotspots): the total-PM2.5 series is computed there too
 // the redesigned page (index_modern.html, <body data-click="info">): a click on the map shows a short summary of that place at the
 // slider time, with buttons for the full location window and for keeping the place as one of "my points"; the original page adds the point
 const CLICK_INFO=document.body?.dataset.click==='info';
 map.on('click',e=>{ if(typeof layerMode==='function'&&layerMode()==='nasa'){ nasaPoint(e.latlng,e.containerPoint); return; }
   if(CLICK_INFO){ clickInfo(e.latlng.lat,e.latlng.lng); return; } addMyPoint(e.latlng.lat,e.latlng.lng); });
-$('btnClearPts').onclick=()=>{S.myPts=[];store.set('hsw.points','[]');if(S.sim)computeReceptors();drawTowns();renderWarnings();};
+$('btnClearPts').onclick=()=>{S.myPts=[];store.set('hsw.points','[]');computeReceptors();drawTowns();renderWarnings();};
 
 function allReceptors(){return TOWNS.filter(t=>inRegion(t.lat,t.lon)&&inBox(t.lat,t.lon,REGIONS.msea.bbox)).concat(S.myPts);}
 
@@ -2589,13 +2589,13 @@ async function newBuild(){ if(BUILD==='dev'||location.protocol==='file:') return
   try{const r=await fetch('build.txt?ts='+Date.now(),{cache:'no-store'}); if(!r.ok) return null; const b=(await r.text()).trim(); return b&&b!==BUILD?b:null;}catch(e){return null;} }
 async function refreshClick(){
   if(playT){clearInterval(playT);playT=null;$('btnPlay').textContent='▶';}
-  S.jumpNow=true; const b=await newBuild();
+  S.jumpNow=true; S.keepSel=false; const b=await newBuild();   // a failed silent auto-refresh may have left keepSel set; a manual refresh shows now
   if(b){ toast(T('New version of the page — reloading…','มีหน้าเว็บเวอร์ชันใหม่ — กำลังโหลดใหม่…'));
     const u=new URL(location.href); u.searchParams.set('v',b); location.replace(u.toString()); return; }   // the query bypasses the browser's cached copy of the page
   const before=P.data?P.data.generated:null; await runAuto(false);
   if(S.jumpNow){ setTimeline(); redrawTime(); }   // the load failed before the timeline was rebuilt: still show the current hour
   if(!P.data) return; const g=P.data.generated, nxt=new Date(Math.floor(Date.now()/HR)*HR+HR+20*60e3);
-  toast(g!==before&&before!=null?T(`Updated to the run of ${hm(g)}.`,`อัปเดตเป็นรอบ ${hm(g)} แล้ว`)
+  toast(g!==before?T(`Updated to the run of ${hm(g)}.`,`อัปเดตเป็นรอบ ${hm(g)} แล้ว`)
     :T(`Already the latest run (${hm(g)}). New runs arrive hourly, next about ${hm(nxt)}.`,`เป็นข้อมูลรอบล่าสุดแล้ว (${hm(g)}) ข้อมูลใหม่มาทุกชั่วโมง รอบถัดไปประมาณ ${hm(nxt)}`),6000);
 }
 async function runAuto(quiet){ try{ await runAuto_(quiet); }catch(e){ busy(null); if(!quiet) banner(`<b>${T('Update failed.','อัปเดตไม่สำเร็จ')}</b> ${esc(e.message)}`); console.error(e); } }
@@ -2627,7 +2627,7 @@ async function loadT2(){
   const info=P.data?.t2down; if(!info){T2D=null;return;} if(!info.corr&&T2D){T2D.corr=null;} if(T2D&&T2D.key===(info.tA??'')+'|'+P.data.generated) return;
   try{
     const dem=T2D?.dem||await (await fetch(info.dem+'?k='+(info.demKey||''),{cache:'force-cache'})).json(); if(!T2D?.dem){dem.values=undx(dem,'values');}
-    let corr=null; if(info.corr){const c=await (await fetch(info.corr+'?g='+P.data.generated)).json(); c.meanDay=undx(c,'meanDay'); c.meanNight=undx(c,'meanNight'); c.anom=undx(c,'anom'); corr=c;}
+    let corr=null; if(info.corr){ try{ const c=await (await fetch(info.corr+'?g='+P.data.generated)).json(); c.meanDay=undx(c,'meanDay'); c.meanNight=undx(c,'meanNight'); c.anom=undx(c,'anom'); corr=c; }catch(e){corr=null;} }   // a failed small correction file must not throw away the decoded DEM
     T2D={key:(info.tA??'')+'|'+P.data.generated,dem,corr,lapse:info.lapse,efoldH:info.efoldH};
   }catch(e){T2D=null;}
 }
@@ -2667,7 +2667,7 @@ function t2At(lat,lon,t){
 let RAINOBS=null;
 async function inflateB64(b64){const bin=Uint8Array.from(atob(b64),c=>c.charCodeAt(0)); const ds=new Blob([bin]).stream().pipeThrough(new DecompressionStream('deflate')); const buf=await new Response(ds).arrayBuffer(); return new Int16Array(buf);}
 async function loadRainObs(){
-  const info=P.data?.rainObs; if(!info){RAINOBS=null;return;} const key=info.times.join('|'); if(RAINOBS&&RAINOBS.key===key) return;
+  const info=P.data?.rainObs; if(!info){RAINOBS=null;return;} const key=info.times.join('|')+'|'+(info.radar?.latest??'')+'|'+(info.radar?.nowcast?.t0??''); if(RAINOBS&&RAINOBS.key===key) return;   // reload when GSMaP OR the radar/nowcast moved on
   try{const r=await fetch(info.file+'?g='+P.data.generated); if(!r.ok) return; const o=await r.json(); o.a=await Promise.all(o.d.map(inflateB64)); delete o.d; o.key=key;
     // weather radar part (scripts/radar.mjs): hourly 0.025° fields, the coverage mask and the nowcast
     if(o.radar){ const R=o.radar; R.a=await Promise.all(R.d.map(inflateB64)); delete R.d; if(R.mask){ const bin=Uint8Array.from(atob(R.mask),c=>c.charCodeAt(0)); R.m=new Uint8Array(await new Response(new Blob([bin]).stream().pipeThrough(new DecompressionStream('deflate'))).arrayBuffer()); }
@@ -3106,7 +3106,7 @@ function drawUnc(){
   const W=Math.min(1100,Math.round((e-w)*60)), H=Math.min(1100,Math.round((mercY(n)-mercY(so))/DEG*60));
   const rgb=UNC_COL.map(hexRGB);
   let cell=0.05; while(((e-w)/cell)*((n-so)/cell)>200000) cell*=1.25;
-  const fx=Math.ceil((e-w)/cell), fy=Math.ceil((n-so)/cell), key=[P.data.generated,so,w,fx,fy,!!DEM,!!MET].join('|');
+  const fx=Math.ceil((e-w)/cell), fy=Math.ceil((n-so)/cell), key=[P.data.generated,so,w,fx,fy,!!DEM,!!MET,useA()?'A':'-'].join('|');   // rkSigma follows the assimilation toggle (rk / rkA)
   if(!S.unc||S.unc.key!==key){const F=new Float32Array(fx*fy);
     for(let y=0;y<fy;y++) for(let x=0;x<fx;x++){const la=so+(y+.5)*cell, lo=w+(x+.5)*cell, sg=rkSigma(camsAt(la,lo,i),la,lo); F[y*fx+x]=sg==null?NaN:(Math.exp(sg)-1)*100;}
     S.unc={key,F};}
@@ -4041,7 +4041,7 @@ function puffField(s,w,so,nx,ny,cell){
     const x0=Math.max(0,Math.floor((s.lon[i]-rLon-w)/cell)), x1=Math.min(nx-1,Math.ceil((s.lon[i]+rLon-w)/cell));
     const y0=Math.max(0,Math.floor((s.lat[i]-rLat-so)/cell)), y1=Math.min(ny-1,Math.ceil((s.lat[i]+rLat-so)/cell));
     for(let y=y0;y<=y1;y++){const la=so+(y+.5)*cell, dy=(la-s.lat[i])*MPD;
-      for(let x=x0;x<=x1;x++){const dx=(w+(x+.5)*cell-s.lon[i])*cl, r2=dx*dx+dy*dy; if(r2<9*s2) F[y*nx+x]+=amp*Math.exp(-r2/s2);}}}
+      for(let x=x0;x<=x1;x++){const dx=(w+(x+.5)*cell-s.lon[i])*cl, r2=dx*dx+dy*dy; if(r2<4.5*s2) F[y*nx+x]+=amp*Math.exp(-r2/s2);}}}   // 3σ (s2 = 2σ²), the same cut-off as concAt
   return F;
 }
 function boxMean(F,nx,ny,k){ // mean over a (2k+1)² window, via an integral image

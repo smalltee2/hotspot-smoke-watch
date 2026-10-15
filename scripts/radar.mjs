@@ -158,7 +158,8 @@ export function scoreRadar(gaugeStore, cache, scored = {}, rows = []) {
       const w = o[i] >= 0.5, e = p[i] >= 0.5; if (w) wet++; if (w && e) hit++; if (!w && e) fa++; if (w && !e) miss++; if (o[i] >= 0.1 && p[i] >= 0.1) { sg += o[i]; sr += p[i]; } }
     out.push({ hour: new Date(+k).toISOString().slice(0, 13) + 'Z', n, wet, rmse: +Math.sqrt(se / n).toFixed(3), r: vp && vo ? +(cv / Math.sqrt(vp * vo)).toFixed(3) : null, bias: +(mp - mo).toFixed(3), pod: wet ? +(hit / wet).toFixed(2) : null, far: hit + fa ? +(fa / (hit + fa)).toFixed(2) : null, sg: +sg.toFixed(1), sr: +sr.toFixed(1), nwet: wet });
     scored[k] = h.n; }
-  const all = [...rows, ...out], SG = all.reduce((a, r) => a + r.sg, 0), SR = all.reduce((a, r) => a + r.sr, 0), NW = all.reduce((a, r) => a + r.nwet, 0);
+  const all = [...rows.filter(r => !out.some(x => x.hour === r.hour)), ...out];   // an hour re-scored (more frames) replaces its old row
+  const SG = all.reduce((a, r) => a + r.sg, 0), SR = all.reduce((a, r) => a + r.sr, 0), NW = all.reduce((a, r) => a + r.nwet, 0);
   const factor = NW >= 200 && SR > 0 ? +Math.min(2.5, Math.max(0.5, SG / SR)).toFixed(2) : 1;
   return { rows: out, factor, nWet: NW };
 }
@@ -244,18 +245,22 @@ export function rainDiag(metPure, cache, factor, now, sample) {
   const hours = Object.keys(cache?.hours || {}).map(Number).filter(t => t >= now - DIAG.windowH * HOUR && t + HOUR <= now).sort((a, b) => a - b);
   if (hours.length < 24) return null;
   const [W, S, E, N] = RVCFG.bbox, st = DIAG.step, nx = Math.round((E - W) / st) + 1, ny = Math.round((N - S) / st) + 1, G = GRID, half = Math.round(st / 2 / G.step);
+  // the radar hour list may have gaps (hours with too few frames): ECMWF is kept on a contiguous hourly axis from hours[0] and radar
+  // hour k is matched by its offset hk[k], never by position; hours outside met.json's range are missing (sampleMet would clamp them)
+  const hk = hours.map(H => Math.round((H - hours[0]) / HOUR)), span = hk[hk.length - 1] + 1, mT = metPure.times, mT0 = mT[0], mT1 = mT[mT.length - 1];
   const R = new Float32Array(nx * ny * hours.length).fill(NaN), Ev = new Map();   // radar at node-hour; ECMWF series per node (hour index −6…+6)
   hours.forEach((H, k) => { const h = cache.hours[H], a = h._a || (h._a = unpackI16(h.d));
     for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) { const cx = Math.round((W + i * st - G.lon0) / G.step), cy = Math.round((S + j * st - G.lat0) / G.step); let s = 0, n = 0, all = 0;
       for (let y = cy - half; y <= cy + half; y++) for (let x = cx - half; x <= cx + half; x++) { if (x < 0 || y < 0 || x >= G.nx || y >= G.ny) continue; all++; const q = a[y * G.nx + x]; if (q >= 0) { s += q / 10; n++; } }
       if (all && n >= 0.5 * all) R[(k * ny + j) * nx + i] = s / n * factor; } });
-  const ecm = (i, j) => { const key = j * nx + i; let e = Ev.get(key); if (e) return e; e = new Float32Array(hours.length + 2 * DIAG.maxShiftH);
-    for (let q = 0; q < e.length; q++) { const t = hours[0] + (q - DIAG.maxShiftH) * HOUR + HOUR; const m = sample(metPure, S + j * st, W + i * st, t); e[q] = m && isFinite(m.pr) ? m.pr : NaN; }   // pr at t = rain of the hour ending t
+  const ecm = (i, j) => { const key = j * nx + i; let e = Ev.get(key); if (e) return e; e = new Float32Array(span + 2 * DIAG.maxShiftH);
+    for (let q = 0; q < e.length; q++) { const t = hours[0] + (q - DIAG.maxShiftH) * HOUR + HOUR; if (t < mT0 || t > mT1) { e[q] = NaN; continue; }
+      const m = sample(metPure, S + j * st, W + i * st, t); e[q] = m && isFinite(m.pr) ? m.pr : NaN; }   // pr at t = rain of the hour ending t
     Ev.set(key, e); return e; };
   // timing
   const rBy = {}; let best = 0, bestR = -2, nWet = 0;
   for (let s = -DIAG.maxShiftH; s <= DIAG.maxShiftH; s++) { let n = 0, sx = 0, sy = 0, sxx = 0, syy = 0, sxy = 0;
-    for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) { let e = null; for (let k = 0; k < hours.length; k++) { const r = R[(k * ny + j) * nx + i]; if (!(r === r)) continue; e ||= ecm(i, j); const x = e[k + DIAG.maxShiftH - s]; if (!(x === x)) continue;
+    for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) { let e = null; for (let k = 0; k < hours.length; k++) { const r = R[(k * ny + j) * nx + i]; if (!(r === r)) continue; e ||= ecm(i, j); const x = e[hk[k] + DIAG.maxShiftH - s]; if (!(x === x)) continue;
         n++; sx += x; sy += r; sxx += x * x; syy += r * r; sxy += x * r; if (s === 0 && r >= 0.5) nWet++; } }
     const cv = sxy / n - sx / n * sy / n, vx = sxx / n - (sx / n) ** 2, vy = syy / n - (sy / n) ** 2, r = n > 100 && vx > 0 && vy > 0 ? cv / Math.sqrt(vx * vy) : null;
     rBy[s] = r == null ? null : +r.toFixed(3); if (r != null && r > bestR) { bestR = r; best = s; } }
@@ -263,7 +268,7 @@ export function rainDiag(metPure, cache, factor, now, sample) {
   // amount field
   const lnf = new Float32Array(nx * ny).fill(NaN);
   for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) { let sr = 0, se = 0, n = 0, w = 0; const e = ecm(i, j);
-    for (let k = 0; k < hours.length; k++) { const r = R[(k * ny + j) * nx + i]; if (!(r === r)) continue; const x = e[k + DIAG.maxShiftH - sIdx]; if (!(x === x)) continue; sr += r; se += x; n++; if (r >= DIAG.wetMm || x >= DIAG.wetMm) w++; }
+    for (let k = 0; k < hours.length; k++) { const r = R[(k * ny + j) * nx + i]; if (!(r === r)) continue; const x = e[hk[k] + DIAG.maxShiftH - sIdx]; if (!(x === x)) continue; sr += r; se += x; n++; if (r >= DIAG.wetMm || x >= DIAG.wetMm) w++; }
     if (n >= 24) lnf[j * nx + i] = Math.log((sr + 1) / (se + 1)) * w / (w + DIAG.shrinkN); }
   const out = new Int16Array(nx * ny); let nNodes = 0, sum = 0;
   for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) { let s = 0, n = 0; for (let dj = -1; dj <= 1; dj++) for (let di = -1; di <= 1; di++) { const ii = i + di, jj = j + dj; if (ii < 0 || jj < 0 || ii >= nx || jj >= ny) continue; const v = lnf[jj * nx + ii]; if (v === v) { s += v; n++; } }

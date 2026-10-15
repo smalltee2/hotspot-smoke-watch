@@ -1086,6 +1086,9 @@ tbody tr:hover {
 .trend .wxhead{font:600 .72rem/1.3 var(--font-data);margin:8px 0 2px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
 .locpop{position:fixed;inset:0;z-index:3000;display:flex;align-items:center;justify-content:center;background:rgba(10,14,12,.5);padding:12px}
 .locpop[hidden]{display:none}
+.sumcard .sumwhy{background:var(--bg);border-left:3px solid var(--ember);padding:6px 9px;border-radius:4px;margin:4px 0 6px!important}
+.lpsum p{margin:0 0 7px;font-size:.84rem;line-height:1.55}
+.lpsum p b{font-weight:600}
 .vent-poor{color:#b03a7a;font-weight:600}.vent-mod{color:#c77a2a;font-weight:600}.vent-good{color:#2f8f5b;font-weight:600}
 .radarleg{margin:2px 0 6px;min-width:0;max-width:100%;overflow:hidden}
 .radarleg .pcdbar,.radarleg .ticks{width:100%;box-sizing:border-box}
@@ -3360,6 +3363,120 @@ function locPopHero(lat,lon,tNow,O,vNow,aqi24,w){
   const wx=wi?`<div>${wi.svg}<div><div class="hs">${T('Weather','สภาพอากาศ')} ${src(O.wx||O.rain)}</div><div class="hv">${tV!=null?Math.round(tV)+'°C':'–'}</div><div class="hl">${esc(wi.label)}</div><div class="hs">${wi.cc!=null&&isFinite(wi.cc)?`${T('cloud','เมฆ')} ${Math.round(wi.cc)}% (ECMWF)`:''}${wi.rain>=0.1?` · ${T('rain','ฝน')} ${wi.rain<10?wi.rain.toFixed(1):Math.round(wi.rain)} ${T('mm/h','มม./ชม.')}`:''}</div></div></div>`:'';
   return pm||wx?`<div class="lphero">${pm}${wx}</div>`:'';
 }
+// ---- forecast summary for one place (the "More details" window): drafted from everything the page holds for that point —
+// PM2.5 (measured and map), weather, radar rain and nowcast, ventilation, fires nearby and where the air came from.
+let PTRAJ={key:null,res:null};   // 24-h ensemble for the place (computed once per place and run; the winds load on first use)
+function ensureTrajMet(after){ if(TRAJMET&&TRAJMET.fetched===P.data?.metTraj?.fetched) return true; if(!P.data?.metTraj) return false;
+  const Q=(ensureTrajMet.cbs||=new Set()); if(after) Q.add(after); if(ensureTrajMet.busy) return false; ensureTrajMet.busy=1;
+  loadTrajMet().catch(()=>null).then(()=>{ ensureTrajMet.busy=0; const cb=[...Q]; Q.clear(); if(TRAJMET) cb.forEach(f=>f()); }); return false; }
+// ---- analysis of the PM2.5 forecast from the processes behind it (emissions, transport, dispersion, removal), used by the
+// regional and the place summaries. f = { pm, pmPrev, peakT, firesLocal, frpLocal, upwind: {n, iso, over}, wind: {spd, dir},
+// vent: {mean, min}, rain: {mm, nowMax}, fireTrend }
+function explainPM(f){
+  const th=LANG==='th', s=[], pm=f.pm, b=pm!=null?pcdBand(pm):null;
+  const stag=f.vent&&f.vent.mean!=null&&f.vent.mean<2000, wk=f.wind&&f.wind.spd!=null&&f.wind.spd<2, wet=f.rain&&f.rain.mm!=null&&f.rain.mm>=5;
+  const up=f.upwind, far=up&&up.iso&&up.iso!=='THA', upFires=up&&up.n>=20, local=f.firesLocal>=10;
+  // sources and transport
+  const lowPM=pm!=null&&pm<=25;
+  if(upFires&&lowPM) s.push(T(`Smoke from ${up.n} fire hotspots along the path of the arriving air (from ${up.iso?ctryName(up.iso):'the sea'}) reaches here, but it stays diluted and the load remains low.`,`ควันจากจุดความร้อน ${up.n} จุดบนเส้นทางของอากาศที่มาถึง (จาก${up.iso?ctryName(up.iso):'ทะเล'}) มาถึงที่นี่ แต่ถูกเจือจางจนค่าฝุ่นยังต่ำ`));
+  else if(upFires&&far) s.push(T(`Much of the particle load is smoke carried in: the near-ground air arrives from ${ctryName(up.iso)} after passing ${up.n} active fire hotspots.`,`ฝุ่นส่วนใหญ่เป็นควันที่ถูกพัดพามา: อากาศใกล้พื้นมาจาก${ctryName(up.iso)} ผ่านจุดความร้อน ${up.n} จุด`));
+  else if(upFires) s.push(T(`The air arrives along a path with ${up.n} active fire hotspots inside Thailand, so the smoke is mostly domestic.`,`อากาศเคลื่อนผ่านจุดความร้อน ${up.n} จุดในประเทศไทย ควันจึงมาจากในประเทศเป็นหลัก`));
+  else if(local) s.push(T(`Fires nearby (${f.firesLocal} hotspots, ${Math.round(f.frpLocal)} MW) add smoke directly${wk?' and the light wind keeps it close':''}.`,`ไฟในพื้นที่ (${f.firesLocal} จุด ${Math.round(f.frpLocal)} MW) เพิ่มควันโดยตรง${wk?' และลมอ่อนทำให้ควันอยู่ใกล้แหล่ง':''}`));
+  else if(up) s.push(T(`Few fires lie along the path of the arriving air (from ${up.iso?ctryName(up.iso):'the sea'}), so the load is mostly the regional background and local sources rather than fresh smoke.`,`เส้นทางของอากาศที่มาถึง (จาก${up.iso?ctryName(up.iso):'ทะเล'}) มีไฟน้อย ฝุ่นจึงเป็นค่าพื้นหลังของภูมิภาคและแหล่งในพื้นที่มากกว่าควันใหม่`));
+  // dispersion
+  if(f.vent&&f.vent.mean!=null){ const m=Math.round(f.vent.mean).toLocaleString(), mn=f.vent.min!=null?Math.round(f.vent.min).toLocaleString():null;
+    if(stag) s.push(T(`Dispersion is weak: the ventilation index averages ${m} m²/s${mn?` and drops to ${mn} at night`:''} (below 2,000 is poor), so whatever is emitted or carried in stays in a shallow layer near the ground${wk?' under light winds':''}.`,`การระบายอากาศอ่อน: ดัชนีการระบายอากาศเฉลี่ย ${m} ม.²/วินาที${mn?` และต่ำถึง ${mn} ตอนกลางคืน`:''} (ต่ำกว่า 2,000 คือไม่ดี) ฝุ่นที่ปล่อยหรือพัดเข้ามาจึงสะสมในชั้นบาง ๆ ใกล้พื้น${wk?' ภายใต้ลมอ่อน':''}`));
+    else if(f.vent.mean>=6000) s.push(T(`Dispersion is good: a deep mixed layer and ${f.wind&&f.wind.spd!=null?f.wind.spd.toFixed(1)+' m/s ':''}wind give a ventilation index of ${m} m²/s, diluting the smoke through a thick layer.`,`การระบายอากาศดี: ชั้นผสมหนาและลม${f.wind&&f.wind.spd!=null?' '+f.wind.spd.toFixed(1)+' ม./วินาที':''} ให้ดัชนีการระบายอากาศ ${m} ม.²/วินาที ควันจึงถูกเจือจางในชั้นอากาศที่หนา`));
+    else s.push(T(`Dispersion is moderate (ventilation index ${m} m²/s${mn?`, ${mn} at its night minimum`:''}): the afternoon mixed layer dilutes the smoke, the night layer traps it.`,`การระบายอากาศปานกลาง (ดัชนี ${m} ม.²/วินาที${mn?` ต่ำสุดกลางคืน ${mn}`:''}) ชั้นผสมตอนบ่ายช่วยเจือจาง ส่วนกลางคืนกักฝุ่นไว้`)); }
+  // diurnal peak
+  if(f.peakT!=null){ const h=new Date(f.peakT+7*HR).getUTCHours(); if(h>=4&&h<=10) s.push(T(`The daily peak around ${hm(f.peakT)} is the usual morning maximum: the shallow night-time layer (surface inversion) holds the overnight emissions until the sun deepens the mixed layer by late morning.`,`ค่าสูงสุดราว ${hm(f.peakT)} น. เป็นจุดสูงสุดตอนเช้าตามปกติ: ชั้นอากาศบางตอนกลางคืน (อินเวอร์ชันผิวพื้น) กักฝุ่นที่สะสมข้ามคืนไว้ จนแดดทำให้ชั้นผสมหนาขึ้นช่วงสาย`));
+    else if(h>=17||h<=2) s.push(T(`The peak comes in the evening/night, when the mixed layer collapses after sunset and evening burning and traffic emissions are trapped.`,`ค่าสูงสุดอยู่ช่วงเย็น/กลางคืน เมื่อชั้นผสมยุบตัวหลังพระอาทิตย์ตก ควันจากการเผาและจราจรช่วงเย็นจึงถูกกักไว้`)); }
+  // removal
+  if(wet) s.push(T(`Rain (${f.rain.mm<10?f.rain.mm.toFixed(1):Math.round(f.rain.mm)} mm) washes particles out and keeps the day's mean down.`,`ฝน (${f.rain.mm<10?f.rain.mm.toFixed(1):Math.round(f.rain.mm)} มม.) ชะล้างฝุ่นและกดค่าเฉลี่ยของวันให้ต่ำลง`));
+  else if(f.rain&&f.rain.nowMax!=null&&f.rain.nowMax>=0.5) s.push(T(`The radar nowcast brings rain in the next hours (up to ${f.rain.nowMax<10?f.rain.nowMax.toFixed(1):Math.round(f.rain.nowMax)} mm/h), which should wash out part of the load.`,`การคาดการณ์จากเรดาร์มีฝนในชั่วโมงข้างหน้า (สูงสุด ${f.rain.nowMax<10?f.rain.nowMax.toFixed(1):Math.round(f.rain.nowMax)} มม./ชม.) น่าจะชะล้างฝุ่นได้บางส่วน`));
+  else if(f.rain&&f.rain.mm!=null&&f.rain.mm>=1) s.push(T(`Only light rain (${f.rain.mm.toFixed(1)} mm), too little to wash much out.`,`มีฝนเพียงเล็กน้อย (${f.rain.mm.toFixed(1)} มม.) ไม่พอที่จะชะล้างฝุ่นได้มาก`));
+  else if(stag||upFires) s.push(T('No rain is expected to wash the particles out.','ไม่มีฝนที่จะช่วยชะล้างฝุ่น'));
+  // change on the previous day: the factor that moved most
+  if(pm!=null&&f.pmPrev!=null){ const r=(pm-f.pmPrev)/Math.max(5,f.pmPrev); if(Math.abs(r)>=0.15){ const causes=[];
+      if(f.ventPrev!=null&&f.vent&&f.vent.mean!=null){ const q=f.vent.mean/Math.max(200,f.ventPrev); if(r>0&&q<0.75) causes.push(T('weaker ventilation','การระบายอากาศที่อ่อนลง')); if(r<0&&q>1.33) causes.push(T('stronger ventilation','การระบายอากาศที่ดีขึ้น')); }
+      if(f.fireTrend!=null){ if(r>0&&f.fireTrend>1.3) causes.push(T('more fires upwind','ไฟต้นลมที่มากขึ้น')); if(r<0&&f.fireTrend<0.7) causes.push(T('fewer fires upwind','ไฟต้นลมที่น้อยลง')); }
+      if(f.rainPrev!=null&&f.rain&&f.rain.mm!=null){ if(r<0&&f.rain.mm>=5&&f.rainPrev<1) causes.push(T('rain washout','การชะล้างด้วยฝน')); if(r>0&&f.rainPrev>=5&&f.rain.mm<1) causes.push(T('the end of the rain','ฝนที่หยุดลง')); }
+      if(f.originChange) causes.push(T(`air now arriving from ${ctryName(f.originChange)}`,`อากาศที่เปลี่ยนมาจาก${ctryName(f.originChange)}`));
+      s.push(T(`The ${r>0?'rise':'fall'} on the day before (${Math.round(Math.abs(r)*100)} %) comes mainly from ${causes.length?causes.join(T(' and ',' และ ')):'the forecast change in the regional background (CAMS), with the local factors about unchanged'}.`,
+        `ที่${r>0?'เพิ่มขึ้น':'ลดลง'}จากวันก่อนหน้า (${Math.round(Math.abs(r)*100)}%) มาจาก${causes.length?causes.join(' และ '):'การเปลี่ยนแปลงของค่าพื้นหลังภูมิภาค (CAMS) ขณะที่ปัจจัยในพื้นที่แทบไม่เปลี่ยน'}เป็นหลัก`)); } }
+  // verdict
+  if(b){ const high=pm>37.5, sens=pm>25;
+    s.push(high?T(`Net result: ${b.en.toLowerCase()} — the Thai 24-h standard (37.5 µg/m³) is exceeded; sensitive groups should limit outdoor exertion${pm>75?' and everyone should avoid prolonged outdoor activity':''}.`,`สรุป: ${b.th} เกินค่ามาตรฐาน 24 ชม. ของไทย (37.5 µg/m³) กลุ่มเสี่ยงควรลดกิจกรรมกลางแจ้งที่ใช้แรง${pm>75?' และทุกคนควรเลี่ยงกิจกรรมกลางแจ้งเป็นเวลานาน':''}`)
+      :sens?T(`Net result: ${b.en.toLowerCase()} — within the Thai standard but above the WHO 24-h guideline (15 µg/m³); sensitive people may notice it in the morning hours.`,`สรุป: ${b.th} อยู่ในค่ามาตรฐานไทยแต่เกินค่าแนะนำ WHO 24 ชม. (15 µg/m³) กลุ่มเสี่ยงอาจรู้สึกได้ในช่วงเช้า`)
+      :T(`Net result: ${b.en.toLowerCase()} air.`,`สรุป: อากาศ${b.th}`)); }
+  return s.join(' ');
+}
+// factors for one calendar day at a point or over an area (series v on hours H; wx from wxSeries; centre for wind/vent/trajectory)
+function dayFactors(d,H,v,wx,la,lo,prev,isArea,inA){
+  const now=Date.now(), o={pm:null,pmPrev:prev?prev.pm:null,peakT:null,firesLocal:0,frpLocal:0,upwind:null,wind:null,vent:null,rain:null,fireTrend:null,ventPrev:prev?.vent?.mean??null,rainPrev:prev?.rain?.mm??null,originChange:null};
+  let s=0,n=0,pk=-1; H.forEach((t,i)=>{ if(bkkDay(t-HR)!==d||v[i]==null) return; s+=v[i]; n++; if(v[i]>pk){pk=v[i];o.peakT=t;} }); if(n>=18) o.pm=s/n; else if(n) o.pm=s/n;
+  if(MET){ let u=0,vv=0,m=0,vs=0,vn=0,vmin=Infinity; for(const t of H){ if(bkkDay(t-HR)!==d) continue; const w=sampleMet(MET,la,lo,t); if(w&&isFinite(w.u10)){u+=w.u10;vv+=w.v10;m++;} const vi=ventAt(la,lo,t); if(vi!=null){vs+=vi;vn++;vmin=Math.min(vmin,vi);} }
+    if(m) o.wind={spd:Math.hypot(u/m,vv/m),dir:windFrom(u/m,vv/m)}; if(vn>=6) o.vent={mean:vs/vn,min:vmin}; }
+  if(wx){ let mm=0,k=0; H.forEach((t,i)=>{ if(bkkDay(t-HR)===d&&wx.pr[i]!=null){mm+=wx.pr[i];k++;} }); o.rain={mm:k>=12?mm:null,nowMax:null};
+    if(d===bkkDay(now)){ let mx=0; const tNow=Math.floor(now/HR)*HR; for(let q=1;q<=3;q++){const nc=radarNowAt(la,lo,tNow+q*HR); if(nc&&nc.v>mx) mx=nc.v;} o.rain.nowMax=mx||null; } }
+  for(const h of S.hots){ if(h.t<now-24*HR) continue; if(isArea?inA(h.lat,h.lon):haversineKm(la,lo,h.lat,h.lon)<=30){o.firesLocal++;o.frpLocal+=h.frp||0;} }
+  // where the air arriving at local noon of that day came from (24 h back, 100 m; forecast winds for later days)
+  if(TRAJMET){ try{ const tArr=Math.min(Math.max(Date.parse(d+'T12:00:00+07:00'),TRAJMET.times[0]+24*HR),TRAJMET.times[TRAJMET.times.length-1]);
+      const tr=trajCompute(TRAJMET,la,lo,tArr,24), g=tr.groups[0]; if(g){ let nf=g.fires; if(tArr>now){ nf=0; const seen=new Set(); for(const m of tr.mem) if(m.h===100) for(const [pla,plo] of m.pts) S.hots.forEach((f,fi)=>{ if(!seen.has(fi)&&f.t>=now-24*HR&&Math.abs(f.lat-pla)<=0.25&&haversineKm(pla,plo,f.lat,f.lon)<=TRAJ_FIRE_KM){seen.add(fi);} }); nf=seen.size; }
+        o.upwind={n:nf,iso:g.aEnd?g.aEnd.iso:null,over:g.aEnd}; if(prev?.upwind){ o.fireTrend=(nf+5)/(prev.upwind.n+5); if(prev.upwind.iso!==o.upwind.iso&&o.upwind.iso) o.originChange=o.upwind.iso; } } }catch(e){} }
+  return o;
+}
+function placeSummary(lat,lon,after){
+  if(!P.data||!P.data.hours?.length) return '';
+  const now=Date.now(), tNow=Math.floor(now/HR)*HR, H=P.data.hours, th=LANG==='th', pv=provinceOf(lat,lon), name=pv?provName(pv):T('this place','ที่นี่');
+  const n1=x=>fmtN(x), band=v=>{const b=pcdBand(v); return T(b.en,b.th);};
+  const O=nowObs(lat,lon,now), vNow=totalAt(lat,lon,tNow), w=wxAt(lat,lon,tNow), paras=[];
+  // now
+  { const pm=O.pm?O.pm.v:vNow, src=O.pm?T(`measured at ${stName(O.pm.st)} (${kmTxt(O.pm.d)})`,`ตรวจวัดที่ ${stName(O.pm.st)} (${kmTxt(O.pm.d)})`):T('forecast map','แผนที่พยากรณ์');
+    const bits=[]; if(pm!=null) bits.push(T(`PM₂.₅ is ${n1(pm)} µg/m³ (${band(pm)}, ${src})`,`PM₂.₅ ${n1(pm)} µg/m³ (${band(pm)} ${src})`));
+    if(w&&w.t2!=null){ const sp=Math.hypot(w.u10,w.v10); bits.push(T(`${w.t2.toFixed(1)} °C, wind ${sp<0.5?'calm':sp.toFixed(1)+' m/s from the '+compass(windFrom(w.u10,w.v10))}`,`${w.t2.toFixed(1)} °C ลม${sp<0.5?'สงบ':' '+sp.toFixed(1)+' ม./วินาที จากทิศ'+compass(windFrom(w.u10,w.v10))}`)); }
+    const r=rainAt(lat,lon,tNow), rd=radarObsAt(lat,lon,tNow), cov=radarCovered(lat,lon);
+    if(rd!==undefined) bits.push(rd>=0.1?T(`the radar shows ${rainDayCat(rd)==='no rain'?'rain':rainDayCat(rd)} here in the last hour (${rd<10?rd.toFixed(1):Math.round(rd)} mm/h)`,`เรดาร์พบฝนที่นี่ในชั่วโมงที่ผ่านมา (${rd<10?rd.toFixed(1):Math.round(rd)} มม./ชม.)`):T('the radar shows no rain here in the last hour','เรดาร์ไม่พบฝนที่นี่ในชั่วโมงที่ผ่านมา'));
+    else if(r!=null) bits.push(r>=0.1?T(`rain ${r<10?r.toFixed(1):Math.round(r)} mm/h${cov?'':' (satellite / model; no radar here)'}`,`ฝน ${r<10?r.toFixed(1):Math.round(r)} มม./ชม.${cov?'':' (ดาวเทียม/แบบจำลอง ไม่มีเรดาร์ที่นี่)'}`):T('no rain','ไม่มีฝน'));
+    const vi=ventAt(lat,lon,tNow), vc=ventCat(vi); if(vi!=null) bits.push(T(`ventilation ${vc.en} (${Math.round(vi).toLocaleString()} m²/s)`,`การระบายอากาศ${vc.th} (${Math.round(vi).toLocaleString()} ม.²/วินาที)`));
+    if(bits.length) paras.push(`<b>${T('Now','ขณะนี้')} (${hm(now)}):</b> ${bits.join(th?' ':'; ')}${th?'':'.'}${vc&&vc.k==='poor'?T(' Poor ventilation keeps smoke and dust near the ground.',' การระบายอากาศไม่ดีทำให้ควันและฝุ่นสะสมใกล้พื้น'):''}`); }
+  // next hours
+  { const bits=[]; let s6=0,n6=0,p6=0,m6=0; for(let k=1;k<=6;k++){const v=totalAt(lat,lon,tNow+k*HR); if(v!=null){s6+=v;n6++;} const u=totalAt(lat,lon,tNow-k*HR); if(u!=null){p6+=u;m6++;}}
+    if(n6>=4&&m6>=4){ const a=p6/m6, b=s6/n6, d=(b-a)/Math.max(5,a); bits.push(T(`PM₂.₅ ${Math.abs(d)<0.15?'stays about the same':d>0?'rises':'falls'} over the next 6 h (${n1(b)} vs ${n1(a)} µg/m³ in the last 6 h)`,`PM₂.₅ ใน 6 ชม. ข้างหน้า${Math.abs(d)<0.15?'ทรงตัว':d>0?'เพิ่มขึ้น':'ลดลง'} (${n1(b)} เทียบกับ ${n1(a)} µg/m³ ใน 6 ชม. ที่ผ่านมา)`)); }
+    let nmax=0,nlead=null; for(let k=0;k<=3;k++){ const t=tNow+k*HR+HR; const n=radarNowAt(lat,lon,t); if(n&&n.v>nmax){nmax=n.v;nlead=k;} }
+    if(nlead!=null&&nmax>=0.5) bits.push(T(`the radar nowcast brings ${rainDayCat(nmax)} here ${nlead===0?'within the hour':`in about ${nlead} h`} (${nmax<10?nmax.toFixed(1):Math.round(nmax)} mm/h), which would wash some of the dust out`,`การคาดการณ์จากเรดาร์มี${rainDayCat(nmax)}ที่นี่${nlead===0?'ภายในชั่วโมงนี้':`ในอีกราว ${nlead} ชม.`} (${nmax<10?nmax.toFixed(1):Math.round(nmax)} มม./ชม.) ซึ่งจะช่วยชะล้างฝุ่นบางส่วน`));
+    else if(radarCovered(lat,lon)&&RAINOBS?.radar?.nowcast) bits.push(T('no rain expected from the radar in the next 3 h','จากเรดาร์ไม่คาดว่าจะมีฝนใน 3 ชม. ข้างหน้า'));
+    let vmin=Infinity,vmax=-Infinity; for(let k=1;k<=6;k++){const v=ventAt(lat,lon,tNow+k*HR); if(v!=null){vmin=Math.min(vmin,v);vmax=Math.max(vmax,v);}}
+    if(isFinite(vmin)){ const c=ventCat(vmax); bits.push(T(`ventilation ${ventCat(vmin).en}–${c.en} over the next 6 h`,`การระบายอากาศ${ventCat(vmin).th}ถึง${c.th}ใน 6 ชม. ข้างหน้า`)); }
+    if(bits.length) paras.push(`<b>${T('Next hours:','ชั่วโมงถัดไป:')}</b> ${bits.join(th?' ':'; ')}${th?'':'.'}`); }
+  // today and tomorrow
+  { const v=H.map(t=>totalAt(lat,lon,t)), days=dailyMeans(H,v,now), wx=wxSeries(H,[{la:lat,lo:lon}]), dw=dailyWx(H,wx,now);
+    const keys=[0,1].map(k=>bkkDay(now+k*864e5)), lab=[T('Today','วันนี้'),T('Tomorrow','พรุ่งนี้')], bits=[];
+    keys.forEach((d,i)=>{ const o=days.find(x=>x.d===d); if(!o) return; let pk=null,pv_=-1; H.forEach((t,j)=>{ if(bkkDay(t-HR)===d&&v[j]!=null&&v[j]>pv_){pv_=v[j];pk=t;} });
+      const ww=dw.get(d), wtxt=ww&&isFinite(ww.tmin)?T(`, ${Math.round(ww.tmin)}–${Math.round(ww.tmax)} °C, ${rainDayCat(ww.rain)}`,` ${Math.round(ww.tmin)}–${Math.round(ww.tmax)} °C ${rainDayCat(ww.rain)}`):'';
+      bits.push(T(`${lab[i]}: daily mean ${n1(o.mean)} µg/m³ (${band(o.mean)}), highest around ${hm(pk)} (${n1(pv_)})${wtxt}`,`${lab[i]}: เฉลี่ยรายวัน ${n1(o.mean)} µg/m³ (${band(o.mean)}) สูงสุดราว ${hm(pk)} น. (${n1(pv_)})${wtxt}`)); });
+    if(bits.length) paras.push(`<b>${T('Outlook:','ภาพรวม:')}</b> ${bits.join(th?' · ':'. ')}${th?'':'.'}`); }
+  // analysis: why the forecast is what it is
+  { if(ensureTrajMet(after)||!P.data.metTraj){ const v=H.map(t=>totalAt(lat,lon,t)), wx=wxSeries(H,[{la:lat,lo:lon}]), dY=bkkDay(now-864e5), d0=bkkDay(now), d1=bkkDay(now+864e5);
+      const fY=dayFactors(dY,H,v,wx,lat,lon,null,false), f0=dayFactors(d0,H,v,wx,lat,lon,fY,false), f1=dayFactors(d1,H,v,wx,lat,lon,f0,false);
+      const a0=explainPM(f0), a1=f1.pm!=null?explainPM(f1):'';
+      if(a0) paras.push(`<b>${T('Why today looks like this:','ทำไมวันนี้เป็นเช่นนี้:')}</b> ${a0}`); if(a1) paras.push(`<b>${T('Tomorrow:','พรุ่งนี้:')}</b> ${a1}`); } }
+  // fires nearby and where the air came from
+  { const bits=[]; let n=0,dmin=1e9,frp=0; for(const h of S.hots){ if(h.t<now-24*HR) continue; const d=haversineKm(lat,lon,h.lat,h.lon); if(d<=30){n++;frp+=h.frp||0;} if(d<dmin) dmin=d; }
+    bits.push(n?T(`${n} satellite hotspots within 30 km in the last 24 h (nearest ${dmin<1?'under 1':Math.round(dmin)} km, total FRP ${Math.round(frp)} MW)`,`จุดความร้อนจากดาวเทียม ${n} จุดในรัศมี 30 กม. ใน 24 ชม. ที่ผ่านมา (ใกล้สุด ${dmin<1?'ไม่ถึง 1':Math.round(dmin)} กม. FRP รวม ${Math.round(frp)} MW)`)
+      :T(`no satellite hotspots within 30 km in the last 24 h${isFinite(dmin)&&dmin<1e8?` (nearest ${Math.round(dmin)} km)`:''}`,`ไม่มีจุดความร้อนในรัศมี 30 กม. ใน 24 ชม. ที่ผ่านมา${isFinite(dmin)&&dmin<1e8?` (ใกล้สุด ${Math.round(dmin)} กม.)`:''}`));
+    const key=`${lat.toFixed(3)},${lon.toFixed(3)}|${P.data.generated}|${tNow}`;
+    if(PTRAJ.key!==key) PTRAJ={key,res:null,tried:false};
+    if(!PTRAJ.res&&!PTRAJ.tried&&ensureTrajMet(after)){ PTRAJ.tried=true; try{ PTRAJ.res=trajCompute(TRAJMET,lat,lon,tNow,24); }catch(e){ PTRAJ.res=null; } }
+    const tr=PTRAJ.res; if(tr&&tr.groups){ const g=tr.groups[0], g2=tr.groups[1];   // 100 m and 500 m
+      const over=g.aEnd?ctryName(g.aEnd.iso):null, fires=g.fires+(g2?g2.fires:0), top=g.fTop||g2?.fTop;
+      bits.push(T(`the air near the ground arriving now was over ${over||'the sea'} 24 h ago${tr.hours<24?` (traced ${tr.hours} h)`:''}${fires?`, passing ${fires} fire hotspots${top?` mostly in ${ctryName(top)}`:''}`:', passing no fire hotspots'}`,
+        `อากาศใกล้พื้นที่มาถึงขณะนี้อยู่เหนือ${over||'ทะเล'}เมื่อ 24 ชม. ก่อน${tr.hours<24?` (ย้อนได้ ${tr.hours} ชม.)`:''}${fires?` ผ่านจุดความร้อน ${fires} จุด${top?` ส่วนใหญ่ใน${ctryName(top)}`:''}`:' ไม่ผ่านจุดความร้อน'}`)); }
+    else if(P.data.metTraj&&!tr) bits.push(T('tracing where the air came from…','กำลังย้อนรอยที่มาของอากาศ…'));
+    paras.push(`<b>${T('Fires and origin:','ไฟและที่มาของอากาศ:')}</b> ${bits.join(th?' ':'; ')}${th?'':'.'}`); }
+  return `<div class="lpsec">${T('Forecast summary for this place','สรุปพยากรณ์สำหรับที่นี่')} <span class="note" style="font-weight:400">· ${esc(name)}</span></div>
+    <div class="lpsum">${paras.map(x=>`<p>${x}</p>`).join('')}<p class="note" style="font-size:.66rem;margin:4px 0 0">${T('Drafted automatically from the forecast data; please check before passing on.','ร่างอัตโนมัติจากข้อมูลพยากรณ์ โปรดตรวจทานก่อนส่งต่อ')}</p></div>`;
+}
 function locPopHTML(lat,lon,acc){
   const now=Date.now(), tNow=Math.floor(now/HR)*HR, pv=provinceOf(lat,lon), H=P.data?.hours||[], tEnd=H.length?H[H.length-1]:tNow;
   const vNow=totalAt(lat,lon,tNow), w=wxAt(lat,lon,tNow), O=nowObs(lat,lon,now);
@@ -3399,6 +3516,7 @@ function locPopHTML(lat,lon,acc){
     </div>
     ${rows.length?`<div class="lpsec">${T('Forecast, every 3 hours','พยากรณ์ ทุก 3 ชั่วโมง')}</div>
     <div class="note" style="font-size:.68rem;margin:-2px 0 4px">${T('PM₂.₅ in µg/m³ (hourly) · temperature at the hour · rain in mm over the 3 h ending at the time · wind in m/s, arrow points where the wind blows to','PM₂.₅ หน่วย µg/m³ (รายชั่วโมง) · อุณหภูมิ ณ เวลานั้น · ฝน มม. รวม 3 ชม. ก่อนถึงเวลานั้น · ลม ม./วินาที ลูกศรชี้ทิศที่ลมพัดไป')}</div><div class="lpfc"><table><thead><tr><th>${T('Time','เวลา')}</th><th>PM₂.₅</th><th>°C</th><th>${T('Rain','ฝน')}</th><th>${T('Wind','ลม')}</th><th>RH %</th></tr></thead><tbody>${rows.join('')}</tbody></table></div>`:''}
+    ${placeSummary(lat,lon,()=>{ if(LOCPOP) renderLocPop(); })}
     <div class="lpsec">${T('Trend and daily outlook','แนวโน้มและภาพรวมรายวัน')}</div>
     ${hereTrend(lat,lon)}
     <div class="lpfoot"><label><input type="checkbox" id="locPopAuto"${store.get('hsw.locPop')==='off'?'':' checked'}> ${T('Show this when the page opens','แสดงหน้าต่างนี้เมื่อเปิดหน้าเว็บ')}</label>
@@ -3517,9 +3635,13 @@ async function runTraj(){ if(!CLICK) return; const c=CLICK; let t0=curT(); if(t0
   let M=null; try{ M=await loadTrajMet(); }catch(e){ console.error(e); }
   if(CLICK!==c) return;
   if(!M){ c.traj={err:T('Winds at several heights are not published yet; they arrive with the next weather update (every 12 h).','ยังไม่มีข้อมูลลมหลายระดับความสูง จะมาพร้อมข้อมูลอากาศรอบถัดไป (ทุก 12 ชม.)')}; renderClickInfo(); return; }
+  const want=+(store.get('hsw.trajH')||48);
+  c.traj=trajCompute(M,c.lat,c.lon,t0,want); drawTrajBk(); renderClickInfo(); showTrajView(); }
+// the ensemble for a place: {t0, hours, want, mem, groups}
+function trajCompute(M,lat,lon,t0,want){
   t0=Math.min(Math.max(t0,M.times[0]),M.times[M.times.length-1]);
-  const want=+(store.get('hsw.trajH')||48), hours=Math.min(want,Math.floor((t0-M.times[0])/HR));
-  const mem=[]; for(const h of TRAJ_H) for(const dy of [0,-TRAJ_OFF,TRAJ_OFF]) for(const dx of [0,-TRAJ_OFF,TRAJ_OFF]) mem.push({h,c:!dx&&!dy,pts:backTraj(M,c.lat,c.lon,h,t0,hours,dx,dy)});
+  const hours=Math.min(want,Math.floor((t0-M.times[0])/HR));
+  const mem=[]; for(const h of TRAJ_H) for(const dy of [0,-TRAJ_OFF,TRAJ_OFF]) for(const dx of [0,-TRAJ_OFF,TRAJ_OFF]) mem.push({h,c:!dx&&!dy,pts:backTraj(M,lat,lon,h,t0,hours,dx,dy)});
   // fires near the paths: hotspots within 20 km of an hourly point, detected within 12 h of the air passing
   const fires=TRAJ_H.map(()=>new Set()), hit=TRAJ_H.map(()=>0);
   mem.forEach(m=>{const gi=TRAJ_H.indexOf(m.h); let any=false;
@@ -3530,7 +3652,8 @@ async function runTraj(){ if(!CLICK) return; const c=CLICK; let t0=curT(); if(t0
     const fc={}; let frp=0; for(const fi of fires[gi]){const f=S.hots[fi]; frp+=f.frp||0; const iso=countryOf(f.lat,f.lon)||'-'; fc[iso]=(fc[iso]||0)+1;}
     const fTop=Object.entries(fc).sort((a,b)=>b[1]-a[1])[0];
     return {h,n:ms.length,a24:at(Math.min(24,hours)),aEnd:at(hours),fires:fires[gi].size,frp,hit:hit[gi],fTop:fTop?(fTop[0]==='-'?null:fTop[0]):null}; });
-  c.traj={t0,hours,want,mem,groups}; drawTrajBk(); renderClickInfo(); showTrajView(); }
+  return {t0,hours,want,mem,groups}; }
+
 function drawTrajBk(){ trajBkLayer.clearLayers(); const tr=CLICK?.traj; if(!tr?.mem) return;
   for(const m of tr.mem){ if(m.pts.length<2) continue; const col=TRAJ_COL[m.h];
     L.polyline(m.pts.map(p=>[p[0],p[1]]),{color:col,weight:m.c?3:1.4,opacity:m.c?.95:.5,interactive:false}).addTo(trajBkLayer);
@@ -4133,6 +4256,16 @@ function buildSummary(){
     return {label,d,mean:o.mean,band:b,text:out}; };
   const secs=[];
   const s0=dayText(keys[0],null,T('Today','วันนี้')); if(s0){
+    // radar: rain over the area in the last hour and in the nowcast for the next 3 h (points a radar sees)
+    if(RAINOBS?.radar){ const b=R?R.bbox:REGIONS.msea.bbox, st=R?0.1:0.25, tNow=Math.floor(now/HR)*HR; let cov=0,wet=0,nwet=0,ncov=0, hasObs=RAINOBS.radar.times.includes(obsHour(tNow)), hasNow=!!RAINOBS.radar.nowcast;
+      const inA=(la,lo)=>isAll?inRegion(la,lo):(provinceOf(la,lo)?.n===g.p?.n);
+      for(let la=Math.ceil(b[1]/st)*st;la<=b[3];la+=st) for(let lo=Math.ceil(b[0]/st)*st;lo<=b[2];lo+=st){ if(!inA(la,lo)||!radarCovered(la,lo)) continue;
+        if(hasObs){ const r=radarObsAt(la,lo,tNow); if(r!==undefined){cov++; if(r>=0.5) wet++;} }
+        if(hasNow){ let mx=0; for(let k=1;k<=3;k++){const n=radarNowAt(la,lo,tNow+k*HR); if(n&&n.v>mx) mx=n.v;} ncov++; if(mx>=0.5) nwet++; } }
+      const pc=(a,b)=>Math.round(100*a/b);
+      if(cov||ncov){ const parts=[]; if(cov) parts.push(wet?T(`the radar shows rain over ${pc(wet,cov)} % of the area in the last hour`,`เรดาร์พบฝนใน ${pc(wet,cov)}% ของพื้นที่ในชั่วโมงที่ผ่านมา`):T('the radar shows no rain over the area in the last hour','เรดาร์ไม่พบฝนในพื้นที่ในชั่วโมงที่ผ่านมา'));
+        if(ncov) parts.push(nwet?T(`the nowcast brings rain to ${pc(nwet,ncov)} % of it in the next 3 h`,`การคาดการณ์จากเรดาร์มีฝนใน ${pc(nwet,ncov)}% ของพื้นที่ใน 3 ชม. ข้างหน้า`):T('no rain is expected from the radar in the next 3 h','จากเรดาร์ไม่คาดว่าจะมีฝนใน 3 ชม. ข้างหน้า'));
+        s0.text.push(T(`Radar: ${parts.join('; ')}${isAll&&!R?'':''} (where a radar sees).`,`เรดาร์: ${parts.join(' ')} (เฉพาะพื้นที่ที่เรดาร์มองเห็น)`)); } }
     // fire hotspots seen by satellite in the last 24 h inside the area
     const inA=h=>isAll?inRegion(h.lat,h.lon):(provinceOf(h.lat,h.lon)?.n===g.p.n), hs=S.hots.filter(h=>h.t>now-24*HR&&inA(h));
     if(hs.length){ const c={}; for(const h of hs){ const pv=provinceOf(h.lat,h.lon), k=pv&&pv.c==='THA'?provName(pv):ctryName(countryOf(h.lat,h.lon)); c[k]=(c[k]||0)+1; }
@@ -4140,7 +4273,12 @@ function buildSummary(){
       s0.text.push(T(`Fires: ${hs.length} hotspots detected by satellite in the last 24 h${isAll?` (most in ${top})`:''}.`,`ไฟ: ดาวเทียมตรวจพบจุดความร้อน ${hs.length} จุดใน 24 ชม. ที่ผ่านมา${isAll?` (มากที่สุดที่ ${top})`:''}`)); }
     else s0.text.push(T('Fires: no hotspots detected by satellite in the last 24 h.','ไฟ: ดาวเทียมไม่พบจุดความร้อนใน 24 ชม. ที่ผ่านมา'));
     secs.push(s0); }
-  const s1=dayText(keys[1],keys[0],T('Tomorrow','พรุ่งนี้')); if(s1) secs.push(s1);
+  // analysis from the processes (emissions, transport, dispersion, removal) for today and tomorrow, at the area's centre
+  { const b=R?R.bbox:REGIONS.msea.bbox; let la=(b[1]+b[3])/2, lo=(b[0]+b[2])/2; if(!isAll&&g.p){ const c=provCentroid(GEO_P.features.find(f=>f.properties.n===g.p.n)); if(c){la=c[0];lo=c[1];} }
+    const inA=(a,o)=>isAll?inRegion(a,o):(provinceOf(a,o)?.n===g.p?.n); ensureTrajMet(()=>{ if(!$('sumPop').hidden) renderFcSummary(); });
+    const fY=dayFactors(bkkDay(now-864e5),H,g.mean,g.wx,la,lo,null,true,inA), f0=dayFactors(keys[0],H,g.mean,g.wx,la,lo,fY,true,inA), f1=dayFactors(keys[1],H,g.mean,g.wx,la,lo,f0,true,inA);
+    if(s0&&f0.pm!=null) s0.why=explainPM(f0); if(f1.pm!=null) f1.why=explainPM(f1); var whyTomorrow=f1.why||''; }
+  const s1=dayText(keys[1],keys[0],T('Tomorrow','พรุ่งนี้')); if(s1){ if(whyTomorrow) s1.why=whyTomorrow; secs.push(s1); }
   const n2=[dayText(keys[2],keys[1],''),dayText(keys[3],keys[2],'')].filter(Boolean);
   if(n2.length) secs.push({label:T('Next two days','อีก 2 วันถัดไป'),sub:n2.map(x=>({...x,label:dLong(x.d)}))});
   // overview: worst full day and the direction over the forecast
@@ -4157,7 +4295,7 @@ function buildSummary(){
 }
 function summaryText(S_){ const L_=[T('PM₂.₅ forecast summary','สรุปพยากรณ์ PM₂.₅')+' — '+S_.area,'',S_.ov,''];
   for(const s of S_.secs){ if(s.sub){ L_.push(s.label); for(const x of s.sub){ L_.push(`• ${x.label}${x.band?` (${x.band.name})`:''}: `+x.text.join(' ')); } }
-    else L_.push(`${s.label}${s.band?` (${s.band.name})`:''}: `+s.text.join(' ')); L_.push(''); }
+    else { L_.push(`${s.label}${s.band?` (${s.band.name})`:''}: `+s.text.join(' ')); if(s.why) L_.push(T('Why: ','เหตุผล: ')+s.why); } L_.push(''); }
   L_.push(S_.foot); return L_.join('\n'); }
 function renderFcSummary(){ const box=$('sumPop'), card=$('sumCard'); const S_=buildSummary();
   const pillB=b=>b?`<span class="pill" style="background:var(--${b.key});color:#fff">${esc(b.name)}</span>`:'';
@@ -4166,7 +4304,7 @@ function renderFcSummary(){ const box=$('sumPop'), card=$('sumCard'); const S_=b
   else card.innerHTML=head+`<div class="sumctl"><label>${T('Area','พื้นที่')} <select id="sumArea"><option value="__all">${esc(T('Whole region','ทั้งภูมิภาค'))}: ${esc(S_.regionName)}</option>${S_.provs.map(([k,n])=>`<option value="${esc(k)}"${k===SUMAREA?' selected':''}>${esc(n)}</option>`).join('')}</select></label></div>
     <div class="sumbody"><p class="sumov">${esc(S_.ov)}</p>
     ${S_.secs.map(s=>s.sub?`<div class="sumsec"><h3>${esc(s.label)}</h3>${s.sub.map(x=>`<p><b>${esc(x.label)}</b> ${pillB(x.band)}<br>${x.text.map(esc).join(' ')}</p>`).join('')}</div>`
-      :`<div class="sumsec"><h3>${esc(s.label)} <span class="note">${esc(dayLabel(Date.parse(s.d+'T12:00:00+07:00')))}</span> ${pillB(s.band)}</h3><p>${s.text.map(esc).join(' ')}</p></div>`).join('')}
+      :`<div class="sumsec"><h3>${esc(s.label)} <span class="note">${esc(dayLabel(Date.parse(s.d+'T12:00:00+07:00')))}</span> ${pillB(s.band)}</h3><p>${s.text.map(esc).join(' ')}</p>${s.why?`<p class="sumwhy"><b>${T('Why:','เหตุผล:')}</b> ${esc(s.why)}</p>`:''}</div>`).join('')}
     <p class="sumfoot">${esc(S_.foot)}</p></div>
     <div class="sumbtns"><button class="btn" type="button" id="sumCopy">${T('Copy text','คัดลอกข้อความ')}</button><button class="btn primary" type="button" id="sumClose">${T('Close','ปิด')}</button></div>`;
   box.hidden=false;

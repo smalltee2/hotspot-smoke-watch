@@ -57,6 +57,30 @@ jobs:
             data/ml-field.json
           key: pipeline-state-${{ github.run_id }}-${{ github.run_attempt }}
           restore-keys: pipeline-state-
+      # ONE-OFF (remove after one successful run): the cache version depends on the path list, so adding radar-cache.json made the
+      # earlier caches invisible and the 00:00Z run started from an empty state. This restores the last cache saved with the previous
+      # path list over the fresh one; the save step below then writes it under the new version.
+      - name: Restore working state saved with the previous path list (one-off)
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            data/state.json
+            data/met.json
+            data/latest.json
+            data/rk-bias.json
+            data/rk-bias-A.json
+            data/landcover.bin
+            data/verify.json
+            data/gsmap-cache.json
+            data/met-web.json
+            data/t2-corr.json
+            data/rain-obs.json
+            data/wx-ml.json
+            data/perf.json
+            data/perf-series.json
+            data/ml-field.json
+          key: pipeline-state-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: pipeline-state-
 
       - name: Restore forecast history (branch "history") and ML training store (branch "mltrain")
         id: restore

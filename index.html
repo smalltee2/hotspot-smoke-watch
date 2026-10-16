@@ -131,6 +131,9 @@ td.num{text-align:right;font-family:var(--font-data);font-variant-numeric:tabula
 .method li{margin-bottom:6px;font-size:.84rem}
 
 .mapwrap{position:relative;min-height:0;min-width:0}
+.mapmsg{position:absolute;left:50%;top:40%;transform:translate(-50%,-50%);z-index:1100;width:min(340px,calc(100% - 32px));background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--fg);padding:12px 14px;box-shadow:0 4px 18px rgba(0,0,0,.18);font-size:.88rem;line-height:1.45}
+.lbl-x{visibility:hidden}
+.mapmsg b{display:block;margin-bottom:4px} .mapmsg p{margin:0 0 10px;color:var(--muted)}
 #map{position:absolute;inset:0;background:var(--bg)}
 .scrub{position:absolute;left:12px;right:12px;bottom:12px;z-index:500;background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:8px 12px;display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;box-shadow:0 2px 10px rgb(0 0 0 / .12)}
 .scrub input{width:100%;accent-color:var(--ember)}
@@ -405,7 +408,7 @@ td.num{text-align:right;font-family:var(--font-data);font-variant-numeric:tabula
     <small class="tagline" data-th="พยากรณ์ PM&lt;sub&gt;2.5&lt;/sub&gt; และสภาพอากาศ ความละเอียดสูง 0.025°">High-resolution (0.025°) PM<sub>2.5</sub> and weather forecast</small>
   </div>
   <div class="status">
-    <span id="modeChip" class="chip">no data</span>
+    <span id="modeChip" class="chip">No data</span>
     <span id="updated" class="note"></span><div id="toast" role="status" aria-live="polite"></div>
     <a class="btn dev-only" href="perf.html" title="Live model performance: scores, charts and maps, updated every 3 hours"><span class="lbl-long" data-th="ผลการประเมินแบบจำลอง">Model performance</span><span class="lbl-short" data-th="ผลประเมิน">Scores</span></a>
     <a class="btn btn-ico public-only" href="dev.html" title="Developer page (sign-in) · หน้าสำหรับผู้พัฒนา (ต้องเข้าสู่ระบบ)" aria-label="Developer page"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></a>
@@ -1234,7 +1237,7 @@ const PUBLIC=document.documentElement.dataset.mode==='public';
 let LANG=store.get('hsw.lang')||'th';   // Thai by default; a choice made with the language button is remembered on the device
 const T=(en,th)=>LANG==='th'?th:en;
 const LOC=()=>LANG==='th'?'th-TH':undefined;
-const hm=t=>new Date(t).toLocaleTimeString(LOC(),{hour:'2-digit',minute:'2-digit'});
+const hm=t=>new Date(t).toLocaleTimeString(LOC(),{hour:'2-digit',minute:'2-digit',timeZone:'Asia/Bangkok'});
 function applyStaticLang(){
   document.documentElement.lang=LANG;
   document.querySelectorAll('[data-th]').forEach(el=>{ if(el.dataset.en==null) el.dataset.en=el.innerHTML; el.innerHTML=LANG==='th'?el.dataset.th:el.dataset.en; });
@@ -1253,7 +1256,7 @@ function townName(r){ const mp=/^(?:My point|จุดของฉัน) (\d+)$
   if(r.kind==='cap'&&r.cc==='TH'&&typeof provinceOf==='function'){ if(!_townTH.has(r.name)){const p=provinceOf(r.lat,r.lon); _townTH.set(r.name,p&&p.th||r.name);} return _townTH.get(r.name); }
   return r.name; }
 const provName=p=>LANG==='th'&&p.th?p.th:p.n;
-const fmtT=t=>t==null?'–':new Date(t).toLocaleString(LOC(),{weekday:'short',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
+const fmtT=t=>t==null?'–':new Date(t).toLocaleString(LOC(),{weekday:'short',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit',timeZone:'Asia/Bangkok'});   // page times are Thai time, like the day bar
 const fmtN=(x,d=1)=>x>=100?Math.round(x).toLocaleString():x.toFixed(d);
 const cssVar=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
 
@@ -1363,10 +1366,28 @@ function provCentroid(f){let b=L.geoJSON(f).getBounds();let best=null,area=0;
   for(const pg of polys){const r=pg[0];let a=0,cx=0,cy=0;for(let i=0,j=r.length-1;i<r.length;j=i++){const k=r[j][0]*r[i][1]-r[i][0]*r[j][1];a+=k;cx+=(r[j][0]+r[i][0])*k;cy+=(r[j][1]+r[i][1])*k;}
     if(Math.abs(a)>area){area=Math.abs(a);best=[cy/(3*a),cx/(3*a)];}}
   return best||b.getCenter();}
-provLabels=L.layerGroup(GEO_P.features.map(f=>L.marker(provCentroid(f),{icon:L.divIcon({className:'',html:'',iconSize:[0,0]}),interactive:false,keyboard:false})
-  .bindTooltip(f.properties.th?`${f.properties.n} · ${f.properties.th}`:f.properties.n,{permanent:true,direction:'center',className:'plabel'}))).addTo(map);
-function labelZoom(){const z=map.getZoom();map.getContainer().classList.toggle('hide-plabel',z<8);map.getContainer().classList.toggle('hide-tlabel',z<7);map.getContainer().classList.toggle('hide-mlabel',z<9);}
-map.on('zoomend',labelZoom);
+const provLabelText=f=>LANG==='th'&&f.properties.th?f.properties.th:f.properties.n;   // in the language shown; relabelled on a language switch
+provLabels=L.layerGroup(GEO_P.features.map(f=>{const m=L.marker(provCentroid(f),{icon:L.divIcon({className:'',html:'',iconSize:[0,0]}),interactive:false,keyboard:false})
+  .bindTooltip(provLabelText(f),{permanent:true,direction:'center',className:'plabel'}); m.feature=f; return m;})).addTo(map);
+function labelZoom(){const z=map.getZoom();map.getContainer().classList.toggle('hide-plabel',z<8);map.getContainer().classList.toggle('hide-tlabel',z<5);map.getContainer().classList.toggle('hide-mlabel',z<8);}
+// names must not cover each other or another town's dot. Order: provincial capitals, towns, province names. A town name that
+// collides on the right of its dot tries the left; if both sides are taken it is hidden. Run after each redraw and move.
+function declutterLabels(){ const C=map.getContainer(), cr=C.getBoundingClientRect(), kept=[];
+  const els=[...C.querySelectorAll('.leaflet-tooltip.tlabel,.leaflet-tooltip.plabel')];
+  const rank=el=>el.classList.contains('plabel')?2:el.classList.contains('minor')?1:0; els.sort((a,b)=>rank(a)-rank(b));
+  const dots=(S.townDots||[]).map(d=>{const p=map.latLngToContainerPoint([d.lat,d.lon]), x=cr.left+p.x, y=cr.top+p.y, k=d.r+1; return {cx:x,cy:y,left:x-k,right:x+k,top:y-k,bottom:y+k};});   // drawn on canvas: positions from coordinates
+  const hit=(a,q,pad)=>a.left<q.right+pad&&a.right>q.left-pad&&a.top<q.bottom+1&&a.bottom>q.top-1;
+  for(const el of els){ el.classList.remove('lbl-x'); el.style.marginLeft=''; if(el.style.opacity==='0') continue;   // a label being removed (Leaflet fades it out for 200 ms)
+    const r=el.getBoundingClientRect(); if(!r.width) continue;   // hidden by zoom
+    const own=d=>Math.abs(d.cy-(r.top+r.bottom)/2)<6&&r.left-d.cx>=0&&r.left-d.cx<16;   // a town name sits just right of its own dot
+    const lab=b=>kept.some(q=>hit(b,q,3)), dot=b=>dots.some(d=>!own(d)&&hit(b,d,1)), inside=b=>b.left>=cr.left&&b.right<=cr.right;
+    if(!lab(r)&&!dot(r)){ kept.push(r); continue; }
+    if(el.classList.contains('tlabel')){ el.style.marginLeft=`-${Math.round(r.width+14)}px`; const r2=el.getBoundingClientRect();
+      if(inside(r2)&&!lab(r2)&&!dot(r2)){ kept.push(r2); continue; } el.style.marginLeft=''; }
+    if(!lab(r)){ kept.push(r); continue; }   // only a dot in the way and no free side: the name stays (a lost name is worse than a covered dot)
+    el.classList.add('lbl-x'); } }
+let dcT=0; const declutterSoon=()=>{ clearTimeout(dcT); dcT=setTimeout(declutterLabels,80); };   // after the map has settled: mid-move, every label still sits where the view started
+map.on('zoomend',()=>{labelZoom(); declutterSoon();}); map.on('moveend resize',declutterSoon);
 const TILESETS={
   light:()=>[`https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/${isDark()?'World_Dark_Gray_Base':'World_Light_Gray_Base'}/MapServer/tile/{z}/{y}/{x}`,{maxZoom:16,attribution:'Basemap © Esri, HERE, Garmin, © OpenStreetMap contributors'}],
   street:()=>['https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap contributors'}],
@@ -1492,7 +1513,7 @@ function setTiles(){
   if(tiles){map.removeLayer(tiles);tiles=null;}
   if(bm!=='plain'){const [url,opt]=TILESETS[bm]();let fails=0,ok=0;
     tiles=L.tileLayer(url,{...opt,attribution:opt.attribution+' · Fires: NASA FIRMS · Wind: Open-Meteo · Borders: World Bank Official Boundaries'})
-      .on('tileload',()=>ok++).on('tileerror',()=>{if(++fails>6&&!ok){setBasemap('plain');banner(T('Online map tiles could not load here, so the page switched to the built-in outline map. Fires, wind and smoke still work.','โหลดแผนที่ออนไลน์ไม่ได้ จึงเปลี่ยนเป็นแผนที่เส้นขอบในตัว จุดไฟ ลม และควันยังแสดงได้ตามปกติ'),'info');}}).addTo(map);}
+      .on('tileload',()=>ok++).on('tileerror',()=>{if(++fails>6&&!ok){setBasemap('plain');banner(()=>T('Online map tiles could not load here, so the page switched to the built-in outline map. Fires, wind and smoke still work.','โหลดแผนที่ออนไลน์ไม่ได้ จึงเปลี่ยนเป็นแผนที่เส้นขอบในตัว จุดไฟ ลม และควันยังแสดงได้ตามปกติ'),'info');}}).addTo(map);}
   else map.attributionControl.addAttribution('Borders: World Bank Official Boundaries');
   styleBase();
   $('bmSel').value=bm;
@@ -1511,20 +1532,33 @@ new MutationObserver(reTheme).observe(document.documentElement,{attributes:true,
 const hotLayer=L.layerGroup().addTo(map), trajLayer=L.layerGroup().addTo(map), townLayer=L.layerGroup().addTo(map);
 let plume=null;
 function addMyPoint(lat,lon){ const name=`${T('My point','จุดของฉัน')} ${S.myPts.length+1}`; S.myPts.push({name,lat:+lat.toFixed(4),lon:+lon.toFixed(4),cc:'★'});
-  store.set('hsw.points',JSON.stringify(S.myPts)); if(S.sim) computeReceptors(); drawTowns(); renderWarnings(); }
+  store.set('hsw.points',JSON.stringify(S.myPts)); computeReceptors(); drawTowns(); renderWarnings(); }   // also without a fire simulation (no hotspots): the total-PM2.5 series is computed there too
 // the redesigned page (index_modern.html, <body data-click="info">): a click on the map shows a short summary of that place at the
 // slider time, with buttons for the full location window and for keeping the place as one of "my points"; the original page adds the point
 const CLICK_INFO=document.body?.dataset.click==='info';
 map.on('click',e=>{ if(typeof layerMode==='function'&&layerMode()==='nasa'){ nasaPoint(e.latlng,e.containerPoint); return; }
   if(CLICK_INFO){ clickInfo(e.latlng.lat,e.latlng.lng); return; } addMyPoint(e.latlng.lat,e.latlng.lng); });
-$('btnClearPts').onclick=()=>{S.myPts=[];store.set('hsw.points','[]');if(S.sim)computeReceptors();drawTowns();renderWarnings();};
+$('btnClearPts').onclick=()=>{S.myPts=[];store.set('hsw.points','[]');computeReceptors();drawTowns();renderWarnings();};
 
 function allReceptors(){return TOWNS.filter(t=>inRegion(t.lat,t.lon)&&inBox(t.lat,t.lon,REGIONS.msea.bbox)).concat(S.myPts);}
 
 // ---- busy & messages
 function busy(msg){$('busy').hidden=!msg; if(msg) $('busyMsg').textContent=msg; $('btnRun').disabled=$('btnRun2').disabled=$('btnDemo').disabled=!!msg;}
-function banner(html,cls=''){$('banner').innerHTML=html?`<div class="msg ${cls}">${html}</div>`:'';}
-function setMode(m){S.mode=m;if(m==='live'&&P.data){showFreshness();return;}const c=$('modeChip');c.className='chip '+m;c.textContent={live:T('Live data','ข้อมูลล่าสุด'),demo:T('Demo · synthetic','ข้อมูลจำลอง'),file:T('Uploaded file','ไฟล์ที่อัปโหลด')}[m];
+// side-panel message; pass a function (it calls T) and the message is rebuilt in the new language when the language is switched
+let BANNER=null;
+function banner(html,cls=''){ BANNER=typeof html==='function'?{f:html,cls}:null; const h=BANNER?html():html; $('banner').innerHTML=h?`<div class="msg ${cls}">${h}</div>`:''; }
+// the forecast could not be loaded: say so over the map, where it is seen on phones too (there the side panel is folded away),
+// and offer to try again. Public pages say what to do; the technical reason stays in the console (and in the banner on the developer page).
+let LOADFAIL=false;
+function loadFail(on){ LOADFAIL=on; let el=document.getElementById('mapMsg');
+  if(!on){ if(el) el.remove(); return; }
+  if(!el){ el=document.createElement('div'); el.id='mapMsg'; el.className='mapmsg'; el.setAttribute('role','alert'); document.querySelector('.mapwrap').appendChild(el);
+    L.DomEvent.disableClickPropagation(el); L.DomEvent.disableScrollPropagation(el); }
+  el.innerHTML=`<b>${T('The forecast could not be loaded.','โหลดข้อมูลพยากรณ์ไม่สำเร็จ')}</b>
+    <p>${T('Check your internet connection, then try again. If it still fails, the hourly update may be late: try again in a few minutes.','ตรวจสอบการเชื่อมต่ออินเทอร์เน็ต แล้วลองอีกครั้ง หากยังไม่ได้ ข้อมูลรายชั่วโมงอาจมาช้า ลองใหม่อีกครั้งในไม่กี่นาที')}</p>
+    <button type="button" class="btn primary">${T('Try again','ลองอีกครั้ง')}</button>`;
+  el.querySelector('button').onclick=()=>refreshClick(); }
+function setMode(m){S.mode=m;if(m==='live'&&P.data){showFreshness();return;}const c=$('modeChip');c.className='chip '+m;c.textContent={live:T('Live data','ข้อมูลล่าสุด'),demo:T('Demo data','ข้อมูลจำลอง'),file:T('Uploaded file','ไฟล์ที่อัปโหลด')}[m];
   $('updated').textContent=T('Run ','รัน ')+hm(Date.now());}
 
 // ---- data fetching
@@ -1612,21 +1646,24 @@ async function newBuild(){ if(BUILD==='dev'||location.protocol==='file:') return
   try{const r=await fetch('build.txt?ts='+Date.now(),{cache:'no-store'}); if(!r.ok) return null; const b=(await r.text()).trim(); return b&&b!==BUILD?b:null;}catch(e){return null;} }
 async function refreshClick(){
   if(playT){clearInterval(playT);playT=null;$('btnPlay').textContent='▶';}
-  S.jumpNow=true; const b=await newBuild();
+  S.jumpNow=true; S.keepSel=false; const b=await newBuild();   // a failed silent auto-refresh may have left keepSel set; a manual refresh shows now
   if(b){ toast(T('New version of the page — reloading…','มีหน้าเว็บเวอร์ชันใหม่ — กำลังโหลดใหม่…'));
     const u=new URL(location.href); u.searchParams.set('v',b); location.replace(u.toString()); return; }   // the query bypasses the browser's cached copy of the page
-  const before=P.data?P.data.generated:null; await runAuto(false);
+  const before=P.data?P.data.generated:null, ok=await runAuto(false);
   if(S.jumpNow){ setTimeline(); redrawTime(); }   // the load failed before the timeline was rebuilt: still show the current hour
-  if(!P.data) return; const g=P.data.generated, nxt=new Date(Math.floor(Date.now()/HR)*HR+HR+20*60e3);
-  toast(g!==before&&before!=null?T(`Updated to the run of ${hm(g)}.`,`อัปเดตเป็นรอบ ${hm(g)} แล้ว`)
+  if(!P.data||ok===false) return; const g=P.data.generated, nxt=new Date(Math.floor(Date.now()/HR)*HR+HR+20*60e3);
+  toast(g!==before?T(`Updated to the run of ${hm(g)}.`,`อัปเดตเป็นรอบ ${hm(g)} แล้ว`)
     :T(`Already the latest run (${hm(g)}). New runs arrive hourly, next about ${hm(nxt)}.`,`เป็นข้อมูลรอบล่าสุดแล้ว (${hm(g)}) ข้อมูลใหม่มาทุกชั่วโมง รอบถัดไปประมาณ ${hm(nxt)}`),6000);
 }
-async function runAuto(quiet){ try{ await runAuto_(quiet); }catch(e){ busy(null); if(!quiet) banner(`<b>${T('Update failed.','อัปเดตไม่สำเร็จ')}</b> ${esc(e.message)}`); console.error(e); } }
+async function runAuto(quiet){ try{ return await runAuto_(quiet); }catch(e){ busy(null); console.error(e);
+  if(!quiet){ if(PUBLIC&&!P.data) loadFail(true); else banner(()=>`<b>${T('Update failed.','อัปเดตไม่สำเร็จ')}</b> ${PUBLIC?T('Part of the latest data could not be loaded, so some layers may be missing. Try Refresh again in a few minutes.','โหลดข้อมูลล่าสุดได้ไม่ครบ บางชั้นข้อมูลอาจหายไป ลองกดรีเฟรชอีกครั้งในอีกไม่กี่นาที'):esc(e.message)}`); } return false; } }   // false: the load failed (refreshClick then skips its "updated" message)
 async function runAuto_(quiet){
   if(!quiet) busy(T('Loading the latest hourly data…','กำลังโหลดข้อมูลรายชั่วโมงล่าสุด…'));
   const d=await loadPipeline();
   if(d){P.data=d; busy(T('Loading meteorology…','กำลังโหลดข้อมูลอุตุนิยมวิทยา…')); await Promise.all([loadDEM(),loadMet(),loadMlField(),loadRkFine(),loadWxml()]); await runModel(pipelineHotspots(d),'live',null,quiet); showFreshness(); loadVerify(); renderRK(); renderAssim(); renderML();}
-  else if(!quiet){P.data=null; await runLive();}
+  else if(!quiet){ if(PUBLIC&&P.data){ busy(null); toast(T('The latest data could not be loaded; the page keeps the data it had.','โหลดข้อมูลล่าสุดไม่สำเร็จ หน้าเว็บยังแสดงข้อมูลเดิมอยู่')); return false; }
+    if(PUBLIC){ busy(null); loadFail(true); return false; }   // public: reading FIRMS from the browser needs a key and a proxy the public page does not have
+    P.data=null; await runLive(); }
 }
 let DEM=null, MET=null;
 // met-web.json stores integers as hour-to-hour differences (see scripts/met.mjs packMet); rebuild the plain arrays
@@ -1650,7 +1687,7 @@ async function loadT2(){
   const info=P.data?.t2down; if(!info){T2D=null;return;} if(!info.corr&&T2D){T2D.corr=null;} if(T2D&&T2D.key===(info.tA??'')+'|'+P.data.generated) return;
   try{
     const dem=T2D?.dem||await (await fetch(info.dem+'?k='+(info.demKey||''),{cache:'force-cache'})).json(); if(!T2D?.dem){dem.values=undx(dem,'values');}
-    let corr=null; if(info.corr){const c=await (await fetch(info.corr+'?g='+P.data.generated)).json(); c.meanDay=undx(c,'meanDay'); c.meanNight=undx(c,'meanNight'); c.anom=undx(c,'anom'); corr=c;}
+    let corr=null; if(info.corr){ try{ const c=await (await fetch(info.corr+'?g='+P.data.generated)).json(); c.meanDay=undx(c,'meanDay'); c.meanNight=undx(c,'meanNight'); c.anom=undx(c,'anom'); corr=c; }catch(e){corr=null;} }   // a failed small correction file must not throw away the decoded DEM
     T2D={key:(info.tA??'')+'|'+P.data.generated,dem,corr,lapse:info.lapse,efoldH:info.efoldH};
   }catch(e){T2D=null;}
 }
@@ -1690,7 +1727,7 @@ function t2At(lat,lon,t){
 let RAINOBS=null;
 async function inflateB64(b64){const bin=Uint8Array.from(atob(b64),c=>c.charCodeAt(0)); const ds=new Blob([bin]).stream().pipeThrough(new DecompressionStream('deflate')); const buf=await new Response(ds).arrayBuffer(); return new Int16Array(buf);}
 async function loadRainObs(){
-  const info=P.data?.rainObs; if(!info){RAINOBS=null;return;} const key=info.times.join('|'); if(RAINOBS&&RAINOBS.key===key) return;
+  const info=P.data?.rainObs; if(!info){RAINOBS=null;return;} const key=info.times.join('|')+'|'+(info.radar?.latest??'')+'|'+(info.radar?.nowcast?.t0??''); if(RAINOBS&&RAINOBS.key===key) return;   // reload when GSMaP OR the radar/nowcast moved on
   try{const r=await fetch(info.file+'?g='+P.data.generated); if(!r.ok) return; const o=await r.json(); o.a=await Promise.all(o.d.map(inflateB64)); delete o.d; o.key=key;
     // weather radar part (scripts/radar.mjs): hourly 0.025° fields, the coverage mask and the nowcast
     if(o.radar){ const R=o.radar; R.a=await Promise.all(R.d.map(inflateB64)); delete R.d; if(R.mask){ const bin=Uint8Array.from(atob(R.mask),c=>c.charCodeAt(0)); R.m=new Uint8Array(await new Response(new Blob([bin]).stream().pipeThrough(new DecompressionStream('deflate'))).arrayBuffer()); }
@@ -2129,7 +2166,7 @@ function drawUnc(){
   const W=Math.min(1100,Math.round((e-w)*60)), H=Math.min(1100,Math.round((mercY(n)-mercY(so))/DEG*60));
   const rgb=UNC_COL.map(hexRGB);
   let cell=0.05; while(((e-w)/cell)*((n-so)/cell)>200000) cell*=1.25;
-  const fx=Math.ceil((e-w)/cell), fy=Math.ceil((n-so)/cell), key=[P.data.generated,so,w,fx,fy,!!DEM,!!MET].join('|');
+  const fx=Math.ceil((e-w)/cell), fy=Math.ceil((n-so)/cell), key=[P.data.generated,so,w,fx,fy,!!DEM,!!MET,useA()?'A':'-'].join('|');   // rkSigma follows the assimilation toggle (rk / rkA)
   if(!S.unc||S.unc.key!==key){const F=new Float32Array(fx*fy);
     for(let y=0;y<fy;y++) for(let x=0;x<fx;x++){const la=so+(y+.5)*cell, lo=w+(x+.5)*cell, sg=rkSigma(camsAt(la,lo,i),la,lo); F[y*fx+x]=sg==null?NaN:(Math.exp(sg)-1)*100;}
     S.unc={key,F};}
@@ -2333,12 +2370,12 @@ const LocateCtl=L.Control.extend({options:{position:'topleft'},onAdd(){
   b.innerHTML='<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/><circle cx="12" cy="12" r="8"/></svg>';
   L.DomEvent.disableClickPropagation(b);
   b.onclick=()=>{
-    if(!navigator.geolocation){banner(T('This browser cannot share its location.','เบราว์เซอร์นี้ไม่รองรับการระบุตำแหน่ง'),'info');return;}
+    if(!navigator.geolocation){banner(()=>T('This browser cannot share its location.','เบราว์เซอร์นี้ไม่รองรับการระบุตำแหน่ง'),'info');return;}
     b.setAttribute('aria-busy','true');
     navigator.geolocation.getCurrentPosition(pos=>{b.removeAttribute('aria-busy'); b.classList.add('on');
         showHere(pos.coords.latitude,pos.coords.longitude,pos.coords.accuracy,true);},
       err=>{b.removeAttribute('aria-busy');
-        banner(err.code===1?T('Location permission was declined. Allow location for this site in the browser settings, then tap the button again.','ไม่ได้รับอนุญาตให้ใช้ตำแหน่ง เปิดสิทธิ์ตำแหน่งให้เว็บนี้ในการตั้งค่าเบราว์เซอร์ แล้วกดปุ่มอีกครั้ง'):
+        banner(()=>err.code===1?T('Location permission was declined. Allow location for this site in the browser settings, then tap the button again.','ไม่ได้รับอนุญาตให้ใช้ตำแหน่ง เปิดสิทธิ์ตำแหน่งให้เว็บนี้ในการตั้งค่าเบราว์เซอร์ แล้วกดปุ่มอีกครั้ง'):
                err.code===3?T('Finding your location took too long. Move to open sky or turn on Wi-Fi, then try again.','ใช้เวลาหาตำแหน่งนานเกินไป ลองออกไปที่โล่งหรือเปิด Wi-Fi แล้วลองใหม่'):T('Your location is not available right now.','ยังระบุตำแหน่งไม่ได้ในขณะนี้'),'info'); showTab('warn');},
       {enableHighAccuracy:true,timeout:15000,maximumAge:60000});};
   return b;}});
@@ -2625,7 +2662,10 @@ document.addEventListener('keydown',e=>{ if(e.key==='Escape'&&LOCPOP) closeLocPo
 function openLocPop(lat,lon,acc){ LOCPOP={lat,lon,acc}; renderLocPop.focused=0; renderLocPop(); ensureT2(renderLocPop); ensureRainObs(renderLocPop); ensureRainFac(renderLocPop); }
 // ---- short summary of a clicked place (redesigned page): PM2.5 and weather at the slider time
 function clickInfoHTML(lat,lon){
-  const t=curT(); if(t==null||!P.data) return `<div class="cp"><button type="button" class="cp-x" data-a="x" aria-label="${T('Close','ปิด')}">×</button><div class="cp-h"><b>${lat.toFixed(3)}°N ${lon.toFixed(3)}°E</b></div><div class="cp-n">${T('Forecast not loaded yet.','ยังไม่ได้โหลดข้อมูลพยากรณ์')}</div></div>`;
+  const t=curT(); if(t==null||!P.data){ const pv0=provinceOf(lat,lon);   // no forecast: name the place anyway, and say what to do
+    return `<div class="cp"><button type="button" class="cp-x" data-a="x" aria-label="${T('Close','ปิด')}">×</button><div class="cp-h"><b>${pv0?esc(provName(pv0)):T('Selected point','จุดที่เลือก')}</b><span>${lat.toFixed(3)}°N ${lon.toFixed(3)}°E</span></div><div class="cp-n">${
+      S.mode==='demo'?T('The demo models fire smoke only, so there are no PM₂.₅ or weather values for places. The live page shows them here.','ข้อมูลจำลองคำนวณเฉพาะควันไฟ จึงไม่มีค่า PM₂.₅ และสภาพอากาศของแต่ละจุด หน้าเว็บที่ใช้ข้อมูลจริงจะแสดงค่าเหล่านี้ที่นี่')
+      :T('There are no values for this place because the forecast is not loaded. Tap Refresh at the top of the page to try again.','ยังไม่มีค่าของจุดนี้ เพราะยังโหลดข้อมูลพยากรณ์ไม่ได้ กด รีเฟรช ที่ด้านบนของหน้าเพื่อลองอีกครั้ง')}</div></div>`; }
   const pv=provinceOf(lat,lon), v=totalAt(lat,lon,t), w=wxAt(lat,lon,t), r=rainAt(lat,lon,t), wi=wxIcon(lat,lon,t,r), past=t<=Date.now();
   const when=new Date(t).toLocaleString(LOC(),{weekday:'short',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit',timeZone:'Asia/Bangkok'});
   const b=v!=null?bandFor(v):null, ws=w?Math.hypot(w.u10,w.v10):null;
@@ -2658,8 +2698,8 @@ function renderClickInfo(){ if(!CLICK) return; const {lat,lon}=CLICK, el=clickCa
 function closeClickInfo(){ if(CLICK?.pin) map.removeLayer(CLICK.pin); clearTraj(); CLICK=null; const el=document.getElementById('clickCard'); if(el) el.hidden=true; if(window.PHONEUI?.active()) PHONEUI.set('peek'); }
 function clickInfo(lat,lon){
   if(CLICK?.pin) map.removeLayer(CLICK.pin); clearTraj();
-  const ember=getComputedStyle(document.documentElement).getPropertyValue('--ember').trim()||'#ea580c';
-  CLICK={lat,lon,pin:L.circleMarker([lat,lon],{radius:7,color:'#fff',weight:2.5,fillColor:ember,fillOpacity:1,interactive:false,pane:'markerPane'}).addTo(map)};
+  const pinC=cssVar('--ink')||cssVar('--ember')||'#ea580c';   // the selected place is a control, not data: ink where the page defines it, not fire orange
+  CLICK={lat,lon,pin:L.circleMarker([lat,lon],{radius:7,color:'#fff',weight:2.5,fillColor:pinC,fillOpacity:1,interactive:false,pane:'markerPane'}).addTo(map)};
   renderClickInfo();
   const again=()=>refreshClickInfo(); ensureT2(again); ensureRainObs(again); ensureRainFac(again);   // 0.025° temperature and rain load on first use
 }
@@ -2878,12 +2918,13 @@ async function runLive(){
   }catch(e){busy(null);banner(`<b>${T('Live data failed.','โหลดข้อมูลไม่สำเร็จ')}</b> ${esc(e.message)}`);showTab('warn');}
 }
 async function runModel(hotsRaw,mode,windOverride,quiet){
+  if(LOADFAIL) loadFail(false);
   const minc=$('minconf').value;
   S.hots=hotsRaw.filter(h=>confOK(h,minc));
   S.sources=clusterSources(S.hots,0.1,+$('fuel').value,$('fuelLC').checked,$('fireProf').value!=='const');
   const now=Date.now(), horizon=+$('horizon').value;
   if(!S.sources.length){busy(null);setMode(mode);S.sim=null;S.simInc=null;S.assimApplied=0;clearPlume();setTimeline();drawHotspots();drawTraj();computeReceptors();renderAll();redrawTime();
-    if(!quiet) banner(T(`No hotspots in ${esc(REGIONS[$('region').value].name)} right now. Outside the burning season (roughly January–April in the north) this is normal.${PUBLIC?'':' Try “Run demo” in Settings to see how the page works.'}`,`ขณะนี้ไม่มีจุดความร้อนในพื้นที่ที่เลือก นอกฤดูเผา (ภาคเหนือประมาณมกราคม–เมษายน) ถือเป็นเรื่องปกติ${PUBLIC?'':' ลองกด “ทดลองด้วยข้อมูลจำลอง” ในแท็บตั้งค่าเพื่อดูการทำงานของหน้าเว็บ'}`),'info');return;}
+    if(!quiet) banner(()=>T(`No hotspots in ${esc(REGIONS[$('region').value].name)} right now. Outside the burning season (roughly January–April in the north) this is normal.${PUBLIC?'':' Try “Run demo” in Settings to see how the page works.'}`,`ขณะนี้ไม่มีจุดความร้อนในพื้นที่ที่เลือก นอกฤดูเผา (ภาคเหนือประมาณมกราคม–เมษายน) ถือเป็นเรื่องปกติ${PUBLIC?'':' ลองกด “ทดลองด้วยข้อมูลจำลอง” ในแท็บตั้งค่าเพื่อดูการทำงานของหน้าเว็บ'}`),'info');return;}
   const reg=REGIONS.msea.bbox;
   const spec=windGridSpec(S.sources,reg);
   let W;
@@ -2911,8 +2952,8 @@ async function runModel(hotsRaw,mode,windOverride,quiet){
   computeReceptors();
   if(mode==='live'&&!P.data){const cams=await fetchCams(S.recep); if(cams) S.recep.forEach((r,i)=>r.cams=cams[i]);}
   setMode(mode); busy(null);
-  if(mode==='demo') banner(T('<b>Demo run.</b> Hotspots and winds are synthetic, generated to show how the page behaves. Nothing here describes real conditions.','<b>ข้อมูลจำลอง</b> จุดความร้อนและลมสร้างขึ้นเพื่อแสดงการทำงานของหน้าเว็บ ไม่ใช่สภาพจริง'));
-  else if(S.sources.length>800) banner(T(`Modelling the 800 strongest of ${S.sources.length} fire groups (0.1° cell × day) to keep the page fast.`,`คำนวณเฉพาะ 800 กลุ่มไฟที่แรงที่สุดจาก ${S.sources.length} กลุ่ม (ช่อง 0.1° × วัน) เพื่อให้หน้าเว็บทำงานเร็ว`),'info');
+  if(mode==='demo') banner(()=>T('<b>Demo run.</b> Hotspots and winds are synthetic, generated to show how the page behaves. Nothing here describes real conditions.','<b>ข้อมูลจำลอง</b> จุดความร้อนและลมสร้างขึ้นเพื่อแสดงการทำงานของหน้าเว็บ ไม่ใช่สภาพจริง'));
+  else if(S.sources.length>800) banner(()=>T(`Modelling the 800 strongest of ${S.sources.length} fire groups (0.1° cell × day) to keep the page fast.`,`คำนวณเฉพาะ 800 กลุ่มไฟที่แรงที่สุดจาก ${S.sources.length} กลุ่ม (ช่อง 0.1° × วัน) เพื่อให้หน้าเว็บทำงานเร็ว`),'info');
   else banner('');
   // slider
   setTimeline(); FIELD_CACHE.clear();
@@ -3002,8 +3043,8 @@ function renderWarnings(){
   $('warnList').querySelectorAll('.alert').forEach(el=>el.onclick=()=>focusTown(el.dataset.name));
   const km=+$('warnkm').value;
   const near=S.recep.filter(r=>r.near>0).sort((a,b)=>b.near-a.near);
-  $('nearList').innerHTML = near.length ? `<div class="tablewrap"><table><thead><tr><th>${T('Town','เมือง')}</th><th class="num">${T('Hotspots ≤','จุดความร้อน ≤')} ${km} ${T('km','กม.')}</th><th class="num">FRP MW</th><th class="num">${T('Closest km','ใกล้สุด กม.')}</th></tr></thead><tbody>`+
-    near.map(r=>`<tr><td>${esc(townName(r))}</td><td class="num">${r.near}</td><td class="num">${fmtN(r.nearFrp)}</td><td class="num">${r.nearest.toFixed(1)}</td></tr>`).join('')+'</tbody></table></div>'
+  $('nearList').innerHTML = near.length ? `<div class="tablewrap"><table><thead><tr><th>${T('Town','เมือง')}</th><th class="num">${T('Hotspots ≤','จุดความร้อน ≤')} ${km} ${T('km','กม.')}</th><th class="num dev-only">FRP MW</th><th class="num">${T('Closest km','ใกล้สุด กม.')}</th></tr></thead><tbody>`+
+    near.map(r=>`<tr><td>${esc(townName(r))}</td><td class="num">${r.near}</td><td class="num dev-only">${fmtN(r.nearFrp)}</td><td class="num">${r.nearest.toFixed(1)}</td></tr>`).join('')+'</tbody></table></div>'
     : T(`No hotspots within ${km} km of a town.`,`ไม่มีจุดความร้อนในรัศมี ${km} กม. จากเมือง`);
 }
 // point-in-province (ray casting), bboxes cached
@@ -3032,10 +3073,10 @@ function renderSources(){renderProvinces();
   tb.querySelectorAll('tr[data-i]').forEach(tr=>tr.onclick=()=>{const s=S.sources[+tr.dataset.i];map.flyTo([s.lat,s.lon],10);showMapOnPhone();});
 }
 function drawHotspots(){
-  hotLayer.clearLayers(); const ember=cssVar('--ember');
-  const now=Date.now();
+  hotLayer.clearLayers(); const ember=cssVar('--ember'), ring=cssVar('--fire-ring')||ember;   // ring: the redesign outlines fire points so they read as points, never as a band colour
+  const now=Date.now(), big=cssVar('--fire-ring')?4:7, k=cssVar('--fire-ring')?0.6:0.9;     // and keeps them small, so hundreds of detections do not merge into blobs
   for(const h of S.hots){if(!inRegion(h.lat,h.lon)) continue; const age=(now-h.t)/36e5;
-    L.circleMarker([h.lat,h.lon],{radius:2.5+Math.min(7,Math.sqrt(h.frp)*0.9),weight:1,color:ember,fillColor:ember,fillOpacity:age<12?0.85:0.45,opacity:age<12?1:0.5})
+    L.circleMarker([h.lat,h.lon],{radius:2.5+Math.min(big,Math.sqrt(h.frp)*k),weight:1,color:ring,fillColor:ember,fillOpacity:age<12?0.9:0.45,opacity:age<12?0.9:0.45})
      .bindTooltip(()=>{if(h.prov===undefined)h.prov=provinceOf(h.lat,h.lon);return `${h.prov?esc(provName(h.prov))+(LANG!=='th'&&h.prov.th?' ('+esc(h.prov.th)+')':'')+'<br>':''}FRP ${fmtN(h.frp)} MW · ${h.sat} · ${fmtT(h.t)}`;}).addTo(hotLayer);}
 }
 function drawTraj(){
@@ -3043,20 +3084,22 @@ function drawTraj(){
   S.sim.traj.slice(0,40).forEach(path=>{if(path.length>2) L.polyline(path.filter((_,i)=>i%3===0),{color:c,weight:1.2,opacity:.55,dashArray:'4 4'}).addTo(trajLayer);});
 }
 function drawTowns(){
-  townLayer.clearLayers(); const fg=cssVar('--fg');
+  townLayer.clearLayers(); const fg=cssVar('--fg'); S.townDots=[];
   const recs=S.recep.length?S.recep:allReceptors().map(p=>({...p,st:{mean24:0,peak:0}}));
   for(const r of recs){const si=simIdx(curT()); const val=si>=0&&r.series?.length?r.series[si]||0:0; const b=bandFor(val);
-    L.circleMarker([r.lat,r.lon],{radius:r.cc==='★'?6:r.kind==='town'?3.5:5,weight:2,color:fg,fillColor:val>=1?b.color:cssVar('--panel'),fillOpacity:1})
+    const rad=r.cc==='★'?6:r.kind==='town'?3.5:5; S.townDots.push({lat:r.lat,lon:r.lon,r:rad+1});   // the names keep off these dots (declutterLabels)
+    L.circleMarker([r.lat,r.lon],{radius:rad,weight:2,color:fg,fillColor:val>=1?b.color:cssVar('--panel'),fillOpacity:1})
      .bindTooltip(`${esc(townName(r))}: ${T('fire PM₂.₅ at this hour','PM₂.₅ จากไฟ ณ ชั่วโมงนี้')} ${fmtN(val)} µg/m³`).on('click',()=>focusTown(r.name)).addTo(townLayer);
     L.marker([r.lat,r.lon],{icon:L.divIcon({className:'',html:'',iconSize:[0,0]}),interactive:false,keyboard:false})
      .bindTooltip(esc(townName(r)),{permanent:true,direction:'right',offset:[6,0],className:r.kind==='town'?'tlabel minor':'tlabel'}).addTo(townLayer);}
+  declutterSoon();
 }
 function clearPlume(){if(plume){map.removeLayer(plume);plume=null;}}
 // smoke colour ramp (µg/m3)
 // µg/m³ colours of both PM2.5 layers (total and fire smoke): MAP_BANDS; fire smoke below 1 µg/m³ is not drawn
 const RAMP=[[1]];
 const EPA_ALPHA=.68;
-function rampColor(c){ if(!(c>=1)) return null; const rgb=hexRGB(rampCss(c)); return [rgb[0],rgb[1],rgb[2],EPA_ALPHA]; }
+function rampColor(c){ if(!(c>=1)) return null; const rgb=hexRGB(rampCss(c)); return [rgb[0],rgb[1],rgb[2],c>=15?EPA_ALPHA:EPA_ALPHA*(0.25+0.75*(c-1)/14)]; }   // fades in up to 15 µg/m³: clean air stays faint (on dark maps it read as fog)
 function puffField(s,w,so,nx,ny,cell){
   const F=new Float32Array(nx*ny);
   for(let i=0;i<s.n;i++){const sy=s.sy[i], s2=2*sy*sy, amp=s.m[i]/(Math.PI*s2)*s.fz[i];
@@ -3064,7 +3107,7 @@ function puffField(s,w,so,nx,ny,cell){
     const x0=Math.max(0,Math.floor((s.lon[i]-rLon-w)/cell)), x1=Math.min(nx-1,Math.ceil((s.lon[i]+rLon-w)/cell));
     const y0=Math.max(0,Math.floor((s.lat[i]-rLat-so)/cell)), y1=Math.min(ny-1,Math.ceil((s.lat[i]+rLat-so)/cell));
     for(let y=y0;y<=y1;y++){const la=so+(y+.5)*cell, dy=(la-s.lat[i])*MPD;
-      for(let x=x0;x<=x1;x++){const dx=(w+(x+.5)*cell-s.lon[i])*cl, r2=dx*dx+dy*dy; if(r2<9*s2) F[y*nx+x]+=amp*Math.exp(-r2/s2);}}}
+      for(let x=x0;x<=x1;x++){const dx=(w+(x+.5)*cell-s.lon[i])*cl, r2=dx*dx+dy*dy; if(r2<4.5*s2) F[y*nx+x]+=amp*Math.exp(-r2/s2);}}}   // 3σ (s2 = 2σ²), the same cut-off as concAt
   return F;
 }
 function boxMean(F,nx,ny,k){ // mean over a (2k+1)² window, via an integral image
@@ -3452,8 +3495,15 @@ drawRegionMask(); fitRegion();
 function epaBar(bar,ticks,first){ bar.style.gridTemplateColumns='repeat(11,1fr)';
   bar.innerHTML=MAP_BANDS.map((b,k)=>`<i style="background:${b.color}" title="${k?MAP_BANDS[k-1].max:0}${b.max<Infinity?'–'+b.max:'+'} µg/m³"></i>`).join('');
   ticks.innerHTML='<span style="position:relative;display:block;width:100%;height:1.1em">'+[[0,first],[2,'15'],[4,'37.5'],[6,'75'],[8,'150'],[10,'300']].map(([k,t])=>`<span style="position:absolute;left:${k/11*100}%;transform:translateX(${k?'-50%':'0'})">${t}</span>`).join('')+'</span>'; }
+// what the colours mean: one row per official band, its swatch made of exactly the map colours it spans (µg/m³ maps), or the
+// band's own colour (AQI views); names follow the PCD (or EPA) bands. Only where the page has the slot (#legKey, #fireKey).
+function bandKey(el,u){ if(!el) return; let rows;
+  if(u==='us'){ const lo=['0','51','101','151','201','301']; rows=US_BANDS.map((b,k)=>({cols:[b.color],name:T(b.en,b.th),range:lo[k]+(k<5?'–'+(+lo[k+1]-1):'+')})); }
+  else if(u==='th'){ const r=['0–25','26–50','51–100','101–200','201+']; rows=PCD.map((b,k)=>({cols:[cssVar('--'+b.key)],name:T(b.en,b.th),range:r[k]})); }
+  else{ let lo=0; rows=PCD.map(b=>{const cols=MAP_BANDS.filter(m=>m.max>lo&&m.max<=b.max||(b.max===Infinity&&m.max>lo)).map(m=>m.color), row={cols,name:T(b.en,b.th),range:b.max<Infinity?`${lo}–${b.max}`:`>${lo}`}; lo=b.max; return row;}); }
+  el.innerHTML=rows.map(w=>`<div><i style="background:${w.cols.length>1?`linear-gradient(to right,${w.cols.map((c,k)=>`${c} ${k/w.cols.length*100}%,${c} ${(k+1)/w.cols.length*100}%`).join(',')})`:w.cols[0]}"></i><span>${esc(w.name)}</span><b>${w.range}</b></div>`).join(''); }
 function renderLegend(){
-  const u=unitMode(), bar=$('legBar'), ticks=$('legTicks'); epaBar($('fireBar'),$('fireTicks'),'1');
+  const u=unitMode(), bar=$('legBar'), ticks=$('legTicks'); epaBar($('fireBar'),$('fireTicks'),'1'); bandKey($('legKey'),u); bandKey($('fireKey'),'ug');
   if(u==='us'){ const w=[9,26.4,20,70,100,60]; bar.style.gridTemplateColumns=w.map(x=>x+'fr').join(' ');
     bar.innerHTML=US_BANDS.map(b=>`<i style="background:${b.color}"></i>`).join('');
     ticks.innerHTML=['0','50','100','150','200','300','500'].map(t=>`<span>${t}</span>`).join(''); }
@@ -3463,14 +3513,15 @@ function renderLegend(){
     ticks.innerHTML=(u==='th'?['0','25','50','100','200','']:['0','15','25','37.5','75','']).map(t=>`<span>${t}</span>`).join(''); }
   $('legNote').textContent=LANG==='th'
     ? ({ug:'PM₂.₅ รายชั่วโมง (µg/m³)',ug24:'PM₂.₅ เฉลี่ย 24 ชม. (µg/m³)',th:'AQI ไทยจากค่าเฉลี่ย 24 ชม. (คพ. 2566)',us:'AQI สหรัฐฯ จากค่าเฉลี่ย 24 ชม. (EPA 2024)'})[u]+
-      ' · ขอบสีตามเกณฑ์ คพ. (15 / 25 / 37.5 / 75) สีอุ่นเริ่มที่ค่ามาตรฐาน 37.5 สีดำ = มากกว่า 300'+(PUBLIC?' · ':' · CAMS + สถานีตรวจวัด + ภูมิประเทศ ')+'ค่า 24 ชม. คือค่าเฉลี่ย 24 ชั่วโมงที่สิ้นสุด ณ เวลาที่เลือก กรอบเส้นประคือพื้นที่พยากรณ์'
+      ($('legKey')?'':' · ขอบสีตามเกณฑ์ คพ. (15 / 25 / 37.5 / 75) สีอุ่นเริ่มที่ค่ามาตรฐาน 37.5 สีดำ = มากกว่า 300')+(PUBLIC?' · ':' · CAMS + สถานีตรวจวัด + ภูมิประเทศ ')+'ค่า 24 ชม. คือค่าเฉลี่ย 24 ชั่วโมงที่สิ้นสุด ณ เวลาที่เลือก กรอบเส้นประคือพื้นที่พยากรณ์'
     : ({ug:'PM₂.₅ hourly, µg/m³',ug24:'PM₂.₅ 24-h mean, µg/m³',th:'Thai AQI from the 24-h mean (PCD 2023)',us:'US AQI from the 24-h mean (EPA 2024)'})[u]+
-    ' · bands follow the Thai PCD thresholds (15 / 25 / 37.5 / 75); warm colours from the 37.5 standard; black above 300'+(PUBLIC?' · ':' · CAMS + monitors + low-cost sensors + terrain, 0.025°. ')+'24-h values are the mean of the 24 hours ending at the slider time. Dashed box: forecast area.';
+    ($('legKey')?'':' · bands follow the Thai PCD thresholds (15 / 25 / 37.5 / 75); warm colours from the 37.5 standard; black above 300')+(PUBLIC?' · ':' · CAMS + monitors + low-cost sensors + terrain, 0.025°. ')+'24-h values are the mean of the 24 hours ending at the slider time. Dashed box: forecast area.';
 }
-applyStaticLang(); if(!S.mode) $('modeChip').textContent=T('no data','ไม่มีข้อมูล');
+applyStaticLang(); if(!S.mode) $('modeChip').textContent=T('No data','ไม่มีข้อมูล');
 $('btnLang').onclick=()=>{ LANG=LANG==='th'?'en':'th'; store.set('hsw.lang',LANG); applyStaticLang(); initLegToggle.relabel?.(); initSideToggle.relabel?.(); refreshClickInfo();
-  {const lb=document.querySelector('.locate-btn'); if(lb){lb.title=T('Show PM2.5 at my location','ดูค่าฝุ่นที่ตำแหน่งของฉัน'); lb.setAttribute('aria-label',lb.title);}} if(S.mode) setMode(S.mode); else $('modeChip').textContent=T('no data','ไม่มีข้อมูล');
-  renderLegend(); renderAll(); renderHereBox(); if(LOCPOP) renderLocPop(); drawStations?.(); redrawTime(); };
+  {const lb=document.querySelector('.locate-btn'); if(lb){lb.title=T('Show PM2.5 at my location','ดูค่าฝุ่นที่ตำแหน่งของฉัน'); lb.setAttribute('aria-label',lb.title);}} if(S.mode) setMode(S.mode); else $('modeChip').textContent=T('No data','ไม่มีข้อมูล');
+  renderLegend(); renderAll(); renderHereBox(); if(LOCPOP) renderLocPop(); drawStations?.(); redrawTime();
+  if(BANNER) banner(BANNER.f,BANNER.cls); if(LOADFAIL) loadFail(true); provLabels?.eachLayer(m=>m.setTooltipContent(provLabelText(m.feature))); declutterSoon(); };
 {const v=store.get('hsw.unitSel'); if(v) $('unitSel').value=v;}
 setWarnView(store.get('hsw.warnView')||'prov'); $('warnView').addEventListener('change',e=>setWarnView(e.target.value));
 $('unitSel').addEventListener('change',()=>{store.set('hsw.unitSel',$('unitSel').value); renderLegend(); renderAll(); redrawTime();});

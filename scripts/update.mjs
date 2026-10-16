@@ -35,6 +35,9 @@ const CFG = {
   met: { refreshH: 12,   // ECMWF HRES full runs are 00/12 UTC; 12 h keeps Open-Meteo use under the free daily limit
           grids: [ { name: 'north', bbox: [96.5, 14.5, 102.5, 21.5], step: 0.25 }, { name: 'domain', bbox: [92, 5, 110, 25], step: 1.0 } ] },
   stationRefreshH: 24,
+  // time budget (min from the start of the run; the job is killed at 25): optional blocks (radar frames, GSMaP/gauges, t2/weather ML)
+  // are skipped once passed, so the essential forecast and the state are still written; the per-station OpenAQ fallback stops at fallbackMin
+  budget: { optionalMin: 16, fallbackMin: 6 },
   maxStations: 700,              // reference monitors first, then low-cost sensors (the MSEA low-cost networks, e.g. AirGradient in Laos, need room)
   obsMaxAgeH: 3,                 // ignore station values older than this
   firmsSources: ['VIIRS_SNPP_NRT', 'VIIRS_NOAA20_NRT', 'VIIRS_NOAA21_NRT'],
@@ -93,7 +96,7 @@ const log = (...a) => { let line = a.join(' '); for (const k of SECRETS) line = 
 
 // ------------------------------------------------------------------ helpers
 async function readJSON(p, dflt) { try { return JSON.parse(await fs.readFile(p, 'utf8')); } catch { return dflt; } }
-async function writeJSON(p, o) { await fs.mkdir(path.dirname(p), { recursive: true }); await fs.writeFile(p, JSON.stringify(o)); }
+async function writeJSON(p, o) { await fs.mkdir(path.dirname(p), { recursive: true }); await fs.writeFile(p + '.tmp', JSON.stringify(o)); await fs.rename(p + '.tmp', p); }   // atomic: a run killed mid-write must not leave a truncated state.json for the cache
 async function appendCSV(p, header, rows) {
   if (!rows.length) return;
   await fs.mkdir(path.dirname(p), { recursive: true });
@@ -101,10 +104,10 @@ async function appendCSV(p, header, rows) {
   await fs.appendFile(p, (exists ? '' : header + '\n') + rows.map(r => r.join(',')).join('\n') + '\n');
 }
 const sleep = ms => new Promise(r => setTimeout(r, ms));
-async function get(url, opt = {}, tries = 3, waitMs = 2000) {
+async function get(url, opt = {}, tries = 3, waitMs = 2000, timeoutMs = 60e3) {
   for (let i = 0; i < tries; i++) {
     try {
-      const r = await fetch(url, { ...opt, signal: AbortSignal.timeout(60e3) });
+      const r = await fetch(url, { ...opt, signal: AbortSignal.timeout(timeoutMs) });
       if (r.status === 429) { await sleep(5000 * (i + 1)); continue; }
       if (!r.ok) throw new Error(`HTTP ${r.status} ${(await r.text()).slice(0, 200)}`);
       return r;
@@ -161,8 +164,10 @@ async function oaqLatest(stations) {
     log(`OpenAQ latest (bulk): ${vals.size} stations`);
   } catch (e) { log('bulk latest failed:', e.message); }
   if (vals.size < stations.length * 0.3) {
+    const t0 = Date.now();
     for (const st of stations) {
       if (vals.has(st.id)) continue;
+      if (Date.now() - t0 > CFG.budget.fallbackMin * 60e3) { log(`OpenAQ latest (per location): stopped after ${CFG.budget.fallbackMin} min (time budget)`); break; }
       try {
         const js = await (await get(`${OAQ}/locations/${st.id}/latest`, { headers: oaqHeaders() })).json();
         const m = (js.results || []).find(m => m.sensorsId === st.sensor);
@@ -220,8 +225,8 @@ async function firmsHotspots() {
   const rows = []; firmsHotspots.ok = false;
   for (const src of CFG.firmsSources) {
     try {
-      // FIRMS sometimes drops connections from cloud runners: 5 tries, 10–50 s apart
-      const txt = await (await get(`https://firms.modaps.eosdis.nasa.gov/api/area/csv/${key}/${src}/${CFG.bbox.join(',')}/${CFG.firmsDays}`, {}, 5, 10000)).text();
+      // FIRMS sometimes drops connections from cloud runners: 3 tries, 10–20 s apart, 20 s each (a hanging connection must not eat the run)
+      const txt = await (await get(`https://firms.modaps.eosdis.nasa.gov/api/area/csv/${key}/${src}/${CFG.bbox.join(',')}/${CFG.firmsDays}`, {}, 3, 10000, 20e3)).text();
       const lines = txt.trim().split('\n'); const head = lines[0].split(',');
       if (!head.includes('latitude')) { log(`FIRMS ${src}: unexpected reply: ${txt.slice(0, 120).replace(/\s+/g, ' ')}`); continue; }
       const ix = k => head.indexOf(k);
@@ -277,6 +282,7 @@ const isAvg24 = s => !s.hourly && CFG.avg24Providers.includes(s.provider);   // 
 // ------------------------------------------------------------------ main
 async function main() {
   const T0 = Date.now(); let tPrev = T0, tLab = 'start', tAcc = [];
+  const late = lab => { const min = (Date.now() - T0) / 60e3, over = min > CFG.budget.optionalMin; if (over) log(`time budget: ${lab} skipped, ${min.toFixed(0)} min into the run`); return over; };
   globalThis.TIMER = lab => { const t = Date.now(); tAcc.push(`${tLab} ${((t - tPrev) / 1000).toFixed(0)} s`); tPrev = t; tLab = lab; if (lab === 'outputs' && process.env.GITHUB_ACTIONS) console.log(`::notice title=timing::${tAcc.join(' · ')}`); };
   if (!process.env.OPENAQ_API_KEY) throw new Error('OPENAQ_API_KEY is not set');
   const state = await readJSON(path.join(DATA, 'state.json'), {});
@@ -328,7 +334,7 @@ async function main() {
       log(`CAMS refresh failed: ${e.message}`);
       const prevOK = state.cams && state.cams.gridKey === gridKey;
       if (prevOK && state.cams.stIds !== stIds && state.prevStations && state.prevStations.map(s => s.id).join(',') === state.cams.stIds) {
-        stations = state.stations = state.prevStations; state.stationsAt = 0;   // go back to the list the old forecast matches; retry next run
+        stations = state.stations = state.prevStations; state.stationsAt = now - (CFG.stationRefreshH - CFG.a4t.retryH) * HOUR; state.a4tTried = now;   // go back to the list the old forecast matches; retry in retryH hours, not every hour (a rate-limited CAMS refetch would otherwise repeat hourly)
         log('using the previous CAMS forecast and the previous station list');
       } else if (!prevOK || state.cams.stIds !== stIds) throw e;   // cannot continue without a forecast for these stations
       else log('using the previous CAMS forecast');
@@ -406,10 +412,10 @@ async function main() {
   //      extrapolated below once the gauges are in. The factor of the previous run adjusts the archive values written this run.
   globalThis.TIMER('radar');
   let rcache = await readJSON(path.join(DATA, 'radar-cache.json'), null); const RADAR_F0 = state.radarFactor || 1;
-  try { rcache = await updateRadar(rcache, now, { get, sleep, log }); await writeJSON(path.join(DATA, 'radar-cache.json'), rcache); }
+  if (!late('radar frames')) try { rcache = await updateRadar(rcache, now, { get, sleep, log }); await writeJSON(path.join(DATA, 'radar-cache.json'), rcache); }
   catch (e) { log(`radar update failed: ${e.message}${rcache ? ' (keeping previous frames)' : ''}`); if (process.env.GITHUB_ACTIONS) console.log(`::warning title=radar::${e.message}`); }
   globalThis.TIMER('rain');
-  if (met) try {
+  if (met && !late('GSMaP, gauges and rain diagnostic')) try {
     let gcache = await readJSON(path.join(DATA, 'gsmap-cache.json'), null);
     gcache = await updateGsmap(gcache, now, { log });
     gcacheG = gcache;
@@ -436,12 +442,12 @@ async function main() {
       const yday = thaiDate(now - 24 * HOUR), rf = path.join(DATA, 'history', yday.slice(0, 7), `rainobs-${yday.replace(/-/g, '')}.csv`);
       if (new Date(now + 7 * HOUR).getUTCHours() >= 6 && await fs.access(rf).then(() => false, () => true)) {   // from 06:00 Thai (GSMaP NRT for 24:00 arrives ~05:00; NOW fills any gap), before the Mac's 09:30 evaluation
         const d0 = Date.parse(yday + 'T00:00:00+07:00'), rowsR = []; let nH = 0;
-        for (let te = d0 + HOUR; te <= d0 + 24 * HOUR; te += HOUR) { const ts = te - HOUR; if (!gcache.hours?.[ts]) continue; nH++;
+        for (let te = d0 + HOUR; te <= d0 + 24 * HOUR; te += HOUR) { const ts = te - HOUR, hasG = !!gcache.hours?.[ts]; if (!hasG && !rcache?.hours?.[ts]) continue; nH++;   // an hour counts with GSMaP or the radar: the radar truth is written even when GSMaP is missing
           const he = new Date(te).toISOString().slice(0, 13) + ':00Z';
-          for (const s of a4tSt) { const g = await gsmapAt(gcache, DATA, s.lat, s.lon, ts); if (g) rowsR.push([he, 'a4t', s.id, s.lat, s.lon, '', g.cell, g.bil, g.fine, g.src, radarAt(rcache, s.lat, s.lon, ts, RADAR_F0) ?? '']); }
+          for (const s of a4tSt) { const g = hasG ? await gsmapAt(gcache, DATA, s.lat, s.lon, ts) : null, rd = radarAt(rcache, s.lat, s.lon, ts, RADAR_F0); if (g || rd != null) rowsR.push([he, 'a4t', s.id, s.lat, s.lon, '', g?.cell ?? '', g?.bil ?? '', g?.fine ?? '', g?.src ?? '', rd ?? '']); }
           for (const [la, lo, mm] of state.gaugeRain?.[ts] || []) { const g = await gsmapAt(gcache, DATA, la, lo, ts); rowsR.push([he, 'gauge', '', la, lo, mm, g?.cell ?? '', g?.bil ?? '', g?.fine ?? '', g?.src ?? '', radarAt(rcache, la, lo, ts, RADAR_F0) ?? '']); } }
         if (nH >= 20) { await appendCSV(rf, 'hour_end_utc,kind,station_id,lat,lon,gauge_mm,gsmap_cell,gsmap_bil,gsmap_fine,gsmap_src,radar_mmh', rowsR); log(`observed-rain archive ${path.basename(rf)}: ${nH} hours, ${rowsR.length} rows`); }
-        else log(`observed-rain archive for ${yday}: only ${nH} GSMaP hours held, not written`);
+        else log(`observed-rain archive for ${yday}: only ${nH} GSMaP/radar hours held, not written`);
       }
     } catch (e) { log(`observed-rain archive failed: ${e.message}`); }
   } catch (e) { log(`GSMaP observed rain failed: ${e.message}`); if (process.env.GITHUB_ACTIONS) console.log(`::warning title=GSMaP rain::${e.message}`); }
@@ -452,7 +458,7 @@ async function main() {
   if (rcache?.hours) try {
     state.radarScored ||= {}; for (const k of Object.keys(state.radarScored)) if (+k < now - 48 * HOUR) delete state.radarScored[k];
     state.radarScore = (state.radarScore || []).filter(r => Date.parse(r.hour.replace('Z', ':00Z')) > now - 7 * 24 * HOUR);
-    const sc = scoreRadar(state.gaugeRain, rcache, state.radarScored, state.radarScore); state.radarScore = [...state.radarScore, ...sc.rows].slice(-200); state.radarFactor = sc.factor;
+    const sc = scoreRadar(state.gaugeRain, rcache, state.radarScored, state.radarScore); state.radarScore = [...state.radarScore.filter(r => !sc.rows.some(x => x.hour === r.hour)), ...sc.rows].slice(-200); state.radarFactor = sc.factor;
     const R = state.radarScore, N = R.reduce((a, r) => a + r.n, 0);
     if (R.length) { const m = `radar vs ThaiWater gauges, ${R.length} hours, ${N} gauge-hours (${sc.nWet} wet ≥0.5 mm): RMSE ${+Math.sqrt(R.reduce((a, r) => a + r.n * r.rmse ** 2, 0) / N).toFixed(3)} mm/h, mean hourly r ${+(R.filter(r => r.r != null).reduce((a, r) => a + r.n * r.r, 0) / Math.max(1, R.filter(r => r.r != null).reduce((a, r) => a + r.n, 0))).toFixed(3)}, hits ${+(R.reduce((a, r) => a + (r.pod ?? 0) * r.wet, 0) / Math.max(1, R.reduce((a, r) => a + r.wet, 0))).toFixed(2)}, false alarms ${+(R.filter(r => r.far != null).reduce((a, r) => a + r.far, 0) / Math.max(1, R.filter(r => r.far != null).length)).toFixed(2)}; gauge/radar factor ${sc.factor}${sc.nWet < 200 ? ' (1 until 200 wet pairs)' : ''}`;
       log(m); if (process.env.GITHUB_ACTIONS) console.log(`::notice title=radar vs gauges::${m}`); }
@@ -478,8 +484,10 @@ async function main() {
           const es = D ? sampleMet(met, st.lat, st.lon, H + HOUR + D.shiftH * HOUR)?.pr : null, fa = D ? diagFactorAt(D, st.lat, st.lon) : null, pe = persistAt(rcache, sc.factor, st.lat, st.lon, H, Hobs);
           let nv = ''; if (ki >= 0 && H >= nc.t0) { const G = webR, ix = Math.round((st.lon - G.lon0) / G.step), iy = Math.round((st.lat - G.lat0) / G.step); if (ix >= 0 && iy >= 0 && ix < G.nx && iy < G.ny) { const q = nc.fields[ki][iy * G.nx + ix]; if (q >= 0) nv = +(q / 10 * sc.factor).toFixed(2); } }
           rows.push([iss, new Date(H).toISOString().slice(0, 13) + ':00Z', L, st.id, st.lat, st.lon, +e.toFixed(2), es == null ? '' : +es.toFixed(2), fa == null ? '' : +(e * fa).toFixed(2), pe ?? '', nv, +(await rainFactor(DATA, st.lat, st.lon, H)).toFixed(3)]); } }
-      const d = thaiDate(now); await appendCSV(path.join(DATA, 'history', d.slice(0, 7), `rainfc-${d.replace(/-/g, '')}.csv`), 'issued_utc,hour_start_utc,lead_h,station_id,lat,lon,ecmwf_mmh,ecmwf_shift_mmh,ecmwf_amount_mmh,persist_mmh,nowcast_mmh,chelsa_factor', rows);
-      log(`rain forecast log: ${rows.length} station-leads`); }
+      const d = thaiDate(now), rfc = path.join(DATA, 'history', d.slice(0, 7), `rainfc-${d.replace(/-/g, '')}.csv`);
+      if (await fs.readFile(rfc, 'utf8').then(s => s.includes('\n' + iss.slice(0, 13)), () => false)) log('rain forecast log: this issue hour is already logged (second run in the hour)');   // fit_rain_blend.py does not dedupe
+      else { await appendCSV(rfc,'issued_utc,hour_start_utc,lead_h,station_id,lat,lon,ecmwf_mmh,ecmwf_shift_mmh,ecmwf_amount_mmh,persist_mmh,nowcast_mmh,chelsa_factor', rows);
+      log(`rain forecast log: ${rows.length} station-leads`); } }
     if (D) rainInfo && (rainInfo.corr = { t: D.t, shiftH: D.shiftH, lon0: D.lon0, lat0: D.lat0, step: D.step, nx: D.nx, ny: D.ny, lnf100: D.lnf100, w: CFG.rainBlend, latestH: rcache.latest ? Math.floor(rcache.latest / HOUR) * HOUR - HOUR : null });
   } catch (e) { log(`radar scoring/nowcast failed: ${e.message}`); if (process.env.GITHUB_ACTIONS) console.log(`::warning title=radar::${e.message}`); }
 
@@ -495,7 +503,7 @@ async function main() {
   // 3b'. 2-m temperature downscaled to 0.025° (live forecast only; scripts/t2down.mjs): terrain lapse-rate correction on a 0.025° DEM
   //      plus the Air4Thai stations' residuals kriged (24-h mean kept, latest anomaly faded with lead). The page assembles the field.
   let t2Info = null;
-  if (met) try {
+  if (met && !late('t2 downscaling and weather ML')) try {
     let dem25 = await readJSON(path.join(DATA, 'static', 'elev025.json'), null);
     const key25 = `${CFG.bbox.join(',')}|${T2CFG.demStep}`;
     if (!dem25 || dem25.key !== key25) {
@@ -561,8 +569,10 @@ async function main() {
       for (const s of a4tSt) {
         const z = sampleGrid(demV, s.lat, s.lon) ?? 0, oT = obsAt(s.id, tI - HOUR), fT = prevF.get(String(s.id));
         let obsLast = NaN, obs6 = 0, k6 = 0;
-        if (gcacheG) { const g = await gsmapAt(gcacheG, DATA, s.lat, s.lon, tI - 3 * HOUR); if (g) obsLast = g.fine;
-          for (let te = tI - 7 * HOUR; te <= tI - 2 * HOUR; te += HOUR) { const q = await gsmapAt(gcacheG, DATA, s.lat, s.lon, te - HOUR); if (q) { obs6 += q.fine; k6++; } } }
+        // recent rain as in training (mlwx loadWxObs): the gauge-adjusted radar where it sees the station, GSMaP otherwise
+        { const rd = radarAt(rcache, s.lat, s.lon, tI - 3 * HOUR, RADAR_F0); if (rd != null) obsLast = rd; else if (gcacheG) { const g = await gsmapAt(gcacheG, DATA, s.lat, s.lon, tI - 3 * HOUR); if (g) obsLast = g.fine; }
+          for (let te = tI - 7 * HOUR; te <= tI - 2 * HOUR; te += HOUR) { const r6 = radarAt(rcache, s.lat, s.lon, te - HOUR, RADAR_F0); if (r6 != null) { obs6 += r6; k6++; continue; }
+            if (gcacheG) { const q = await gsmapAt(gcacheG, DATA, s.lat, s.lon, te - HOUR); if (q) { obs6 += q.fine; k6++; } } } }
         for (const L of leads) {
           const tv = tI + L * HOUR, tm = tv - T2CFG.obsOffsetMs, m = sampleMet(met, s.lat, s.lon, tm), mp = sampleMet(met, s.lat, s.lon, tv), d = t2Down(met, demV, r?.file || null, s.lat, s.lon, tm, sampleGrid, tv);
           const prF = mp?.pr != null ? mp.pr * await rainFactor(DATA, s.lat, s.lon, tv) : null;
@@ -928,11 +938,12 @@ async function main() {
   // history: one small new file per run (never rewritten), so git stores each row once
   const iso = new Date(now).toISOString(), ym = iso.slice(0, 7), stamp = iso.slice(0, 13).replace(/[-:]/g, '');
   const hdir = path.join(DATA, 'history', ym);
-  await appendCSV(path.join(hdir, `obs-${stamp}.csv`), 'time_utc,station_id,obs_pm25,cams_raw,cams_plus_inc', obsRows);
+  const newRun = await fs.access(path.join(hdir, `obs-${stamp}.csv`)).then(() => false, () => true);   // a second run in the same hour (backup cron, manual run) must not append the rows again
+  if (newRun) await appendCSV(path.join(hdir, `obs-${stamp}.csv`), 'time_utc,station_id,obs_pm25,cams_raw,cams_plus_inc', obsRows);
   // map: leave-one-out value of the 0.025° analysis at every input site (24-h means at the analysis hour), for the daily evaluation (map vs CAMS)
   const mapRows = [];
   for (const [ver, r] of [['map', rk], ['mapA', rkA]]) if (r && r.cvRows) for (const row of r.cvRows) mapRows.push([iso.slice(0, 13) + ':00Z', new Date(r.t).toISOString().slice(0, 13) + ':00Z', ver, ...row]);
-  await appendCSV(path.join(hdir, `map-${stamp}.csv`), 'run_utc,analysis_utc,version,station_id,monitor,obs24,cams24,map_loo', mapRows);
+  if (newRun) await appendCSV(path.join(hdir, `map-${stamp}.csv`), 'run_utc,analysis_utc,version,station_id,monitor,obs24,cams24,map_loo', mapRows);
   // forecast log: without and with the fire assimilation (corrA, blend24A), so verify.mjs scores both on the same rows
   const fRows = [], stIndex = new Map(stations.map((s, i) => [s.id, i]));
   const m24 = (arr, j) => { if (!arr) return ''; let su = 0, n = 0; for (let q = j - 23; q <= j; q++) { const v = q >= 0 ? arr[q] : null; if (v != null) { su += v; n++; } } return n >= 18 ? r1(su / n) : ''; };

@@ -51,7 +51,7 @@ export async function loadWxDataset(histDir, meta, { from = 0, to = Infinity } =
   for (const r of all) {
     const tV = r._tV, tI = r._tI; if (!(tV >= from && tV < to)) continue;
     const m = meta.get(r.station_id); if (!m) continue;
-    const o = { lead: +r.lead_h, tValid: tV, lat: m.lat, lon: m.lon, elev: n(r.elev_m), t2: n(r.t2_down), t2e: n(r.t2_ecmwf), pr: n(r.pr_fine ?? r.pr_ecmwf) };
+    const o = { lead: +r.lead_h, tValid: tV, lat: m.lat, lon: m.lon, elev: n(r.elev_m), t2: n(r.t2_down), t2e: n(r.t2_ecmwf), pr: isFinite(n(r.pr_fine)) ? n(r.pr_fine) : n(r.pr_ecmwf) };   // '' (missing) must fall back too, not only null
     const oT = T.get(`${r.station_id}|${tI - HOUR}`), fT = fc1.get(`${r.station_id}|${tI - HOUR}`);
     o.oT2 = oT; o.lastErr = oT != null && fT != null ? oT - fT : NaN;
     o.obsLast = R.get(`${r.station_id}|${tI - 2 * HOUR}`); o.obs6 = rain6(R, r.station_id, tI - 2 * HOUR);

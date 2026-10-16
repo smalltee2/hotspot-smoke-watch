@@ -1374,8 +1374,8 @@ function declutterLabels(){ const els=[...map.getContainer().querySelectorAll('.
   els.sort((a,b)=>a.classList.contains('minor')-b.classList.contains('minor'));
   for(const el of els){ el.classList.remove('lbl-x'); const r=el.getBoundingClientRect(); if(!r.width) continue;   // hidden by zoom
     if(kept.some(q=>r.left<q.right+3&&r.right>q.left-3&&r.top<q.bottom+1&&r.bottom>q.top-1)) el.classList.add('lbl-x'); else kept.push(r); } }
-const declutterSoon=()=>requestAnimationFrame(declutterLabels);
-map.on('zoomend',()=>{labelZoom(); declutterSoon();}); map.on('resize',declutterSoon);
+let dcT=0; const declutterSoon=()=>{ clearTimeout(dcT); dcT=setTimeout(declutterLabels,80); };   // after the map has settled: mid-move, every label still sits where the view started
+map.on('zoomend',()=>{labelZoom(); declutterSoon();}); map.on('moveend resize',declutterSoon);
 const TILESETS={
   light:()=>[`https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/${isDark()?'World_Dark_Gray_Base':'World_Light_Gray_Base'}/MapServer/tile/{z}/{y}/{x}`,{maxZoom:16,attribution:'Basemap © Esri, HERE, Garmin, © OpenStreetMap contributors'}],
   street:()=>['https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap contributors'}],

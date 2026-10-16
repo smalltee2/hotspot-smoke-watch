@@ -407,7 +407,7 @@ td.num{text-align:right;font-family:var(--font-data);font-variant-numeric:tabula
     <small class="tagline" data-th="พยากรณ์ PM&lt;sub&gt;2.5&lt;/sub&gt; และสภาพอากาศ ความละเอียดสูง 0.025°">High-resolution (0.025°) PM<sub>2.5</sub> and weather forecast</small>
   </div>
   <div class="status">
-    <span id="modeChip" class="chip">no data</span>
+    <span id="modeChip" class="chip">No data</span>
     <span id="updated" class="note"></span><div id="toast" role="status" aria-live="polite"></div>
     <a class="btn dev-only" href="perf.html" title="Live model performance: scores, charts and maps, updated every 3 hours"><span class="lbl-long" data-th="ผลการประเมินแบบจำลอง">Model performance</span><span class="lbl-short" data-th="ผลประเมิน">Scores</span></a>
     <a class="btn btn-ico public-only" href="dev.html" title="Developer page (sign-in) · หน้าสำหรับผู้พัฒนา (ต้องเข้าสู่ระบบ)" aria-label="Developer page"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></a>
@@ -1539,7 +1539,7 @@ function loadFail(on){ LOADFAIL=on; let el=document.getElementById('mapMsg');
     <p>${T('Check your internet connection, then try again. If it still fails, the hourly update may be late: try again in a few minutes.','ตรวจสอบการเชื่อมต่ออินเทอร์เน็ต แล้วลองอีกครั้ง หากยังไม่ได้ ข้อมูลรายชั่วโมงอาจมาช้า ลองใหม่อีกครั้งในไม่กี่นาที')}</p>
     <button type="button" class="btn primary">${T('Try again','ลองอีกครั้ง')}</button>`;
   el.querySelector('button').onclick=()=>refreshClick(); }
-function setMode(m){S.mode=m;if(m==='live'&&P.data){showFreshness();return;}const c=$('modeChip');c.className='chip '+m;c.textContent={live:T('Live data','ข้อมูลล่าสุด'),demo:T('Demo · synthetic','ข้อมูลจำลอง'),file:T('Uploaded file','ไฟล์ที่อัปโหลด')}[m];
+function setMode(m){S.mode=m;if(m==='live'&&P.data){showFreshness();return;}const c=$('modeChip');c.className='chip '+m;c.textContent={live:T('Live data','ข้อมูลล่าสุด'),demo:T('Demo data','ข้อมูลจำลอง'),file:T('Uploaded file','ไฟล์ที่อัปโหลด')}[m];
   $('updated').textContent=T('Run ','รัน ')+hm(Date.now());}
 
 // ---- data fetching
@@ -3489,9 +3489,9 @@ function renderLegend(){
     : ({ug:'PM₂.₅ hourly, µg/m³',ug24:'PM₂.₅ 24-h mean, µg/m³',th:'Thai AQI from the 24-h mean (PCD 2023)',us:'US AQI from the 24-h mean (EPA 2024)'})[u]+
     ' · bands follow the Thai PCD thresholds (15 / 25 / 37.5 / 75); warm colours from the 37.5 standard; black above 300'+(PUBLIC?' · ':' · CAMS + monitors + low-cost sensors + terrain, 0.025°. ')+'24-h values are the mean of the 24 hours ending at the slider time. Dashed box: forecast area.';
 }
-applyStaticLang(); if(!S.mode) $('modeChip').textContent=T('no data','ไม่มีข้อมูล');
+applyStaticLang(); if(!S.mode) $('modeChip').textContent=T('No data','ไม่มีข้อมูล');
 $('btnLang').onclick=()=>{ LANG=LANG==='th'?'en':'th'; store.set('hsw.lang',LANG); applyStaticLang(); initLegToggle.relabel?.(); initSideToggle.relabel?.(); refreshClickInfo();
-  {const lb=document.querySelector('.locate-btn'); if(lb){lb.title=T('Show PM2.5 at my location','ดูค่าฝุ่นที่ตำแหน่งของฉัน'); lb.setAttribute('aria-label',lb.title);}} if(S.mode) setMode(S.mode); else $('modeChip').textContent=T('no data','ไม่มีข้อมูล');
+  {const lb=document.querySelector('.locate-btn'); if(lb){lb.title=T('Show PM2.5 at my location','ดูค่าฝุ่นที่ตำแหน่งของฉัน'); lb.setAttribute('aria-label',lb.title);}} if(S.mode) setMode(S.mode); else $('modeChip').textContent=T('No data','ไม่มีข้อมูล');
   renderLegend(); renderAll(); renderHereBox(); if(LOCPOP) renderLocPop(); drawStations?.(); redrawTime();
   if(BANNER) banner(BANNER.f,BANNER.cls); if(LOADFAIL) loadFail(true); };
 {const v=store.get('hsw.unitSel'); if(v) $('unitSel').value=v;}

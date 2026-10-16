@@ -6,7 +6,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>SEA-HAF · Southeast Asia Hybrid Air-quality Forecast</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@500;600;700;800&family=IBM+Plex+Sans+Thai:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anuphan:wght@500;600;700&family=IBM+Plex+Sans+Thai+Looped:wght@400;500;600&display=swap">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
 <script>window.L||document.write('<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"><\/script>')</script>
 <style>
@@ -63,12 +63,15 @@
   --glass-border: 1px solid rgba(226, 232, 240, 0.75);
 
   /* Typography */
-  /* English: Inter (text) and Plus Jakarta Sans (headings); Thai: IBM Plex Sans Thai (looped); numbers and times: IBM Plex Mono.
-     Every stack names the Thai font, so Thai inside headings and number boxes does not fall back to the system font. */
-  --font-thai: "IBM Plex Sans Thai";
-  --font-display: "Plus Jakarta Sans", var(--font-thai), "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  --font-body: "Inter", var(--font-thai), -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  --font-data: "IBM Plex Mono", var(--font-thai), "SF Mono", Menlo, Consolas, monospace;
+  /* Thai first, set the way Thai print is: loopless Thai for display, looped Thai for text. Anuphan (Cadson Demak) for headings
+     and the answer for your place; IBM Plex Sans Thai Looped for everything else, numbers included (its digits are tabular by
+     default, so no monospace face). Both carry their own Latin. Hierarchy comes from face, weight, size and colour, never
+     capitals, so it holds in Thai. Scale (px at 16 px root): 12 13 14 15 17 20 28; nothing smaller than 12. */
+  --font-thai: "IBM Plex Sans Thai Looped";
+  --font-display: "Anuphan", var(--font-thai), -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-body: var(--font-thai), -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-data: var(--font-body);
+  --fs-xs: 0.75rem; --fs-sm: 0.8125rem; --fs-md: 0.875rem; --fs-base: 0.9375rem; --fs-h: 1.0625rem; --fs-lg: 1.25rem; --fs-xl: 1.75rem;
   
   /* Radii */
   --radius-sm: 6px;
@@ -176,7 +179,7 @@ body {
   min-height: 100dvh;
   background: var(--bg);
   color: var(--fg);
-  font: 400 13.5px/1.5 var(--font-body);
+  font: 400 var(--fs-base)/1.6 var(--font-body);
   display: flex;
   flex-direction: column;
   -webkit-font-smoothing: antialiased;
@@ -223,7 +226,7 @@ header {
 }
 .brand small {
   color: var(--muted);
-  font-size: 0.78rem;
+  font-size: var(--fs-sm);
   font-weight: 400;
   letter-spacing: -0.01em;
   padding-left: 8px;
@@ -236,10 +239,8 @@ header {
   align-items: center;
 }
 .chip {
-  font: 500 0.72rem/1 var(--font-data);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  padding: 5px 11px;
+  font: 500 var(--fs-sm)/1.2 var(--font-body);
+  padding: 4px 11px;
   border-radius: var(--radius-pill);
   border: 1px solid var(--line);
   background: var(--panel);
@@ -282,7 +283,7 @@ header {
   color: var(--aq4);
   background: rgba(249, 115, 22, 0.08);
 }
-.note { color: var(--muted); font-size: 0.8rem; line-height: 1.45; }
+.note { color: var(--muted); font-size: var(--fs-md); line-height: 1.45; }
 
 /* Buttons */
 .btn {
@@ -292,7 +293,7 @@ header {
   padding: 6px 14px;
   border-radius: var(--radius-pill);
   font-weight: 500;
-  font-size: 0.82rem;
+  font-size: var(--fs-md);
   cursor: pointer;
   display: inline-flex;
   align-items: center;
@@ -325,7 +326,7 @@ a.btn { color: inherit; text-decoration: none; display: inline-flex; }
 .btn-ico:hover, .btn-ico:focus-visible { opacity: 1; }
 #btnLang {
   padding: 5px 12px;
-  font-size: 0.78rem;
+  font-size: var(--fs-sm);
   font-weight: 600;
 }
 .lbl-short { display: none; }
@@ -367,12 +368,12 @@ html:not([data-mode=public]) .public-only { display: none !important; }
   gap: 5px;
 }
 .summary b {
-  font: 600 0.88rem/1.3 var(--font-body);
+  font: 600 var(--fs-base)/1.3 var(--font-body);
   color: var(--fg);
   font-variant-numeric: tabular-nums;
 }
 .summary span {
-  font: 400 0.8rem/1.3 var(--font-body);
+  font: 400 var(--fs-md)/1.3 var(--font-body);
   color: var(--muted);
 }
 
@@ -395,7 +396,7 @@ html:not([data-mode=public]) .public-only { display: none !important; }
   border: none;
   border-radius: var(--radius-sm);
   padding: 7px 6px;
-  font: 500 0.8rem/1.2 var(--font-body);
+  font: 500 var(--fs-md)/1.2 var(--font-body);
   color: var(--muted);
   cursor: pointer;
   transition: all 0.15s ease;
@@ -420,11 +421,9 @@ html:not([data-mode=public]) .public-only { display: none !important; }
   min-height: 0;
 }
 .pane h3 {
-  font: 600 0.75rem/1.2 var(--font-display);
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--muted);
-  margin: 18px 0 10px;
+  font: 600 var(--fs-h)/1.35 var(--font-display);
+  color: var(--fg);
+  margin: 22px 0 8px;
 }
 .pane h3:first-child { margin-top: 4px; }
 
@@ -436,7 +435,7 @@ html:not([data-mode=public]) .public-only { display: none !important; }
   background: var(--ink-soft);
   color: var(--fg);
   padding: 10px 14px;
-  font-size: 0.84rem;
+  font-size: var(--fs-md);
   margin-bottom: 12px;
   line-height: 1.45;
 }
@@ -474,12 +473,12 @@ html:not([data-mode=public]) .public-only { display: none !important; }
 }
 .alert .name {
   font-weight: 600;
-  font-size: 0.88rem;
+  font-size: var(--fs-base);
   color: var(--fg);
   transition: color 0.15s;
 }
 .alert .sub {
-  font-size: 0.76rem;
+  font-size: var(--fs-sm);
   color: var(--muted);
   margin-top: 2px;
 }
@@ -493,7 +492,7 @@ html:not([data-mode=public]) .public-only { display: none !important; }
 }
 .alert .val small {
   display: block;
-  font-size: 0.7rem;
+  font-size: var(--fs-sm);
   color: var(--muted);
   font-weight: 400;
 }
@@ -505,25 +504,21 @@ html:not([data-mode=public]) .public-only { display: none !important; }
   margin: 4px 0 8px;
 }
 .wview label {
-  font: 600 0.75rem var(--font-display);
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
+  font: 500 var(--fs-md) var(--font-body);
   color: var(--muted);
 }
 .wview select {
   flex: 1 1 200px;
   max-width: 380px;
-  font-size: 0.88rem;
+  font-size: var(--fs-base);
   padding: 7px 10px;
 }
 .pill {
   display: inline-block;
-  font: 600 0.65rem/1 var(--font-data);
-  padding: 3px 7px;
+  font: 600 var(--fs-xs)/1.25 var(--font-body);
+  padding: 2px 8px;
   border-radius: var(--radius-pill);
   color: #fff;
-  letter-spacing: 0.03em;
-  text-transform: uppercase;
   vertical-align: 1px;
 }
 
@@ -539,7 +534,7 @@ html:not([data-mode=public]) .public-only { display: none !important; }
 table {
   border-collapse: collapse;
   width: 100%;
-  font-size: 0.8rem;
+  font-size: var(--fs-md);
 }
 th, td {
   text-align: left;
@@ -550,11 +545,9 @@ th, td {
 tr:last-child td { border-bottom: none; }
 th {
   background: var(--sub-panel);
-  font-weight: 600;
+  font-weight: 500;
   color: var(--muted);
-  font-size: 0.68rem;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
+  font-size: var(--fs-sm);
 }
 td.num {
   text-align: right;
@@ -575,7 +568,7 @@ tbody tr:hover {
   margin-bottom: 12px;
 }
 .field label {
-  font-size: 0.8rem;
+  font-size: var(--fs-md);
   font-weight: 500;
   color: var(--fg);
 }
@@ -589,7 +582,7 @@ tbody tr:hover {
   border-radius: var(--radius-sm);
   background: var(--panel);
   color: var(--fg);
-  font-size: 0.84rem;
+  font-size: var(--fs-md);
   transition: border-color 0.15s, box-shadow 0.15s;
 }
 .field input:focus, .field select:focus {
@@ -607,7 +600,7 @@ tbody tr:hover {
   display: flex;
   gap: 8px 16px;
   flex-wrap: wrap;
-  font-size: 0.82rem;
+  font-size: var(--fs-md);
 }
 .checks label {
   display: inline-flex;
@@ -622,7 +615,7 @@ tbody tr:hover {
 
 /* Method & Equations */
 .method p, .method li { max-width: 65ch; line-height: 1.6; }
-.method code, .eq { font-family: var(--font-data); font-size: 0.8rem; }
+.method code, .eq { font-family: var(--font-data); font-size: var(--fs-md); }
 .eq {
   display: block;
   background: var(--sub-panel);
@@ -634,7 +627,7 @@ tbody tr:hover {
   white-space: nowrap;
 }
 .method ol { padding-left: 20px; }
-.method li { margin-bottom: 8px; font-size: 0.84rem; }
+.method li { margin-bottom: 8px; font-size: var(--fs-md); }
 
 /* Location Card (#hereBox) */
 .herebox {
@@ -650,10 +643,8 @@ tbody tr:hover {
   margin-bottom: 6px;
 }
 .herebox .hhead strong {
-  font: 600 0.75rem/1.2 var(--font-display);
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--muted);
+  font: 600 var(--fs-h)/1.35 var(--font-display);
+  color: var(--fg);
 }
 .herebox .x {
   border: none;
@@ -666,14 +657,13 @@ tbody tr:hover {
   border-radius: 4px;
 }
 .herebox .x:hover { color: var(--fg); background: var(--panel-hover); }
-.here { font-size: 12.5px; overflow-wrap: anywhere; }
+.here { font-size: var(--fs-md); overflow-wrap: anywhere; }
 .here .big {
-  font: 700 1.6rem/1.1 var(--font-data);
+  font: 700 var(--fs-xl)/1.1 var(--font-display);
   font-variant-numeric: tabular-nums;
   margin: 4px 0 6px;
-  letter-spacing: -0.02em;
 }
-.here table { font-size: 11.5px; width: 100%; table-layout: fixed; margin-top: 8px; }
+.here table { font-size: var(--fs-sm); width: 100%; table-layout: fixed; margin-top: 8px; }
 .here th { width: 38%; vertical-align: top; color: var(--muted); }
 .here td, .here th { padding: 4px 6px; white-space: normal; text-align: left; }
 .here .pill { white-space: nowrap; }
@@ -686,10 +676,10 @@ tbody tr:hover {
 
 /* Trend Chips */
 .trend .chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0 4px; }
-.trend .chip { text-transform: none; border: 1px solid var(--line); padding: 4px 8px; font: 500 0.72rem/1.3 var(--font-data); min-width: 64px; border-radius: var(--radius-sm); }
+.trend .chip { text-transform: none; border: 1px solid var(--line); padding: 4px 8px; font: 500 var(--fs-sm)/1.3 var(--font-data); min-width: 64px; border-radius: var(--radius-sm); }
 .trend .chip b { display: block; font-weight: 600; }
 .trend select { max-width: 100%; margin: 2px 0 6px; }
-.trend .tw { font: 600 0.8rem/1.3 var(--font-data); text-transform: none; }
+.trend .tw { font: 600 var(--fs-md)/1.3 var(--font-data); text-transform: none; }
 .trend .sw { display: inline-block; width: 10px; height: 10px; margin-left: 6px; vertical-align: -1px; }
 .trend table tr { cursor: pointer; }
 
@@ -698,8 +688,8 @@ tbody tr:hover {
 /* the forecast could not be loaded (page code: loadFail): said over the map, where phones see it too, with one way forward */
 .mapmsg { position: absolute; left: 50%; top: 40%; transform: translate(-50%, -50%); z-index: 1100; width: min(360px, calc(100% - 32px));
   background: var(--panel); border: 1px solid var(--line-strong); border-left: 3px solid var(--ink); border-radius: var(--radius-md);
-  box-shadow: var(--shadow-lg); padding: 16px 18px; font-size: 0.9rem; line-height: 1.5; color: var(--fg); }
-.mapmsg b { display: block; font: 600 1.02rem/1.35 var(--font-display); margin-bottom: 4px; }
+  box-shadow: var(--shadow-lg); padding: 16px 18px; font-size: var(--fs-base); line-height: 1.5; color: var(--fg); }
+.mapmsg b { display: block; font: 600 var(--fs-h)/1.35 var(--font-display); margin-bottom: 4px; }
 .mapmsg p { margin: 0 0 12px; color: var(--muted); }
 #map { position: absolute; inset: 0; background: var(--bg); }
 
@@ -758,13 +748,13 @@ tbody tr:hover {
   outline: none;
 }
 .scrub .t {
-  font: 600 0.82rem/1.2 var(--font-data);
+  font: 600 var(--fs-md)/1.2 var(--font-data);
   font-variant-numeric: tabular-nums;
   text-align: right;
   min-width: 9.5em;
   color: var(--fg);
 }
-.scrub .t small { display: block; color: var(--muted); font-size: 0.7rem; font-weight: 400; }
+.scrub .t small { display: block; color: var(--muted); font-size: var(--fs-sm); font-weight: 400; }
 
 /* Floating Glassmorphic Legend & Layer Picker */
 .legend {
@@ -778,21 +768,21 @@ tbody tr:hover {
   border: var(--glass-border);
   border-radius: var(--radius-lg);
   padding: 12px 14px;
-  font-size: 0.74rem;
+  font-size: var(--fs-sm);
   max-width: 220px;
   box-shadow: var(--shadow-lg);
 }
 .legend summary {
   cursor: pointer;
   font-weight: 600;
-  font-size: 0.76rem;
+  font-size: var(--fs-sm);
   list-style: none;
   display: flex;
   align-items: center;
   justify-content: space-between;
 }
 .legend summary::-webkit-details-marker { display: none; }
-.legend summary::after { content: "▾"; color: var(--muted); font-size: 0.85rem; }
+.legend summary::after { content: "▾"; color: var(--muted); font-size: var(--fs-md); }
 .legend details:not([open]) summary::after { content: "▸"; }
 .legend .bar {
   height: 8px;
@@ -804,7 +794,7 @@ tbody tr:hover {
   display: flex;
   justify-content: space-between;
   font-family: var(--font-data);
-  font-size: 0.68rem;
+  font-size: var(--fs-xs);
   color: var(--muted);
 }
 .legend .keys { display: grid; gap: 5px; margin-top: 8px; }
@@ -818,10 +808,8 @@ tbody tr:hover {
   border-top: 1px solid var(--line);
 }
 .showpick strong {
-  font-size: 0.7rem;
-  color: var(--muted);
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
+  font-size: var(--fs-md);
+  color: var(--fg);
   margin-bottom: 2px;
 }
 .showpick label {
@@ -843,7 +831,7 @@ tbody tr:hover {
   z-index: 500;
 }
 .basemap-switch select {
-  font-size: 0.76rem;
+  font-size: var(--fs-sm);
   font-weight: 500;
   padding: 6px 14px;
   border-radius: var(--radius-pill);
@@ -891,7 +879,7 @@ tbody tr:hover {
   border-radius: var(--radius-pill);
   background: var(--fg);
   color: var(--bg);
-  font-size: 0.84rem;
+  font-size: var(--fs-md);
   font-weight: 500;
   line-height: 1.35;
   box-shadow: var(--shadow-lg);
@@ -1049,7 +1037,7 @@ tbody tr:hover {
 .leaflet-container a.leaflet-popup-close-button{position:absolute;top:0;right:0;border:none;text-align:center;width:24px;height:24px;font:16px/24px Tahoma,Verdana,sans-serif;color:var(--muted);text-decoration:none;background:transparent}
 .leaflet-tooltip{position:absolute;padding:3px 6px;background:var(--panel);color:var(--fg);border:1px solid var(--line);border-radius:3px;white-space:nowrap;pointer-events:none;font-size:11px;box-shadow:0 1px 3px rgba(0,0,0,.25)}
 .leaflet-tooltip-top:before,.leaflet-tooltip-bottom:before,.leaflet-tooltip-left:before,.leaflet-tooltip-right:before{display:none}
-#btnLang{padding:4px 9px;font-size:.78rem;min-width:0}
+#btnLang{padding:4px 9px;font-size:var(--fs-sm);min-width:0}
 
 
 /* ---- Page parts the redesign had not styled (ported from index.html) ---- */
@@ -1059,27 +1047,27 @@ tbody tr:hover {
 .alert.c2{grid-template-columns:8px minmax(0,1fr) 172px}
 .fc2{display:grid;grid-template-columns:1fr 1fr;gap:6px;align-self:center}
 .fc2 .d{border:1px solid var(--line);border-radius:6px;padding:4px 6px 5px;text-align:center;min-width:0;background:var(--bg);overflow:hidden}
-.fc2 .d .h{display:block;font-size:.62rem;color:var(--muted);white-space:nowrap}
+.fc2 .d .h{display:block;font-size:var(--fs-xs);color:var(--muted);white-space:nowrap}
 .fc2 .d .ic{display:flex;justify-content:center;gap:2px;margin:2px 0 1px}
 .fc2 .d .ic svg{width:24px;height:24px;display:block}
 .fc2 .d b{display:block;font:600 1rem/1.15 var(--font-data);font-variant-numeric:tabular-nums}
 .fc2 .d i.bar{display:block;height:4px;border-radius:2px;margin:2px 0 3px}
-.fc2 .d .w{display:block;font-size:.62rem;color:var(--muted);line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fc2 .d .w{display:block;font-size:var(--fs-xs);color:var(--muted);line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 @media (max-width:420px){
   .alert.c2{grid-template-columns:6px minmax(0,1fr) 142px;gap:8px}
   .fc2{gap:4px}
   .fc2 .d{padding:3px 4px 4px}
-  .fc2 .d b{font-size:.9rem}
+  .fc2 .d b{font-size:var(--fs-base)}
 }
 .slwrap{min-width:0;display:flex;flex-direction:column;gap:3px}
 .slwrap input{margin:0}
 .daybar{position:relative;height:22px;margin:0 8px;border-radius:4px;overflow:hidden;background:var(--bg);border:1px solid var(--line);display:flex}
-.daybar button{position:relative;flex:none;border:0;border-left:1px solid var(--line);background:transparent;font:500 .7rem/20px var(--font-body);color:var(--muted);padding:0 2px;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:clip;min-width:0}
+.daybar button{position:relative;flex:none;border:0;border-left:1px solid var(--line);background:transparent;font:500 var(--fs-sm)/20px var(--font-body);color:var(--muted);padding:0 2px;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:clip;min-width:0}
 .daybar button:first-child{border-left:0}
 .daybar button.on{color:var(--fg);font-weight:700;background:var(--ink-soft)}
 .daybar .past{position:absolute;left:0;top:0;bottom:0;background:color-mix(in srgb,var(--muted) 18%,transparent);pointer-events:none}
 .daybar button span{position:relative}
-.tlg{display:flex;flex-wrap:wrap;gap:3px 12px;font-size:.7rem;color:var(--muted);margin:3px 0 6px}
+.tlg{display:flex;flex-wrap:wrap;gap:3px 12px;font-size:var(--fs-sm);color:var(--muted);margin:3px 0 6px}
 .tlg span{display:inline-flex;align-items:center;gap:5px}
 .tlg i{display:inline-block;width:16px;height:2px;border-radius:1px}
 .tlg i.band{height:9px;background:var(--ember);opacity:.18}
@@ -1088,52 +1076,52 @@ tbody tr:hover {
 .trend .chip .ci{display:flex;flex-direction:column;gap:2px}
 .trend .chip .ci svg{width:34px;height:34px;display:block}
 .trend .chip .ct{min-width:0}
-.trend .chip .cwx{display:block;margin-top:3px;color:var(--muted);font-weight:500;font-size:.68rem}
-.trend .wxhead{font:600 .72rem/1.3 var(--font-data);margin:8px 0 2px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.trend .chip .cwx{display:block;margin-top:3px;color:var(--muted);font-weight:500;font-size:var(--fs-xs)}
+.trend .wxhead{font:600 var(--fs-sm)/1.35 var(--font-body);margin:8px 0 2px;color:var(--muted)}
 .locpop{position:fixed;inset:0;z-index:3000;display:flex;align-items:center;justify-content:center;background:rgba(10,14,12,.5);padding:12px}
 .locpop[hidden]{display:none}
-.sumplain{font-size:.92rem;line-height:1.6;margin:0 0 8px}
+.sumplain{font-size:var(--fs-base);line-height:1.6;margin:0 0 8px}
 .sumdet{margin:6px 0 4px}
-.sumdet>summary{cursor:pointer;font-size:.78rem;color:var(--muted);margin:0 0 6px}
+.sumdet>summary{cursor:pointer;font-size:var(--fs-sm);color:var(--muted);margin:0 0 6px}
 .sumdet>summary:hover{color:var(--fg)}
 .sumcard .sumwhy{background:var(--bg);border-left:3px solid var(--ink);padding:6px 9px;border-radius:4px;margin:4px 0 6px!important}
-.lpsum p{margin:0 0 7px;font-size:.84rem;line-height:1.55}
+.lpsum p{margin:0 0 7px;font-size:var(--fs-md);line-height:1.55}
 .lpsum p b{font-weight:600}
 .vent-poor{color:#b03a7a;font-weight:600}.vent-mod{color:#c77a2a;font-weight:600}.vent-good{color:#2f8f5b;font-weight:600}
 .radarleg{margin:2px 0 6px;min-width:0;max-width:100%;overflow:hidden}
 .radarleg .pcdbar,.radarleg .ticks{width:100%;box-sizing:border-box}
 .radarctl{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:4px 0 3px;min-width:0}
-.radarctl .btn{padding:2px 9px;font-size:.72rem;line-height:1.4;flex:none}
+.radarctl .btn{padding:2px 9px;font-size:var(--fs-sm);line-height:1.4;flex:none}
 .radarctl input[type=range]{flex:1 1 80px;width:0;min-width:0}
-.radarctl .note{font-size:.68rem;flex:1 0 100%}
+.radarctl .note{font-size:var(--fs-xs);flex:1 0 100%}
 .btn-sum{display:inline-flex;align-items:center;gap:6px}
 .btn-sum svg,.sum-cta svg{flex:none}
 .sum-cta{margin:4px 0 12px}
 .sum-cta .btn{display:inline-flex;align-items:center;gap:7px;width:100%;justify-content:center;text-align:left}
-.sumcard .sumctl{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:10px 0 4px;font-size:.8rem}
+.sumcard .sumctl{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:10px 0 4px;font-size:var(--fs-md)}
 .sumcard .sumctl select{font:inherit;max-width:100%}
 .sumcard .sumbody{margin-top:6px}
 .sumcard .sumsec{border-top:1px solid var(--line);padding:10px 0 4px}
-.sumcard .sumsec h3{margin:0 0 4px;font-size:.92rem;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-.sumcard .sumsec h3 .pill{font-size:.68rem}
-.sumcard .sumsec p{margin:0 0 6px;font-size:.86rem;line-height:1.55}
-.sumcard .sumov{font-size:.9rem;line-height:1.55;margin:4px 0 10px}
-.sumcard .sumfoot{font-size:.7rem;color:var(--muted);line-height:1.45;margin:8px 0 0}
+.sumcard .sumsec h3{margin:0 0 4px;font-size:var(--fs-base);display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.sumcard .sumsec h3 .pill{font-size:var(--fs-xs)}
+.sumcard .sumsec p{margin:0 0 6px;font-size:var(--fs-md);line-height:1.55}
+.sumcard .sumov{font-size:var(--fs-base);line-height:1.55;margin:4px 0 10px}
+.sumcard .sumfoot{font-size:var(--fs-sm);color:var(--muted);line-height:1.45;margin:8px 0 0}
 .sumcard .sumbtns{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;margin-top:10px}
 .locpop .lpcard{background:var(--panel);color:var(--fg);border-radius:10px;width:100%;max-width:600px;max-height:calc(100dvh - 24px);overflow:auto;box-shadow:0 10px 40px rgba(0,0,0,.35);padding:14px 16px 12px;font-size:13px}
 .lphead{display:flex;align-items:flex-start;justify-content:space-between;gap:8px}
-.lphead h2{margin:0;font:600 1.02rem/1.25 var(--font-display);letter-spacing:.02em}
+.lphead h2{margin:0;font:600 var(--fs-lg)/1.3 var(--font-display)}
 .lphead .x{border:0;background:none;font-size:1.5rem;line-height:1;cursor:pointer;color:var(--muted);padding:0 4px}
 .lphero{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0 0}
 .lphero>div{display:flex;align-items:center;gap:10px;border:1px solid var(--line);border-radius:9px;padding:10px 12px;background:var(--bg);min-width:0}
 .lphero svg{flex:0 0 auto;width:58px;height:58px}
-.lphero .hv{font:600 1.45rem/1.1 var(--font-data);font-variant-numeric:tabular-nums}
-.lphero .hl{font-weight:600;font-size:.86rem;line-height:1.25;overflow-wrap:anywhere}
-.lphero .obs,.lphero .mod{display:inline-block;font-size:.62rem;padding:0 5px;border-radius:8px;margin-left:3px;vertical-align:1px}
+.lphero .hv{font:700 var(--fs-xl)/1.1 var(--font-display);font-variant-numeric:tabular-nums}
+.lphero .hl{font-weight:600;font-size:var(--fs-md);line-height:1.25;overflow-wrap:anywhere}
+.lphero .obs,.lphero .mod{display:inline-block;font-size:var(--fs-xs);padding:0 5px;border-radius:8px;margin-left:3px;vertical-align:1px}
 .lphero .obs{background:#d9efe2;color:#1f6a43}
 .lphero .mod{background:var(--line);color:var(--muted)}
-.lpnow .src{font-size:.66rem;margin-top:2px;opacity:.85}
-.lphero .hs{font-size:.72rem;color:var(--muted);line-height:1.3;overflow-wrap:anywhere}
+.lpnow .src{font-size:var(--fs-xs);margin-top:2px;opacity:.85}
+.lphero .hs{font-size:var(--fs-sm);color:var(--muted);line-height:1.3;overflow-wrap:anywhere}
 @media (max-width:520px){
   .lphero>div{flex-direction:column;align-items:flex-start;gap:4px;padding:8px 10px}
   .lphero svg{width:46px;height:46px}
@@ -1142,21 +1130,21 @@ tbody tr:hover {
 .lpnow{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:10px 0 4px}
 .lpnow>div{border:1px solid var(--line);border-radius:7px;padding:7px 9px;background:var(--bg);min-width:0}
 .lpnow b{display:block;font:600 1.2rem/1.15 var(--font-data);font-variant-numeric:tabular-nums}
-.lpnow span{display:block;font-size:.72rem;color:var(--muted);overflow-wrap:anywhere}
+.lpnow span{display:block;font-size:var(--fs-sm);color:var(--muted);overflow-wrap:anywhere}
 .lpnow .pm{grid-column:span 3;display:flex;flex-wrap:wrap;align-items:center;gap:4px 12px}
 .lpnow .pm b{font-size:1.7rem}
-.lpsec{margin:12px 0 4px;font:600 .74rem/1.2 var(--font-display);text-transform:uppercase;letter-spacing:.09em;color:var(--muted)}
+.lpsec{margin:14px 0 4px;font:600 var(--fs-h)/1.35 var(--font-display);color:var(--muted)}
 .lpfc{overflow-x:auto}
-.lpfc table{width:100%;border-collapse:collapse;font:12px var(--font-data);font-variant-numeric:tabular-nums}
+.lpfc table{width:100%;border-collapse:collapse;font:var(--fs-sm) var(--font-data);font-variant-numeric:tabular-nums}
 .lpfc th,.lpfc td{padding:4px 6px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
 .lpfc th:first-child,.lpfc td:first-child{text-align:left}
-.lpfc th{font:500 .7rem var(--font-body,inherit);color:var(--muted)}
+.lpfc th{font:500 var(--fs-sm) var(--font-body,inherit);color:var(--muted)}
 .lpfc .warr{display:inline-block;font-style:normal;font-weight:700;color:var(--focus)}
 .lpfc td b{font-weight:600}
 .lpfc .dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:5px;vertical-align:-1px;border:1px solid rgba(0,0,0,.2)}
 .lpfc tr.nd td{border-top:2px solid var(--line)}
 .lpfoot{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;margin-top:10px}
-.lpfoot label{font-size:.75rem;color:var(--muted);display:flex;align-items:center;gap:6px}
+.lpfoot label{font-size:var(--fs-sm);color:var(--muted);display:flex;align-items:center;gap:6px}
 .lpfoot .btns{display:flex;gap:8px}
 @media (max-width:520px){
   .locpop{padding:0;align-items:flex-end}
@@ -1165,16 +1153,16 @@ tbody tr:hover {
   .lpnow .pm{grid-column:span 2}
   .lpfc th,.lpfc td{padding:4px 4px}
 }
-.nasatip{position:absolute;z-index:650;pointer-events:none;background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:6px 8px;font-size:.72rem;max-width:250px;box-shadow:0 2px 10px rgb(0 0 0 / .2)}
-.nasatip b.k{display:block;font-size:.85rem;margin-bottom:2px}
+.nasatip{position:absolute;z-index:650;pointer-events:none;background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:6px 8px;font-size:var(--fs-sm);max-width:250px;box-shadow:0 2px 10px rgb(0 0 0 / .2)}
+.nasatip b.k{display:block;font-size:var(--fs-md);margin-bottom:2px}
 .nasatip ul,.nasaarea ul{margin:2px 0 0;padding-left:14px}
 .nasatip li,.nasaarea li{margin:1px 0}
-.nasaarea{margin-top:6px;font-size:.7rem}
+.nasaarea{margin-top:6px;font-size:var(--fs-sm)}
 .nasaarea .bar{display:flex;height:10px;border-radius:3px;overflow:hidden;margin:4px 0}
 .nasaarea .bar i{display:block;height:100%}
 .nasaarea .row{display:flex;justify-content:space-between;gap:6px}
 .mapwrap.cropping #map{cursor:crosshair}
-.gibsdate{display:block;margin-top:4px;font:500 .68rem var(--font-data);background:var(--panel);border:1px solid var(--line);border-radius:4px;padding:2px 6px;box-shadow:0 1px 4px rgb(0 0 0 / .15);width:max-content;max-width:60vw}
+.gibsdate{display:block;margin-top:4px;font:500 var(--fs-xs) var(--font-data);background:var(--panel);border:1px solid var(--line);border-radius:4px;padding:2px 6px;box-shadow:0 1px 4px rgb(0 0 0 / .15);width:max-content;max-width:60vw}
 
 /* ---- Redesign fit-ups ---- */
 /* warning cards: two-day forecast boxes with small weather icons */
@@ -1186,17 +1174,17 @@ tbody tr:hover {
 .scrub{align-items:center}
 .slwrap{gap:6px}
 .daybar{margin:0;height:24px;border-radius:var(--radius-pill,999px);background:var(--panel-hover,var(--bg))}
-.daybar button{font:500 .7rem/22px var(--font-body);padding:0 4px;text-overflow:ellipsis;transition:background .15s,color .15s}
+.daybar button{font:500 var(--fs-sm)/22px var(--font-body);padding:0 4px;text-overflow:ellipsis;transition:background .15s,color .15s}
 .daybar button:hover{color:var(--fg)}
 .daybar button.on{color:var(--ink);background:var(--ink-soft)}
 /* layer panel: scrolls instead of running under the floating time bar (bar height measured into --scrubH) */
 .legend{max-height:calc(100% - 16px - var(--scrubH,58px) - 24px - 12px);overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin}
 .legend summary{position:sticky;top:-12px;z-index:1;background:inherit;padding:2px 0}
 @media (max-width:860px){
-  .legend{top:8px;right:8px;max-width:min(200px,calc(100vw - 120px));padding:8px 10px;font-size:.68rem;max-height:calc(100% - 8px - var(--scrubH,52px) - 14px - 12px)}
+  .legend{top:8px;right:8px;max-width:min(200px,calc(100vw - 120px));padding:8px 10px;font-size:var(--fs-xs);max-height:calc(100% - 8px - var(--scrubH,52px) - 14px - 12px)}
   .legend .keys{display:none}
   .scrub{gap:8px;padding:6px 10px;border-radius:18px}
-  .scrub .t{min-width:6.8em;font-size:.7rem}
+  .scrub .t{min-width:6.8em;font-size:var(--fs-sm)}
   #btnPlay{width:32px;height:32px}
   /* phone: the page scrolls (panel, then map) instead of squeezing both into one screen */
   html,body{height:auto}
@@ -1209,15 +1197,15 @@ tbody tr:hover {
   .brand{flex:1 0 auto}
   .brand small{display:none}
   .status{margin-left:auto;flex-wrap:wrap;justify-content:flex-end;gap:6px}
-  .status .chip{font-size:.62rem;padding:4px 8px;letter-spacing:.02em}
+  .status .chip{font-size:var(--fs-xs);padding:4px 8px}
   .status .btn,.status button{white-space:nowrap}
   .basemap-switch{left:52px;top:8px}
-  .basemap-switch select{max-width:116px;font-size:.72rem}
+  .basemap-switch select{max-width:116px;font-size:var(--fs-sm)}
   .daybar{height:22px}
-  .daybar button{font-size:.62rem;line-height:20px;padding:0 2px}
+  .daybar button{font-size:var(--fs-xs);line-height:20px;padding:0 2px}
 }
 /* ---- Type ---- */
-body{font-feature-settings:"ss01";text-rendering:optimizeLegibility}   /* Inter open digits: 3, 4, 6, 9 easier to tell apart at small sizes */
+body{text-rendering:optimizeLegibility}
 :lang(th) body,html[lang=th] body{line-height:1.6}
 .summary b,.alert .val,.fc2 .d b,.lpnow b,.lphero .hv,.scrub .t,.lpfc table,.daybar button{font-variant-numeric:tabular-nums}
 
@@ -1237,33 +1225,33 @@ body{font-feature-settings:"ss01";text-rendering:optimizeLegibility}   /* Inter 
 .cp-x{position:absolute;top:-6px;right:-6px;width:28px;height:28px;border:0;border-radius:50%;background:transparent;color:var(--muted);font-size:1.3rem;line-height:1;cursor:pointer}
 .cp-x:hover{background:var(--panel-hover);color:var(--fg)}
 .cp-h{display:flex;flex-direction:column;gap:1px;margin:0 22px 8px 0}
-.cp-h b{font:700 .98rem/1.25 var(--font-display);color:var(--fg)}
-.cp-h span{font-size:.7rem;color:var(--muted)}
+.cp-h b{font:700 var(--fs-h)/1.3 var(--font-display);color:var(--fg)}
+.cp-h span{font-size:var(--fs-sm);color:var(--muted)}
 .cp-r{display:flex;align-items:center;gap:10px;padding:7px 0;border-top:1px solid var(--line)}
 .cp-r svg{flex:none;width:40px;height:40px}
 .cp-r>div{display:flex;flex-direction:column;min-width:0}
-.cp-k{font-size:.68rem;color:var(--muted)}
+.cp-k{font-size:var(--fs-xs);color:var(--muted)}
 .cp-r b{font:600 1.15rem/1.15 var(--font-data);font-variant-numeric:tabular-nums;color:var(--fg)}
-.cp-r b small{font:500 .68rem var(--font-body);color:var(--muted)}
-.cp-l{font-size:.74rem;color:var(--fg)}
+.cp-r b small{font:500 var(--fs-xs) var(--font-body);color:var(--muted)}
+.cp-l{font-size:var(--fs-sm);color:var(--fg)}
 .cp-l[style]{display:inline-flex;align-items:center;gap:5px}
 .cp-l[style]::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--c)}
-.cp-w{font-size:.72rem;color:var(--muted);padding:0 0 8px 50px;margin-top:-4px}
-.cp-n{font-size:.78rem;color:var(--muted);padding:6px 0;border-top:1px solid var(--line)}
+.cp-w{font-size:var(--fs-sm);color:var(--muted);padding:0 0 8px 50px;margin-top:-4px}
+.cp-n{font-size:var(--fs-sm);color:var(--muted);padding:6px 0;border-top:1px solid var(--line)}
 .cp-b{display:flex;gap:6px;padding-top:9px;border-top:1px solid var(--line)}
-.cp-b .btn{padding:5px 11px;font-size:.74rem}
+.cp-b .btn{padding:5px 11px;font-size:var(--fs-sm)}
 .cp-tb{padding:0 0 9px}
-.cp-tb .btn,.cp-tc .btn{padding:5px 11px;font-size:.74rem}
+.cp-tb .btn,.cp-tc .btn{padding:5px 11px;font-size:var(--fs-sm)}
 .cp-tr{padding:7px 0 9px;border-top:1px solid var(--line)}
-.cp-tr table{width:100%;border-collapse:collapse;margin:5px 0 6px;font-size:.72rem}
-.cp-tr th{font-weight:500;color:var(--muted);text-align:left;padding:0 4px 3px 0;font-size:.66rem}
+.cp-tr table{width:100%;border-collapse:collapse;margin:5px 0 6px;font-size:var(--fs-sm)}
+.cp-tr th{font-weight:500;color:var(--muted);text-align:left;padding:0 4px 3px 0;font-size:var(--fs-xs)}
 .cp-tr td{padding:3px 4px 3px 0;vertical-align:top;border-top:1px solid var(--line);color:var(--fg)}
 .cp-tr td:first-child{white-space:nowrap;font-family:var(--font-data)}
 .cp-tr td i{display:inline-block;width:12px;height:3px;border-radius:2px;margin:0 5px 3px 0;vertical-align:middle}
-.cp-tr small{color:var(--muted);font-size:.64rem}
-.cp-tc{display:flex;flex-wrap:wrap;align-items:center;gap:6px;font-size:.72rem;color:var(--muted)}
+.cp-tr small{color:var(--muted);font-size:var(--fs-xs)}
+.cp-tc{display:flex;flex-wrap:wrap;align-items:center;gap:6px;font-size:var(--fs-sm);color:var(--muted)}
 .cp-tc select{font:inherit;color:var(--fg);background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:2px 4px}
-.cp-tn{font-size:.64rem;line-height:1.4;color:var(--muted);margin:7px 0 0}
+.cp-tn{font-size:var(--fs-xs);line-height:1.4;color:var(--muted);margin:7px 0 0}
 @media (max-width:860px){
   .mapwrap{--legTop:52px}
   .legtoggle{top:8px;right:8px;width:36px;height:36px}
@@ -1289,9 +1277,9 @@ main.side-hidden .sidetoggle svg{transform:rotate(180deg)}
 /* desktop: the answer for your place leads the side panel. The prompt below gives way to your place's readout (#hereBox) once
    you have located; on phones the same block is the bottom sheet's peek */
 .sheet-peek{padding:16px 16px 14px;border-bottom:1px solid var(--line)}
-.sheet-peek .ask{margin:0 0 10px;font:600 1.05rem/1.35 var(--font-display);color:var(--fg)}
+.sheet-peek .ask{margin:0 0 10px;font:600 var(--fs-lg)/1.3 var(--font-display);color:var(--fg)}
 .sheet-cta{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px}
-.sheet-hint{font-size:.82rem;color:var(--muted);line-height:1.35}
+.sheet-hint{font-size:var(--fs-md);color:var(--muted);line-height:1.35}
 aside:has(#hereBox:not([hidden])) .sheet-peek .ask,aside:has(#hereBox:not([hidden])) .sheet-peek .sheet-cta{display:none}
 aside:has(#hereBox:not([hidden])) .sheet-peek:not(:has(#clickCard:not([hidden]))){display:none}
 @media (max-width:860px){
@@ -1305,7 +1293,7 @@ aside:has(#hereBox:not([hidden])) .sheet-peek:not(:has(#clickCard:not([hidden]))
   #updated{display:none}
   .status .chip{max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .status .btn-ico.public-only{display:none}   /* the developer sign-in link: not for visitors, and the status chip needs the room (dev.html stays reachable) */
-  .status .btn{min-height:32px;padding:4px 10px;font-size:.76rem}
+  .status .btn{min-height:32px;padding:4px 10px;font-size:var(--fs-sm)}
   /* map: everything between the header and the sheet's peek */
   main{display:block;position:static}
   .mapwrap{position:fixed;left:0;right:0;top:calc(var(--hdrH) + env(safe-area-inset-top,0px));bottom:calc(var(--tabH) + var(--peekH) - 16px);height:auto;min-height:0;z-index:1}
@@ -1326,8 +1314,8 @@ aside:has(#hereBox:not([hidden])) .sheet-peek:not(:has(#clickCard:not([hidden]))
   .sheet-peek{display:block;padding:0 14px;border-bottom:0}
   .sheet-peek .ask{display:none}
   .sheet-cta{display:flex;align-items:center;gap:10px;padding:2px 0 10px}
-  .sheet-cta .btn{flex:none;padding:7px 14px;font-size:.8rem}
-  .sheet-hint{font-size:.74rem;color:var(--muted);line-height:1.3}
+  .sheet-cta .btn{flex:none;padding:7px 14px;font-size:var(--fs-md)}
+  .sheet-hint{font-size:var(--fs-sm);color:var(--muted);line-height:1.3}
   #clickCard:not([hidden])~.sheet-cta,.sheet-peek:has(#clickCard:not([hidden])) .sheet-cta{display:none}
   .sheet-peek .clickcard{position:static;width:auto;max-width:none;max-height:none;overflow:visible;box-shadow:none;border:0;border-radius:0;padding:4px 0 10px;animation:none}
   aside .summary{padding:0 14px 8px}
@@ -1337,21 +1325,21 @@ aside:has(#hereBox:not([hidden])) .sheet-peek:not(:has(#clickCard:not([hidden]))
   .tabbar{display:flex;position:fixed;left:0;right:0;bottom:0;height:var(--tabH);padding-bottom:env(safe-area-inset-bottom,0px);z-index:1300;
     background:var(--glass-bg);-webkit-backdrop-filter:blur(20px);backdrop-filter:blur(20px);border-top:1px solid var(--line)}
   .tabbar button{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;border:0;background:none;color:var(--muted);
-    font:500 .66rem/1.1 var(--font-body);cursor:pointer;padding:6px 2px 4px;min-width:0}
+    font:500 var(--fs-xs)/1.1 var(--font-body);cursor:pointer;padding:6px 2px 4px;min-width:0}
   .tabbar svg{width:23px;height:23px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
   .tabbar button.on{color:var(--ink)}
   .tabbar button.on svg{stroke-width:2.1}
   .tabbar span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
   /* layers: a pop-up panel above the tab bar */
   .legend{position:fixed;left:8px;right:8px;top:auto;bottom:calc(var(--tabH) + 8px);max-width:none;max-height:68dvh;z-index:1350;
-    padding:14px 16px 12px;font-size:.8rem;border-radius:18px;background:var(--panel);box-shadow:0 -4px 30px rgba(15,23,42,.22)}
-  .legend summary{pointer-events:none;font-size:.9rem;padding-right:34px}
+    padding:14px 16px 12px;font-size:var(--fs-md);border-radius:18px;background:var(--panel);box-shadow:0 -4px 30px rgba(15,23,42,.22)}
+  .legend summary{pointer-events:none;font-size:var(--fs-base);padding-right:34px}
   .legend summary::after{display:none}
   .leg-close{display:grid;place-items:center;position:absolute;top:8px;right:10px;z-index:2;width:32px;height:32px;border:0;border-radius:50%;background:var(--panel-hover);color:var(--muted);font-size:1.3rem;line-height:1;cursor:pointer}
   .layerpick{gap:2px}
   .layerpick label{padding:7px 4px;border-radius:10px}
   .layerpick label:has(input:checked){background:var(--ink-soft)}
-  .advsw{display:flex;align-items:center;gap:8px;margin:8px 0 6px;padding:8px 10px;border-radius:10px;background:var(--panel-hover);font-size:.76rem;color:var(--muted)}
+  .advsw{display:flex;align-items:center;gap:8px;margin:8px 0 6px;padding:8px 10px;border-radius:10px;background:var(--panel-hover);font-size:var(--fs-sm);color:var(--muted)}
   .advsw input{width:34px;height:20px;appearance:none;-webkit-appearance:none;border-radius:10px;background:var(--line-strong);position:relative;flex:none;cursor:pointer;transition:background .15s}
   .advsw input::after{content:"";position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:#fff;transition:transform .15s;box-shadow:0 1px 2px rgba(0,0,0,.25)}
   .advsw input:checked{background:var(--ink)} .advsw input:checked::after{transform:translateX(14px)}
@@ -1379,7 +1367,7 @@ aside:has(#hereBox:not([hidden])) .sheet-peek:not(:has(#clickCard:not([hidden]))
     <small class="tagline" data-th="พยากรณ์ PM&lt;sub&gt;2.5&lt;/sub&gt; และสภาพอากาศ ความละเอียดสูง 0.025°">High-resolution (0.025°) PM<sub>2.5</sub> and weather forecast</small>
   </div>
   <div class="status">
-    <span id="modeChip" class="chip">no data</span>
+    <span id="modeChip" class="chip">No data</span>
     <span id="updated" class="note"></span><div id="toast" role="status" aria-live="polite"></div>
     <a class="btn dev-only" href="perf.html" title="Live model performance: scores, charts and maps, updated every 3 hours"><span class="lbl-long" data-th="ผลการประเมินแบบจำลอง">Model performance</span><span class="lbl-short" data-th="ผลประเมิน">Scores</span></a>
     <a class="btn btn-ico public-only" href="dev.html" title="Developer page (sign-in) · หน้าสำหรับผู้พัฒนา (ต้องเข้าสู่ระบบ)" aria-label="Developer page"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></a>
@@ -1676,10 +1664,10 @@ aside:has(#hereBox:not([hidden])) .sheet-peek:not(:has(#clickCard:not([hidden]))
         <label><input type="radio" name="layer" id="lyTemp" value="temp"> <span data-th="อุณหภูมิ (°C)">Temperature, °C</span></label>
         <label><input type="radio" name="layer" id="lyVent" value="vent"> <span data-th="การระบายอากาศ (ม.²/วินาที)">Ventilation, m²/s</span></label>
         <label><input type="radio" name="layer" id="lyNasa" value="nasa"> <span data-th="ภาพดาวเทียมรายวัน NASA (เห็นควัน)">NASA daily satellite image (shows smoke)</span></label>
-        <div id="assimNote" class="note dev-only" style="font-size:.68rem;color:var(--focus)" hidden></div>
+        <div id="assimNote" class="note dev-only" style="font-size:var(--fs-xs);color:var(--focus)" hidden></div>
       </div>
-      <div class="field" style="margin:4px 0 6px"><label for="unitSel" style="font-size:.7rem" data-th="แสดงเป็น">Show as</label>
-        <select id="unitSel" style="font-size:.75rem;padding:3px 4px">
+      <div class="field" style="margin:4px 0 6px"><label for="unitSel" style="font-size:var(--fs-sm)" data-th="แสดงเป็น">Show as</label>
+        <select id="unitSel" style="font-size:var(--fs-sm);padding:3px 4px">
           <option value="ug" data-th="PM₂.₅ รายชั่วโมง (µg/m³)">PM₂.₅ hourly, µg/m³</option>
           <option value="ug24" data-th="PM₂.₅ เฉลี่ย 24 ชม. (µg/m³)">PM₂.₅ 24-h mean, µg/m³</option>
           <option value="th" data-th="AQI ไทย (เฉลี่ย 24 ชม.)">Thai AQI (24-h mean)</option>
@@ -1688,38 +1676,38 @@ aside:has(#hereBox:not([hidden])) .sheet-peek:not(:has(#clickCard:not([hidden]))
       <div id="legTotal">
         <div class="pcdbar" id="legBar"></div>
         <div class="ticks" id="legTicks"></div>
-        <div class="note" style="font-size:.68rem" id="legNote"></div>
+        <div class="note" style="font-size:var(--fs-xs)" id="legNote"></div>
       </div>
       <div id="legUnc" hidden>
         <div class="pcdbar" id="uncBar" style="grid-template-columns:1fr 1fr 1fr 1fr 1fr"></div>
         <div class="ticks"><span>±0%</span><span>25</span><span>50</span><span>75</span><span>100</span><span>%+</span></div>
-        <div class="note" style="font-size:.68rem" data-th="ครึ่งความกว้างของช่วง 68% เป็น % ของ (PM₂.₅+1) จากความแปรปรวนของ regression kriging ณ ชั่วโมงวิเคราะห์ ชั่วโมงพยากรณ์มีความคลาดเคลื่อนเพิ่มขึ้นอีก (ดูแท็บวิธีการ → How well it has done)">Half-width of the 68% range, as % of (PM₂.₅+1). Regression-kriging variance at the analysis hour; forecast hours carry extra error (see Method → How well it has done).</div>
+        <div class="note" style="font-size:var(--fs-xs)" data-th="ครึ่งความกว้างของช่วง 68% เป็น % ของ (PM₂.₅+1) จากความแปรปรวนของ regression kriging ณ ชั่วโมงวิเคราะห์ ชั่วโมงพยากรณ์มีความคลาดเคลื่อนเพิ่มขึ้นอีก (ดูแท็บวิธีการ → How well it has done)">Half-width of the 68% range, as % of (PM₂.₅+1). Regression-kriging variance at the analysis hour; forecast hours carry extra error (see Method → How well it has done).</div>
       </div>
       <div id="legRain" hidden>
         <div class="pcdbar" id="rainBar" style="grid-template-columns:1fr 1fr 1fr 1fr 1fr 1fr"></div>
         <div class="ticks"><span>0.1</span><span>0.5</span><span>1</span><span>2</span><span>5</span><span>10</span><span>mm/h</span></div>
-        <div class="note" style="font-size:.68rem" data-th="ฝนรายชั่วโมง ชั่วโมงที่ผ่านมา: เรดาร์ตรวจอากาศ (กรมอุตุนิยมวิทยา ผ่าน RainViewer เฉลี่ยรายชั่วโมงที่ 0.025° ปรับด้วยเครื่องวัดฝน ThaiWater) ในพื้นที่ที่เรดาร์มองเห็น ที่อื่น: ดาวเทียมปรับด้วยเครื่องวัดฝน (JAXA GSMaP 0.1°) ประมาณค่าเป็น 0.025° และปรับรูปแบบด้วยฝนรายเดือน 1981–2010 (CHELSA V2.1) ใช้คำนวณการชะล้างควันด้วย 3 ชม. ถัดไป: ECMWF ผสมกับการต่อขยายการเคลื่อนที่ของกลุ่มฝนจากเรดาร์ (น้ำหนักชั่วคราว 0.9 → 0.1 จาก 0.5 ถึง 3.5 ชม. จนกว่าจะปรับจากบันทึก) หลังจากนั้น: พยากรณ์ ECMWF ประมาณค่าเป็น 0.025° และปรับรูปแบบแบบเดียวกัน ฝนชะล้างฝุ่นออกจากอากาศ">Hourly rain. Past hours: weather radar (Thai Meteorological Department via RainViewer, hourly means on 0.025°, adjusted with the ThaiWater rain gauges) where a radar sees; elsewhere satellite calibrated with rain gauges (JAXA GSMaP, 0.1°), interpolated to 0.025° and shaped by the month's 1981–2010 rain pattern (CHELSA V2.1), also used for wet removal of smoke. Next 3 h: ECMWF blended with the radar echoes extrapolated along their motion (provisional weights 0.9 → 0.1 from 0.5 to 3.5 h until fitted on the logs). Later: ECMWF forecast, interpolated to 0.025° and shaped the same way. Rain washes particles out of the air.</div>
+        <div class="note" style="font-size:var(--fs-xs)" data-th="ฝนรายชั่วโมง ชั่วโมงที่ผ่านมา: เรดาร์ตรวจอากาศ (กรมอุตุนิยมวิทยา ผ่าน RainViewer เฉลี่ยรายชั่วโมงที่ 0.025° ปรับด้วยเครื่องวัดฝน ThaiWater) ในพื้นที่ที่เรดาร์มองเห็น ที่อื่น: ดาวเทียมปรับด้วยเครื่องวัดฝน (JAXA GSMaP 0.1°) ประมาณค่าเป็น 0.025° และปรับรูปแบบด้วยฝนรายเดือน 1981–2010 (CHELSA V2.1) ใช้คำนวณการชะล้างควันด้วย 3 ชม. ถัดไป: ECMWF ผสมกับการต่อขยายการเคลื่อนที่ของกลุ่มฝนจากเรดาร์ (น้ำหนักชั่วคราว 0.9 → 0.1 จาก 0.5 ถึง 3.5 ชม. จนกว่าจะปรับจากบันทึก) หลังจากนั้น: พยากรณ์ ECMWF ประมาณค่าเป็น 0.025° และปรับรูปแบบแบบเดียวกัน ฝนชะล้างฝุ่นออกจากอากาศ">Hourly rain. Past hours: weather radar (Thai Meteorological Department via RainViewer, hourly means on 0.025°, adjusted with the ThaiWater rain gauges) where a radar sees; elsewhere satellite calibrated with rain gauges (JAXA GSMaP, 0.1°), interpolated to 0.025° and shaped by the month's 1981–2010 rain pattern (CHELSA V2.1), also used for wet removal of smoke. Next 3 h: ECMWF blended with the radar echoes extrapolated along their motion (provisional weights 0.9 → 0.1 from 0.5 to 3.5 h until fitted on the logs). Later: ECMWF forecast, interpolated to 0.025° and shaped the same way. Rain washes particles out of the air.</div>
       </div>
       <div id="legTemp" hidden>
         <div class="pcdbar" id="tempBar" style="grid-template-columns:repeat(7,1fr)"></div>
         <div class="ticks"><span>5</span><span>10</span><span>15</span><span>20</span><span>25</span><span>30</span><span>35</span><span>40 °C</span></div>
-        <div class="note" style="font-size:.68rem" data-th="อุณหภูมิอากาศที่ 2 ม. พยากรณ์ ECMWF ย่อส่วนเป็น 0.025° ด้วยความสูงภูมิประเทศ (6.5 °C/กม.) และปรับด้วยค่าตรวจวัดของสถานี Air4Thai เมื่อผ่านการทดสอบแบบตัดทีละสถานีในรอบนั้น">Air temperature at 2 m: ECMWF forecast downscaled to 0.025° with terrain height (6.5 °C/km) and, when it passes a leave-one-out check in that run, corrected with Air4Thai station measurements.</div>
+        <div class="note" style="font-size:var(--fs-xs)" data-th="อุณหภูมิอากาศที่ 2 ม. พยากรณ์ ECMWF ย่อส่วนเป็น 0.025° ด้วยความสูงภูมิประเทศ (6.5 °C/กม.) และปรับด้วยค่าตรวจวัดของสถานี Air4Thai เมื่อผ่านการทดสอบแบบตัดทีละสถานีในรอบนั้น">Air temperature at 2 m: ECMWF forecast downscaled to 0.025° with terrain height (6.5 °C/km) and, when it passes a leave-one-out check in that run, corrected with Air4Thai station measurements.</div>
       </div>
       <div id="legVent" hidden>
         <div class="pcdbar" id="ventBar" style="grid-template-columns:repeat(6,1fr)"></div>
         <div class="ticks"><span>0</span><span>1k</span><span>2k</span><span>4k</span><span>6k</span><span>10k</span><span>m²/s</span></div>
-        <div class="note" style="font-size:.68rem" data-th="ดัชนีการระบายอากาศ = ความสูงชั้นผสม × ความเร็วลมพัดพา (ECMWF: ความสูงชั้นบรรยากาศขอบเขต × ลมที่ 100 ม.) ยิ่งต่ำ ฝุ่นยิ่งสะสมใกล้พื้น: ต่ำกว่า 2,000 ระบายอากาศไม่ดี, 2,000–6,000 ปานกลาง, สูงกว่า 6,000 ดี (เกณฑ์ศักยภาพมลพิษอากาศของ US National Meteorological Center: ต่ำกว่า 6,000 ม.²/วินาที = ศักยภาพมลพิษสูง, Stackpole 1967; Gross 1970) ต่ำสุดกลางคืนและเช้ามืด สูงสุดบ่าย วาดที่ 0.025°: ปรับลมตามภูมิประเทศ เพิ่มบนสันเขาและด้านรับลม ลดในหุบเขาและด้านอับลม (น้ำหนักแบบ MicroMet, Liston &amp; Elder 2006 ไม่เกิน ±40%) ส่วนความสูงชั้นผสมใช้ค่า ECMWF เหนือพื้น จึงยังไม่แยกแอ่งอากาศเย็นในหุบเขา">Ventilation index = mixing height × transport wind (ECMWF boundary-layer height × 100-m wind). The lower, the more smoke and dust build up near the ground: below 2,000 poor, 2,000–6,000 moderate, above 6,000 good (US National Meteorological Center air-pollution-potential criterion: below 6,000 m²/s = high potential; Stackpole 1967, Gross 1970). Lowest at night and early morning, highest in the afternoon. Drawn at 0.025°: the wind is raised on ridges and windward slopes and lowered in valleys and on lee slopes from the terrain (MicroMet weighting, Liston &amp; Elder 2006, within ±40 %); the mixing height is the ECMWF value above ground, so valley cold pools are not resolved.</div>
+        <div class="note" style="font-size:var(--fs-xs)" data-th="ดัชนีการระบายอากาศ = ความสูงชั้นผสม × ความเร็วลมพัดพา (ECMWF: ความสูงชั้นบรรยากาศขอบเขต × ลมที่ 100 ม.) ยิ่งต่ำ ฝุ่นยิ่งสะสมใกล้พื้น: ต่ำกว่า 2,000 ระบายอากาศไม่ดี, 2,000–6,000 ปานกลาง, สูงกว่า 6,000 ดี (เกณฑ์ศักยภาพมลพิษอากาศของ US National Meteorological Center: ต่ำกว่า 6,000 ม.²/วินาที = ศักยภาพมลพิษสูง, Stackpole 1967; Gross 1970) ต่ำสุดกลางคืนและเช้ามืด สูงสุดบ่าย วาดที่ 0.025°: ปรับลมตามภูมิประเทศ เพิ่มบนสันเขาและด้านรับลม ลดในหุบเขาและด้านอับลม (น้ำหนักแบบ MicroMet, Liston &amp; Elder 2006 ไม่เกิน ±40%) ส่วนความสูงชั้นผสมใช้ค่า ECMWF เหนือพื้น จึงยังไม่แยกแอ่งอากาศเย็นในหุบเขา">Ventilation index = mixing height × transport wind (ECMWF boundary-layer height × 100-m wind). The lower, the more smoke and dust build up near the ground: below 2,000 poor, 2,000–6,000 moderate, above 6,000 good (US National Meteorological Center air-pollution-potential criterion: below 6,000 m²/s = high potential; Stackpole 1967, Gross 1970). Lowest at night and early morning, highest in the afternoon. Drawn at 0.025°: the wind is raised on ridges and windward slopes and lowered in valleys and on lee slopes from the terrain (MicroMet weighting, Liston &amp; Elder 2006, within ±40 %); the mixing height is the ECMWF value above ground, so valley cold pools are not resolved.</div>
       </div>
       <div id="legNasa" hidden>
-        <div class="note" style="font-size:.7rem" data-th="ชี้เมาส์หรือแตะที่ภาพ เพื่อดูการประเมินว่าเป็นท้องฟ้าโปร่ง เมฆ หรือควัน/หมอกควัน พร้อมหลักฐาน · หรือกดปุ่มด้านล่างแล้วลากกรอบ เพื่อสรุปสัดส่วนในพื้นที่">Point or tap on the image for an assessment: clear sky, cloud, or smoke/haze, with the evidence · or press the button below and drag a box to summarise an area.</div>
+        <div class="note" style="font-size:var(--fs-sm)" data-th="ชี้เมาส์หรือแตะที่ภาพ เพื่อดูการประเมินว่าเป็นท้องฟ้าโปร่ง เมฆ หรือควัน/หมอกควัน พร้อมหลักฐาน · หรือกดปุ่มด้านล่างแล้วลากกรอบ เพื่อสรุปสัดส่วนในพื้นที่">Point or tap on the image for an assessment: clear sky, cloud, or smoke/haze, with the evidence · or press the button below and drag a box to summarise an area.</div>
         <button class="btn" type="button" id="nasaCrop" style="margin-top:5px;width:100%" data-th="▭ เลือกพื้นที่ (ลากกรอบ)">▭ Select an area (drag a box)</button>
         <div id="nasaArea" class="nasaarea" hidden></div>
-        <div class="note" style="font-size:.64rem;margin-top:4px" data-th="เป็นการประเมินจากกฎที่อธิบายได้ ไม่ใช่แบบจำลอง ML ที่ผ่านการฝึก อาจผิดได้ โดยเฉพาะควันบางกับเมฆบาง ดูเกณฑ์ที่แท็บเกี่ยวกับ">An assessment from stated rules, not a trained ML model; it can be wrong, especially for thin smoke vs thin cloud. Rules: see About.</div>
+        <div class="note" style="font-size:var(--fs-xs);margin-top:4px" data-th="เป็นการประเมินจากกฎที่อธิบายได้ ไม่ใช่แบบจำลอง ML ที่ผ่านการฝึก อาจผิดได้ โดยเฉพาะควันบางกับเมฆบาง ดูเกณฑ์ที่แท็บเกี่ยวกับ">An assessment from stated rules, not a trained ML model; it can be wrong, especially for thin smoke vs thin cloud. Rules: see About.</div>
       </div>
       <div id="legFire" hidden>
         <div class="pcdbar" id="fireBar"></div>
         <div class="ticks" id="fireTicks"></div>
-        <div class="note" style="font-size:.68rem" data-th="PM&lt;sub&gt;2.5&lt;/sub&gt; ที่เพิ่มจากไฟ (µg/m³) สีอุ่นเริ่มที่ค่ามาตรฐาน 37.5 µg/m³ สีดำ = มากกว่า 300">Fire-added PM<sub>2.5</sub>, µg/m³; warm colours from the Thai standard (37.5), black above 300.</div>
+        <div class="note" style="font-size:var(--fs-xs)" data-th="PM&lt;sub&gt;2.5&lt;/sub&gt; ที่เพิ่มจากไฟ (µg/m³) สีอุ่นเริ่มที่ค่ามาตรฐาน 37.5 µg/m³ สีดำ = มากกว่า 300">Fire-added PM<sub>2.5</sub>, µg/m³; warm colours from the Thai standard (37.5), black above 300.</div>
       </div>
       <div class="keys">
         <span><i class="dot" style="background:var(--ember)"></i><span data-th="จุดความร้อน (ขนาด = FRP)">Hotspot (size = FRP)</span></span>
@@ -1727,7 +1715,7 @@ aside:has(#hereBox:not([hidden])) .sheet-peek:not(:has(#clickCard:not([hidden]))
         <span><i style="display:inline-block;width:14px;height:10px;vertical-align:-1px"><svg viewBox="0 0 14 10" width="14" height="10"><path d="M0 5h10M7 1l4 4-4 4" fill="none" stroke="var(--fg)" stroke-width="1.6"/></svg></i><span data-th="ลม: อนุภาคเคลื่อนไปตามทิศที่ลมพัด สีและความเร็วตามความแรงลม ดูค่าลมได้ที่ตำแหน่งของฉันและเมือง">Wind: particles drift the way the wind blows, coloured and moving by wind speed; wind values are shown under “my location” and each town</span></span>
         <div id="legWind" hidden><div class="pcdbar" id="windBar" style="grid-template-columns:repeat(6,1fr)"></div>
           <div class="ticks"><span>0</span><span>1.6</span><span>3.4</span><span>5.5</span><span>8</span><span>10.8</span><span>m/s</span></div>
-          <div class="note" style="font-size:.66rem" data-th="ลม 10 ม. แบ่งตามมาตราโบฟอร์ต (WMO): สงบ–ลมเบา (0–1), ลมอ่อน (2), ลมโชย (3), ลมปานกลาง (4), ลมแรงพอควร (5), ลมแรงขึ้นไป (6+)">10-m wind by Beaufort force (WMO): calm–light air (0–1), light breeze (2), gentle (3), moderate (4), fresh (5), strong and above (6+)</div></div>
+          <div class="note" style="font-size:var(--fs-xs)" data-th="ลม 10 ม. แบ่งตามมาตราโบฟอร์ต (WMO): สงบ–ลมเบา (0–1), ลมอ่อน (2), ลมโชย (3), ลมปานกลาง (4), ลมแรงพอควร (5), ลมแรงขึ้นไป (6+)">10-m wind by Beaufort force (WMO): calm–light air (0–1), light breeze (2), gentle (3), moderate (4), fresh (5), strong and above (6+)</div></div>
         <span><i class="dot" style="background:var(--aq2);box-shadow:0 0 0 3px var(--aq4);border:1px solid var(--fg)"></i><span data-th="Air4Thai: ด้านใน = ค่าตรวจวัด, วงนอก = แบบจำลอง">Air4Thai: inside = measured, ring = model</span></span>
         <span><i class="dot" style="border-radius:2px;border:1.5px solid var(--fg);background:var(--aq2)"></i><span data-th="สถานีตรวจวัด (ค่าปัจจุบัน)">Monitor (measured now)</span></span>
       </div>
@@ -1738,11 +1726,11 @@ aside:has(#hereBox:not([hidden])) .sheet-peek:not(:has(#clickCard:not([hidden]))
         <div id="legRadar" class="radarleg" hidden><div class="pcdbar" id="radarBar" style="grid-template-columns:repeat(6,1fr)"></div>
           <div class="ticks"><span>10</span><span>20</span><span>30</span><span>40</span><span>50</span><span>60</span><span>dBZ</span></div>
           <div class="radarctl"><button type="button" class="btn" id="radarPlay" aria-label="Play the last 2 hours">▶</button><input type="range" id="radarSlider" min="0" max="0" value="0" aria-label="Radar time"><span id="radarTime" class="note"></span></div>
-          <div class="note" id="radarNote" style="font-size:.66rem" data-th="เรดาร์ตรวจอากาศผ่าน RainViewer (ไทย: กรมอุตุนิยมวิทยา) ทุก 10 นาที ย้อนหลัง 2 ชม. (ไม่ใช่เวลาบนแถบเวลาพยากรณ์) รวมเรดาร์ของหลายประเทศที่ RainViewer ได้รับ (ไทย เวียดนาม มาเลเซีย ฯลฯ ไม่มีในลาว กัมพูชา และส่วนใหญ่ของเมียนมา) บางสถานีอาจปิดอยู่ ประมาณฝน: 20 dBZ ≈ 0.6, 30 ≈ 3, 40 ≈ 12, 50 ≈ 50 มม./ชม. (Marshall–Palmer)">Weather radar via RainViewer (Thailand: Thai Meteorological Department), every 10 min for the last 2 h (not the forecast hour on the time bar). Composite of the national radar networks RainViewer receives (Thailand, Viet Nam, Malaysia and others; none over Laos, Cambodia or most of Myanmar); some radars may be offline. Rain rate roughly: 20 dBZ ≈ 0.6, 30 ≈ 3, 40 ≈ 12, 50 ≈ 50 mm/h (Marshall–Palmer).</div></div>
+          <div class="note" id="radarNote" style="font-size:var(--fs-xs)" data-th="เรดาร์ตรวจอากาศผ่าน RainViewer (ไทย: กรมอุตุนิยมวิทยา) ทุก 10 นาที ย้อนหลัง 2 ชม. (ไม่ใช่เวลาบนแถบเวลาพยากรณ์) รวมเรดาร์ของหลายประเทศที่ RainViewer ได้รับ (ไทย เวียดนาม มาเลเซีย ฯลฯ ไม่มีในลาว กัมพูชา และส่วนใหญ่ของเมียนมา) บางสถานีอาจปิดอยู่ ประมาณฝน: 20 dBZ ≈ 0.6, 30 ≈ 3, 40 ≈ 12, 50 ≈ 50 มม./ชม. (Marshall–Palmer)">Weather radar via RainViewer (Thailand: Thai Meteorological Department), every 10 min for the last 2 h (not the forecast hour on the time bar). Composite of the national radar networks RainViewer receives (Thailand, Viet Nam, Malaysia and others; none over Laos, Cambodia or most of Myanmar); some radars may be offline. Rain rate roughly: 20 dBZ ≈ 0.6, 30 ≈ 3, 40 ≈ 12, 50 ≈ 50 mm/h (Marshall–Palmer).</div></div>
         <label class="dev-only"><input type="checkbox" id="shWindArr"> <span data-th="ลูกศรลมพร้อมค่า (ชี้ดู)">Wind arrows with values (hover)</span></label>
         <label><input type="checkbox" id="shProv"> <span data-th="เขตและชื่อจังหวัด">Province borders and names</span></label>
         <label><input type="checkbox" id="shA4t" checked> <span data-th="Air4Thai: ค่าตรวจวัดเทียบแบบจำลอง">Air4Thai: measured vs model</span></label>
-        <div id="a4tStat" class="note" style="font-size:.68rem;margin:-2px 0 4px 22px"></div>
+        <div id="a4tStat" class="note" style="font-size:var(--fs-xs);margin:-2px 0 4px 22px"></div>
         <label><input type="checkbox" id="shSt" checked> <span data-th="สถานี OpenAQ">OpenAQ stations</span></label>
         <label><input type="checkbox" id="shHot" checked> <span data-th="จุดความร้อน">Hotspots</span></label>
         <label><input type="checkbox" id="shTown" checked> <span data-th="เมือง">Towns</span></label>
@@ -2530,7 +2518,7 @@ function loadFail(on){ LOADFAIL=on; let el=document.getElementById('mapMsg');
     <p>${T('Check your internet connection, then try again. If it still fails, the hourly update may be late: try again in a few minutes.','ตรวจสอบการเชื่อมต่ออินเทอร์เน็ต แล้วลองอีกครั้ง หากยังไม่ได้ ข้อมูลรายชั่วโมงอาจมาช้า ลองใหม่อีกครั้งในไม่กี่นาที')}</p>
     <button type="button" class="btn primary">${T('Try again','ลองอีกครั้ง')}</button>`;
   el.querySelector('button').onclick=()=>refreshClick(); }
-function setMode(m){S.mode=m;if(m==='live'&&P.data){showFreshness();return;}const c=$('modeChip');c.className='chip '+m;c.textContent={live:T('Live data','ข้อมูลล่าสุด'),demo:T('Demo · synthetic','ข้อมูลจำลอง'),file:T('Uploaded file','ไฟล์ที่อัปโหลด')}[m];
+function setMode(m){S.mode=m;if(m==='live'&&P.data){showFreshness();return;}const c=$('modeChip');c.className='chip '+m;c.textContent={live:T('Live data','ข้อมูลล่าสุด'),demo:T('Demo data','ข้อมูลจำลอง'),file:T('Uploaded file','ไฟล์ที่อัปโหลด')}[m];
   $('updated').textContent=T('Run ','รัน ')+hm(Date.now());}
 
 // ---- data fetching
@@ -4480,9 +4468,9 @@ function renderLegend(){
     : ({ug:'PM₂.₅ hourly, µg/m³',ug24:'PM₂.₅ 24-h mean, µg/m³',th:'Thai AQI from the 24-h mean (PCD 2023)',us:'US AQI from the 24-h mean (EPA 2024)'})[u]+
     ' · bands follow the Thai PCD thresholds (15 / 25 / 37.5 / 75); warm colours from the 37.5 standard; black above 300'+(PUBLIC?' · ':' · CAMS + monitors + low-cost sensors + terrain, 0.025°. ')+'24-h values are the mean of the 24 hours ending at the slider time. Dashed box: forecast area.';
 }
-applyStaticLang(); if(!S.mode) $('modeChip').textContent=T('no data','ไม่มีข้อมูล');
+applyStaticLang(); if(!S.mode) $('modeChip').textContent=T('No data','ไม่มีข้อมูล');
 $('btnLang').onclick=()=>{ LANG=LANG==='th'?'en':'th'; store.set('hsw.lang',LANG); applyStaticLang(); initLegToggle.relabel?.(); initSideToggle.relabel?.(); refreshClickInfo();
-  {const lb=document.querySelector('.locate-btn'); if(lb){lb.title=T('Show PM2.5 at my location','ดูค่าฝุ่นที่ตำแหน่งของฉัน'); lb.setAttribute('aria-label',lb.title);}} if(S.mode) setMode(S.mode); else $('modeChip').textContent=T('no data','ไม่มีข้อมูล');
+  {const lb=document.querySelector('.locate-btn'); if(lb){lb.title=T('Show PM2.5 at my location','ดูค่าฝุ่นที่ตำแหน่งของฉัน'); lb.setAttribute('aria-label',lb.title);}} if(S.mode) setMode(S.mode); else $('modeChip').textContent=T('No data','ไม่มีข้อมูล');
   renderLegend(); renderAll(); renderHereBox(); if(LOCPOP) renderLocPop(); drawStations?.(); redrawTime();
   if(BANNER) banner(BANNER.f,BANNER.cls); if(LOADFAIL) loadFail(true); };
 {const v=store.get('hsw.unitSel'); if(v) $('unitSel').value=v;}

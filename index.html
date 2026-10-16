@@ -1366,15 +1366,24 @@ function provCentroid(f){let b=L.geoJSON(f).getBounds();let best=null,area=0;
   for(const pg of polys){const r=pg[0];let a=0,cx=0,cy=0;for(let i=0,j=r.length-1;i<r.length;j=i++){const k=r[j][0]*r[i][1]-r[i][0]*r[j][1];a+=k;cx+=(r[j][0]+r[i][0])*k;cy+=(r[j][1]+r[i][1])*k;}
     if(Math.abs(a)>area){area=Math.abs(a);best=[cy/(3*a),cx/(3*a)];}}
   return best||b.getCenter();}
-provLabels=L.layerGroup(GEO_P.features.map(f=>L.marker(provCentroid(f),{icon:L.divIcon({className:'',html:'',iconSize:[0,0]}),interactive:false,keyboard:false})
-  .bindTooltip(f.properties.th?`${f.properties.n} · ${f.properties.th}`:f.properties.n,{permanent:true,direction:'center',className:'plabel'}))).addTo(map);
+const provLabelText=f=>LANG==='th'&&f.properties.th?f.properties.th:f.properties.n;   // in the language shown; relabelled on a language switch
+provLabels=L.layerGroup(GEO_P.features.map(f=>{const m=L.marker(provCentroid(f),{icon:L.divIcon({className:'',html:'',iconSize:[0,0]}),interactive:false,keyboard:false})
+  .bindTooltip(provLabelText(f),{permanent:true,direction:'center',className:'plabel'}); m.feature=f; return m;})).addTo(map);
 function labelZoom(){const z=map.getZoom();map.getContainer().classList.toggle('hide-plabel',z<8);map.getContainer().classList.toggle('hide-tlabel',z<5);map.getContainer().classList.toggle('hide-mlabel',z<8);}
-// names that would overlap are hidden: provincial capitals first, then towns, then province names; run after each redraw and move
-function declutterLabels(){ const els=[...map.getContainer().querySelectorAll('.leaflet-tooltip.tlabel,.leaflet-tooltip.plabel')], kept=[];
+// names must not cover each other or another town's dot. Order: provincial capitals, towns, province names. A town name that
+// collides on the right of its dot tries the left; if both sides are taken it is hidden. Run after each redraw and move.
+function declutterLabels(){ const C=map.getContainer(), cr=C.getBoundingClientRect(), kept=[];
+  const els=[...C.querySelectorAll('.leaflet-tooltip.tlabel,.leaflet-tooltip.plabel')];
   const rank=el=>el.classList.contains('plabel')?2:el.classList.contains('minor')?1:0; els.sort((a,b)=>rank(a)-rank(b));
-  for(const el of els){ el.classList.remove('lbl-x'); if(el.style.opacity==='0') continue;   // a label being removed (Leaflet fades it out for 200 ms)
+  const dots=(S.townDots||[]).map(d=>{const p=map.latLngToContainerPoint([d.lat,d.lon]), x=cr.left+p.x, y=cr.top+p.y, k=d.r+1; return {cx:x,cy:y,left:x-k,right:x+k,top:y-k,bottom:y+k};});   // drawn on canvas: positions from coordinates
+  const hit=(a,q,pad)=>a.left<q.right+pad&&a.right>q.left-pad&&a.top<q.bottom+1&&a.bottom>q.top-1;
+  for(const el of els){ el.classList.remove('lbl-x'); el.style.marginLeft=''; if(el.style.opacity==='0') continue;   // a label being removed (Leaflet fades it out for 200 ms)
     const r=el.getBoundingClientRect(); if(!r.width) continue;   // hidden by zoom
-    if(kept.some(q=>r.left<q.right+3&&r.right>q.left-3&&r.top<q.bottom+1&&r.bottom>q.top-1)) el.classList.add('lbl-x'); else kept.push(r); } }
+    const own=d=>Math.abs(d.cy-(r.top+r.bottom)/2)<6&&r.left-d.cx>=0&&r.left-d.cx<16;   // a town name sits just right of its own dot
+    const bad=b=>kept.some(q=>hit(b,q,3))||dots.some(d=>!own(d)&&hit(b,d,1));
+    if(!bad(r)){ kept.push(r); continue; }
+    if(el.classList.contains('tlabel')){ el.style.marginLeft=`-${Math.round(r.width+14)}px`; const r2=el.getBoundingClientRect(); if(!bad(r2)){ kept.push(r2); continue; } el.style.marginLeft=''; }
+    el.classList.add('lbl-x'); } }
 let dcT=0; const declutterSoon=()=>{ clearTimeout(dcT); dcT=setTimeout(declutterLabels,80); };   // after the map has settled: mid-move, every label still sits where the view started
 map.on('zoomend',()=>{labelZoom(); declutterSoon();}); map.on('moveend resize',declutterSoon);
 const TILESETS={
@@ -3073,10 +3082,11 @@ function drawTraj(){
   S.sim.traj.slice(0,40).forEach(path=>{if(path.length>2) L.polyline(path.filter((_,i)=>i%3===0),{color:c,weight:1.2,opacity:.55,dashArray:'4 4'}).addTo(trajLayer);});
 }
 function drawTowns(){
-  townLayer.clearLayers(); const fg=cssVar('--fg');
+  townLayer.clearLayers(); const fg=cssVar('--fg'); S.townDots=[];
   const recs=S.recep.length?S.recep:allReceptors().map(p=>({...p,st:{mean24:0,peak:0}}));
   for(const r of recs){const si=simIdx(curT()); const val=si>=0&&r.series?.length?r.series[si]||0:0; const b=bandFor(val);
-    L.circleMarker([r.lat,r.lon],{radius:r.cc==='★'?6:r.kind==='town'?3.5:5,weight:2,color:fg,fillColor:val>=1?b.color:cssVar('--panel'),fillOpacity:1})
+    const rad=r.cc==='★'?6:r.kind==='town'?3.5:5; S.townDots.push({lat:r.lat,lon:r.lon,r:rad+1});   // the names keep off these dots (declutterLabels)
+    L.circleMarker([r.lat,r.lon],{radius:rad,weight:2,color:fg,fillColor:val>=1?b.color:cssVar('--panel'),fillOpacity:1})
      .bindTooltip(`${esc(townName(r))}: ${T('fire PM₂.₅ at this hour','PM₂.₅ จากไฟ ณ ชั่วโมงนี้')} ${fmtN(val)} µg/m³`).on('click',()=>focusTown(r.name)).addTo(townLayer);
     L.marker([r.lat,r.lon],{icon:L.divIcon({className:'',html:'',iconSize:[0,0]}),interactive:false,keyboard:false})
      .bindTooltip(esc(townName(r)),{permanent:true,direction:'right',offset:[6,0],className:r.kind==='town'?'tlabel minor':'tlabel'}).addTo(townLayer);}
@@ -3483,8 +3493,15 @@ drawRegionMask(); fitRegion();
 function epaBar(bar,ticks,first){ bar.style.gridTemplateColumns='repeat(11,1fr)';
   bar.innerHTML=MAP_BANDS.map((b,k)=>`<i style="background:${b.color}" title="${k?MAP_BANDS[k-1].max:0}${b.max<Infinity?'–'+b.max:'+'} µg/m³"></i>`).join('');
   ticks.innerHTML='<span style="position:relative;display:block;width:100%;height:1.1em">'+[[0,first],[2,'15'],[4,'37.5'],[6,'75'],[8,'150'],[10,'300']].map(([k,t])=>`<span style="position:absolute;left:${k/11*100}%;transform:translateX(${k?'-50%':'0'})">${t}</span>`).join('')+'</span>'; }
+// what the colours mean: one row per official band, its swatch made of exactly the map colours it spans (µg/m³ maps), or the
+// band's own colour (AQI views); names follow the PCD (or EPA) bands. Only where the page has the slot (#legKey, #fireKey).
+function bandKey(el,u){ if(!el) return; let rows;
+  if(u==='us'){ const lo=['0','51','101','151','201','301']; rows=US_BANDS.map((b,k)=>({cols:[b.color],name:T(b.en,b.th),range:lo[k]+(k<5?'–'+(+lo[k+1]-1):'+')})); }
+  else if(u==='th'){ const r=['0–25','26–50','51–100','101–200','201+']; rows=PCD.map((b,k)=>({cols:[cssVar('--'+b.key)],name:T(b.en,b.th),range:r[k]})); }
+  else{ let lo=0; rows=PCD.map(b=>{const cols=MAP_BANDS.filter(m=>m.max>lo&&m.max<=b.max||(b.max===Infinity&&m.max>lo)).map(m=>m.color), row={cols,name:T(b.en,b.th),range:b.max<Infinity?`${lo}–${b.max}`:`>${lo}`}; lo=b.max; return row;}); }
+  el.innerHTML=rows.map(w=>`<div><i style="background:${w.cols.length>1?`linear-gradient(to right,${w.cols.map((c,k)=>`${c} ${k/w.cols.length*100}%,${c} ${(k+1)/w.cols.length*100}%`).join(',')})`:w.cols[0]}"></i><span>${esc(w.name)}</span><b>${w.range}</b></div>`).join(''); }
 function renderLegend(){
-  const u=unitMode(), bar=$('legBar'), ticks=$('legTicks'); epaBar($('fireBar'),$('fireTicks'),'1');
+  const u=unitMode(), bar=$('legBar'), ticks=$('legTicks'); epaBar($('fireBar'),$('fireTicks'),'1'); bandKey($('legKey'),u); bandKey($('fireKey'),'ug');
   if(u==='us'){ const w=[9,26.4,20,70,100,60]; bar.style.gridTemplateColumns=w.map(x=>x+'fr').join(' ');
     bar.innerHTML=US_BANDS.map(b=>`<i style="background:${b.color}"></i>`).join('');
     ticks.innerHTML=['0','50','100','150','200','300','500'].map(t=>`<span>${t}</span>`).join(''); }
@@ -3494,15 +3511,15 @@ function renderLegend(){
     ticks.innerHTML=(u==='th'?['0','25','50','100','200','']:['0','15','25','37.5','75','']).map(t=>`<span>${t}</span>`).join(''); }
   $('legNote').textContent=LANG==='th'
     ? ({ug:'PM₂.₅ รายชั่วโมง (µg/m³)',ug24:'PM₂.₅ เฉลี่ย 24 ชม. (µg/m³)',th:'AQI ไทยจากค่าเฉลี่ย 24 ชม. (คพ. 2566)',us:'AQI สหรัฐฯ จากค่าเฉลี่ย 24 ชม. (EPA 2024)'})[u]+
-      ' · ขอบสีตามเกณฑ์ คพ. (15 / 25 / 37.5 / 75) สีอุ่นเริ่มที่ค่ามาตรฐาน 37.5 สีดำ = มากกว่า 300'+(PUBLIC?' · ':' · CAMS + สถานีตรวจวัด + ภูมิประเทศ ')+'ค่า 24 ชม. คือค่าเฉลี่ย 24 ชั่วโมงที่สิ้นสุด ณ เวลาที่เลือก กรอบเส้นประคือพื้นที่พยากรณ์'
+      ($('legKey')?'':' · ขอบสีตามเกณฑ์ คพ. (15 / 25 / 37.5 / 75) สีอุ่นเริ่มที่ค่ามาตรฐาน 37.5 สีดำ = มากกว่า 300')+(PUBLIC?' · ':' · CAMS + สถานีตรวจวัด + ภูมิประเทศ ')+'ค่า 24 ชม. คือค่าเฉลี่ย 24 ชั่วโมงที่สิ้นสุด ณ เวลาที่เลือก กรอบเส้นประคือพื้นที่พยากรณ์'
     : ({ug:'PM₂.₅ hourly, µg/m³',ug24:'PM₂.₅ 24-h mean, µg/m³',th:'Thai AQI from the 24-h mean (PCD 2023)',us:'US AQI from the 24-h mean (EPA 2024)'})[u]+
-    ' · bands follow the Thai PCD thresholds (15 / 25 / 37.5 / 75); warm colours from the 37.5 standard; black above 300'+(PUBLIC?' · ':' · CAMS + monitors + low-cost sensors + terrain, 0.025°. ')+'24-h values are the mean of the 24 hours ending at the slider time. Dashed box: forecast area.';
+    ($('legKey')?'':' · bands follow the Thai PCD thresholds (15 / 25 / 37.5 / 75); warm colours from the 37.5 standard; black above 300')+(PUBLIC?' · ':' · CAMS + monitors + low-cost sensors + terrain, 0.025°. ')+'24-h values are the mean of the 24 hours ending at the slider time. Dashed box: forecast area.';
 }
 applyStaticLang(); if(!S.mode) $('modeChip').textContent=T('No data','ไม่มีข้อมูล');
 $('btnLang').onclick=()=>{ LANG=LANG==='th'?'en':'th'; store.set('hsw.lang',LANG); applyStaticLang(); initLegToggle.relabel?.(); initSideToggle.relabel?.(); refreshClickInfo();
   {const lb=document.querySelector('.locate-btn'); if(lb){lb.title=T('Show PM2.5 at my location','ดูค่าฝุ่นที่ตำแหน่งของฉัน'); lb.setAttribute('aria-label',lb.title);}} if(S.mode) setMode(S.mode); else $('modeChip').textContent=T('No data','ไม่มีข้อมูล');
   renderLegend(); renderAll(); renderHereBox(); if(LOCPOP) renderLocPop(); drawStations?.(); redrawTime();
-  if(BANNER) banner(BANNER.f,BANNER.cls); if(LOADFAIL) loadFail(true); };
+  if(BANNER) banner(BANNER.f,BANNER.cls); if(LOADFAIL) loadFail(true); provLabels?.eachLayer(m=>m.setTooltipContent(provLabelText(m.feature))); declutterSoon(); };
 {const v=store.get('hsw.unitSel'); if(v) $('unitSel').value=v;}
 setWarnView(store.get('hsw.warnView')||'prov'); $('warnView').addEventListener('change',e=>setWarnView(e.target.value));
 $('unitSel').addEventListener('change',()=>{store.set('hsw.unitSel',$('unitSel').value); renderLegend(); renderAll(); redrawTime();});

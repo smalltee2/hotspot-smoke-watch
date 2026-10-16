@@ -33,6 +33,13 @@
   --ember-glow: rgba(234, 88, 12, 0.22);
   --smoke: #475569;
   --focus: #2563eb;
+
+  /* Colour roles: controls are ink (the indigo of mor hom, the indigo-dyed cloth of Phrae); orange (--ember) is fire data only;
+     air quality uses only the official band colours (--aq*, --pcd*). The ink is a hue that cannot be mistaken for any band or for fire. */
+  --ink: #283a78;
+  --ink-hover: #1d2b5c;
+  --ink-soft: rgba(40, 58, 120, 0.08);
+  --on-ink: #ffffff;
   
   --sea: #e0f2fe;
   --land: #ffffff;
@@ -90,6 +97,10 @@
     --ember-glow: rgba(251, 146, 60, 0.25);
     --smoke: #cbd5e1;
     --focus: #60a5fa;
+    --ink: #b3c1f2;
+    --ink-hover: #cdd6f7;
+    --ink-soft: rgba(179, 193, 242, 0.12);
+    --on-ink: #0f172a;
     
     --sea: #082f49;
     --land: #0f172a;
@@ -131,6 +142,10 @@
   --ember-glow: rgba(251, 146, 60, 0.25);
   --smoke: #cbd5e1;
   --focus: #60a5fa;
+  --ink: #b3c1f2;
+  --ink-hover: #cdd6f7;
+  --ink-soft: rgba(179, 193, 242, 0.12);
+  --on-ink: #0f172a;
   
   --sea: #082f49;
   --land: #0f172a;
@@ -204,7 +219,7 @@ header {
   white-space: nowrap;
 }
 .brand h1 span {
-  color: var(--ember);
+  color: var(--ink);
 }
 .brand small {
   color: var(--muted);
@@ -253,9 +268,9 @@ header {
   50% { opacity: 0.4; transform: scale(0.85); }
 }
 .chip.demo {
-  border-color: rgba(234, 88, 12, 0.3);
-  color: var(--ember);
-  background: var(--ember-soft);
+  border-color: var(--line-strong);
+  color: var(--ink);
+  background: var(--ink-soft);
 }
 .chip.file {
   border-color: rgba(14, 165, 233, 0.3);
@@ -294,16 +309,16 @@ a.btn { color: inherit; text-decoration: none; display: inline-flex; }
 }
 .btn:active { transform: translateY(0); }
 .btn.primary {
-  background: var(--ember);
-  border-color: var(--ember);
-  color: #fff;
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--on-ink);
   font-weight: 600;
-  box-shadow: 0 2px 10px var(--ember-glow);
+  box-shadow: none;
 }
 .btn.primary:hover {
-  background: var(--ember-hover);
-  border-color: var(--ember-hover);
-  box-shadow: 0 4px 14px var(--ember-glow);
+  background: var(--ink-hover);
+  border-color: var(--ink-hover);
+  box-shadow: none;
 }
 .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
 .btn-ico { display: inline-flex; align-items: center; justify-content: center; padding: 5px 8px; opacity: 0.7; }
@@ -337,44 +352,28 @@ aside {
 
 /* Summary Metrics */
 .summary {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 8px;
-  padding: 14px 14px 10px;
-  background: var(--sub-panel);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 18px;
+  padding: 10px 16px;
   border-bottom: 1px solid var(--line);
 }
 html[data-mode=public] .dev-only { display: none !important; }
 html:not([data-mode=public]) .pub-only { display: none !important; }
 html:not([data-mode=public]) .public-only { display: none !important; }
-html[data-mode=public] .summary { grid-template-columns: repeat(2, 1fr); }
 .summary div {
-  background: var(--panel);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-md);
-  padding: 10px 8px 8px;
-  text-align: center;
-  box-shadow: var(--shadow-sm);
-  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
-}
-.summary div:hover {
-  transform: translateY(-1px);
-  box-shadow: var(--shadow-md);
-  border-color: var(--ember-glow);
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
 }
 .summary b {
-  display: block;
-  font: 600 1.25rem/1 var(--font-data);
-  letter-spacing: -0.03em;
+  font: 600 0.88rem/1.3 var(--font-body);
   color: var(--fg);
   font-variant-numeric: tabular-nums;
-  margin-bottom: 4px;
 }
 .summary span {
-  font: 600 0.65rem/1.2 var(--font-display);
+  font: 400 0.8rem/1.3 var(--font-body);
   color: var(--muted);
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
 }
 
 /* Navigation Tabs */
@@ -432,8 +431,9 @@ html[data-mode=public] .summary { grid-template-columns: repeat(2, 1fr); }
 /* Messages & Banners */
 .msg {
   border-radius: var(--radius-md);
-  border: 1px solid rgba(234, 88, 12, 0.25);
-  background: var(--ember-soft);
+  border: 1px solid var(--line-strong);
+  border-left: 3px solid var(--ink);
+  background: var(--ink-soft);
   color: var(--fg);
   padding: 10px 14px;
   font-size: 0.84rem;
@@ -461,12 +461,12 @@ html[data-mode=public] .summary { grid-template-columns: repeat(2, 1fr); }
   transition: all 0.15s ease;
 }
 .alert:hover {
-  border-color: var(--ember);
+  border-color: var(--ink);
   transform: translateY(-1px);
   box-shadow: var(--shadow-md);
 }
 .alert:hover .name {
-  color: var(--ember);
+  color: var(--ink);
 }
 .sev {
   align-self: stretch;
@@ -616,7 +616,7 @@ tbody tr:hover {
   cursor: pointer;
 }
 .checks input[type=checkbox] {
-  accent-color: var(--ember);
+  accent-color: var(--ink);
 }
 .actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px; }
 
@@ -695,6 +695,12 @@ tbody tr:hover {
 
 /* Map Canvas & Wrap */
 .mapwrap { position: relative; min-height: 0; min-width: 0; height: 100%; }
+/* the forecast could not be loaded (page code: loadFail): said over the map, where phones see it too, with one way forward */
+.mapmsg { position: absolute; left: 50%; top: 40%; transform: translate(-50%, -50%); z-index: 1100; width: min(360px, calc(100% - 32px));
+  background: var(--panel); border: 1px solid var(--line-strong); border-left: 3px solid var(--ink); border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg); padding: 16px 18px; font-size: 0.9rem; line-height: 1.5; color: var(--fg); }
+.mapmsg b { display: block; font: 600 1.02rem/1.35 var(--font-display); margin-bottom: 4px; }
+.mapmsg p { margin: 0 0 12px; color: var(--muted); }
 #map { position: absolute; inset: 0; background: var(--bg); }
 
 /* Modern Floating Time Scrubber Dock */
@@ -727,24 +733,24 @@ tbody tr:hover {
   height: 38px;
   border-radius: 50%;
   border: none;
-  background: var(--ember);
-  color: #fff;
+  background: var(--ink);
+  color: var(--on-ink);
   font-size: 14px;
   cursor: pointer;
   display: grid;
   place-items: center;
-  box-shadow: 0 2px 10px var(--ember-glow);
+  box-shadow: none;
   transition: all 0.15s ease;
   flex-shrink: 0;
 }
 #btnPlay:hover {
   transform: scale(1.06);
-  background: var(--ember-hover);
+  background: var(--ink-hover);
 }
 #btnPlay:active { transform: scale(0.95); }
 .scrub input[type=range] {
   width: 100%;
-  accent-color: var(--ember);
+  accent-color: var(--ink);
   height: 6px;
   border-radius: var(--radius-pill);
   background: var(--line);
@@ -824,7 +830,7 @@ tbody tr:hover {
   gap: 6px;
   cursor: pointer;
 }
-.showpick input[type=checkbox] { accent-color: var(--ember); }
+.showpick input[type=checkbox] { accent-color: var(--ink); }
 .pcdbar { display: grid; height: 8px; border-radius: var(--radius-pill); overflow: hidden; margin: 8px 0 4px; }
 .dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; flex: none; }
 .cline { font: 600 10px/1 var(--font-data); }
@@ -1070,7 +1076,7 @@ tbody tr:hover {
 .daybar{position:relative;height:22px;margin:0 8px;border-radius:4px;overflow:hidden;background:var(--bg);border:1px solid var(--line);display:flex}
 .daybar button{position:relative;flex:none;border:0;border-left:1px solid var(--line);background:transparent;font:500 .7rem/20px var(--font-body);color:var(--muted);padding:0 2px;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:clip;min-width:0}
 .daybar button:first-child{border-left:0}
-.daybar button.on{color:var(--fg);font-weight:700;background:color-mix(in srgb,var(--ember) 14%,transparent)}
+.daybar button.on{color:var(--fg);font-weight:700;background:var(--ink-soft)}
 .daybar .past{position:absolute;left:0;top:0;bottom:0;background:color-mix(in srgb,var(--muted) 18%,transparent);pointer-events:none}
 .daybar button span{position:relative}
 .tlg{display:flex;flex-wrap:wrap;gap:3px 12px;font-size:.7rem;color:var(--muted);margin:3px 0 6px}
@@ -1090,7 +1096,7 @@ tbody tr:hover {
 .sumdet{margin:6px 0 4px}
 .sumdet>summary{cursor:pointer;font-size:.78rem;color:var(--muted);margin:0 0 6px}
 .sumdet>summary:hover{color:var(--fg)}
-.sumcard .sumwhy{background:var(--bg);border-left:3px solid var(--ember);padding:6px 9px;border-radius:4px;margin:4px 0 6px!important}
+.sumcard .sumwhy{background:var(--bg);border-left:3px solid var(--ink);padding:6px 9px;border-radius:4px;margin:4px 0 6px!important}
 .lpsum p{margin:0 0 7px;font-size:.84rem;line-height:1.55}
 .lpsum p b{font-weight:600}
 .vent-poor{color:#b03a7a;font-weight:600}.vent-mod{color:#c77a2a;font-weight:600}.vent-good{color:#2f8f5b;font-weight:600}
@@ -1171,7 +1177,6 @@ tbody tr:hover {
 .gibsdate{display:block;margin-top:4px;font:500 .68rem var(--font-data);background:var(--panel);border:1px solid var(--line);border-radius:4px;padding:2px 6px;box-shadow:0 1px 4px rgb(0 0 0 / .15);width:max-content;max-width:60vw}
 
 /* ---- Redesign fit-ups ---- */
-:root{--ink:var(--fg)}
 /* warning cards: two-day forecast boxes with small weather icons */
 .alert.c2{grid-template-columns:4px minmax(0,1fr) 172px;gap:12px}
 .alert .sev{width:4px}
@@ -1183,7 +1188,7 @@ tbody tr:hover {
 .daybar{margin:0;height:24px;border-radius:var(--radius-pill,999px);background:var(--panel-hover,var(--bg))}
 .daybar button{font:500 .7rem/22px var(--font-body);padding:0 4px;text-overflow:ellipsis;transition:background .15s,color .15s}
 .daybar button:hover{color:var(--fg)}
-.daybar button.on{color:var(--ember);background:var(--ember-soft)}
+.daybar button.on{color:var(--ink);background:var(--ink-soft)}
 /* layer panel: scrolls instead of running under the floating time bar (bar height measured into --scrubH) */
 .legend{max-height:calc(100% - 16px - var(--scrubH,58px) - 24px - 12px);overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin}
 .legend summary{position:sticky;top:-12px;z-index:1;background:inherit;padding:2px 0}
@@ -1221,7 +1226,7 @@ body{font-feature-settings:"ss01";text-rendering:optimizeLegibility}   /* Inter 
 .legtoggle{position:absolute;top:16px;right:16px;z-index:520;width:38px;height:38px;border-radius:50%;display:grid;place-items:center;cursor:pointer;
   background:var(--glass-bg);-webkit-backdrop-filter:blur(20px);backdrop-filter:blur(20px);border:var(--glass-border);box-shadow:var(--shadow-lg);color:var(--muted);transition:color .15s,background .15s,transform .15s}
 .legtoggle:hover{color:var(--fg);transform:translateY(-1px)}
-.legtoggle.on{color:var(--ember);background:var(--panel)}
+.legtoggle.on{color:var(--ink);background:var(--panel)}
 .legend{top:var(--legTop);max-height:calc(100% - var(--legTop) - var(--scrubH,58px) - 24px - 12px)}
 .legend[hidden]{display:none}
 .clickcard{position:absolute;z-index:560;left:64px;top:64px;width:286px;max-width:calc(100% - 80px);max-height:calc(100% - 64px - var(--scrubH,58px) - 36px);overflow:auto;
@@ -1272,7 +1277,7 @@ main.side-hidden{grid-template-columns:0 1fr}
 main.side-hidden>aside{visibility:hidden;overflow:hidden;border-right:0}
 .sidetoggle{position:absolute;left:0;top:50%;transform:translateY(-50%);z-index:520;width:22px;height:52px;padding:0;display:grid;place-items:center;cursor:pointer;
   background:var(--glass-bg);-webkit-backdrop-filter:blur(20px);backdrop-filter:blur(20px);border:var(--glass-border);border-left:0;border-radius:0 10px 10px 0;box-shadow:var(--shadow-md);color:var(--muted);transition:color .15s,width .15s}
-.sidetoggle:hover{color:var(--ember);width:26px}
+.sidetoggle:hover{color:var(--ink);width:26px}
 .sidetoggle svg{transition:transform .2s}
 main.side-hidden .sidetoggle svg{transform:rotate(180deg)}
 @media (max-width:860px){ .sidetoggle{display:none} main.side-hidden>aside{visibility:visible} }
@@ -1280,7 +1285,15 @@ main.side-hidden .sidetoggle svg{transform:rotate(180deg)}
 /* ===================== Phone app layout (≤ 860 px) =====================
    full-screen map · the side panel as a bottom sheet (body[data-sheet] = peek | half | full) · bottom tab bar ·
    layers as a pop-up panel, simple unless "advanced" is on (body.adv). Page code: PHONEUI, initLegToggle. */
-.sheet-grip,.sheet-peek,.tabbar,.leg-close,.advsw{display:none}
+.sheet-grip,.tabbar,.leg-close,.advsw{display:none}
+/* desktop: the answer for your place leads the side panel. The prompt below gives way to your place's readout (#hereBox) once
+   you have located; on phones the same block is the bottom sheet's peek */
+.sheet-peek{padding:16px 16px 14px;border-bottom:1px solid var(--line)}
+.sheet-peek .ask{margin:0 0 10px;font:600 1.05rem/1.35 var(--font-display);color:var(--fg)}
+.sheet-cta{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px}
+.sheet-hint{font-size:.82rem;color:var(--muted);line-height:1.35}
+aside:has(#hereBox:not([hidden])) .sheet-peek .ask,aside:has(#hereBox:not([hidden])) .sheet-peek .sheet-cta{display:none}
+aside:has(#hereBox:not([hidden])) .sheet-peek:not(:has(#clickCard:not([hidden]))){display:none}
 @media (max-width:860px){
   :root{--hdrH:52px;--tabH:calc(58px + env(safe-area-inset-bottom,0px));--peekH:84px}
   html,body{height:100%;overflow:hidden;overscroll-behavior:none}
@@ -1290,7 +1303,8 @@ main.side-hidden .sidetoggle svg{transform:rotate(180deg)}
   .brand{flex:0 0 auto} .brand h1{font-size:1.05rem}
   .status{flex-wrap:nowrap;gap:5px;min-width:0}
   #updated{display:none}
-  .status .chip{max-width:96px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .status .chip{max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .status .btn-ico.public-only{display:none}   /* the developer sign-in link: not for visitors, and the status chip needs the room (dev.html stays reachable) */
   .status .btn{min-height:32px;padding:4px 10px;font-size:.76rem}
   /* map: everything between the header and the sheet's peek */
   main{display:block;position:static}
@@ -1309,7 +1323,8 @@ main.side-hidden .sidetoggle svg{transform:rotate(180deg)}
   .sheet-grip{display:block;position:sticky;top:0;z-index:3;height:26px;margin-bottom:-4px;background:var(--panel);cursor:grab;touch-action:none;border-radius:18px 18px 0 0}
   .sheet-grip i{display:block;width:40px;height:5px;border-radius:3px;background:var(--line-strong);margin:9px auto 0}
   .sheet-grip:focus-visible{outline-offset:-4px}
-  .sheet-peek{display:block;padding:0 14px}
+  .sheet-peek{display:block;padding:0 14px;border-bottom:0}
+  .sheet-peek .ask{display:none}
   .sheet-cta{display:flex;align-items:center;gap:10px;padding:2px 0 10px}
   .sheet-cta .btn{flex:none;padding:7px 14px;font-size:.8rem}
   .sheet-hint{font-size:.74rem;color:var(--muted);line-height:1.3}
@@ -1324,7 +1339,7 @@ main.side-hidden .sidetoggle svg{transform:rotate(180deg)}
   .tabbar button{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;border:0;background:none;color:var(--muted);
     font:500 .66rem/1.1 var(--font-body);cursor:pointer;padding:6px 2px 4px;min-width:0}
   .tabbar svg{width:23px;height:23px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
-  .tabbar button.on{color:var(--ember)}
+  .tabbar button.on{color:var(--ink)}
   .tabbar button.on svg{stroke-width:2.1}
   .tabbar span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
   /* layers: a pop-up panel above the tab bar */
@@ -1335,11 +1350,11 @@ main.side-hidden .sidetoggle svg{transform:rotate(180deg)}
   .leg-close{display:grid;place-items:center;position:absolute;top:8px;right:10px;z-index:2;width:32px;height:32px;border:0;border-radius:50%;background:var(--panel-hover);color:var(--muted);font-size:1.3rem;line-height:1;cursor:pointer}
   .layerpick{gap:2px}
   .layerpick label{padding:7px 4px;border-radius:10px}
-  .layerpick label:has(input:checked){background:var(--ember-soft)}
+  .layerpick label:has(input:checked){background:var(--ink-soft)}
   .advsw{display:flex;align-items:center;gap:8px;margin:8px 0 6px;padding:8px 10px;border-radius:10px;background:var(--panel-hover);font-size:.76rem;color:var(--muted)}
   .advsw input{width:34px;height:20px;appearance:none;-webkit-appearance:none;border-radius:10px;background:var(--line-strong);position:relative;flex:none;cursor:pointer;transition:background .15s}
   .advsw input::after{content:"";position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:#fff;transition:transform .15s;box-shadow:0 1px 2px rgba(0,0,0,.25)}
-  .advsw input:checked{background:var(--ember)} .advsw input:checked::after{transform:translateX(14px)}
+  .advsw input:checked{background:var(--ink)} .advsw input:checked::after{transform:translateX(14px)}
   /* simple mode (public first): the display unit, long notes, symbol keys and expert overlays wait behind "advanced" */
   body:not(.adv) .legend .field,body:not(.adv) .legend .note,body:not(.adv) .legend .keys,
   body:not(.adv) .showpick label:has(#shContour),body:not(.adv) .showpick label:has(#shA4t),body:not(.adv) #a4tStat,body:not(.adv) .showpick label:has(#shSt){display:none}
@@ -1370,7 +1385,7 @@ main.side-hidden .sidetoggle svg{transform:rotate(180deg)}
     <a class="btn btn-ico public-only" href="dev.html" title="Developer page (sign-in) · หน้าสำหรับผู้พัฒนา (ต้องเข้าสู่ระบบ)" aria-label="Developer page"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></a>
     <button id="btnSum" class="btn btn-sum" type="button" title="Forecast summary: today, tomorrow and the next two days"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 3h9l4 4v14H6z"/><path d="M9 11h7M9 15h7M9 7h3"/></svg><span class="lbl-long" data-th="สรุปพยากรณ์">Forecast summary</span><span class="lbl-short" data-th="สรุป">Summary</span></button>
     <button id="btnLang" class="btn" type="button" lang="th" title="ภาษาไทย / English">ไทย</button>
-    <button id="btnRun" class="btn primary" type="button" title="Reload the latest data"><span class="lbl-long" data-th="โหลดข้อมูลล่าสุด">Load live data</span><span class="lbl-short" data-th="รีเฟรช">Refresh</span></button>
+    <button id="btnRun" class="btn" type="button" title="Reload the latest data (the page also checks for new data every 3 minutes)"><span class="lbl-long" data-th="รีเฟรช">Refresh</span><span class="lbl-short" data-th="รีเฟรช">Refresh</span></button>
   </div>
 </header>
 
@@ -1379,16 +1394,17 @@ main.side-hidden .sidetoggle svg{transform:rotate(180deg)}
     <!-- phones: the side panel is a bottom sheet; drag or tap the grip (page code: PHONEUI) -->
     <div class="sheet-grip" id="sheetGrip" role="button" tabindex="0" aria-expanded="false" aria-label="Raise the panel"><i></i></div>
     <div class="sheet-peek" id="sheetPeek">
+      <p class="ask" data-th="อากาศตรงที่คุณอยู่เป็นอย่างไร">How is the air where you are?</p>
       <div class="sheet-cta"><button type="button" class="btn primary" id="sheetLocate"><svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3.2"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/><circle cx="12" cy="12" r="7.5"/></svg><span data-th="ค่าฝุ่นที่ตำแหน่งของฉัน">PM₂.₅ where I am</span></button>
         <span class="sheet-hint" data-th="หรือแตะแผนที่เพื่อดูข้อมูลจุดนั้น">or tap the map for any place</span></div>
     </div>
+    <section id="hereBox" class="herebox" hidden aria-live="polite"></section>
     <div class="summary">
       <div><b id="sHot">–</b><span data-th="จุดความร้อน">Hotspots</span></div>
       <div class="dev-only"><b id="sSrc">–</b><span data-th="กลุ่มไฟ">Fire clusters</span></div>
       <div class="dev-only"><b id="sFrp">–</b><span data-th="FRP (MW)">FRP, MW</span></div>
       <div><b id="sWarn">–</b><span data-th="เมืองที่เตือน">Towns warned</span></div>
     </div>
-    <section id="hereBox" class="herebox" hidden aria-live="polite"></section>
     <div class="tabs" role="tablist">
       <button role="tab" aria-selected="true" data-tab="warn" id="tab-warn" data-th="คำเตือน">Warnings</button>
       <button role="tab" aria-selected="false" data-tab="hot" id="tab-hot" data-th="จุดความร้อน">Hotspots</button>
@@ -2469,7 +2485,7 @@ function setTiles(){
   if(tiles){map.removeLayer(tiles);tiles=null;}
   if(bm!=='plain'){const [url,opt]=TILESETS[bm]();let fails=0,ok=0;
     tiles=L.tileLayer(url,{...opt,attribution:opt.attribution+' · Fires: NASA FIRMS · Wind: Open-Meteo · Borders: World Bank Official Boundaries'})
-      .on('tileload',()=>ok++).on('tileerror',()=>{if(++fails>6&&!ok){setBasemap('plain');banner(T('Online map tiles could not load here, so the page switched to the built-in outline map. Fires, wind and smoke still work.','โหลดแผนที่ออนไลน์ไม่ได้ จึงเปลี่ยนเป็นแผนที่เส้นขอบในตัว จุดไฟ ลม และควันยังแสดงได้ตามปกติ'),'info');}}).addTo(map);}
+      .on('tileload',()=>ok++).on('tileerror',()=>{if(++fails>6&&!ok){setBasemap('plain');banner(()=>T('Online map tiles could not load here, so the page switched to the built-in outline map. Fires, wind and smoke still work.','โหลดแผนที่ออนไลน์ไม่ได้ จึงเปลี่ยนเป็นแผนที่เส้นขอบในตัว จุดไฟ ลม และควันยังแสดงได้ตามปกติ'),'info');}}).addTo(map);}
   else map.attributionControl.addAttribution('Borders: World Bank Official Boundaries');
   styleBase();
   $('bmSel').value=bm;
@@ -2500,7 +2516,20 @@ function allReceptors(){return TOWNS.filter(t=>inRegion(t.lat,t.lon)&&inBox(t.la
 
 // ---- busy & messages
 function busy(msg){$('busy').hidden=!msg; if(msg) $('busyMsg').textContent=msg; $('btnRun').disabled=$('btnRun2').disabled=$('btnDemo').disabled=!!msg;}
-function banner(html,cls=''){$('banner').innerHTML=html?`<div class="msg ${cls}">${html}</div>`:'';}
+// side-panel message; pass a function (it calls T) and the message is rebuilt in the new language when the language is switched
+let BANNER=null;
+function banner(html,cls=''){ BANNER=typeof html==='function'?{f:html,cls}:null; const h=BANNER?html():html; $('banner').innerHTML=h?`<div class="msg ${cls}">${h}</div>`:''; }
+// the forecast could not be loaded: say so over the map, where it is seen on phones too (there the side panel is folded away),
+// and offer to try again. Public pages say what to do; the technical reason stays in the console (and in the banner on the developer page).
+let LOADFAIL=false;
+function loadFail(on){ LOADFAIL=on; let el=document.getElementById('mapMsg');
+  if(!on){ if(el) el.remove(); return; }
+  if(!el){ el=document.createElement('div'); el.id='mapMsg'; el.className='mapmsg'; el.setAttribute('role','alert'); document.querySelector('.mapwrap').appendChild(el);
+    L.DomEvent.disableClickPropagation(el); L.DomEvent.disableScrollPropagation(el); }
+  el.innerHTML=`<b>${T('The forecast could not be loaded.','โหลดข้อมูลพยากรณ์ไม่สำเร็จ')}</b>
+    <p>${T('Check your internet connection, then try again. If it still fails, the hourly update may be late: try again in a few minutes.','ตรวจสอบการเชื่อมต่ออินเทอร์เน็ต แล้วลองอีกครั้ง หากยังไม่ได้ ข้อมูลรายชั่วโมงอาจมาช้า ลองใหม่อีกครั้งในไม่กี่นาที')}</p>
+    <button type="button" class="btn primary">${T('Try again','ลองอีกครั้ง')}</button>`;
+  el.querySelector('button').onclick=()=>refreshClick(); }
 function setMode(m){S.mode=m;if(m==='live'&&P.data){showFreshness();return;}const c=$('modeChip');c.className='chip '+m;c.textContent={live:T('Live data','ข้อมูลล่าสุด'),demo:T('Demo · synthetic','ข้อมูลจำลอง'),file:T('Uploaded file','ไฟล์ที่อัปโหลด')}[m];
   $('updated').textContent=T('Run ','รัน ')+hm(Date.now());}
 
@@ -2592,18 +2621,21 @@ async function refreshClick(){
   S.jumpNow=true; S.keepSel=false; const b=await newBuild();   // a failed silent auto-refresh may have left keepSel set; a manual refresh shows now
   if(b){ toast(T('New version of the page — reloading…','มีหน้าเว็บเวอร์ชันใหม่ — กำลังโหลดใหม่…'));
     const u=new URL(location.href); u.searchParams.set('v',b); location.replace(u.toString()); return; }   // the query bypasses the browser's cached copy of the page
-  const before=P.data?P.data.generated:null; await runAuto(false);
+  const before=P.data?P.data.generated:null, ok=await runAuto(false);
   if(S.jumpNow){ setTimeline(); redrawTime(); }   // the load failed before the timeline was rebuilt: still show the current hour
-  if(!P.data) return; const g=P.data.generated, nxt=new Date(Math.floor(Date.now()/HR)*HR+HR+20*60e3);
+  if(!P.data||ok===false) return; const g=P.data.generated, nxt=new Date(Math.floor(Date.now()/HR)*HR+HR+20*60e3);
   toast(g!==before?T(`Updated to the run of ${hm(g)}.`,`อัปเดตเป็นรอบ ${hm(g)} แล้ว`)
     :T(`Already the latest run (${hm(g)}). New runs arrive hourly, next about ${hm(nxt)}.`,`เป็นข้อมูลรอบล่าสุดแล้ว (${hm(g)}) ข้อมูลใหม่มาทุกชั่วโมง รอบถัดไปประมาณ ${hm(nxt)}`),6000);
 }
-async function runAuto(quiet){ try{ await runAuto_(quiet); }catch(e){ busy(null); if(!quiet) banner(`<b>${T('Update failed.','อัปเดตไม่สำเร็จ')}</b> ${esc(e.message)}`); console.error(e); } }
+async function runAuto(quiet){ try{ return await runAuto_(quiet); }catch(e){ busy(null); console.error(e);
+  if(!quiet){ if(PUBLIC&&!P.data) loadFail(true); else banner(()=>`<b>${T('Update failed.','อัปเดตไม่สำเร็จ')}</b> ${PUBLIC?T('Part of the latest data could not be loaded, so some layers may be missing. Try Refresh again in a few minutes.','โหลดข้อมูลล่าสุดได้ไม่ครบ บางชั้นข้อมูลอาจหายไป ลองกดรีเฟรชอีกครั้งในอีกไม่กี่นาที'):esc(e.message)}`); } return false; } }   // false: the load failed (refreshClick then skips its "updated" message)
 async function runAuto_(quiet){
   if(!quiet) busy(T('Loading the latest hourly data…','กำลังโหลดข้อมูลรายชั่วโมงล่าสุด…'));
   const d=await loadPipeline();
   if(d){P.data=d; busy(T('Loading meteorology…','กำลังโหลดข้อมูลอุตุนิยมวิทยา…')); await Promise.all([loadDEM(),loadMet(),loadMlField(),loadRkFine(),loadWxml()]); await runModel(pipelineHotspots(d),'live',null,quiet); showFreshness(); loadVerify(); renderRK(); renderAssim(); renderML();}
-  else if(!quiet){P.data=null; await runLive();}
+  else if(!quiet){ if(PUBLIC&&P.data){ busy(null); toast(T('The latest data could not be loaded; the page keeps the data it had.','โหลดข้อมูลล่าสุดไม่สำเร็จ หน้าเว็บยังแสดงข้อมูลเดิมอยู่')); return false; }
+    if(PUBLIC){ busy(null); loadFail(true); return false; }   // public: reading FIRMS from the browser needs a key and a proxy the public page does not have
+    P.data=null; await runLive(); }
 }
 let DEM=null, MET=null;
 // met-web.json stores integers as hour-to-hour differences (see scripts/met.mjs packMet); rebuild the plain arrays
@@ -3310,12 +3342,12 @@ const LocateCtl=L.Control.extend({options:{position:'topleft'},onAdd(){
   b.innerHTML='<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/><circle cx="12" cy="12" r="8"/></svg>';
   L.DomEvent.disableClickPropagation(b);
   b.onclick=()=>{
-    if(!navigator.geolocation){banner(T('This browser cannot share its location.','เบราว์เซอร์นี้ไม่รองรับการระบุตำแหน่ง'),'info');return;}
+    if(!navigator.geolocation){banner(()=>T('This browser cannot share its location.','เบราว์เซอร์นี้ไม่รองรับการระบุตำแหน่ง'),'info');return;}
     b.setAttribute('aria-busy','true');
     navigator.geolocation.getCurrentPosition(pos=>{b.removeAttribute('aria-busy'); b.classList.add('on');
         showHere(pos.coords.latitude,pos.coords.longitude,pos.coords.accuracy,true);},
       err=>{b.removeAttribute('aria-busy');
-        banner(err.code===1?T('Location permission was declined. Allow location for this site in the browser settings, then tap the button again.','ไม่ได้รับอนุญาตให้ใช้ตำแหน่ง เปิดสิทธิ์ตำแหน่งให้เว็บนี้ในการตั้งค่าเบราว์เซอร์ แล้วกดปุ่มอีกครั้ง'):
+        banner(()=>err.code===1?T('Location permission was declined. Allow location for this site in the browser settings, then tap the button again.','ไม่ได้รับอนุญาตให้ใช้ตำแหน่ง เปิดสิทธิ์ตำแหน่งให้เว็บนี้ในการตั้งค่าเบราว์เซอร์ แล้วกดปุ่มอีกครั้ง'):
                err.code===3?T('Finding your location took too long. Move to open sky or turn on Wi-Fi, then try again.','ใช้เวลาหาตำแหน่งนานเกินไป ลองออกไปที่โล่งหรือเปิด Wi-Fi แล้วลองใหม่'):T('Your location is not available right now.','ยังระบุตำแหน่งไม่ได้ในขณะนี้'),'info'); showTab('warn');},
       {enableHighAccuracy:true,timeout:15000,maximumAge:60000});};
   return b;}});
@@ -3602,7 +3634,10 @@ document.addEventListener('keydown',e=>{ if(e.key==='Escape'&&LOCPOP) closeLocPo
 function openLocPop(lat,lon,acc){ LOCPOP={lat,lon,acc}; renderLocPop.focused=0; renderLocPop(); ensureT2(renderLocPop); ensureRainObs(renderLocPop); ensureRainFac(renderLocPop); }
 // ---- short summary of a clicked place (redesigned page): PM2.5 and weather at the slider time
 function clickInfoHTML(lat,lon){
-  const t=curT(); if(t==null||!P.data) return `<div class="cp"><button type="button" class="cp-x" data-a="x" aria-label="${T('Close','ปิด')}">×</button><div class="cp-h"><b>${lat.toFixed(3)}°N ${lon.toFixed(3)}°E</b></div><div class="cp-n">${T('Forecast not loaded yet.','ยังไม่ได้โหลดข้อมูลพยากรณ์')}</div></div>`;
+  const t=curT(); if(t==null||!P.data){ const pv0=provinceOf(lat,lon);   // no forecast: name the place anyway, and say what to do
+    return `<div class="cp"><button type="button" class="cp-x" data-a="x" aria-label="${T('Close','ปิด')}">×</button><div class="cp-h"><b>${pv0?esc(provName(pv0)):T('Selected point','จุดที่เลือก')}</b><span>${lat.toFixed(3)}°N ${lon.toFixed(3)}°E</span></div><div class="cp-n">${
+      S.mode==='demo'?T('The demo models fire smoke only, so there are no PM₂.₅ or weather values for places. The live page shows them here.','ข้อมูลจำลองคำนวณเฉพาะควันไฟ จึงไม่มีค่า PM₂.₅ และสภาพอากาศของแต่ละจุด หน้าเว็บที่ใช้ข้อมูลจริงจะแสดงค่าเหล่านี้ที่นี่')
+      :T('There are no values for this place because the forecast is not loaded. Tap Refresh at the top of the page to try again.','ยังไม่มีค่าของจุดนี้ เพราะยังโหลดข้อมูลพยากรณ์ไม่ได้ กด รีเฟรช ที่ด้านบนของหน้าเพื่อลองอีกครั้ง')}</div></div>`; }
   const pv=provinceOf(lat,lon), v=totalAt(lat,lon,t), w=wxAt(lat,lon,t), r=rainAt(lat,lon,t), wi=wxIcon(lat,lon,t,r), past=t<=Date.now();
   const when=new Date(t).toLocaleString(LOC(),{weekday:'short',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit',timeZone:'Asia/Bangkok'});
   const b=v!=null?bandFor(v):null, ws=w?Math.hypot(w.u10,w.v10):null;
@@ -3635,8 +3670,8 @@ function renderClickInfo(){ if(!CLICK) return; const {lat,lon}=CLICK, el=clickCa
 function closeClickInfo(){ if(CLICK?.pin) map.removeLayer(CLICK.pin); clearTraj(); CLICK=null; const el=document.getElementById('clickCard'); if(el) el.hidden=true; if(window.PHONEUI?.active()) PHONEUI.set('peek'); }
 function clickInfo(lat,lon){
   if(CLICK?.pin) map.removeLayer(CLICK.pin); clearTraj();
-  const ember=getComputedStyle(document.documentElement).getPropertyValue('--ember').trim()||'#ea580c';
-  CLICK={lat,lon,pin:L.circleMarker([lat,lon],{radius:7,color:'#fff',weight:2.5,fillColor:ember,fillOpacity:1,interactive:false,pane:'markerPane'}).addTo(map)};
+  const pinC=cssVar('--ink')||cssVar('--ember')||'#ea580c';   // the selected place is a control, not data: ink where the page defines it, not fire orange
+  CLICK={lat,lon,pin:L.circleMarker([lat,lon],{radius:7,color:'#fff',weight:2.5,fillColor:pinC,fillOpacity:1,interactive:false,pane:'markerPane'}).addTo(map)};
   renderClickInfo();
   const again=()=>refreshClickInfo(); ensureT2(again); ensureRainObs(again); ensureRainFac(again);   // 0.025° temperature and rain load on first use
 }
@@ -3855,12 +3890,13 @@ async function runLive(){
   }catch(e){busy(null);banner(`<b>${T('Live data failed.','โหลดข้อมูลไม่สำเร็จ')}</b> ${esc(e.message)}`);showTab('warn');}
 }
 async function runModel(hotsRaw,mode,windOverride,quiet){
+  if(LOADFAIL) loadFail(false);
   const minc=$('minconf').value;
   S.hots=hotsRaw.filter(h=>confOK(h,minc));
   S.sources=clusterSources(S.hots,0.1,+$('fuel').value,$('fuelLC').checked,$('fireProf').value!=='const');
   const now=Date.now(), horizon=+$('horizon').value;
   if(!S.sources.length){busy(null);setMode(mode);S.sim=null;S.simInc=null;S.assimApplied=0;clearPlume();setTimeline();drawHotspots();drawTraj();computeReceptors();renderAll();redrawTime();
-    if(!quiet) banner(T(`No hotspots in ${esc(REGIONS[$('region').value].name)} right now. Outside the burning season (roughly January–April in the north) this is normal.${PUBLIC?'':' Try “Run demo” in Settings to see how the page works.'}`,`ขณะนี้ไม่มีจุดความร้อนในพื้นที่ที่เลือก นอกฤดูเผา (ภาคเหนือประมาณมกราคม–เมษายน) ถือเป็นเรื่องปกติ${PUBLIC?'':' ลองกด “ทดลองด้วยข้อมูลจำลอง” ในแท็บตั้งค่าเพื่อดูการทำงานของหน้าเว็บ'}`),'info');return;}
+    if(!quiet) banner(()=>T(`No hotspots in ${esc(REGIONS[$('region').value].name)} right now. Outside the burning season (roughly January–April in the north) this is normal.${PUBLIC?'':' Try “Run demo” in Settings to see how the page works.'}`,`ขณะนี้ไม่มีจุดความร้อนในพื้นที่ที่เลือก นอกฤดูเผา (ภาคเหนือประมาณมกราคม–เมษายน) ถือเป็นเรื่องปกติ${PUBLIC?'':' ลองกด “ทดลองด้วยข้อมูลจำลอง” ในแท็บตั้งค่าเพื่อดูการทำงานของหน้าเว็บ'}`),'info');return;}
   const reg=REGIONS.msea.bbox;
   const spec=windGridSpec(S.sources,reg);
   let W;
@@ -3888,8 +3924,8 @@ async function runModel(hotsRaw,mode,windOverride,quiet){
   computeReceptors();
   if(mode==='live'&&!P.data){const cams=await fetchCams(S.recep); if(cams) S.recep.forEach((r,i)=>r.cams=cams[i]);}
   setMode(mode); busy(null);
-  if(mode==='demo') banner(T('<b>Demo run.</b> Hotspots and winds are synthetic, generated to show how the page behaves. Nothing here describes real conditions.','<b>ข้อมูลจำลอง</b> จุดความร้อนและลมสร้างขึ้นเพื่อแสดงการทำงานของหน้าเว็บ ไม่ใช่สภาพจริง'));
-  else if(S.sources.length>800) banner(T(`Modelling the 800 strongest of ${S.sources.length} fire groups (0.1° cell × day) to keep the page fast.`,`คำนวณเฉพาะ 800 กลุ่มไฟที่แรงที่สุดจาก ${S.sources.length} กลุ่ม (ช่อง 0.1° × วัน) เพื่อให้หน้าเว็บทำงานเร็ว`),'info');
+  if(mode==='demo') banner(()=>T('<b>Demo run.</b> Hotspots and winds are synthetic, generated to show how the page behaves. Nothing here describes real conditions.','<b>ข้อมูลจำลอง</b> จุดความร้อนและลมสร้างขึ้นเพื่อแสดงการทำงานของหน้าเว็บ ไม่ใช่สภาพจริง'));
+  else if(S.sources.length>800) banner(()=>T(`Modelling the 800 strongest of ${S.sources.length} fire groups (0.1° cell × day) to keep the page fast.`,`คำนวณเฉพาะ 800 กลุ่มไฟที่แรงที่สุดจาก ${S.sources.length} กลุ่ม (ช่อง 0.1° × วัน) เพื่อให้หน้าเว็บทำงานเร็ว`),'info');
   else banner('');
   // slider
   setTimeline(); FIELD_CACHE.clear();
@@ -3979,8 +4015,8 @@ function renderWarnings(){
   $('warnList').querySelectorAll('.alert').forEach(el=>el.onclick=()=>focusTown(el.dataset.name));
   const km=+$('warnkm').value;
   const near=S.recep.filter(r=>r.near>0).sort((a,b)=>b.near-a.near);
-  $('nearList').innerHTML = near.length ? `<div class="tablewrap"><table><thead><tr><th>${T('Town','เมือง')}</th><th class="num">${T('Hotspots ≤','จุดความร้อน ≤')} ${km} ${T('km','กม.')}</th><th class="num">FRP MW</th><th class="num">${T('Closest km','ใกล้สุด กม.')}</th></tr></thead><tbody>`+
-    near.map(r=>`<tr><td>${esc(townName(r))}</td><td class="num">${r.near}</td><td class="num">${fmtN(r.nearFrp)}</td><td class="num">${r.nearest.toFixed(1)}</td></tr>`).join('')+'</tbody></table></div>'
+  $('nearList').innerHTML = near.length ? `<div class="tablewrap"><table><thead><tr><th>${T('Town','เมือง')}</th><th class="num">${T('Hotspots ≤','จุดความร้อน ≤')} ${km} ${T('km','กม.')}</th><th class="num dev-only">FRP MW</th><th class="num">${T('Closest km','ใกล้สุด กม.')}</th></tr></thead><tbody>`+
+    near.map(r=>`<tr><td>${esc(townName(r))}</td><td class="num">${r.near}</td><td class="num dev-only">${fmtN(r.nearFrp)}</td><td class="num">${r.nearest.toFixed(1)}</td></tr>`).join('')+'</tbody></table></div>'
     : T(`No hotspots within ${km} km of a town.`,`ไม่มีจุดความร้อนในรัศมี ${km} กม. จากเมือง`);
 }
 // point-in-province (ray casting), bboxes cached
@@ -4447,7 +4483,8 @@ function renderLegend(){
 applyStaticLang(); if(!S.mode) $('modeChip').textContent=T('no data','ไม่มีข้อมูล');
 $('btnLang').onclick=()=>{ LANG=LANG==='th'?'en':'th'; store.set('hsw.lang',LANG); applyStaticLang(); initLegToggle.relabel?.(); initSideToggle.relabel?.(); refreshClickInfo();
   {const lb=document.querySelector('.locate-btn'); if(lb){lb.title=T('Show PM2.5 at my location','ดูค่าฝุ่นที่ตำแหน่งของฉัน'); lb.setAttribute('aria-label',lb.title);}} if(S.mode) setMode(S.mode); else $('modeChip').textContent=T('no data','ไม่มีข้อมูล');
-  renderLegend(); renderAll(); renderHereBox(); if(LOCPOP) renderLocPop(); drawStations?.(); redrawTime(); };
+  renderLegend(); renderAll(); renderHereBox(); if(LOCPOP) renderLocPop(); drawStations?.(); redrawTime();
+  if(BANNER) banner(BANNER.f,BANNER.cls); if(LOADFAIL) loadFail(true); };
 {const v=store.get('hsw.unitSel'); if(v) $('unitSel').value=v;}
 setWarnView(store.get('hsw.warnView')||'prov'); $('warnView').addEventListener('change',e=>setWarnView(e.target.value));
 $('unitSel').addEventListener('change',()=>{store.set('hsw.unitSel',$('unitSel').value); renderLegend(); renderAll(); redrawTime();});

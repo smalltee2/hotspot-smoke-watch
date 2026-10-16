@@ -131,6 +131,8 @@ td.num{text-align:right;font-family:var(--font-data);font-variant-numeric:tabula
 .method li{margin-bottom:6px;font-size:.84rem}
 
 .mapwrap{position:relative;min-height:0;min-width:0}
+.mapmsg{position:absolute;left:50%;top:40%;transform:translate(-50%,-50%);z-index:1100;width:min(340px,calc(100% - 32px));background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--fg);padding:12px 14px;box-shadow:0 4px 18px rgba(0,0,0,.18);font-size:.88rem;line-height:1.45}
+.mapmsg b{display:block;margin-bottom:4px} .mapmsg p{margin:0 0 10px;color:var(--muted)}
 #map{position:absolute;inset:0;background:var(--bg)}
 .scrub{position:absolute;left:12px;right:12px;bottom:12px;z-index:500;background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:8px 12px;display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;box-shadow:0 2px 10px rgb(0 0 0 / .12)}
 .scrub input{width:100%;accent-color:var(--ember)}
@@ -1492,7 +1494,7 @@ function setTiles(){
   if(tiles){map.removeLayer(tiles);tiles=null;}
   if(bm!=='plain'){const [url,opt]=TILESETS[bm]();let fails=0,ok=0;
     tiles=L.tileLayer(url,{...opt,attribution:opt.attribution+' · Fires: NASA FIRMS · Wind: Open-Meteo · Borders: World Bank Official Boundaries'})
-      .on('tileload',()=>ok++).on('tileerror',()=>{if(++fails>6&&!ok){setBasemap('plain');banner(T('Online map tiles could not load here, so the page switched to the built-in outline map. Fires, wind and smoke still work.','โหลดแผนที่ออนไลน์ไม่ได้ จึงเปลี่ยนเป็นแผนที่เส้นขอบในตัว จุดไฟ ลม และควันยังแสดงได้ตามปกติ'),'info');}}).addTo(map);}
+      .on('tileload',()=>ok++).on('tileerror',()=>{if(++fails>6&&!ok){setBasemap('plain');banner(()=>T('Online map tiles could not load here, so the page switched to the built-in outline map. Fires, wind and smoke still work.','โหลดแผนที่ออนไลน์ไม่ได้ จึงเปลี่ยนเป็นแผนที่เส้นขอบในตัว จุดไฟ ลม และควันยังแสดงได้ตามปกติ'),'info');}}).addTo(map);}
   else map.attributionControl.addAttribution('Borders: World Bank Official Boundaries');
   styleBase();
   $('bmSel').value=bm;
@@ -1523,7 +1525,20 @@ function allReceptors(){return TOWNS.filter(t=>inRegion(t.lat,t.lon)&&inBox(t.la
 
 // ---- busy & messages
 function busy(msg){$('busy').hidden=!msg; if(msg) $('busyMsg').textContent=msg; $('btnRun').disabled=$('btnRun2').disabled=$('btnDemo').disabled=!!msg;}
-function banner(html,cls=''){$('banner').innerHTML=html?`<div class="msg ${cls}">${html}</div>`:'';}
+// side-panel message; pass a function (it calls T) and the message is rebuilt in the new language when the language is switched
+let BANNER=null;
+function banner(html,cls=''){ BANNER=typeof html==='function'?{f:html,cls}:null; const h=BANNER?html():html; $('banner').innerHTML=h?`<div class="msg ${cls}">${h}</div>`:''; }
+// the forecast could not be loaded: say so over the map, where it is seen on phones too (there the side panel is folded away),
+// and offer to try again. Public pages say what to do; the technical reason stays in the console (and in the banner on the developer page).
+let LOADFAIL=false;
+function loadFail(on){ LOADFAIL=on; let el=document.getElementById('mapMsg');
+  if(!on){ if(el) el.remove(); return; }
+  if(!el){ el=document.createElement('div'); el.id='mapMsg'; el.className='mapmsg'; el.setAttribute('role','alert'); document.querySelector('.mapwrap').appendChild(el);
+    L.DomEvent.disableClickPropagation(el); L.DomEvent.disableScrollPropagation(el); }
+  el.innerHTML=`<b>${T('The forecast could not be loaded.','โหลดข้อมูลพยากรณ์ไม่สำเร็จ')}</b>
+    <p>${T('Check your internet connection, then try again. If it still fails, the hourly update may be late: try again in a few minutes.','ตรวจสอบการเชื่อมต่ออินเทอร์เน็ต แล้วลองอีกครั้ง หากยังไม่ได้ ข้อมูลรายชั่วโมงอาจมาช้า ลองใหม่อีกครั้งในไม่กี่นาที')}</p>
+    <button type="button" class="btn primary">${T('Try again','ลองอีกครั้ง')}</button>`;
+  el.querySelector('button').onclick=()=>refreshClick(); }
 function setMode(m){S.mode=m;if(m==='live'&&P.data){showFreshness();return;}const c=$('modeChip');c.className='chip '+m;c.textContent={live:T('Live data','ข้อมูลล่าสุด'),demo:T('Demo · synthetic','ข้อมูลจำลอง'),file:T('Uploaded file','ไฟล์ที่อัปโหลด')}[m];
   $('updated').textContent=T('Run ','รัน ')+hm(Date.now());}
 
@@ -1615,18 +1630,21 @@ async function refreshClick(){
   S.jumpNow=true; S.keepSel=false; const b=await newBuild();   // a failed silent auto-refresh may have left keepSel set; a manual refresh shows now
   if(b){ toast(T('New version of the page — reloading…','มีหน้าเว็บเวอร์ชันใหม่ — กำลังโหลดใหม่…'));
     const u=new URL(location.href); u.searchParams.set('v',b); location.replace(u.toString()); return; }   // the query bypasses the browser's cached copy of the page
-  const before=P.data?P.data.generated:null; await runAuto(false);
+  const before=P.data?P.data.generated:null, ok=await runAuto(false);
   if(S.jumpNow){ setTimeline(); redrawTime(); }   // the load failed before the timeline was rebuilt: still show the current hour
-  if(!P.data) return; const g=P.data.generated, nxt=new Date(Math.floor(Date.now()/HR)*HR+HR+20*60e3);
+  if(!P.data||ok===false) return; const g=P.data.generated, nxt=new Date(Math.floor(Date.now()/HR)*HR+HR+20*60e3);
   toast(g!==before?T(`Updated to the run of ${hm(g)}.`,`อัปเดตเป็นรอบ ${hm(g)} แล้ว`)
     :T(`Already the latest run (${hm(g)}). New runs arrive hourly, next about ${hm(nxt)}.`,`เป็นข้อมูลรอบล่าสุดแล้ว (${hm(g)}) ข้อมูลใหม่มาทุกชั่วโมง รอบถัดไปประมาณ ${hm(nxt)}`),6000);
 }
-async function runAuto(quiet){ try{ await runAuto_(quiet); }catch(e){ busy(null); if(!quiet) banner(`<b>${T('Update failed.','อัปเดตไม่สำเร็จ')}</b> ${esc(e.message)}`); console.error(e); } }
+async function runAuto(quiet){ try{ return await runAuto_(quiet); }catch(e){ busy(null); console.error(e);
+  if(!quiet){ if(PUBLIC&&!P.data) loadFail(true); else banner(()=>`<b>${T('Update failed.','อัปเดตไม่สำเร็จ')}</b> ${PUBLIC?T('Part of the latest data could not be loaded, so some layers may be missing. Try Refresh again in a few minutes.','โหลดข้อมูลล่าสุดได้ไม่ครบ บางชั้นข้อมูลอาจหายไป ลองกดรีเฟรชอีกครั้งในอีกไม่กี่นาที'):esc(e.message)}`); } return false; } }   // false: the load failed (refreshClick then skips its "updated" message)
 async function runAuto_(quiet){
   if(!quiet) busy(T('Loading the latest hourly data…','กำลังโหลดข้อมูลรายชั่วโมงล่าสุด…'));
   const d=await loadPipeline();
   if(d){P.data=d; busy(T('Loading meteorology…','กำลังโหลดข้อมูลอุตุนิยมวิทยา…')); await Promise.all([loadDEM(),loadMet(),loadMlField(),loadRkFine(),loadWxml()]); await runModel(pipelineHotspots(d),'live',null,quiet); showFreshness(); loadVerify(); renderRK(); renderAssim(); renderML();}
-  else if(!quiet){P.data=null; await runLive();}
+  else if(!quiet){ if(PUBLIC&&P.data){ busy(null); toast(T('The latest data could not be loaded; the page keeps the data it had.','โหลดข้อมูลล่าสุดไม่สำเร็จ หน้าเว็บยังแสดงข้อมูลเดิมอยู่')); return false; }
+    if(PUBLIC){ busy(null); loadFail(true); return false; }   // public: reading FIRMS from the browser needs a key and a proxy the public page does not have
+    P.data=null; await runLive(); }
 }
 let DEM=null, MET=null;
 // met-web.json stores integers as hour-to-hour differences (see scripts/met.mjs packMet); rebuild the plain arrays
@@ -2333,12 +2351,12 @@ const LocateCtl=L.Control.extend({options:{position:'topleft'},onAdd(){
   b.innerHTML='<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/><circle cx="12" cy="12" r="8"/></svg>';
   L.DomEvent.disableClickPropagation(b);
   b.onclick=()=>{
-    if(!navigator.geolocation){banner(T('This browser cannot share its location.','เบราว์เซอร์นี้ไม่รองรับการระบุตำแหน่ง'),'info');return;}
+    if(!navigator.geolocation){banner(()=>T('This browser cannot share its location.','เบราว์เซอร์นี้ไม่รองรับการระบุตำแหน่ง'),'info');return;}
     b.setAttribute('aria-busy','true');
     navigator.geolocation.getCurrentPosition(pos=>{b.removeAttribute('aria-busy'); b.classList.add('on');
         showHere(pos.coords.latitude,pos.coords.longitude,pos.coords.accuracy,true);},
       err=>{b.removeAttribute('aria-busy');
-        banner(err.code===1?T('Location permission was declined. Allow location for this site in the browser settings, then tap the button again.','ไม่ได้รับอนุญาตให้ใช้ตำแหน่ง เปิดสิทธิ์ตำแหน่งให้เว็บนี้ในการตั้งค่าเบราว์เซอร์ แล้วกดปุ่มอีกครั้ง'):
+        banner(()=>err.code===1?T('Location permission was declined. Allow location for this site in the browser settings, then tap the button again.','ไม่ได้รับอนุญาตให้ใช้ตำแหน่ง เปิดสิทธิ์ตำแหน่งให้เว็บนี้ในการตั้งค่าเบราว์เซอร์ แล้วกดปุ่มอีกครั้ง'):
                err.code===3?T('Finding your location took too long. Move to open sky or turn on Wi-Fi, then try again.','ใช้เวลาหาตำแหน่งนานเกินไป ลองออกไปที่โล่งหรือเปิด Wi-Fi แล้วลองใหม่'):T('Your location is not available right now.','ยังระบุตำแหน่งไม่ได้ในขณะนี้'),'info'); showTab('warn');},
       {enableHighAccuracy:true,timeout:15000,maximumAge:60000});};
   return b;}});
@@ -2625,7 +2643,10 @@ document.addEventListener('keydown',e=>{ if(e.key==='Escape'&&LOCPOP) closeLocPo
 function openLocPop(lat,lon,acc){ LOCPOP={lat,lon,acc}; renderLocPop.focused=0; renderLocPop(); ensureT2(renderLocPop); ensureRainObs(renderLocPop); ensureRainFac(renderLocPop); }
 // ---- short summary of a clicked place (redesigned page): PM2.5 and weather at the slider time
 function clickInfoHTML(lat,lon){
-  const t=curT(); if(t==null||!P.data) return `<div class="cp"><button type="button" class="cp-x" data-a="x" aria-label="${T('Close','ปิด')}">×</button><div class="cp-h"><b>${lat.toFixed(3)}°N ${lon.toFixed(3)}°E</b></div><div class="cp-n">${T('Forecast not loaded yet.','ยังไม่ได้โหลดข้อมูลพยากรณ์')}</div></div>`;
+  const t=curT(); if(t==null||!P.data){ const pv0=provinceOf(lat,lon);   // no forecast: name the place anyway, and say what to do
+    return `<div class="cp"><button type="button" class="cp-x" data-a="x" aria-label="${T('Close','ปิด')}">×</button><div class="cp-h"><b>${pv0?esc(provName(pv0)):T('Selected point','จุดที่เลือก')}</b><span>${lat.toFixed(3)}°N ${lon.toFixed(3)}°E</span></div><div class="cp-n">${
+      S.mode==='demo'?T('The demo models fire smoke only, so there are no PM₂.₅ or weather values for places. The live page shows them here.','ข้อมูลจำลองคำนวณเฉพาะควันไฟ จึงไม่มีค่า PM₂.₅ และสภาพอากาศของแต่ละจุด หน้าเว็บที่ใช้ข้อมูลจริงจะแสดงค่าเหล่านี้ที่นี่')
+      :T('There are no values for this place because the forecast is not loaded. Tap Refresh at the top of the page to try again.','ยังไม่มีค่าของจุดนี้ เพราะยังโหลดข้อมูลพยากรณ์ไม่ได้ กด รีเฟรช ที่ด้านบนของหน้าเพื่อลองอีกครั้ง')}</div></div>`; }
   const pv=provinceOf(lat,lon), v=totalAt(lat,lon,t), w=wxAt(lat,lon,t), r=rainAt(lat,lon,t), wi=wxIcon(lat,lon,t,r), past=t<=Date.now();
   const when=new Date(t).toLocaleString(LOC(),{weekday:'short',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit',timeZone:'Asia/Bangkok'});
   const b=v!=null?bandFor(v):null, ws=w?Math.hypot(w.u10,w.v10):null;
@@ -2658,8 +2679,8 @@ function renderClickInfo(){ if(!CLICK) return; const {lat,lon}=CLICK, el=clickCa
 function closeClickInfo(){ if(CLICK?.pin) map.removeLayer(CLICK.pin); clearTraj(); CLICK=null; const el=document.getElementById('clickCard'); if(el) el.hidden=true; if(window.PHONEUI?.active()) PHONEUI.set('peek'); }
 function clickInfo(lat,lon){
   if(CLICK?.pin) map.removeLayer(CLICK.pin); clearTraj();
-  const ember=getComputedStyle(document.documentElement).getPropertyValue('--ember').trim()||'#ea580c';
-  CLICK={lat,lon,pin:L.circleMarker([lat,lon],{radius:7,color:'#fff',weight:2.5,fillColor:ember,fillOpacity:1,interactive:false,pane:'markerPane'}).addTo(map)};
+  const pinC=cssVar('--ink')||cssVar('--ember')||'#ea580c';   // the selected place is a control, not data: ink where the page defines it, not fire orange
+  CLICK={lat,lon,pin:L.circleMarker([lat,lon],{radius:7,color:'#fff',weight:2.5,fillColor:pinC,fillOpacity:1,interactive:false,pane:'markerPane'}).addTo(map)};
   renderClickInfo();
   const again=()=>refreshClickInfo(); ensureT2(again); ensureRainObs(again); ensureRainFac(again);   // 0.025° temperature and rain load on first use
 }
@@ -2878,12 +2899,13 @@ async function runLive(){
   }catch(e){busy(null);banner(`<b>${T('Live data failed.','โหลดข้อมูลไม่สำเร็จ')}</b> ${esc(e.message)}`);showTab('warn');}
 }
 async function runModel(hotsRaw,mode,windOverride,quiet){
+  if(LOADFAIL) loadFail(false);
   const minc=$('minconf').value;
   S.hots=hotsRaw.filter(h=>confOK(h,minc));
   S.sources=clusterSources(S.hots,0.1,+$('fuel').value,$('fuelLC').checked,$('fireProf').value!=='const');
   const now=Date.now(), horizon=+$('horizon').value;
   if(!S.sources.length){busy(null);setMode(mode);S.sim=null;S.simInc=null;S.assimApplied=0;clearPlume();setTimeline();drawHotspots();drawTraj();computeReceptors();renderAll();redrawTime();
-    if(!quiet) banner(T(`No hotspots in ${esc(REGIONS[$('region').value].name)} right now. Outside the burning season (roughly January–April in the north) this is normal.${PUBLIC?'':' Try “Run demo” in Settings to see how the page works.'}`,`ขณะนี้ไม่มีจุดความร้อนในพื้นที่ที่เลือก นอกฤดูเผา (ภาคเหนือประมาณมกราคม–เมษายน) ถือเป็นเรื่องปกติ${PUBLIC?'':' ลองกด “ทดลองด้วยข้อมูลจำลอง” ในแท็บตั้งค่าเพื่อดูการทำงานของหน้าเว็บ'}`),'info');return;}
+    if(!quiet) banner(()=>T(`No hotspots in ${esc(REGIONS[$('region').value].name)} right now. Outside the burning season (roughly January–April in the north) this is normal.${PUBLIC?'':' Try “Run demo” in Settings to see how the page works.'}`,`ขณะนี้ไม่มีจุดความร้อนในพื้นที่ที่เลือก นอกฤดูเผา (ภาคเหนือประมาณมกราคม–เมษายน) ถือเป็นเรื่องปกติ${PUBLIC?'':' ลองกด “ทดลองด้วยข้อมูลจำลอง” ในแท็บตั้งค่าเพื่อดูการทำงานของหน้าเว็บ'}`),'info');return;}
   const reg=REGIONS.msea.bbox;
   const spec=windGridSpec(S.sources,reg);
   let W;
@@ -2911,8 +2933,8 @@ async function runModel(hotsRaw,mode,windOverride,quiet){
   computeReceptors();
   if(mode==='live'&&!P.data){const cams=await fetchCams(S.recep); if(cams) S.recep.forEach((r,i)=>r.cams=cams[i]);}
   setMode(mode); busy(null);
-  if(mode==='demo') banner(T('<b>Demo run.</b> Hotspots and winds are synthetic, generated to show how the page behaves. Nothing here describes real conditions.','<b>ข้อมูลจำลอง</b> จุดความร้อนและลมสร้างขึ้นเพื่อแสดงการทำงานของหน้าเว็บ ไม่ใช่สภาพจริง'));
-  else if(S.sources.length>800) banner(T(`Modelling the 800 strongest of ${S.sources.length} fire groups (0.1° cell × day) to keep the page fast.`,`คำนวณเฉพาะ 800 กลุ่มไฟที่แรงที่สุดจาก ${S.sources.length} กลุ่ม (ช่อง 0.1° × วัน) เพื่อให้หน้าเว็บทำงานเร็ว`),'info');
+  if(mode==='demo') banner(()=>T('<b>Demo run.</b> Hotspots and winds are synthetic, generated to show how the page behaves. Nothing here describes real conditions.','<b>ข้อมูลจำลอง</b> จุดความร้อนและลมสร้างขึ้นเพื่อแสดงการทำงานของหน้าเว็บ ไม่ใช่สภาพจริง'));
+  else if(S.sources.length>800) banner(()=>T(`Modelling the 800 strongest of ${S.sources.length} fire groups (0.1° cell × day) to keep the page fast.`,`คำนวณเฉพาะ 800 กลุ่มไฟที่แรงที่สุดจาก ${S.sources.length} กลุ่ม (ช่อง 0.1° × วัน) เพื่อให้หน้าเว็บทำงานเร็ว`),'info');
   else banner('');
   // slider
   setTimeline(); FIELD_CACHE.clear();
@@ -3002,8 +3024,8 @@ function renderWarnings(){
   $('warnList').querySelectorAll('.alert').forEach(el=>el.onclick=()=>focusTown(el.dataset.name));
   const km=+$('warnkm').value;
   const near=S.recep.filter(r=>r.near>0).sort((a,b)=>b.near-a.near);
-  $('nearList').innerHTML = near.length ? `<div class="tablewrap"><table><thead><tr><th>${T('Town','เมือง')}</th><th class="num">${T('Hotspots ≤','จุดความร้อน ≤')} ${km} ${T('km','กม.')}</th><th class="num">FRP MW</th><th class="num">${T('Closest km','ใกล้สุด กม.')}</th></tr></thead><tbody>`+
-    near.map(r=>`<tr><td>${esc(townName(r))}</td><td class="num">${r.near}</td><td class="num">${fmtN(r.nearFrp)}</td><td class="num">${r.nearest.toFixed(1)}</td></tr>`).join('')+'</tbody></table></div>'
+  $('nearList').innerHTML = near.length ? `<div class="tablewrap"><table><thead><tr><th>${T('Town','เมือง')}</th><th class="num">${T('Hotspots ≤','จุดความร้อน ≤')} ${km} ${T('km','กม.')}</th><th class="num dev-only">FRP MW</th><th class="num">${T('Closest km','ใกล้สุด กม.')}</th></tr></thead><tbody>`+
+    near.map(r=>`<tr><td>${esc(townName(r))}</td><td class="num">${r.near}</td><td class="num dev-only">${fmtN(r.nearFrp)}</td><td class="num">${r.nearest.toFixed(1)}</td></tr>`).join('')+'</tbody></table></div>'
     : T(`No hotspots within ${km} km of a town.`,`ไม่มีจุดความร้อนในรัศมี ${km} กม. จากเมือง`);
 }
 // point-in-province (ray casting), bboxes cached
@@ -3470,7 +3492,8 @@ function renderLegend(){
 applyStaticLang(); if(!S.mode) $('modeChip').textContent=T('no data','ไม่มีข้อมูล');
 $('btnLang').onclick=()=>{ LANG=LANG==='th'?'en':'th'; store.set('hsw.lang',LANG); applyStaticLang(); initLegToggle.relabel?.(); initSideToggle.relabel?.(); refreshClickInfo();
   {const lb=document.querySelector('.locate-btn'); if(lb){lb.title=T('Show PM2.5 at my location','ดูค่าฝุ่นที่ตำแหน่งของฉัน'); lb.setAttribute('aria-label',lb.title);}} if(S.mode) setMode(S.mode); else $('modeChip').textContent=T('no data','ไม่มีข้อมูล');
-  renderLegend(); renderAll(); renderHereBox(); if(LOCPOP) renderLocPop(); drawStations?.(); redrawTime(); };
+  renderLegend(); renderAll(); renderHereBox(); if(LOCPOP) renderLocPop(); drawStations?.(); redrawTime();
+  if(BANNER) banner(BANNER.f,BANNER.cls); if(LOADFAIL) loadFail(true); };
 {const v=store.get('hsw.unitSel'); if(v) $('unitSel').value=v;}
 setWarnView(store.get('hsw.warnView')||'prov'); $('warnView').addEventListener('change',e=>setWarnView(e.target.value));
 $('unitSel').addEventListener('change',()=>{store.set('hsw.unitSel',$('unitSel').value); renderLegend(); renderAll(); redrawTime();});

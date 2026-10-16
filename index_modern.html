@@ -1313,9 +1313,10 @@ aside:has(#hereBox:not([hidden])) .sheet-peek:not(:has(#clickCard:not([hidden]))
   .sheet-grip:focus-visible{outline-offset:-4px}
   .sheet-peek{display:block;padding:0 14px;border-bottom:0}
   .sheet-peek .ask{display:none}
-  .sheet-cta{display:flex;align-items:center;gap:10px;padding:2px 0 10px}
-  .sheet-cta .btn{flex:none;padding:7px 14px;font-size:var(--fs-md)}
-  .sheet-hint{font-size:var(--fs-sm);color:var(--muted);line-height:1.3}
+  .sheet-cta{display:flex;flex-wrap:nowrap;align-items:center;gap:10px;padding:2px 0 10px}
+  .sheet-cta .btn{flex:none;padding:7px 14px;font-size:var(--fs-sm)}
+  /* the peek has a fixed height: the hint keeps to two lines beside the button (Thai runs longer than English) */
+  .sheet-hint{min-width:0;font-size:var(--fs-xs);color:var(--muted);line-height:1.3;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden}
   #clickCard:not([hidden])~.sheet-cta,.sheet-peek:has(#clickCard:not([hidden])) .sheet-cta{display:none}
   .sheet-peek .clickcard{position:static;width:auto;max-width:none;max-height:none;overflow:visible;box-shadow:none;border:0;border-radius:0;padding:4px 0 10px;animation:none}
   aside .summary{padding:0 14px 8px}

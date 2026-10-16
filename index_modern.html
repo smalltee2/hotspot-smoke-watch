@@ -40,6 +40,7 @@
   --ink-hover: #1d2b5c;
   --ink-soft: rgba(40, 58, 120, 0.08);
   --on-ink: #ffffff;
+  --fire-ring: #4a1a05;   /* outline of fire points: they read as points, never as an air-quality band */
   
   --sea: #e0f2fe;
   --land: #ffffff;
@@ -104,6 +105,7 @@
     --ink-hover: #cdd6f7;
     --ink-soft: rgba(179, 193, 242, 0.12);
     --on-ink: #0f172a;
+    --fire-ring: rgba(255, 255, 255, 0.85);
     
     --sea: #082f49;
     --land: #0f172a;
@@ -149,6 +151,7 @@
   --ink-hover: #cdd6f7;
   --ink-soft: rgba(179, 193, 242, 0.12);
   --on-ink: #0f172a;
+  --fire-ring: rgba(255, 255, 255, 0.85);
   
   --sea: #082f49;
   --land: #0f172a;
@@ -770,6 +773,9 @@ tbody tr:hover {
   padding: 12px 14px;
   font-size: var(--fs-sm);
   max-width: 220px;
+  max-height: calc(100% - 132px);   /* stops above the time dock */
+  overflow-y: auto;
+  overscroll-behavior: contain;
   box-shadow: var(--shadow-lg);
 }
 .legend summary {
@@ -951,19 +957,21 @@ tbody tr:hover {
   border: 0 !important;
   box-shadow: none !important;
   color: var(--muted) !important;
-  font: 500 10px/1 var(--font-body) !important;
+  font: 500 12px/1.2 var(--font-body) !important;
   padding: 0 !important;
-  text-shadow: 0 0 3px var(--land), 0 0 3px var(--land) !important;
+  text-shadow: 0 0 2px var(--land), 0 0 3px var(--land), 0 0 4px var(--land) !important;
 }
 .leaflet-tooltip.tlabel {
   background: none !important;
   border: 0 !important;
   box-shadow: none !important;
   color: var(--fg) !important;
-  font: 600 11px/1 var(--font-body) !important;
+  font: 600 13px/1.2 var(--font-body) !important;
   padding: 0 0 0 4px !important;
-  text-shadow: 0 0 3px var(--land), 0 0 3px var(--land) !important;
+  text-shadow: 0 0 2px var(--land), 0 0 3px var(--land), 0 0 4px var(--land) !important;
 }
+.leaflet-tooltip.tlabel.minor { font-weight: 500 !important; font-size: 12px !important; }
+.lbl-x { visibility: hidden; }
 .hide-plabel .plabel, .hide-tlabel .tlabel, .hide-mlabel .tlabel.minor { display: none; }
 .leaflet-control-attribution {
   background: var(--glass-bg) !important;
@@ -1713,7 +1721,7 @@ aside:has(#hereBox:not([hidden])) .sheet-peek:not(:has(#clickCard:not([hidden]))
       <div class="keys">
         <span><i class="dot" style="background:var(--ember)"></i><span data-th="จุดความร้อน (ขนาด = FRP)">Hotspot (size = FRP)</span></span>
         <span><i class="dot" style="border:2px solid var(--fg)"></i><span data-th="เมือง / จุดรับ">Town / receptor</span></span>
-        <span><i style="display:inline-block;width:14px;height:10px;vertical-align:-1px"><svg viewBox="0 0 14 10" width="14" height="10"><path d="M0 5h10M7 1l4 4-4 4" fill="none" stroke="var(--fg)" stroke-width="1.6"/></svg></i><span data-th="ลม: อนุภาคเคลื่อนไปตามทิศที่ลมพัด สีและความเร็วตามความแรงลม ดูค่าลมได้ที่ตำแหน่งของฉันและเมือง">Wind: particles drift the way the wind blows, coloured and moving by wind speed; wind values are shown under “my location” and each town</span></span>
+        <span><i style="display:inline-block;width:14px;height:10px;vertical-align:-1px"><svg viewBox="0 0 14 10" width="14" height="10"><path d="M0 5h10M7 1l4 4-4 4" fill="none" stroke="var(--fg)" stroke-width="1.6"/></svg></i><span data-th="ลม: อนุภาคเคลื่อนตามลม สีและความเร็วบอกความแรงลม">Wind: particles move with the wind; colour and speed show its strength</span></span>
         <div id="legWind" hidden><div class="pcdbar" id="windBar" style="grid-template-columns:repeat(6,1fr)"></div>
           <div class="ticks"><span>0</span><span>1.6</span><span>3.4</span><span>5.5</span><span>8</span><span>10.8</span><span>m/s</span></div>
           <div class="note" style="font-size:var(--fs-xs)" data-th="ลม 10 ม. แบ่งตามมาตราโบฟอร์ต (WMO): สงบ–ลมเบา (0–1), ลมอ่อน (2), ลมโชย (3), ลมปานกลาง (4), ลมแรงพอควร (5), ลมแรงขึ้นไป (6+)">10-m wind by Beaufort force (WMO): calm–light air (0–1), light breeze (2), gentle (3), moderate (4), fresh (5), strong and above (6+)</div></div>
@@ -1743,7 +1751,7 @@ aside:has(#hereBox:not([hidden])) .sheet-peek:not(:has(#clickCard:not([hidden]))
         <option value="street" data-th="แผนที่ถนน">Street map</option>
         <option value="terrain" data-th="ภูมิประเทศ">Terrain</option>
         <option value="sat" data-th="ภาพดาวเทียม">Satellite</option>
-        <option value="plain" data-th="เส้นขอบอย่างเดียว (ออฟไลน์)">Plain (offline)</option>
+        <option value="plain" data-th="เส้นขอบ (ออฟไลน์)">Plain (offline)</option>
       </select><span id="gibsDate" class="gibsdate" hidden></span></div>
     <div id="nasaTip" class="nasatip" hidden></div>
     <div class="scrub">
@@ -2347,8 +2355,14 @@ function provCentroid(f){let b=L.geoJSON(f).getBounds();let best=null,area=0;
   return best||b.getCenter();}
 provLabels=L.layerGroup(GEO_P.features.map(f=>L.marker(provCentroid(f),{icon:L.divIcon({className:'',html:'',iconSize:[0,0]}),interactive:false,keyboard:false})
   .bindTooltip(f.properties.th?`${f.properties.n} · ${f.properties.th}`:f.properties.n,{permanent:true,direction:'center',className:'plabel'}))).addTo(map);
-function labelZoom(){const z=map.getZoom();map.getContainer().classList.toggle('hide-plabel',z<8);map.getContainer().classList.toggle('hide-tlabel',z<7);map.getContainer().classList.toggle('hide-mlabel',z<9);}
-map.on('zoomend',labelZoom);
+function labelZoom(){const z=map.getZoom();map.getContainer().classList.toggle('hide-plabel',z<8);map.getContainer().classList.toggle('hide-tlabel',z<6);map.getContainer().classList.toggle('hide-mlabel',z<8);}
+// town names that would overlap are hidden (provincial capitals first, then towns in list order); run after each redraw and zoom
+function declutterLabels(){ const els=[...map.getContainer().querySelectorAll('.leaflet-tooltip.tlabel')], kept=[];
+  els.sort((a,b)=>a.classList.contains('minor')-b.classList.contains('minor'));
+  for(const el of els){ el.classList.remove('lbl-x'); const r=el.getBoundingClientRect(); if(!r.width) continue;   // hidden by zoom
+    if(kept.some(q=>r.left<q.right+3&&r.right>q.left-3&&r.top<q.bottom+1&&r.bottom>q.top-1)) el.classList.add('lbl-x'); else kept.push(r); } }
+const declutterSoon=()=>requestAnimationFrame(declutterLabels);
+map.on('zoomend',()=>{labelZoom(); declutterSoon();}); map.on('resize',declutterSoon);
 const TILESETS={
   light:()=>[`https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/${isDark()?'World_Dark_Gray_Base':'World_Light_Gray_Base'}/MapServer/tile/{z}/{y}/{x}`,{maxZoom:16,attribution:'Basemap © Esri, HERE, Garmin, © OpenStreetMap contributors'}],
   street:()=>['https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap contributors'}],
@@ -4034,10 +4048,10 @@ function renderSources(){renderProvinces();
   tb.querySelectorAll('tr[data-i]').forEach(tr=>tr.onclick=()=>{const s=S.sources[+tr.dataset.i];map.flyTo([s.lat,s.lon],10);showMapOnPhone();});
 }
 function drawHotspots(){
-  hotLayer.clearLayers(); const ember=cssVar('--ember');
-  const now=Date.now();
+  hotLayer.clearLayers(); const ember=cssVar('--ember'), ring=cssVar('--fire-ring')||ember;   // ring: the redesign outlines fire points so they read as points, never as a band colour
+  const now=Date.now(), big=cssVar('--fire-ring')?4:7, k=cssVar('--fire-ring')?0.6:0.9;     // and keeps them small, so hundreds of detections do not merge into blobs
   for(const h of S.hots){if(!inRegion(h.lat,h.lon)) continue; const age=(now-h.t)/36e5;
-    L.circleMarker([h.lat,h.lon],{radius:2.5+Math.min(7,Math.sqrt(h.frp)*0.9),weight:1,color:ember,fillColor:ember,fillOpacity:age<12?0.85:0.45,opacity:age<12?1:0.5})
+    L.circleMarker([h.lat,h.lon],{radius:2.5+Math.min(big,Math.sqrt(h.frp)*k),weight:1,color:ring,fillColor:ember,fillOpacity:age<12?0.9:0.45,opacity:age<12?0.9:0.45})
      .bindTooltip(()=>{if(h.prov===undefined)h.prov=provinceOf(h.lat,h.lon);return `${h.prov?esc(provName(h.prov))+(LANG!=='th'&&h.prov.th?' ('+esc(h.prov.th)+')':'')+'<br>':''}FRP ${fmtN(h.frp)} MW · ${h.sat} · ${fmtT(h.t)}`;}).addTo(hotLayer);}
 }
 function drawTraj(){
@@ -4052,13 +4066,14 @@ function drawTowns(){
      .bindTooltip(`${esc(townName(r))}: ${T('fire PM₂.₅ at this hour','PM₂.₅ จากไฟ ณ ชั่วโมงนี้')} ${fmtN(val)} µg/m³`).on('click',()=>focusTown(r.name)).addTo(townLayer);
     L.marker([r.lat,r.lon],{icon:L.divIcon({className:'',html:'',iconSize:[0,0]}),interactive:false,keyboard:false})
      .bindTooltip(esc(townName(r)),{permanent:true,direction:'right',offset:[6,0],className:r.kind==='town'?'tlabel minor':'tlabel'}).addTo(townLayer);}
+  declutterSoon();
 }
 function clearPlume(){if(plume){map.removeLayer(plume);plume=null;}}
 // smoke colour ramp (µg/m3)
 // µg/m³ colours of both PM2.5 layers (total and fire smoke): MAP_BANDS; fire smoke below 1 µg/m³ is not drawn
 const RAMP=[[1]];
 const EPA_ALPHA=.68;
-function rampColor(c){ if(!(c>=1)) return null; const rgb=hexRGB(rampCss(c)); return [rgb[0],rgb[1],rgb[2],EPA_ALPHA]; }
+function rampColor(c){ if(!(c>=1)) return null; const rgb=hexRGB(rampCss(c)); return [rgb[0],rgb[1],rgb[2],c>=15?EPA_ALPHA:EPA_ALPHA*(0.25+0.75*(c-1)/14)]; }   // fades in up to 15 µg/m³: clean air stays faint (on dark maps it read as fog)
 function puffField(s,w,so,nx,ny,cell){
   const F=new Float32Array(nx*ny);
   for(let i=0;i<s.n;i++){const sy=s.sy[i], s2=2*sy*sy, amp=s.m[i]/(Math.PI*s2)*s.fz[i];

@@ -2355,11 +2355,12 @@ function provCentroid(f){let b=L.geoJSON(f).getBounds();let best=null,area=0;
   return best||b.getCenter();}
 provLabels=L.layerGroup(GEO_P.features.map(f=>L.marker(provCentroid(f),{icon:L.divIcon({className:'',html:'',iconSize:[0,0]}),interactive:false,keyboard:false})
   .bindTooltip(f.properties.th?`${f.properties.n} · ${f.properties.th}`:f.properties.n,{permanent:true,direction:'center',className:'plabel'}))).addTo(map);
-function labelZoom(){const z=map.getZoom();map.getContainer().classList.toggle('hide-plabel',z<8);map.getContainer().classList.toggle('hide-tlabel',z<6);map.getContainer().classList.toggle('hide-mlabel',z<8);}
-// town names that would overlap are hidden (provincial capitals first, then towns in list order); run after each redraw and zoom
-function declutterLabels(){ const els=[...map.getContainer().querySelectorAll('.leaflet-tooltip.tlabel')], kept=[];
-  els.sort((a,b)=>a.classList.contains('minor')-b.classList.contains('minor'));
-  for(const el of els){ el.classList.remove('lbl-x'); const r=el.getBoundingClientRect(); if(!r.width) continue;   // hidden by zoom
+function labelZoom(){const z=map.getZoom();map.getContainer().classList.toggle('hide-plabel',z<8);map.getContainer().classList.toggle('hide-tlabel',z<5);map.getContainer().classList.toggle('hide-mlabel',z<8);}
+// names that would overlap are hidden: provincial capitals first, then towns, then province names; run after each redraw and move
+function declutterLabels(){ const els=[...map.getContainer().querySelectorAll('.leaflet-tooltip.tlabel,.leaflet-tooltip.plabel')], kept=[];
+  const rank=el=>el.classList.contains('plabel')?2:el.classList.contains('minor')?1:0; els.sort((a,b)=>rank(a)-rank(b));
+  for(const el of els){ el.classList.remove('lbl-x'); if(el.style.opacity==='0') continue;   // a label being removed (Leaflet fades it out for 200 ms)
+    const r=el.getBoundingClientRect(); if(!r.width) continue;   // hidden by zoom
     if(kept.some(q=>r.left<q.right+3&&r.right>q.left-3&&r.top<q.bottom+1&&r.bottom>q.top-1)) el.classList.add('lbl-x'); else kept.push(r); } }
 let dcT=0; const declutterSoon=()=>{ clearTimeout(dcT); dcT=setTimeout(declutterLabels,80); };   // after the map has settled: mid-move, every label still sits where the view started
 map.on('zoomend',()=>{labelZoom(); declutterSoon();}); map.on('moveend resize',declutterSoon);

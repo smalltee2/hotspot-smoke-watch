@@ -1380,9 +1380,11 @@ function declutterLabels(){ const C=map.getContainer(), cr=C.getBoundingClientRe
   for(const el of els){ el.classList.remove('lbl-x'); el.style.marginLeft=''; if(el.style.opacity==='0') continue;   // a label being removed (Leaflet fades it out for 200 ms)
     const r=el.getBoundingClientRect(); if(!r.width) continue;   // hidden by zoom
     const own=d=>Math.abs(d.cy-(r.top+r.bottom)/2)<6&&r.left-d.cx>=0&&r.left-d.cx<16;   // a town name sits just right of its own dot
-    const bad=b=>kept.some(q=>hit(b,q,3))||dots.some(d=>!own(d)&&hit(b,d,1));
-    if(!bad(r)){ kept.push(r); continue; }
-    if(el.classList.contains('tlabel')){ el.style.marginLeft=`-${Math.round(r.width+14)}px`; const r2=el.getBoundingClientRect(); if(!bad(r2)){ kept.push(r2); continue; } el.style.marginLeft=''; }
+    const lab=b=>kept.some(q=>hit(b,q,3)), dot=b=>dots.some(d=>!own(d)&&hit(b,d,1)), inside=b=>b.left>=cr.left&&b.right<=cr.right;
+    if(!lab(r)&&!dot(r)){ kept.push(r); continue; }
+    if(el.classList.contains('tlabel')){ el.style.marginLeft=`-${Math.round(r.width+14)}px`; const r2=el.getBoundingClientRect();
+      if(inside(r2)&&!lab(r2)&&!dot(r2)){ kept.push(r2); continue; } el.style.marginLeft=''; }
+    if(!lab(r)){ kept.push(r); continue; }   // only a dot in the way and no free side: the name stays (a lost name is worse than a covered dot)
     el.classList.add('lbl-x'); } }
 let dcT=0; const declutterSoon=()=>{ clearTimeout(dcT); dcT=setTimeout(declutterLabels,80); };   // after the map has settled: mid-move, every label still sits where the view started
 map.on('zoomend',()=>{labelZoom(); declutterSoon();}); map.on('moveend resize',declutterSoon);

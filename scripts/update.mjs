@@ -547,6 +547,15 @@ async function main() {
         for (const [v, eng, names] of [['t2', T2ENG, T2_NAMES], ['pr', PRENG, PR_NAMES]]) {
           if (state.wxml[v].lastDay === ydayW) continue;   // already learned this day (a retry after the other variable failed): do not score it twice
           const nSt = await storeWxDay(path.join(DATA, 'mltrain'), v, names, D[v], dayStart, zlib.gzipSync);
+          // days of the last 30 with no store file (a failed save to the "mltrain" branch lost them, while lastDay above was
+          // kept in the state): rebuilt from the logs on "history", which hold them for 35 days; days without verified rows store nothing
+          let nBack = 0; const wxBase = path.join(DATA, 'mltrain', 'wx', v), wxSeas = await fs.readdir(wxBase).catch(() => []);
+          for (let d0 = dayStart - 30 * 864e5; d0 < dayStart; d0 += 864e5) {
+            const dn = new Date(d0 + 7 * HOUR).toISOString().slice(0, 10).replace(/-/g, '');
+            let have = false; for (const s of wxSeas) if (await fs.access(path.join(wxBase, s, `train-${dn}.csv.gz`)).then(() => true, () => false)) { have = true; break; }
+            if (!have && await storeWxDay(path.join(DATA, 'mltrain'), v, names, D[v], d0, zlib.gzipSync)) nBack++;
+          }
+          if (nBack) log(`ML ${v}: ${nBack} missing day(s) of the training store rebuilt from the logs`);
           const sea = await loadWxSeason(path.join(DATA, 'mltrain'), v, names, dayStart + 12 * HOUR, zlib.gunzipSync, dayEnd);
           if (D[v].length) recs[v] = eng.dailyLearn(state.wxml[v], D[v], { now, dayStart, dayEnd, seasonRows: sea, label: v, log });
           else log(`ML ${v}: no verified rows yet (weather logs start 7 Oct 2026)`);

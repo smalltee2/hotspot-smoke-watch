@@ -63,10 +63,15 @@ jobs:
         run: |
           set -e
           # a branch that exists but cannot be fetched fails the job: the push steps below must never replace it with an empty tree
-          restore() { local br=$1 dir=$2; mkdir -p "$dir"
-            rc=0; git ls-remote --exit-code --heads origin "$br" >/dev/null 2>&1 || rc=$?
-            if [ $rc = 0 ]; then git fetch -q --depth=1 origin "$br" && git archive FETCH_HEAD "$dir" | tar -x
-            elif [ $rc != 2 ]; then echo "cannot reach origin to check branch $br"; exit 1; fi
+          # a brief network error must not cost the hour's forecast: the check and the fetch are tried 3 times, 10 s apart
+          restore() { local br=$1 dir=$2 rc i; mkdir -p "$dir"
+            for i in 1 2 3; do rc=0; git ls-remote --exit-code --heads origin "$br" >/dev/null 2>&1 || rc=$?
+              if [ $rc = 0 ] || [ $rc = 2 ]; then break; fi; sleep 10; done
+            if [ $rc = 0 ]; then
+              for i in 1 2 3; do if git fetch -q --depth=1 origin "$br"; then break; fi
+                if [ $i = 3 ]; then echo "cannot fetch branch $br (3 tries)"; exit 1; fi; sleep 10; done
+              git archive FETCH_HEAD "$dir" | tar -x
+            elif [ $rc != 2 ]; then echo "cannot reach origin to check branch $br (3 tries)"; exit 1; fi
             echo "$br files: $(find "$dir" -type f | wc -l)"; }
           restore history data/history
           restore mltrain data/mltrain
@@ -140,7 +145,7 @@ jobs:
           LAST=$( [ "$NEW" = 0 ] && git log -1 --format=%cd --date=format:%Y-%m-%d HEAD || echo none )
           if [ "$LAST" != "$(date -u +%F)" ]; then
             # first update of a new UTC day: replace the branch by one commit holding only the kept files
-            git checkout -q --orphan snap && git commit -qm "history snapshot $(date -u +'%Y-%m-%d %H:%M UTC') (last 35 days)" && git push -qf origin snap:history
+            git checkout -q --orphan snap-history && git commit -qm "history snapshot $(date -u +'%Y-%m-%d %H:%M UTC') (last 35 days)" && git push -qf origin snap-history:history
           else
             git commit -qm "history: $(date -u +'%Y-%m-%d %H:%M UTC')" && git push -q origin HEAD:history || echo "::warning::history push failed"
           fi
@@ -157,8 +162,9 @@ jobs:
           rm -rf "$H/data/mltrain" && mkdir -p "$H/data/mltrain" && cp -a data/mltrain/. "$H/data/mltrain/"
           cd "$H" && git add -A
           git diff --cached --quiet && exit 0
-          # one squashed commit per update: the branch holds only the kept files, so deleted ones do not stay in its history
-          git checkout -q --orphan snap && git commit -qm "ML training store $(date -u +'%Y-%m-%d %H:%M UTC') (2 years)" && git push -qf origin snap:mltrain
+          # one squashed commit per update: the branch holds only the kept files, so deleted ones do not stay in its history.
+          # Its own temporary branch name: the history step's daily snapshot (same repository, other worktree) uses snap-history
+          git checkout -q --orphan snap-mltrain && git commit -qm "ML training store $(date -u +'%Y-%m-%d %H:%M UTC') (2 years)" && git push -qf origin snap-mltrain:mltrain
 
       - name: Build site
         id: build

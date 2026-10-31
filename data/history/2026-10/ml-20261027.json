@@ -1,0 +1,1 @@
+{"day":"2026-10-27","at":1793135258024,"verifiedDays":25,"nTest":16340,"loss":{"base":0.30595,"day":0.27403,"week":0.16434},"weights":{"base":0.0309,"day":0.0364,"week":0.9327},"trained":{"day":{"n":49482},"week":{"n":116517}},"seasonStore":{"season":"winter-2026","days":12}}

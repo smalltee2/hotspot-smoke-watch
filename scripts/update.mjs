@@ -97,6 +97,19 @@ const log = (...a) => { let line = a.join(' '); for (const k of SECRETS) line = 
 // ------------------------------------------------------------------ helpers
 async function readJSON(p, dflt) { try { return JSON.parse(await fs.readFile(p, 'utf8')); } catch { return dflt; } }
 async function writeJSON(p, o) { await fs.mkdir(path.dirname(p), { recursive: true }); await fs.writeFile(p + '.tmp', JSON.stringify(o)); await fs.rename(p + '.tmp', p); }   // atomic: a run killed mid-write must not leave a truncated state.json for the cache
+// days of the last 30 with no file in a training store (a failed save to the "mltrain" branch lost them while the day was
+// already marked done in the state) are rebuilt with store(dayStart) from the logs on "history", kept 35 days; a day without
+// verified rows stores nothing. base holds one folder per season; the weather store's own folder "wx" is not a season.
+async function backfillStore(base, dayStart, store) {
+  const seas = (await fs.readdir(base, { withFileTypes: true }).catch(() => [])).filter(e => e.isDirectory() && e.name !== 'wx').map(e => e.name);
+  let n = 0;
+  for (let d0 = dayStart - 30 * 864e5; d0 < dayStart; d0 += 864e5) {
+    const dn = new Date(d0 + 7 * HOUR).toISOString().slice(0, 10).replace(/-/g, '');
+    let have = false; for (const sea of seas) if (await fs.access(path.join(base, sea, `train-${dn}.csv.gz`)).then(() => true, () => false)) { have = true; break; }
+    if (!have && await store(d0)) n++;
+  }
+  return n;
+}
 async function appendCSV(p, header, rows) {
   if (!rows.length) return;
   await fs.mkdir(path.dirname(p), { recursive: true });
@@ -547,14 +560,7 @@ async function main() {
         for (const [v, eng, names] of [['t2', T2ENG, T2_NAMES], ['pr', PRENG, PR_NAMES]]) {
           if (state.wxml[v].lastDay === ydayW) continue;   // already learned this day (a retry after the other variable failed): do not score it twice
           const nSt = await storeWxDay(path.join(DATA, 'mltrain'), v, names, D[v], dayStart, zlib.gzipSync);
-          // days of the last 30 with no store file (a failed save to the "mltrain" branch lost them, while lastDay above was
-          // kept in the state): rebuilt from the logs on "history", which hold them for 35 days; days without verified rows store nothing
-          let nBack = 0; const wxBase = path.join(DATA, 'mltrain', 'wx', v), wxSeas = await fs.readdir(wxBase).catch(() => []);
-          for (let d0 = dayStart - 30 * 864e5; d0 < dayStart; d0 += 864e5) {
-            const dn = new Date(d0 + 7 * HOUR).toISOString().slice(0, 10).replace(/-/g, '');
-            let have = false; for (const s of wxSeas) if (await fs.access(path.join(wxBase, s, `train-${dn}.csv.gz`)).then(() => true, () => false)) { have = true; break; }
-            if (!have && await storeWxDay(path.join(DATA, 'mltrain'), v, names, D[v], d0, zlib.gzipSync)) nBack++;
-          }
+          const nBack = await backfillStore(path.join(DATA, 'mltrain', 'wx', v), dayStart, d0 => storeWxDay(path.join(DATA, 'mltrain'), v, names, D[v], d0, zlib.gzipSync));
           if (nBack) log(`ML ${v}: ${nBack} missing day(s) of the training store rebuilt from the logs`);
           const sea = await loadWxSeason(path.join(DATA, 'mltrain'), v, names, dayStart + 12 * HOUR, zlib.gunzipSync, dayEnd);
           if (D[v].length) recs[v] = eng.dailyLearn(state.wxml[v], D[v], { now, dayStart, dayEnd, seasonRows: sea, label: v, log });
@@ -773,6 +779,9 @@ async function main() {
       const rows = await loadDataset(path.join(DATA, 'history'), meta, { from: dayEnd - 36 * 864e5, to: dayEnd, lowcost: id => lcOK.has(id) });
       // long-term training store (branch "mltrain", 2 years): the verified day's rows, then the season expert's data
       const nStored = await storeDay(path.join(DATA, 'mltrain'), rows, dayStart, zlib.gzipSync);
+      // rebuilt days take today's low-cost sensor check (lcOK), not the one of their own day: the only difference from the original
+      const nBackPM = await backfillStore(path.join(DATA, 'mltrain'), dayStart, d0 => storeDay(path.join(DATA, 'mltrain'), rows, d0, zlib.gzipSync));
+      if (nBackPM) log(`ML store: ${nBackPM} missing day(s) rebuilt from the logs`);
       const seasonRows = await loadSeasonRows(path.join(DATA, 'mltrain'), dayStart + 12 * HOUR, zlib.gunzipSync, dayEnd);
       log(`ML store: ${nStored} rows for ${yday}; season ${seasonRows.season}: ${seasonRows.days} days, ${seasonRows.rows.length} rows`);
       mlRec = dailyLearn(state, rows, { now, dayStart, dayEnd, season, seasonRows, log });

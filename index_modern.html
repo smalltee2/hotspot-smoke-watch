@@ -2783,16 +2783,20 @@ function leadW(tab,L){ if(!tab||!tab.length) return 0; if(L<=tab[0][0]) return t
 function corrFactorAt(C,lat,lon){ const fx=(lon-C.lon0)/C.step, fy=(lat-C.lat0)/C.step; if(fx<0||fy<0||fx>C.nx-1||fy>C.ny-1) return 1;
   const x0=Math.min(Math.floor(fx),C.nx-2), y0=Math.min(Math.floor(fy),C.ny-2), ax=fx-x0, ay=fy-y0, a=C.lnf100, i=y0*C.nx+x0;
   return Math.exp(((1-ax)*(1-ay)*a[i]+ax*(1-ay)*a[i+1]+(1-ax)*ay*a[i+C.nx]+ax*ay*a[i+C.nx+1])/100); }
-function rainBlend(lat,lon,t,v){ if(v==null) return v; const C=P.data?.rainObs?.corr;
-  if(C&&C.w&&C.latestH!=null){ const H=obsHour(t), L=(H+HR/2-(C.latestH+HR))/HR;
-    if(L>0){ const w={s:leadW(C.w.shift,L),a:leadW(C.w.amount,L),p:leadW(C.w.persist,L)};
-      if(w.s||w.a||w.p){ let y=lnR(v); const base=y;
-        if(w.s&&C.shiftH&&MET){ let e=metVarAt(MET,'pr',lat,lon,t+C.shiftH*HR); if(e!=null){ if(e>0) e*=rainFactorAt(lat,lon,t); y+=w.s*(lnR(e)-base); } }
-        if(w.a&&radarCovered(lat,lon)) y+=w.a*(lnR(v*corrFactorAt(C,lat,lon))-base);
-        if(w.p){ const Hp=H-Math.max(1,Math.ceil((H-C.latestH)/(24*HR)))*24*HR, r=radarObsAt(lat,lon,Hp+HR); if(r!==undefined) y+=w.p*(lnR(r)-base); }
-        v=unLnR(y); } }
-    if(Array.isArray(C.w.nowcast)&&C.w.nowcast.length){ const n=radarNowAt(lat,lon,t); if(!n) return v; const wn=leadW(C.w.nowcast,n.lead); return wn>0?unLnR(lnR(v)+wn*(lnR(n.v)-lnR(v))):v; } }   // fitted nowcast weights replace the provisional ones
-  return nowcastBlend(lat,lon,t,v); }
+// As fitted (scripts/fit_rain_blend.py): one step y = base + sum_m w_m (x_m - base) on ln(R + 0.2), the nowcast among the members once
+// its weights are fitted (until then the provisional nowcastBlend follows). Weights are read at the fit's lead: hours counted from the
+// issue hour, 1 = the hour the run starts in. Here hour H is (H + 30 min - latest radar hour end) after the data, i.e. that lead - 0.5;
+// for the nowcast, n.lead runs from the latest frame (a few minutes into the issue hour), so the fit's lead is round(n.lead + 0.5).
+function rainBlend(lat,lon,t,v){ if(v==null) return v; const C=P.data?.rainObs?.corr; if(!(C&&C.w)) return nowcastBlend(lat,lon,t,v);
+  const base=lnR(v); let y=base;
+  if(C.latestH!=null){ const H=obsHour(t), Lf=(H+HR/2-(C.latestH+HR))/HR+0.5;
+    if(Lf>0.5){ const w={s:leadW(C.w.shift,Lf),a:leadW(C.w.amount,Lf),p:leadW(C.w.persist,Lf)};
+      if(w.s&&C.shiftH&&MET){ let e=metVarAt(MET,'pr',lat,lon,t+C.shiftH*HR); if(e!=null){ if(e>0) e*=rainFactorAt(lat,lon,t); y+=w.s*(lnR(e)-base); } }
+      if(w.a&&radarCovered(lat,lon)) y+=w.a*(lnR(v*corrFactorAt(C,lat,lon))-base);
+      if(w.p){ const Hp=H-Math.max(1,Math.ceil((H-C.latestH)/(24*HR)))*24*HR, r=radarObsAt(lat,lon,Hp+HR); if(r!==undefined) y+=w.p*(lnR(r)-base); } } }
+  if(!(Array.isArray(C.w.nowcast)&&C.w.nowcast.length)) return nowcastBlend(lat,lon,t,y===base?v:unLnR(y));   // nowcast not fitted yet: provisional weights
+  const n=radarNowAt(lat,lon,t); if(n){ const wn=leadW(C.w.nowcast,Math.round(n.lead+0.5)); if(wn>0) y+=wn*(lnR(n.v)-base); }
+  return y===base?v:unLnR(y); }
 function rainFineAt(lat,lon,t){
   const rd=radarObsAt(lat,lon,t); if(rd!==undefined) return rd;
   const R=RAINOBS; if(!R) return undefined; const k=R.times.indexOf(obsHour(t)); if(k<0) return undefined;

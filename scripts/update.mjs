@@ -77,9 +77,12 @@ const CFG = {
   blendBelt: { box: [97, 17.5, 105.5, 22.5], byLead: [[1, 0.97], [3, 0.94], [6, 0.89], [12, 0.78], [24, 0.74], [48, 0.65]] },
   // rain forecast, the PM2.5 way (scripts/radar.mjs rainDiag; page rainBlend): weights by lead (h) of the members blended with ECMWF on
   // ln(R + 0.2): ECMWF read shiftH earlier (timing), ECMWF × the 72-h radar/ECMWF factor (amount), the radar of the same hour on the
-  // latest observed day (diurnal persistence). ZERO until fitted on the station log rainfc-*.csv with scripts/fit_rain_blend.py; the
-  // radar nowcast (0–3 h) keeps the page's provisional weights until then (null = page default).
-  rainBlend: { shift: [[1, 0], [48, 0]], amount: [[1, 0], [48, 0]], persist: [[1, 0], [48, 0]], nowcast: null },
+  // latest observed day (diurnal persistence), and the radar nowcast (fitted weights replace the page's provisional ones; null = page
+  // default). Fitted with scripts/fit_rain_blend.py on rainfc-*.csv against the gauge-adjusted radar, 15 Oct - 8 Nov 2026 (206k
+  // station-leads, 15.6k wet hours), checked leaving one week out; a lead is kept only if it lowers the error, catches at least as
+  // many rain hours and adds no false alarms. Kept: 1-2 h (left-out weeks, rain hours caught 778 vs 420 at 1 h, 440 vs 371 at 2 h;
+  // false alarms 40 % vs 82 %, 54 % vs 84 %). 3-48 h stay on ECMWF: there the blend caught a third fewer rain hours. Refit in the rainy season.
+  rainBlend: { shift: [[1, 0.12], [2, 0.14], [3, 0], [6, 0], [9, 0], [12, 0], [18, 0], [24, 0], [30, 0], [36, 0], [42, 0], [48, 0]], amount: [[1, 0.0], [2, 0.0], [3, 0], [6, 0], [9, 0], [12, 0], [18, 0], [24, 0], [30, 0], [36, 0], [42, 0], [48, 0]], persist: [[1, 0.12], [2, 0.19], [3, 0], [6, 0], [9, 0], [12, 0], [18, 0], [24, 0], [30, 0], [36, 0], [42, 0], [48, 0]], nowcast: [[1, 0.74], [2, 0.5], [3, 0]] },
   rainLogLeads: [1, 2, 3, 6, 9, 12, 18, 24, 30, 36, 42, 48],   // leads (h) logged every 3 h at the hourly stations
 };
 const PM25_ID = 2; // OpenAQ parameter id for pm25

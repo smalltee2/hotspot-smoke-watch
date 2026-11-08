@@ -34,6 +34,9 @@ See `README.md` for the method and data sources.
   runs in the Actions cache. Git keeps the per-run CSVs in `data/history/` and the static grids in `data/static/`.
 - Check syntax before committing: `for f in scripts/*.mjs; do node --check "$f"; done`.
 - The page is bilingual (Thai/English via `data-th` and `T()`); keep both strings when changing user-facing text.
+- Judge rain corrections by rain hours caught (>= 0.5 mm/h) and false alarms, not only by error on ln(R + 0.2): that error
+  can be lowered by forecasting less rain everywhere. `fit_rain_blend.py` and the weather-ML rain gate (`rainDetectCheck` in
+  `scripts/update.mjs`) both require catching at least as many rain hours as uncorrected ECMWF, with no more false alarms.
 - Public page is `/` (redesign), the original layout is `/classic.html`, the developer page `/dev.html`.
 
 ## Scheduled work

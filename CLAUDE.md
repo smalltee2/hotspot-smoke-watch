@@ -41,6 +41,6 @@ See `README.md` for the method and data sources.
 
 ## Scheduled work
 
-- **Rain-blend fit, early November 2026** (about 3 weeks of radar history needed): run `scripts/fit_rain_blend.py` on the
-  `history` branch logs, review the per-lead weights it prints, then set `CFG.rainBlend` in `scripts/update.mjs` from its output.
-  This touches the live forecast, so do it in Claude Code with the run output in hand, not from memory.
+- **Rain-blend refit, monthly** (1st of the month, 08:51 Bangkok, a scheduled task in Claude Code): run `scripts/fit_rain_blend.py`
+  on the `history` branch logs (the last ~35 days), set `CFG.rainBlend` exactly from its output if it changed, PR, merge and
+  check the run. First fit 8 Nov 2026 (15 Oct - 8 Nov): kept 1-2 h, 3-48 h on ECMWF. Expect weights to return with the rainy season.

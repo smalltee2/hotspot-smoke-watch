@@ -113,6 +113,25 @@ async function backfillStore(base, dayStart, store) {
   }
   return n;
 }
+// The weather-ML rain experts are weighted by log error, which a correction can lower just by forecasting less rain everywhere
+// (Oct-Nov 2026: the corrected rain caught 7 % of rain hours against 31 % uncorrected, at 0.26 of the observed total). So the
+// rain correction reaches the page only while, over the last 14 verified days of the weather log (wxf, the candidate correction
+// in pr_ml), it catches at least as many hours >= 0.5 mm/h of the gauge-adjusted radar (rainobs, a4t rows) as the uncorrected
+// pr_fine, with no larger share of false alarms.
+async function rainDetectCheck(histDir, dayEnd, days = 14) {
+  const from = dayEnd - days * 864e5, truth = new Map(), c = { n: 0, wet: 0, hit_f: 0, hit_m: 0, fc_f: 0, fc_m: 0 };
+  for (let d = from; d < dayEnd + 864e5; d += 864e5) { const td = thaiDate(d);
+    const txt = await fs.readFile(path.join(histDir, td.slice(0, 7), `rainobs-${td.replace(/-/g, '')}.csv`), 'utf8').catch(() => '');
+    for (const l of txt.split('\n')) { const v = l.split(','); if (v[1] === 'a4t' && v[10] !== undefined && v[10] !== '' && isFinite(+v[10])) truth.set(`${v[2]}|${v[0]}`, +v[10]); } }
+  for (let t = from; t < dayEnd; t += HOUR) { const iso = new Date(t).toISOString();
+    const txt = await fs.readFile(path.join(histDir, iso.slice(0, 7), `wxf-${iso.slice(0, 13).replace(/[-:]/g, '')}.csv`), 'utf8').catch(() => '');
+    for (const l of txt.split('\n').slice(1)) { const v = l.split(','); if (v.length < 12 || v[9] === '' || v[11] === '') continue;
+      const y = truth.get(`${v[2]}|${v[1]}`); if (y === undefined) continue;
+      const wet = y >= 0.5, f = +v[9], m = +v[11]; c.n++; c.wet += wet;
+      if (f >= 0.5) { c.fc_f++; c.hit_f += wet; } if (m >= 0.5) { c.fc_m++; c.hit_m += wet; } } }
+  const fa = k => (c['fc_' + k] - c['hit_' + k]) / Math.max(1, c['fc_' + k]);
+  return { days, ...c, fa_f: +fa('f').toFixed(3), fa_m: +fa('m').toFixed(3), ok: c.n >= 2000 && c.wet >= 50 && c.hit_m >= c.hit_f && fa('m') <= fa('f') };
+}
 async function appendCSV(p, header, rows) {
   if (!rows.length) return;
   await fs.mkdir(path.dirname(p), { recursive: true });
@@ -570,6 +589,8 @@ async function main() {
           else log(`ML ${v}: no verified rows yet (weather logs start 7 Oct 2026)`);
           if (recs[v]) recs[v].stored = nSt;
         }
+        state.wxml.pr.detect = await rainDetectCheck(path.join(DATA, 'history'), dayEnd);
+        { const k = state.wxml.pr.detect; log(`weather ML rain correction check (${k.days} d, ${k.n} station-hours, ${k.wet} wet): rain hours caught ${k.hit_m} corrected vs ${k.hit_f} uncorrected, false alarms ${Math.round(k.fa_m * 100)} % vs ${Math.round(k.fa_f * 100)} % -> ${k.ok ? 'published' : 'NOT published'}`); }
         state.wxml.lastDay = ydayW;
         await writeJSON(path.join(DATA, 'history', ydayW.slice(0, 7), `mlwx-${ydayW.replace(/-/g, '')}.json`), recs);
       } catch (e) { log(`weather ML daily learning failed: ${e.message}`); if (process.env.GITHUB_ACTIONS) console.log(`::warning title=weather ML::${e.message}`); }
@@ -577,7 +598,7 @@ async function main() {
     let wxmlInfo = null;
     try {
       const iso0 = new Date(now).toISOString(), stamp0 = iso0.slice(0, 13).replace(/[-:]/g, ''), wxf = path.join(DATA, 'history', iso0.slice(0, 7), `wxf-${stamp0}.csv`);
-      const tI = Math.floor(now / HOUR) * HOUR, onT = T2ENG.active(state.wxml.t2), onP = PRENG.active(state.wxml.pr);
+      const tI = Math.floor(now / HOUR) * HOUR, onT = T2ENG.active(state.wxml.t2), candP = PRENG.active(state.wxml.pr), onP = candP && state.wxml.pr.detect?.ok === true;   // candP: logged (pr_ml) for the check; onP: published
       // issue-time inputs: measured temperature of the last full hour and its lead-1 forecast (previous runs' logs); observed rain 2 h back
       const prevF = new Map(), pIso = new Date(tI - 2 * HOUR).toISOString();
       try { const txt = await fs.readFile(path.join(DATA, 'history', pIso.slice(0, 7), `wxf-${pIso.slice(0, 13).replace(/[-:]/g, '')}.csv`), 'utf8');
@@ -596,7 +617,7 @@ async function main() {
           const prF = mp?.pr != null ? mp.pr * await rainFactor(DATA, s.lat, s.lon, tv) : null;
           const o = { lead: L, tValid: tv, lat: s.lat, lon: s.lon, elev: Math.round(z), t2: d.down, t2e: m?.t2, pr: prF, oT2: oT ?? NaN, lastErr: oT != null && fT != null && isFinite(fT) ? oT - fT : NaN, obsLast, obs6: k6 >= 4 ? obs6 * 6 / k6 : NaN };
           const cT = onT && d.down != null ? T2ENG.correction(state.wxml.t2, { lead: L, hloc: new Date(tv + 7 * HOUR).getUTCHours(), x: t2Features(o) }) : 0;
-          const cP = onP && prF != null ? PRENG.correction(state.wxml.pr, { lead: L, hloc: new Date(tv + 7 * HOUR).getUTCHours(), x: prFeatures(o) }) : 0;
+          const cP = candP && prF != null ? PRENG.correction(state.wxml.pr, { lead: L, hloc: new Date(tv + 7 * HOUR).getUTCHours(), x: prFeatures(o) }) : 0;
           if (WXML.leads.includes(L)) { (corrT.get(L) || corrT.set(L, []).get(L)).push({ lat: s.lat, lon: s.lon, y: cT }); (corrP.get(L) || corrP.set(L, []).get(L)).push({ lat: s.lat, lon: s.lon, y: cP }); }
           if (CFG.logLeads.includes(L)) rowsW.push([new Date(tI).toISOString().slice(0, 13) + ':00Z', new Date(tv).toISOString().slice(0, 13) + ':00Z', s.id, L, Math.round(z),
             m?.t2 != null ? +m.t2.toFixed(2) : '', d.terrain != null ? +d.terrain.toFixed(2) : '', d.down != null ? +d.down.toFixed(2) : '', mp?.pr != null ? +mp.pr.toFixed(2) : '',

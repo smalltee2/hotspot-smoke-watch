@@ -34,10 +34,13 @@ See `README.md` for the method and data sources.
   runs in the Actions cache. Git keeps the per-run CSVs in `data/history/` and the static grids in `data/static/`.
 - Check syntax before committing: `for f in scripts/*.mjs; do node --check "$f"; done`.
 - The page is bilingual (Thai/English via `data-th` and `T()`); keep both strings when changing user-facing text.
+- Judge rain corrections by rain hours caught (>= 0.5 mm/h) and false alarms, not only by error on ln(R + 0.2): that error
+  can be lowered by forecasting less rain everywhere. `fit_rain_blend.py` and the weather-ML rain gate (`rainDetectCheck` in
+  `scripts/update.mjs`) both require catching at least as many rain hours as uncorrected ECMWF, with no more false alarms.
 - Public page is `/` (redesign), the original layout is `/classic.html`, the developer page `/dev.html`.
 
 ## Scheduled work
 
-- **Rain-blend fit, early November 2026** (about 3 weeks of radar history needed): run `scripts/fit_rain_blend.py` on the
-  `history` branch logs, review the per-lead weights it prints, then set `CFG.rainBlend` in `scripts/update.mjs` from its output.
-  This touches the live forecast, so do it in Claude Code with the run output in hand, not from memory.
+- **Rain-blend refit, monthly** (1st of the month, 08:51 Bangkok, a scheduled task in Claude Code): run `scripts/fit_rain_blend.py`
+  on the `history` branch logs (the last ~35 days), set `CFG.rainBlend` exactly from its output if it changed, PR, merge and
+  check the run. First fit 8 Nov 2026 (15 Oct - 8 Nov): kept 1-2 h, 3-48 h on ECMWF. Expect weights to return with the rainy season.

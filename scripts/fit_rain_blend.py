@@ -26,10 +26,14 @@ for f in glob.glob(os.path.join(hist, '*', 'rainobs-*.csv')):
                 except ValueError: pass
 ln = lambda x: math.log(max(0.0, x) + EPS)
 num = lambda v: float(v) if v not in ('', None) else None
-rows = []
+rows, seen, dup = [], set(), 0
 for f in sorted(glob.glob(os.path.join(hist, '*', 'rainfc-*.csv'))):
     with open(f) as fh:
         for r in csv.DictReader(fh):
+            # two runs in one hour (backup cron, manual run) logged the same issue hour twice before update.mjs skipped it: keep the first
+            k = (r['issued_utc'][:13], r['station_id'], r['lead_h'])
+            if k in seen: dup += 1; continue
+            seen.add(k)
             he = (datetime.strptime(r['hour_start_utc'][:13], '%Y-%m-%dT%H') + timedelta(hours=1)).strftime('%Y-%m-%dT%H:00Z')
             y = truth.get((r['station_id'], he))
             if y is None: continue
@@ -38,7 +42,7 @@ for f in sorted(glob.glob(os.path.join(hist, '*', 'rainfc-*.csv'))):
             xs = {'shift': num(r['ecmwf_shift_mmh']), 'amount': num(r['ecmwf_amount_mmh']), 'persist': num(r['persist_mmh']), 'nowcast': num(r['nowcast_mmh'])}
             d = [(ln(xs[m] * (ch if m in ('shift', 'amount') else 1.0)) - b) if xs[m] is not None else 0.0 for m in MEMBERS]
             rows.append((int(float(r['lead_h'])), r['issued_utc'][:10], ln(y) - b, d, y >= 0.5))
-print(f'{len(rows)} station-leads with a radar observation ({sum(r[4] for r in rows)} wet >= 0.5 mm)')
+print(f'{len(rows)} station-leads with a radar observation ({sum(r[4] for r in rows)} wet >= 0.5 mm); {dup} rows of repeated issue hours dropped')
 def nnls(X, y):
     act = list(range(X.shape[1]))
     while act:

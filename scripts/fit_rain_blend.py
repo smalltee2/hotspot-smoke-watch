@@ -7,7 +7,10 @@ on the "history" branch, as replay/fit_blend.py did for the PM2.5 persistence we
    rainobs-YYYYMMDD.csv  the truth: gauge-adjusted radar of the hour at the stations (radar_mmh)
 For each lead the forecast is   y = b + sum_m w_m (x_m - b)   on ln(R + 0.2), b = ln(ECMWF x CHELSA + 0.2); weights are fitted by
 non-negative least squares (a member with no value on a row counts as equal to b there), capped at 1, and checked by leaving one
-week out at a time. A member keeps its weight at a lead only if the out-of-week MSE beats ECMWF alone.
+week out at a time. A lead keeps its weights only if, over the left-out weeks, the blend (1) has a lower MSE than ECMWF alone,
+(2) catches at least as many rain hours (>= 0.5 mm/h) and (3) has no larger share of false alarms among its rain forecasts.
+(2) and (3) guard against a blend that lowers the log error only by forecasting less rain everywhere: in the Oct-Nov 2026 data
+the MSE fit alone kept the 3-48 h leads while they caught a third fewer rain hours than ECMWF.
 usage: python3 fit_rain_blend.py <history dir>      (the folder holding the YYYY-MM/ subfolders)
 """
 import csv, glob, math, os, sys
@@ -25,11 +28,16 @@ for f in glob.glob(os.path.join(hist, '*', 'rainobs-*.csv')):
                 try: truth[(r['station_id'], r['hour_end_utc'])] = float(r['radar_mmh'])
                 except ValueError: pass
 ln = lambda x: math.log(max(0.0, x) + EPS)
+WET = math.log(0.5 + EPS)   # a forecast of >= 0.5 mm/h, on ln(R + 0.2)
 num = lambda v: float(v) if v not in ('', None) else None
-rows = []
+rows, seen, dup = [], set(), 0
 for f in sorted(glob.glob(os.path.join(hist, '*', 'rainfc-*.csv'))):
     with open(f) as fh:
         for r in csv.DictReader(fh):
+            # two runs in one hour (backup cron, manual run) logged the same issue hour twice before update.mjs skipped it: keep the first
+            k = (r['issued_utc'][:13], r['station_id'], r['lead_h'])
+            if k in seen: dup += 1; continue
+            seen.add(k)
             he = (datetime.strptime(r['hour_start_utc'][:13], '%Y-%m-%dT%H') + timedelta(hours=1)).strftime('%Y-%m-%dT%H:00Z')
             y = truth.get((r['station_id'], he))
             if y is None: continue
@@ -37,8 +45,8 @@ for f in sorted(glob.glob(os.path.join(hist, '*', 'rainfc-*.csv'))):
             b = ln(num(r['ecmwf_mmh']) * ch)
             xs = {'shift': num(r['ecmwf_shift_mmh']), 'amount': num(r['ecmwf_amount_mmh']), 'persist': num(r['persist_mmh']), 'nowcast': num(r['nowcast_mmh'])}
             d = [(ln(xs[m] * (ch if m in ('shift', 'amount') else 1.0)) - b) if xs[m] is not None else 0.0 for m in MEMBERS]
-            rows.append((int(float(r['lead_h'])), r['issued_utc'][:10], ln(y) - b, d, y >= 0.5))
-print(f'{len(rows)} station-leads with a radar observation ({sum(r[4] for r in rows)} wet >= 0.5 mm)')
+            rows.append((int(float(r['lead_h'])), r['issued_utc'][:10], ln(y) - b, d, y >= 0.5, b))
+print(f'{len(rows)} station-leads with a radar observation ({sum(r[4] for r in rows)} wet >= 0.5 mm); {dup} rows of repeated issue hours dropped')
 def nnls(X, y):
     act = list(range(X.shape[1]))
     while act:
@@ -52,14 +60,22 @@ for L in BINS:
     R = [r for r in rows if r[0] == L]
     if len(R) < 300 or sum(r[4] for r in R) < 30: print(f'lead {L:2d} h: {len(R)} rows, {sum(r[4] for r in R)} wet: too few, weights stay 0'); [out[m].append([L, 0]) for m in MEMBERS]; continue
     X, y = np.array([r[3] for r in R]), np.array([r[2] for r in R]); w = nnls(X, y)
-    wk = sorted({week(r[1]) for r in R}); loo = []
+    wk = sorted({week(r[1]) for r in R}); loo = []; wet = np.array([r[4] for r in R]); base = np.array([r[5] for r in R])
+    cnt = {'hit_e': 0, 'hit_b': 0, 'rain_e': 0, 'rain_b': 0, 'fa_e': 0, 'fa_b': 0}   # left-out weeks: forecasts >= 0.5 mm/h
     for k in wk:
         tr = [i for i, r in enumerate(R) if week(r[1]) != k]; te = [i for i, r in enumerate(R) if week(r[1]) == k]
         if len(tr) < 200 or len(te) < 30: continue
         wt = nnls(X[tr], y[tr]); loo.append((float(np.mean((y[te] - X[te] @ wt) ** 2)), float(np.mean(y[te] ** 2))))
-    keep = bool(loo) and sum(a for a, _ in loo) < sum(b for _, b in loo)
-    msg = f'; out-of-week MSE blend {np.mean([a for a, _ in loo]):.3f} vs ECMWF {np.mean([b for _, b in loo]):.3f}' if loo else '; no week to leave out'
-    print(f'lead {L:2d} h: n {len(R)}, wet {sum(r[4] for r in R)}, weights ' + ', '.join(f'{m} {v:.2f}' for m, v in zip(MEMBERS, w)) + msg + ('' if keep else ' -> NOT kept (weights 0)'))
+        for tag, f in (('e', base[te]), ('b', base[te] + X[te] @ wt)):
+            fw = f >= WET; cnt['hit_' + tag] += int((fw & wet[te]).sum()); cnt['rain_' + tag] += int(fw.sum()); cnt['fa_' + tag] += int((fw & ~wet[te]).sum())
+    fa = lambda t: cnt['fa_' + t] / max(1, cnt['rain_' + t])
+    ok_mse = bool(loo) and sum(a for a, _ in loo) < sum(b for _, b in loo)
+    ok_hit = cnt['hit_b'] >= cnt['hit_e']; ok_fa = fa('b') <= fa('e')
+    keep = ok_mse and ok_hit and ok_fa
+    msg = (f'; out-of-week MSE blend {np.mean([a for a, _ in loo]):.3f} vs ECMWF {np.mean([b for _, b in loo]):.3f}'
+           f', rain hours caught {cnt["hit_b"]} vs {cnt["hit_e"]}, false alarms {fa("b"):.0%} vs {fa("e"):.0%}') if loo else '; no week to leave out'
+    why = ', '.join(t for t, ok in (('MSE', ok_mse), ('fewer rain hours caught', ok_hit), ('more false alarms', ok_fa)) if not ok)
+    print(f'lead {L:2d} h: n {len(R)}, wet {sum(r[4] for r in R)}, weights ' + ', '.join(f'{m} {v:.2f}' for m, v in zip(MEMBERS, w)) + msg + ('' if keep else f' -> NOT kept ({why}; weights 0)'))
     for m, v in zip(MEMBERS, w): out[m].append([L, round(float(v), 2) if keep else 0])
 print('\nPaste into CFG.rainBlend in scripts/update.mjs:')
 nc = [p for p in out['nowcast'] if p[0] <= 3]

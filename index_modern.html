@@ -1371,6 +1371,19 @@ aside:has(#hereBox:not([hidden])) .sheet-peek:not(:has(#clickCard:not([hidden]))
   .sidetoggle{display:none}
   #toast{top:calc(var(--hdrH) + 10px)}
 }
+/* ---- Layer explanations behind an (i) button (page code: initLayerInfo) ----
+   The long note under each layer's colour scale (rain, temperature, ventilation, uncertainty, fire smoke) is kept in the page,
+   hidden, and shown as a tooltip from the (i) button beside the layer's name: hover or keyboard focus on computers, tap on phones. */
+#legRain>.note,#legTemp>.note,#legVent>.note,#legUnc>.note,#legFire>.note{display:none!important}
+.layerpick label .lyinfo{flex:none;display:inline-grid;place-items:center;width:28px;height:28px;margin:-6px -4px -6px 2px;padding:0;border:0;border-radius:50%;
+  background:none;color:var(--muted);cursor:pointer;vertical-align:middle;transition:color .15s,background .15s}
+.layerpick label .lyinfo:hover,.layerpick label .lyinfo[aria-expanded="true"]{color:var(--ink);background:var(--ink-soft)}
+.layerpick label .lyinfo:focus-visible{outline:2px solid var(--focus);outline-offset:0}
+.lytip{position:fixed;z-index:2500;width:min(340px,calc(100vw - 24px));max-height:min(60vh,420px);overflow:auto;padding:10px 12px;
+  background:var(--panel);color:var(--fg);border:1px solid var(--line-strong);border-radius:var(--radius-md);box-shadow:var(--shadow-lg);
+  font:400 var(--fs-sm)/1.5 var(--font-body)}
+.lytip[hidden]{display:none}
+
 /* ===================== Glass menu frames (after the SEEN prototype, Nov 2026) =====================
    The frames that hold the menus are translucent glass: on computers the side panel floats as a pane over a soft indigo-and-
    slate background and the header's buttons are glass; on phones the bottom tab bar floats as a capsule over the sheet and the
@@ -1805,11 +1818,11 @@ header .status>.btn{--water-fill:.72}
       <div class="layerpick" role="radiogroup" aria-label="Map layer">
         <label><input type="radio" name="layer" id="lyTotal" value="total" checked> <span data-th="PM&lt;sub&gt;2.5&lt;/sub&gt; รวม (พยากรณ์)">Total PM<sub>2.5</sub> forecast</span></label>
         <label class="dev-only"><input type="radio" name="layer" id="lyFine" value="fine"> <span data-th="PM&lt;sub&gt;2.5&lt;/sub&gt; รวม + รายละเอียดไฟ (ทดลอง)">Total PM<sub>2.5</sub> + fire detail (experimental)</span></label>
-        <label class="dev-only"><input type="radio" name="layer" id="lyFire" value="fire"> <span data-th="เฉพาะควันไฟ">Fire smoke only</span></label>
-        <label class="dev-only"><input type="radio" name="layer" id="lyUnc" value="unc"> <span data-th="ความไม่แน่นอนของแผนที่ (±1σ)">Map uncertainty (±1σ)</span></label>
-        <label><input type="radio" name="layer" id="lyRain" value="rain"> <span data-th="ฝน (มม./ชม.)">Rain, mm/h</span></label>
-        <label><input type="radio" name="layer" id="lyTemp" value="temp"> <span data-th="อุณหภูมิ (°C)">Temperature, °C</span></label>
-        <label><input type="radio" name="layer" id="lyVent" value="vent"> <span data-th="การระบายอากาศ (ม.²/วินาที)">Ventilation, m²/s</span></label>
+        <label class="dev-only"><input type="radio" name="layer" id="lyFire" value="fire"> <span data-th="เฉพาะควันไฟ">Fire smoke only</span> <button type="button" class="lyinfo" data-info="legFire" aria-expanded="false"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v5.5M12 7.6v.2"/></svg><span class="vh" data-th="คำอธิบายชั้นข้อมูลนี้">About this layer</span></button></label>
+        <label class="dev-only"><input type="radio" name="layer" id="lyUnc" value="unc"> <span data-th="ความไม่แน่นอนของแผนที่ (±1σ)">Map uncertainty (±1σ)</span> <button type="button" class="lyinfo" data-info="legUnc" aria-expanded="false"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v5.5M12 7.6v.2"/></svg><span class="vh" data-th="คำอธิบายชั้นข้อมูลนี้">About this layer</span></button></label>
+        <label><input type="radio" name="layer" id="lyRain" value="rain"> <span data-th="ฝน (มม./ชม.)">Rain, mm/h</span> <button type="button" class="lyinfo" data-info="legRain" aria-expanded="false"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v5.5M12 7.6v.2"/></svg><span class="vh" data-th="คำอธิบายชั้นข้อมูลนี้">About this layer</span></button></label>
+        <label><input type="radio" name="layer" id="lyTemp" value="temp"> <span data-th="อุณหภูมิ (°C)">Temperature, °C</span> <button type="button" class="lyinfo" data-info="legTemp" aria-expanded="false"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v5.5M12 7.6v.2"/></svg><span class="vh" data-th="คำอธิบายชั้นข้อมูลนี้">About this layer</span></button></label>
+        <label><input type="radio" name="layer" id="lyVent" value="vent"> <span data-th="การระบายอากาศ (ม.²/วินาที)">Ventilation, m²/s</span> <button type="button" class="lyinfo" data-info="legVent" aria-expanded="false"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v5.5M12 7.6v.2"/></svg><span class="vh" data-th="คำอธิบายชั้นข้อมูลนี้">About this layer</span></button></label>
         <label><input type="radio" name="layer" id="lyNasa" value="nasa"> <span data-th="ภาพดาวเทียมรายวัน NASA (เห็นควัน)">NASA daily satellite image (shows smoke)</span></label>
         <div id="assimNote" class="note dev-only" style="font-size:var(--fs-xs);color:var(--focus)" hidden></div>
       </div>
@@ -4672,6 +4685,30 @@ function syncLegendToLayer(){ const m=layerMode();
 for(const el of document.querySelectorAll('input[name=layer]')) el.addEventListener('change',()=>{
   syncLegendToLayer(); if(layerMode()!=='nasa') nasaReset(); redrawTime();});
 syncLegendToLayer();
+// redesigned page: the long explanation of a layer behind an (i) button beside its name (.lyinfo, data-info = the legend block
+// whose .note holds the text, kept hidden there so the language switch still updates it). Hover or focus shows it on computers,
+// a tap toggles it on phones; Escape, a tap elsewhere or scrolling the panel closes it. No buttons (classic page): nothing happens.
+(function initLayerInfo(){ const btns=[...document.querySelectorAll('.lyinfo')]; if(!btns.length) return;
+  const tip=document.createElement('div'); tip.className='lytip'; tip.id='lyTip'; tip.setAttribute('role','tooltip'); tip.hidden=true; document.body.appendChild(tip);
+  let cur=null, pinned=false;
+  const place=b=>{ const r=b.getBoundingClientRect(), w=tip.offsetWidth, h=tip.offsetHeight, vw=innerWidth, vh=innerHeight;
+    let top=r.bottom+6; if(top+h>vh-8) top=Math.max(8,r.top-6-h); tip.style.top=top+'px'; tip.style.left=Math.min(Math.max(8,r.right-w),vw-w-8)+'px'; };
+  const show=(b,pin)=>{ const n=document.querySelector('#'+b.dataset.info+'>.note'); if(!n) return;
+    if(cur&&cur!==b) cur.setAttribute('aria-expanded','false');
+    tip.innerHTML=n.innerHTML; tip.hidden=false; cur=b; pinned=!!pin; b.setAttribute('aria-expanded','true'); b.setAttribute('aria-describedby','lyTip'); place(b); };
+  const hide=()=>{ if(!cur) return; tip.hidden=true; cur.setAttribute('aria-expanded','false'); cur.removeAttribute('aria-describedby'); cur=null; pinned=false; };
+  const hover=matchMedia('(hover: hover)');
+  for(const b of btns){
+    b.addEventListener('mouseenter',()=>{ if(hover.matches&&!pinned) show(b); });
+    b.addEventListener('mouseleave',()=>{ if(hover.matches&&!pinned&&cur===b) hide(); });
+    b.addEventListener('focus',()=>{ if(!pinned&&b.matches(':focus-visible')) show(b); });
+    b.addEventListener('blur',()=>{ if(!pinned&&cur===b) hide(); });
+    b.addEventListener('click',e=>{ e.preventDefault(); e.stopPropagation(); if(cur===b&&pinned) hide(); else show(b,true); });   // a button inside the label: the layer is not chosen by it
+  }
+  document.addEventListener('click',e=>{ if(cur&&!tip.contains(e.target)&&!e.target.closest('.lyinfo')) hide(); });
+  document.addEventListener('keydown',e=>{ if(e.key==='Escape') hide(); });
+  $('legend')?.addEventListener('scroll',hide,{passive:true}); addEventListener('resize',hide);
+})();
 $('rainBar').innerHTML=RAIN_SCALE.slice(1).map(([,c])=>`<i style="background:${c}"></i>`).join(''); $('tempBar').style.background=`linear-gradient(to right,${TEMP_STOPS.map(([v,c])=>`${c} ${((v-5)/35*100).toFixed(1)}%`).join(',')})`;
 $('uncBar').innerHTML=UNC_COL.map(c=>`<i style="background:${c}"></i>`).join('');
 $('ventBar').innerHTML=VENT_SCALE.map(([,c])=>`<i style="background:${c}"></i>`).join('');

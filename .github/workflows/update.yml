@@ -185,8 +185,10 @@ jobs:
           sed -i '0,/<html lang="en">/s//<html lang="en" data-mode="public">/' _site/index.html
           grep -q 'data-mode="public"' _site/index.html
           cp _site/index.html _site/index_modern.html
+          # the redesign's glass menu frames (motion and WebGL2 water), loaded by it as modules; the tests stay out of the site
+          mkdir -p _site/glass && cp glass/nav.mjs glass/water.mjs glass/boot.mjs _site/glass/
           # page version = hash of the page sources, so only a change to a page itself counts as a new version
-          BUILD=$(cat index.html index_modern.html | sha1sum | cut -c1-12)
+          BUILD=$(cat index.html index_modern.html glass/nav.mjs glass/water.mjs glass/boot.mjs | sha1sum | cut -c1-12)
           sed -i "s/<meta name=\"build\" content=\"dev\">/<meta name=\"build\" content=\"${BUILD}\">/" _site/index.html _site/index_modern.html _site/classic.html _site/dev.html
           for f in index.html index_modern.html classic.html dev.html; do grep -q "content=\"${BUILD}\"" _site/$f; done
           echo "${BUILD}" > _site/build.txt

@@ -60,8 +60,8 @@
   --shadow-lg: 0 12px 32px -4px rgba(15, 23, 42, 0.09), 0 4px 10px -2px rgba(15, 23, 42, 0.04);
   --shadow-float: 0 16px 40px -8px rgba(15, 23, 42, 0.12);
   
-  --glass-bg: rgba(255, 255, 255, 0.84);
-  --glass-border: 1px solid rgba(226, 232, 240, 0.75);
+  --float-bg: rgba(255, 255, 255, 0.84);
+  --float-border: 1px solid rgba(226, 232, 240, 0.75);
 
   /* Typography */
   /* Thai first, set the way Thai print is: loopless Thai for display, looped Thai for text. Anuphan (Cadson Demak) for headings
@@ -123,8 +123,8 @@
     --shadow-lg: 0 12px 32px -4px rgba(0, 0, 0, 0.6);
     --shadow-float: 0 16px 40px -8px rgba(0, 0, 0, 0.7);
     
-    --glass-bg: rgba(15, 23, 42, 0.84);
-    --glass-border: 1px solid rgba(255, 255, 255, 0.1);
+    --float-bg: rgba(15, 23, 42, 0.84);
+    --float-border: 1px solid rgba(255, 255, 255, 0.1);
     
     color-scheme: dark;
   }
@@ -169,8 +169,8 @@
   --shadow-lg: 0 12px 32px -4px rgba(0, 0, 0, 0.6);
   --shadow-float: 0 16px 40px -8px rgba(0, 0, 0, 0.7);
   
-  --glass-bg: rgba(15, 23, 42, 0.84);
-  --glass-border: 1px solid rgba(255, 255, 255, 0.1);
+  --float-bg: rgba(15, 23, 42, 0.84);
+  --float-border: 1px solid rgba(255, 255, 255, 0.1);
   color-scheme: dark;
 }
 
@@ -204,7 +204,7 @@ header {
   align-items: center;
   gap: 16px;
   padding: 0 20px;
-  background: var(--glass-bg);
+  background: var(--float-bg);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   border-bottom: 1px solid var(--line);
@@ -705,10 +705,10 @@ tbody tr:hover {
   z-index: 500;
   width: calc(100% - 40px);
   max-width: 660px;
-  background: var(--glass-bg);
+  background: var(--float-bg);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  border: var(--glass-border);
+  border: var(--float-border);
   border-radius: var(--radius-pill);
   padding: 8px 18px;
   display: grid;
@@ -765,10 +765,10 @@ tbody tr:hover {
   right: 16px;
   top: 16px;
   z-index: 500;
-  background: var(--glass-bg);
+  background: var(--float-bg);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  border: var(--glass-border);
+  border: var(--float-border);
   border-radius: var(--radius-lg);
   padding: 12px 14px;
   font-size: var(--fs-sm);
@@ -841,8 +841,8 @@ tbody tr:hover {
   font-weight: 500;
   padding: 6px 14px;
   border-radius: var(--radius-pill);
-  border: var(--glass-border);
-  background: var(--glass-bg);
+  border: var(--float-border);
+  background: var(--float-bg);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   box-shadow: var(--shadow-md);
@@ -858,10 +858,10 @@ tbody tr:hover {
   height: 34px;
   display: grid;
   place-items: center;
-  background: var(--glass-bg);
+  background: var(--float-bg);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  border: var(--glass-border);
+  border: var(--float-border);
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-md);
   cursor: pointer;
@@ -922,10 +922,10 @@ tbody tr:hover {
   box-shadow: var(--shadow-md) !important;
   border-radius: var(--radius-md) !important;
   overflow: hidden;
-  border: var(--glass-border) !important;
+  border: var(--float-border) !important;
 }
 .leaflet-bar a {
-  background: var(--glass-bg) !important;
+  background: var(--float-bg) !important;
   backdrop-filter: blur(16px) !important;
   color: var(--fg) !important;
   border-bottom: 1px solid var(--line) !important;
@@ -979,7 +979,7 @@ tbody tr:hover {
 .bandkey b { font-weight: 500; color: var(--muted); font-variant-numeric: tabular-nums; }
 .hide-plabel .plabel, .hide-tlabel .tlabel, .hide-mlabel .tlabel.minor { display: none; }
 .leaflet-control-attribution {
-  background: var(--glass-bg) !important;
+  background: var(--float-bg) !important;
   backdrop-filter: blur(8px) !important;
   border-radius: 4px;
   font-size: 9px !important;
@@ -1225,7 +1225,7 @@ body{text-rendering:optimizeLegibility}
 /* ---- Layer panel button and map-click summary ---- */
 .mapwrap{--legTop:62px}
 .legtoggle{position:absolute;top:16px;right:16px;z-index:520;width:38px;height:38px;border-radius:50%;display:grid;place-items:center;cursor:pointer;
-  background:var(--glass-bg);-webkit-backdrop-filter:blur(20px);backdrop-filter:blur(20px);border:var(--glass-border);box-shadow:var(--shadow-lg);color:var(--muted);transition:color .15s,background .15s,transform .15s}
+  background:var(--float-bg);-webkit-backdrop-filter:blur(20px);backdrop-filter:blur(20px);border:var(--float-border);box-shadow:var(--shadow-lg);color:var(--muted);transition:color .15s,background .15s,transform .15s}
 .legtoggle:hover{color:var(--fg);transform:translateY(-1px)}
 .legtoggle.on{color:var(--ink);background:var(--panel)}
 .legend{top:var(--legTop);max-height:calc(100% - var(--legTop) - var(--scrubH,58px) - 24px - 12px)}
@@ -1277,7 +1277,7 @@ main{transition:grid-template-columns .22s ease}
 main.side-hidden{grid-template-columns:0 1fr}
 main.side-hidden>aside{visibility:hidden;overflow:hidden;border-right:0}
 .sidetoggle{position:absolute;left:0;top:50%;transform:translateY(-50%);z-index:520;width:22px;height:52px;padding:0;display:grid;place-items:center;cursor:pointer;
-  background:var(--glass-bg);-webkit-backdrop-filter:blur(20px);backdrop-filter:blur(20px);border:var(--glass-border);border-left:0;border-radius:0 10px 10px 0;box-shadow:var(--shadow-md);color:var(--muted);transition:color .15s,width .15s}
+  background:var(--float-bg);-webkit-backdrop-filter:blur(20px);backdrop-filter:blur(20px);border:var(--float-border);border-left:0;border-radius:0 10px 10px 0;box-shadow:var(--shadow-md);color:var(--muted);transition:color .15s,width .15s}
 .sidetoggle:hover{color:var(--ink);width:26px}
 .sidetoggle svg{transition:transform .2s}
 main.side-hidden .sidetoggle svg{transform:rotate(180deg)}
@@ -1337,7 +1337,7 @@ aside:has(#hereBox:not([hidden])) .sheet-peek:not(:has(#clickCard:not([hidden]))
   .pane{overflow:visible;padding:8px 14px 28px}
   /* bottom tab bar */
   .tabbar{display:flex;position:fixed;left:0;right:0;bottom:0;height:var(--tabH);padding-bottom:env(safe-area-inset-bottom,0px);z-index:1300;
-    background:var(--glass-bg);-webkit-backdrop-filter:blur(20px);backdrop-filter:blur(20px);border-top:1px solid var(--line)}
+    background:var(--float-bg);-webkit-backdrop-filter:blur(20px);backdrop-filter:blur(20px);border-top:1px solid var(--line)}
   .tabbar button{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;border:0;background:none;color:var(--muted);
     font:500 var(--fs-xs)/1.1 var(--font-body);cursor:pointer;padding:6px 2px 4px;min-width:0}
   .tabbar svg{width:23px;height:23px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
@@ -1369,7 +1369,138 @@ aside:has(#hereBox:not([hidden])) .sheet-peek:not(:has(#clickCard:not([hidden]))
   .sidetoggle{display:none}
   #toast{top:calc(var(--hdrH) + 10px)}
 }
+/* ===================== Glass menu frames (after the SEEN prototype, Nov 2026) =====================
+   The frames that hold the menus are translucent glass: on computers the side panel floats as a pane over a soft indigo-and-
+   slate background and the header's buttons are glass; on phones the bottom tab bar floats as a capsule over the sheet and the
+   header is glass. The map and its overlays (--float-bg) keep their own look. Text keeps its own colours; the fills are chosen
+   so every text on a frame keeps at least 4.5:1 in both themes. Browsers without backdrop-filter, and visitors who ask for less
+   transparency, get the solid frames. Motion: glass/nav.mjs; the WebGL2 water of the wide layout: glass/water.mjs. */
+:root{
+  --glass-bg:color-mix(in srgb,var(--panel) 50%,transparent);
+  --glass-bg-strong:color-mix(in srgb,var(--panel) 72%,transparent);
+  --glass-side:color-mix(in srgb,var(--panel) 80%,transparent);     /* the side panel holds dense text: more of the panel colour */
+  --glass-bar:color-mix(in srgb,var(--panel) 72%,transparent);      /* the phone's bottom bar: the sheet's text passes under it */
+  /* light caught by the rim of a thick pane: bright along the top, a faint ring, a glow inside the lower edge */
+  --glass-rim:inset 0 0 0 1px rgba(255,255,255,.38),inset 0 1.5px 1px rgba(255,255,255,.95),inset 0 -10px 14px -10px rgba(255,255,255,.75),inset 0 12px 18px -14px rgba(255,255,255,.6);
+  --glass-edge:rgba(255,255,255,.7);
+  --glass-line:color-mix(in srgb,var(--line-strong) 55%,transparent);
+  --glass-blur:saturate(190%) blur(14px);
+  --glass-shadow:0 10px 30px rgba(15,23,42,.12),0 1px 2px rgba(15,23,42,.06);
+  --glass-pill:color-mix(in srgb,var(--ink) 13%,transparent);
+  --glass-tint-a:color-mix(in srgb,var(--ink) 20%,transparent);     /* the page's ink (indigo) */
+  --glass-tint-b:color-mix(in srgb,var(--smoke) 16%,transparent);   /* and smoke (slate); orange stays for fire data */
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --glass-bg:color-mix(in srgb,var(--panel) 46%,transparent);--glass-bg-strong:color-mix(in srgb,var(--panel) 70%,transparent);
+    --glass-side:color-mix(in srgb,var(--panel) 78%,transparent);--glass-bar:color-mix(in srgb,var(--panel) 72%,transparent);
+    --glass-rim:inset 0 0 0 1px rgba(255,255,255,.07),inset 0 1.5px 1px rgba(255,255,255,.28),inset 0 -10px 14px -10px rgba(255,255,255,.14),inset 0 12px 18px -14px rgba(255,255,255,.12);
+    --glass-edge:rgba(255,255,255,.14);--glass-shadow:0 10px 30px rgba(0,0,0,.5),0 1px 2px rgba(0,0,0,.4);
+    --glass-pill:color-mix(in srgb,var(--ink) 20%,transparent);
+    --glass-tint-a:color-mix(in srgb,var(--ink) 16%,transparent);--glass-tint-b:color-mix(in srgb,var(--smoke) 14%,transparent);
+  }
+}
+:root[data-theme="dark"]{
+  --glass-bg:color-mix(in srgb,var(--panel) 46%,transparent);--glass-bg-strong:color-mix(in srgb,var(--panel) 70%,transparent);
+  --glass-side:color-mix(in srgb,var(--panel) 78%,transparent);--glass-bar:color-mix(in srgb,var(--panel) 72%,transparent);
+  --glass-rim:inset 0 0 0 1px rgba(255,255,255,.07),inset 0 1.5px 1px rgba(255,255,255,.28),inset 0 -10px 14px -10px rgba(255,255,255,.14),inset 0 12px 18px -14px rgba(255,255,255,.12);
+  --glass-edge:rgba(255,255,255,.14);--glass-shadow:0 10px 30px rgba(0,0,0,.5),0 1px 2px rgba(0,0,0,.4);
+  --glass-pill:color-mix(in srgb,var(--ink) 20%,transparent);
+  --glass-tint-a:color-mix(in srgb,var(--ink) 16%,transparent);--glass-tint-b:color-mix(in srgb,var(--smoke) 14%,transparent);
+}
+/* Secondary text on glass: --muted (#64748b) reaches 4.5:1 only on near-white, so on the frames it is the page's slate
+   (--smoke) in the light theme and a lighter grey in the dark one; both stay at 4.5:1 or more over the glass. */
+header,main>aside,.tabbar{--muted:#475569}
+@media (prefers-color-scheme:dark){ :root:not([data-theme="light"]) :is(header,main>aside,.tabbar){--muted:#a8b5c8} }
+:root[data-theme="dark"] :is(header,main>aside,.tabbar){--muted:#a8b5c8}
+/* how much of the panel colour the WebGL water's panes lay over the water (glass/water.mjs reads --water-fill) */
+main>aside{--water-fill:.8}
+header .status>.btn{--water-fill:.72}
+
+@supports ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){
+  /* Computers and tablets in the wide layout: soft colour behind the window, the side panel as a floating glass pane. */
+  @media (min-width:861px){
+    body{background:
+      radial-gradient(60rem 36rem at -8% -10%,var(--glass-tint-a),transparent 62%),
+      radial-gradient(44rem 30rem at 4% 108%,var(--glass-tint-b),transparent 60%),
+      radial-gradient(50rem 30rem at 108% -6%,var(--glass-tint-a),transparent 60%),
+      var(--bg)}
+    header{background:transparent;-webkit-backdrop-filter:none;backdrop-filter:none;border-bottom-color:transparent}
+    /* the header's buttons are small glass panes (the header itself is not filtered, so they blur what is behind) */
+    header .status>.btn{background:var(--glass-bg-strong);-webkit-backdrop-filter:var(--glass-blur);backdrop-filter:var(--glass-blur);
+      border-color:var(--glass-line);box-shadow:inset 0 1px 0 var(--glass-edge),0 1px 3px rgba(15,23,42,.08)}
+    header .status>.btn:hover{background:var(--glass-bg)}
+    /* the pane's margins come out of the column, so the column grows by them and the panel keeps its 380 px */
+    main{grid-template-columns:404px 1fr}
+    main.side-hidden{grid-template-columns:0 1fr}
+    main>aside{margin:6px 12px 12px;background:var(--glass-side);-webkit-backdrop-filter:var(--glass-blur);backdrop-filter:var(--glass-blur);
+      border:1px solid var(--glass-line);border-radius:26px;box-shadow:var(--glass-shadow),var(--glass-rim);overflow:hidden}
+    main.side-hidden>aside{margin-inline:0;border-width:0;box-shadow:none}
+    main>aside .sheet-peek,main>aside .summary{border-bottom-color:var(--glass-line)}
+    main>aside .tabs{background:color-mix(in srgb,var(--fg) 5%,transparent);border-color:var(--glass-line)}
+  }
+  /* Phones: the bottom bar floats as a capsule over the sheet, the header is glass. */
+  @media (max-width:860px){
+    :root{--tabH:calc(70px + env(safe-area-inset-bottom,0px))}
+    body{background:radial-gradient(30rem 18rem at -10% -20%,var(--glass-tint-a),transparent 70%),radial-gradient(30rem 18rem at 110% -20%,var(--glass-tint-b),transparent 70%),var(--bg)}
+    header{background:color-mix(in srgb,var(--bg) 70%,transparent);-webkit-backdrop-filter:var(--glass-blur);backdrop-filter:var(--glass-blur);border-bottom-color:var(--glass-line)}
+    /* the sheet reaches the bottom of the screen and its content scrolls on under the capsule (the padding is the room the
+       capsule takes; content-box keeps the sheet's heights, also those set while dragging, meaning what they meant) */
+    aside{box-sizing:content-box;bottom:0;padding-bottom:var(--tabH)}
+    .tabbar{left:max(10px,env(safe-area-inset-left,0px));right:max(10px,env(safe-area-inset-right,0px));bottom:calc(8px + env(safe-area-inset-bottom,0px));
+      height:58px;padding:5px;background:var(--glass-bar);-webkit-backdrop-filter:var(--glass-blur);backdrop-filter:var(--glass-blur);
+      border:1px solid var(--glass-line);border-radius:30px;box-shadow:var(--glass-shadow),var(--glass-rim)}
+    /* each tab starts from its own label's width and the room left is shared, so the longest Thai label (จุดความร้อน) is not
+       cut on narrow phones (equal widths cut it at 375 px in the capsule and at 320 px even before) */
+    .tabbar button{border-radius:24px;padding:4px 4px;flex:1 1 auto}
+    .tabbar button.on{background:var(--glass-pill)}
+  }
+}
+/* Less transparency asked for in the device settings: the solid frames. */
+@media (prefers-reduced-transparency:reduce){
+  :root,:root[data-theme="dark"],:root:not([data-theme="light"]){--glass-bg:var(--panel);--glass-bg-strong:var(--panel);--glass-side:var(--panel);--glass-bar:var(--panel);--glass-blur:none;--glass-rim:inset 0 0 0 0 transparent}
+  header{background:var(--bg)!important}
+}
+
+/* ---- Glass motion (glass/nav.mjs): one pill behind the chosen item slides, with a little overshoot, to the next one ---- */
+@supports ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){
+  .tabs[data-pill]::before,.tabbar[data-pill]::before{content:"";position:absolute;left:0;top:0;z-index:0;width:var(--pill-w);height:var(--pill-h);
+    transform:translate(var(--pill-x),var(--pill-y));pointer-events:none}
+  .tabs[data-pill=on]::before,.tabbar[data-pill=on]::before{transition:transform .5s cubic-bezier(.3,1.35,.45,1),width .3s ease,height .3s ease}
+  .tabs[data-pill]::before{border-radius:var(--radius-sm);background:var(--panel);box-shadow:0 1px 3px rgba(15,23,42,.1),inset 0 1px 0 var(--glass-edge)}
+  .tabs[data-pill] button[aria-selected="true"]{background:transparent;box-shadow:none}
+  .tabs button{position:relative;z-index:1}
+  @media (max-width:860px){
+    .tabbar[data-pill]::before{border-radius:24px;background:var(--glass-pill);box-shadow:inset 0 1px 0 var(--glass-edge),inset 0 0 0 1px color-mix(in srgb,var(--ink) 12%,transparent)}
+    .tabbar[data-pill] button.on{background:transparent}
+    .tabbar button{position:relative;z-index:1}
+    /* reading down the sheet: the bar draws in to its icons; scrolling up brings the names back */
+    .tabbar{transition:left .35s cubic-bezier(.3,1.2,.4,1),right .35s cubic-bezier(.3,1.2,.4,1),height .3s ease}
+    .tabbar span{max-height:1.4em;transition:max-height .3s ease,opacity .2s ease}
+    body.bar-compact .tabbar{left:max(17vw,env(safe-area-inset-left,0px));right:max(17vw,env(safe-area-inset-right,0px));height:46px}
+    body.bar-compact .tabbar span{max-height:0;opacity:0}
+  }
+}
+@media (prefers-reduced-motion:reduce){
+  .tabs[data-pill]::before,.tabbar[data-pill]::before,.tabbar,.tabbar button,.tabbar span{transition:none!important}
+}
+
+/* ---- WebGL2 water and glass (glass/water.mjs), wide layout ----
+   While the canvas draws, it paints the side panel and the header's buttons as panes over the water, so those drop their own
+   CSS glass and keep a thin edge. The canvas is shown only once it has drawn (an undrawn canvas is black). */
+.water{display:none}
+@media (min-width:861px){
+  .water{display:block;visibility:hidden;position:fixed;inset:0;z-index:0;width:100vw;height:100vh;height:100dvh;pointer-events:none}
+  body.water-on>.water{visibility:visible}
+  body.water-on>header,body.water-on>main{position:relative;z-index:1}
+  body.water-on>header{z-index:100}
+  body.water-on main>aside,body.water-on header .status>.btn{background:transparent;-webkit-backdrop-filter:none;backdrop-filter:none;box-shadow:none;
+    border-color:color-mix(in srgb,var(--glass-line) 60%,transparent)}
+  body.water-on header .status>.btn:hover{background:color-mix(in srgb,var(--panel) 40%,transparent)}
+}
+@media print{.water{display:none!important}}
 </style>
+<script type="module" src="glass/boot.mjs"></script>
 </head>
 <body data-click="info">
 <!-- location popup at page level, so it opens above the map (inside the side panel it was drawn under the map) -->

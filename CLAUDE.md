@@ -42,6 +42,11 @@ See `README.md` for the method and data sources.
   ThaiWater gauges daily (rainobs `pardig_cell`, `gsmap_cell`) and hands the page back to GSMaP if PARDIG falls behind. PARDIG uses
   ECMWF fields among its inputs: don't use it as the truth for fitting or judging ECMWF rain corrections. Don't add files to the
   workflow's Actions-cache path list: it changes the cache key and the next run starts without its state.
+- PM2.5 correction v2 (`scripts/ml2.mjs`) is a candidate run beside the live correction (`scripts/ml.mjs`): station-history inputs
+  and a µg/m³ target, logged as `correctedML2` (the live one as `correctedML1`; `correctedML` is whichever is published).
+  `pmHighCheck` publishes v2 only while it catches at least as many hours >= 37.5 µg/m³, with no larger false-alarm share and
+  no larger RMSE, over 14 days. Don't switch it on by hand or loosen the check to make it pass; judge PM2.5 changes by high hours
+  caught and false alarms as well as RMSE (`analysis/highpm_replay.py` reruns the diagnosis on any copy of the logs).
 - Public page is `/` (redesign), the original layout is `/classic.html`, the developer page `/dev.html`.
 - The redesign's glass menu frames: styles in `index_modern.html` ("Glass menu frames"), motion in `glass/nav.mjs`, WebGL2 water
   (wide layout only) in `glass/water.mjs`, wired by `glass/boot.mjs`; the workflow publishes these three to `_site/glass/`.

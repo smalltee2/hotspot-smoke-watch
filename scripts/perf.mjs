@@ -88,7 +88,7 @@ async function main() {
     for (const r of parse(await fs.readFile(f, 'utf8'))) {
       const id = r.station_id, L = +r.lead_h; if (!LEADS.includes(L)) continue;
       const kk = `${id}|${L}|${r.valid_utc.slice(0, 13)}`; if (seen.has(kk)) continue; seen.add(kk);
-      const tv = Date.parse(r.valid_utc), ti = Date.parse(r.issued_utc), day = thaiDay(tv); if (!(day < today)) continue;
+      if (!isFinite(Date.parse(r.valid_utc))) continue; const tv = Date.parse(r.valid_utc), ti = Date.parse(r.issued_utc), day = thaiDay(tv); if (!(day < today)) continue;
       const m = meta.get(id) || {}, basis = r.obs_basis || (m.avg24 ? '24' : 'h'), mon = r.monitor ?? (m.monitor === false ? '0' : '1');
       const g = mon === '0' ? 'lc' : basis === '24' ? 'a4t24' : 'href'; pmGroup.set(id, g);
       const o1 = obs.get(`${id}|${r.valid_utc.slice(0, 13)}`), o24 = basis === '24' ? o1 : obs24(id, tv);
@@ -126,9 +126,10 @@ async function main() {
 
   // ================================================================ temperature and rain (Air4Thai stations, from 7 Oct 2026)
   const tObs = new Map(), rObs = new Map();
-  for (const f of files.filter(f => /a4tw-\d{8}\.csv$/.test(f))) for (const r of parse(await fs.readFile(f, 'utf8'))) { const v = num(r.temp_c); if (v != null) tObs.set(`${r.station_id}|${r.hour_end_utc.slice(0, 13)}`, v); }
+  for (const f of files.filter(f => /a4tw-\d{8}\.csv$/.test(f))) for (const r of parse(await fs.readFile(f, 'utf8'))) { const v = num(r.temp_c); if (v != null && r.hour_end_utc) tObs.set(`${r.station_id}|${r.hour_end_utc.slice(0, 13)}`, v); }
   const rainCheck = {};
   for (const f of files.filter(f => /rainobs-\d{8}\.csv$/.test(f))) for (const r of parse(await fs.readFile(f, 'utf8'))) {
+    if (!isFinite(Date.parse(r.hour_end_utc))) continue;   // cut-off or damaged row
     const day = thaiDay(Date.parse(r.hour_end_utc));
     if (r.kind === 'a4t') { const v = num(r.gsmap_fine); if (v != null) rObs.set(`${r.station_id}|${r.hour_end_utc.slice(0, 13)}`, v); continue; }
     const g = num(r.gauge_mm); if (g == null) continue;
@@ -141,6 +142,7 @@ async function main() {
   const prTot = {};   // daily totals per station, lead and forecast
   const persLag = L => 24 * Math.ceil((L + 1) / 24) * H;   // same hour, newest day known at issue time
   for (const f of files.filter(f => /wxf-\d{8}T\d{2}\.csv$/.test(f))) for (const r of parse(await fs.readFile(f, 'utf8'))) {
+    if (!isFinite(Date.parse(r.valid_utc))) continue;   // cut-off or damaged row
     const L = +r.lead_h, tv = Date.parse(r.valid_utc), day = thaiDay(tv), id = r.station_id; if (!(day < today) || !LEADS.includes(L)) continue;
     // day/night by the hour end in Thai time, as the downscaling bins (t2Bin: hours ending 07–18 = day)
     const hr = new Date(tv + TH).getUTCHours(), dn = hr >= 7 && hr < 19 ? 'day' : 'night', reg = wxGroup(id), k = `${id}|${r.valid_utc.slice(0, 13)}`, kp = `${id}|${k13(tv - persLag(L))}`;

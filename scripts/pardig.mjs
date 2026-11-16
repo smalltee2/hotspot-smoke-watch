@@ -63,8 +63,9 @@ async function fetchFrame(t, get) {
 
 /** cache: { grid, frames: { [t]: b64 }, miss: { [t]: tries }, hours: { [hourStart]: { src: 'pardig', d: b64 } } }.
  *  Fetches the frames still needed for the last keepH hours (firstH on the first fill), builds the hours whose five frames are all
- *  in, and drops frames no hour needs any more. `get(url)` resolves to a fetch Response (404 allowed). Returns the cache. */
-export async function updatePardig(cache, now, { get = (u) => fetch(u, { signal: AbortSignal.timeout(60e3) }), log = console.log, maxFrames = 220, conc = 8 } = {}) {
+ *  in, and drops frames no hour needs any more. `get(url)` resolves to a fetch Response (404 allowed; 20 s limit per frame).
+ *  Returns the cache. */
+export async function updatePardig(cache, now, { get = (u) => fetch(u, { signal: AbortSignal.timeout(20e3) }), log = console.log, maxFrames = 220, conc = 8, deadline = Infinity } = {}) {
   const c = PDCFG;
   cache ||= {}; cache.grid = { lon0: c.lon0, lat0: c.lat0, nx: c.nx, ny: c.ny, step: 0.1 }; cache.frames ||= {}; cache.miss ||= {}; cache.hours ||= {};
   const old = now - c.keepH * HOUR - HOUR;
@@ -77,7 +78,9 @@ export async function updatePardig(cache, now, { get = (u) => fetch(u, { signal:
   }
   want.sort((a, b) => b - a); want.length = Math.min(want.length, maxFrames);   // newest first
   let got = 0, absent = 0, err = 0; const q = [...want];
-  await Promise.all(Array.from({ length: conc }, async () => { while (q.length) { const t = q.shift();
+  // `deadline` (clock ms): no new frame is asked for after it, so a stalling server cannot run the job into its time limit;
+  // what is missing is fetched by the next runs
+  await Promise.all(Array.from({ length: conc }, async () => { while (q.length && Date.now() < deadline) { const t = q.shift();
     try { const f = await fetchFrame(t, get); if (f) { cache.frames[t] = pack(f); got++; delete cache.miss[t]; } else { absent++; cache.miss[t] = (cache.miss[t] || 0) + 1; } }
     catch (e) { err++; if (err <= 2) log(`PARDIG frame ${stamp(t)}: ${e.message}`); } } }));
   let built = 0;

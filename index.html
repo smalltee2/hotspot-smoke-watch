@@ -689,7 +689,7 @@ td.num{text-align:right;font-family:var(--font-data);font-variant-numeric:tabula
       <div class="layerpick" role="radiogroup" aria-label="Map layer">
         <label><input type="radio" name="layer" id="lyTotal" value="total" checked> <span data-th="PM&lt;sub&gt;2.5&lt;/sub&gt; รวม (พยากรณ์)">Total PM<sub>2.5</sub> forecast</span></label>
         <label class="dev-only"><input type="radio" name="layer" id="lyFine" value="fine"> <span data-th="PM&lt;sub&gt;2.5&lt;/sub&gt; รวม + รายละเอียดไฟ (ทดลอง)">Total PM<sub>2.5</sub> + fire detail (experimental)</span></label>
-        <label><input type="radio" name="layer" id="lyFire" value="fire"> <span data-th="เฉพาะควันไฟ">Fire smoke only</span></label>
+        <label class="dev-only"><input type="radio" name="layer" id="lyFire" value="fire"> <span data-th="เฉพาะควันไฟ">Fire smoke only</span></label>
         <label class="dev-only"><input type="radio" name="layer" id="lyUnc" value="unc"> <span data-th="ความไม่แน่นอนของแผนที่ (±1σ)">Map uncertainty (±1σ)</span></label>
         <label><input type="radio" name="layer" id="lyRain" value="rain"> <span data-th="ฝน (มม./ชม.)">Rain, mm/h</span></label>
         <label><input type="radio" name="layer" id="lyTemp" value="temp"> <span data-th="อุณหภูมิ (°C)">Temperature, °C</span></label>
@@ -3552,7 +3552,8 @@ $('alpha').addEventListener('change',()=>{FIELD_CACHE.clear(); redrawTime();});
 {const u=new URL(location.href); if(u.searchParams.has('v')){u.searchParams.delete('v'); history.replaceState(null,'',u.toString());}}
 // first paint, then automatic refresh while the tab is open
 computeReceptors(); renderAll(); applyVisibility();
-runAuto(false).then(()=>{ if(P.data) autoLocPop(); if(!P.data){ $('lyFire').checked=true; $('legTotal').hidden=true; $('legUnc').hidden=true; $('legFire').hidden=false; redrawTime(); } });
+// no data: the developer page falls back to the fire-smoke-only model; the public pages, which do not offer that layer, keep theirs
+runAuto(false).then(()=>{ if(P.data) autoLocPop(); if(!P.data&&document.documentElement.dataset.mode!=='public'){ $('lyFire').checked=true; $('legTotal').hidden=true; $('legUnc').hidden=true; $('legFire').hidden=false; redrawTime(); } });
 // Automatic refresh: every 3 min (and when the tab comes back into view or the device goes online) the page reads data/stamp.json,
 // a few bytes the workflow writes at each deployment with the run time of latest.json and the page version. New data are loaded
 // in place (the chosen hour, the place card and the map view stay); a new page version reloads the page. Without stamp.json

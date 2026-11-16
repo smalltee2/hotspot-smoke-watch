@@ -14,8 +14,9 @@ import { buildDEM, sampleGrid } from './dem.mjs';
 import { regressionKriging, krigeField, clampAux } from './rk.mjs';
 import { fetchMet, sampleMet, packMet, packTraj, MET_MODEL } from './met.mjs';
 import { updateRadar, scoreRadar, mergeRadarIntoMet, nowcast as radarNowcast, webRadar, radarAt, rainDiag, diagFactorAt, persistAt } from './radar.mjs';
-import { updateGsmap, mergeIntoMet, webRain } from './gsmap.mjs';
+import { updateGsmap, mergeIntoMet, webRain, GSCFG } from './gsmap.mjs';
 import { fetchGauges, scoreGauges, gsmapAt, rainFactor } from './thaiwater.mjs';
+import { updatePardig, obsRain } from './pardig.mjs';
 import { WXML, T2_NAMES, PR_NAMES, T2ENG, PRENG, t2Features, prFeatures, loadWxDataset, storeWxDay, loadWxSeason } from './mlwx.mjs';
 import { downscaleT2, packDEM, T2CFG, t2SeaLevel, t2Bin, t2Down } from './t2down.mjs';
 import { buildLandcover, landcoverAt, packLandcover, unpackLandcover } from './landcover.mjs';
@@ -131,6 +132,25 @@ async function rainDetectCheck(histDir, dayEnd, days = 14) {
       if (f >= 0.5) { c.fc_f++; c.hit_f += wet; } if (m >= 0.5) { c.fc_m++; c.hit_m += wet; } } }
   const fa = k => (c['fc_' + k] - c['hit_' + k]) / Math.max(1, c['fc_' + k]);
   return { days, ...c, fa_f: +fa('f').toFixed(3), fa_m: +fa('m').toFixed(3), ok: c.n >= 2000 && c.wet >= 50 && c.hit_m >= c.hit_f && fa('m') <= fa('f') };
+}
+// Observed rain of the page: PARDIG or GSMaP. Scored daily against the ThaiWater gauges of the last 14 days (rainobs gauge rows
+// holding both, 0.1° cells; decided from 3 logged days): PARDIG stays the page's observed rain while it catches at least as many gauge rain hours (>= 0.5 mm/h)
+// as GSMaP with no larger share of false alarms; otherwise GSMaP returns by itself. Until enough rows are logged (decided: false)
+// PARDIG is used on the strength of the 9–15 Nov 2026 evaluation (scripts/pardig.mjs).
+async function obsRainCheck(histDir, dayEnd, days = 14) {
+  const c = { days, nDays: 0, n: 0, wet: 0, hit_g: 0, fc_g: 0, hit_p: 0, fc_p: 0 };
+  for (let d = dayEnd - days * 864e5; d < dayEnd; d += 864e5) { const td = thaiDate(d);
+    const txt = await fs.readFile(path.join(histDir, td.slice(0, 7), `rainobs-${td.replace(/-/g, '')}.csv`), 'utf8').catch(() => '');
+    const [head, ...lines] = txt.trim().split('\n'); if (!head) continue; const h = head.split(','), ix = k => h.indexOf(k);
+    const iK = ix('kind'), iO = ix('gauge_mm'), iG = ix('gsmap_cell'), iP = ix('pardig_cell'); if (iP < 0) continue; const n0 = c.n;
+    for (const l of lines) { const v = l.split(','); if (v[iK] !== 'gauge' || v[iO] === '' || v[iG] === '' || v[iP] === '') continue;
+      const wet = +v[iO] >= 0.5, g = +v[iG] >= 0.5, p = +v[iP] >= 0.5; c.n++; c.wet += wet;
+      if (g) { c.fc_g++; c.hit_g += wet; } if (p) { c.fc_p++; c.hit_p += wet; } }
+    if (c.n > n0) c.nDays++; }
+  const fa = k => (c['fc_' + k] - c['hit_' + k]) / Math.max(1, c['fc_' + k]);
+  const decided = c.nDays >= 3 && c.n >= 20000 && c.wet >= 300;   // one dry or odd day does not switch the page
+  return { ...c, fa_g: +fa('g').toFixed(3), fa_p: +fa('p').toFixed(3), csi_g: +(c.hit_g / Math.max(1, c.wet + c.fc_g - c.hit_g)).toFixed(3), csi_p: +(c.hit_p / Math.max(1, c.wet + c.fc_p - c.hit_p)).toFixed(3),
+    decided, pardigOK: decided ? c.hit_p >= c.hit_g && fa('p') <= fa('g') : true };
 }
 async function appendCSV(p, header, rows) {
   if (!rows.length) return;
@@ -455,10 +475,26 @@ async function main() {
     gcache = await updateGsmap(gcache, now, { log });
     gcacheG = gcache;
     await writeJSON(path.join(DATA, 'gsmap-cache.json'), gcache);
-    const v = mergeIntoMet(met, gcache), web = webRain(gcache, now);
+    // Google DeepMind PARDIG (scripts/pardig.mjs; anonymous, no key): the page's observed rain where it has the hour, GSMaP for the
+    // newest hours (PARDIG runs ~4-5 h behind) and as the fallback; the daily check below can hand the page back to GSMaP
+    // (its cache rides inside gsmap-cache.json: a new file in the workflow's cache list would change the cache key and lose the state)
+    let pcache = gcache.pardig || null;
+    try { pcache = await updatePardig(pcache, now, { log }); gcache.pardig = pcache; await writeJSON(path.join(DATA, 'gsmap-cache.json'), gcache); }
+    catch (e) { log(`PARDIG failed: ${e.message}`); if (process.env.GITHUB_ACTIONS) console.log(`::warning title=PARDIG rain::${e.message}`); }
+    if (state.obsRainCheck?.day !== thaiDate(now)) {
+      const k = await obsRainCheck(path.join(DATA, 'history'), Date.parse(thaiDate(now) + 'T00:00:00+07:00'));
+      state.obsRainCheck = { day: thaiDate(now), ...k };
+      const m = `observed rain vs ThaiWater gauges (${k.nDays} of 14 d logged, ${k.n} gauge-hours, ${k.wet} wet >= 0.5 mm): rain hours caught PARDIG ${k.hit_p} vs GSMaP ${k.hit_g}, false alarms ${Math.round(k.fa_p * 100)} % vs ${Math.round(k.fa_g * 100)} %, CSI ${k.csi_p} vs ${k.csi_g} -> ${!k.decided ? 'too few days logged yet, PARDIG kept' : k.pardigOK ? 'PARDIG on the page' : 'GSMaP on the page'}`;
+      log(m); if (process.env.GITHUB_ACTIONS) console.log(`::notice title=observed rain source::${m}`);
+    }
+    const usePardig = state.obsRainCheck?.pardigOK !== false;
+    const obs = obsRain(pcache, gcache, GSCFG, usePardig), nSrc = {}; for (const h of Object.values(obs.hours)) nSrc[h.src] = (nSrc[h.src] || 0) + 1;
+    const v = mergeIntoMet(met, obs), web = webRain(obs, now, usePardig
+      ? 'Google DeepMind PARDIG (CC BY 4.0) where it has the hour, JAXA GSMaP gauge-calibrated for the newest hours; hourly mean rain rate over the hour starting at each time'
+      : 'JAXA GSMaP gauge-calibrated (Gauge_NRT v6 / Gauge_NOW), hourly mean rain rate over the hour starting at each time (PARDIG off: it scored below GSMaP against the gauges)');
     if (web) { await writeJSON(path.join(DATA, 'rain-obs.json'), web); rainInfo = { file: 'data/rain-obs.json', times: [web.times[0], web.times[web.times.length - 1]], src: web.source, verify: v }; }
-    if (v?.n) { const m = `GSMaP replaced ECMWF rain at ${v.nRep} node-hours up to ${new Date(v.tLast).toISOString().slice(0, 13)}Z; ECMWF vs GSMaP at ${v.n} north-grid node-hours: total ratio ${v.ratio}, r ${v.r}, hits of ≥0.5 mm/h ${v.pod}, false alarms ${v.far}; node totals r ${v.diag?.rTotals} (${v.diag?.nNodes} nodes); hourly r with GSMaP shifted -3..+3 h: ${JSON.stringify(v.diag?.rByShiftH)}`;
-      log(m); if (process.env.GITHUB_ACTIONS) console.log(`::notice title=GSMaP rain::${m}`); state.rainScore ||= []; state.rainScore.push([new Date(now).toISOString().slice(0, 13) + 'Z', v.n, v.ratio, v.r, v.pod, v.far]); state.rainScore = state.rainScore.slice(-400); }
+    if (v?.n) { const m = `observed rain (hours by source ${JSON.stringify(nSrc)}) replaced ECMWF rain at ${v.nRep} node-hours up to ${new Date(v.tLast).toISOString().slice(0, 13)}Z; ECMWF vs observed at ${v.n} north-grid node-hours: total ratio ${v.ratio}, r ${v.r}, hits of ≥0.5 mm/h ${v.pod}, false alarms ${v.far}; node totals r ${v.diag?.rTotals} (${v.diag?.nNodes} nodes); hourly r with the observation shifted -3..+3 h: ${JSON.stringify(v.diag?.rByShiftH)}`;
+      log(m); if (process.env.GITHUB_ACTIONS) console.log(`::notice title=observed rain::${m}`); state.rainScore ||= []; state.rainScore.push([new Date(now).toISOString().slice(0, 13) + 'Z', v.n, v.ratio, v.r, v.pod, v.far]); state.rainScore = state.rainScore.slice(-400); }
     // independent check against ThaiWater rain gauges (hourly), pooled over the last 7 days
     state.gaugeRain = await fetchGauges(state.gaugeRain, now, { get, log });
     state.gaugeScored ||= {}; for (const k of Object.keys(state.gaugeScored)) if (+k < now - 48 * HOUR) delete state.gaugeScored[k];
@@ -469,7 +505,20 @@ async function main() {
             mr = k => { const Rk = R.filter(r => r[k][1] != null), Nk = Rk.reduce((a, r) => a + r.n, 0); return Nk ? +(Rk.reduce((a, r) => a + r.n * r[k][1], 0) / Nk).toFixed(3) : null; };   // hours with no variance (all dry) excluded
       const m = `rain vs ThaiWater gauges, ${R.length} hours, ${N} gauge-hours (${R.reduce((a, r) => a + r.wet, 0)} wet ≥0.5 mm): RMSE / mean hourly r — GSMaP 0.1° cell ${pool('cell')} / ${mr('cell')}, interpolated ${pool('bil')} / ${mr('bil')}, 0.025° with CHELSA pattern ${pool('fine')} / ${mr('fine')} mm/h` + `; cell r by GSMaP hour shift (h): ${JSON.stringify(Object.fromEntries([-2, -1, 1, 2].map(L => [L, +(R.filter(r => r.lag?.[L] != null).reduce((a, r) => a + r.n * r.lag[L], 0) / Math.max(1, R.filter(r => r.lag?.[L] != null).reduce((a, r) => a + r.n, 0))).toFixed(3)])))}` + (sc.length ? `; this run scored ${sc.map(x => x.hour + ' ' + x.src).join(', ')}` : '');
       log(m); if (process.env.GITHUB_ACTIONS) console.log(`::notice title=rain vs gauges::${m}`);
+      const cnt = (RR, k) => RR.reduce((a, r) => { const x = r[k]; if (x?.length >= 6) { a[0] += x[3]; a[1] += x[4]; a[2] += x[5]; } return a; }, [0, 0, 0]),
+            hf = ([h, mi, fa]) => `caught ${h}/${h + mi}, false ${Math.round(100 * fa / Math.max(1, h + fa))} %`;
+      log(`rain hours >= 0.5 mm/h at the gauges (7 d): GSMaP cell ${hf(cnt(R, 'cell'))}`);
       rainInfo && (rainInfo.gauges = { hours: R.length, gaugeHours: N, rmse: { cell: pool('cell'), bil: pool('bil'), fine: pool('fine') }, r: { cell: mr('cell'), bil: mr('bil'), fine: mr('fine') } });
+    }
+    if (pcache) {   // the same check for PARDIG (its own scored hours)
+      state.gaugeScoredP ||= {}; for (const k of Object.keys(state.gaugeScoredP)) if (+k < now - 48 * HOUR) delete state.gaugeScoredP[k];
+      const scP = await scoreGauges(state.gaugeRain, pcache, DATA, state.gaugeScoredP);
+      state.rainGaugeScoreP = [...(state.rainGaugeScoreP || []).filter(r => !scP.some(x => x.hour === r.hour)), ...scP].filter(r => Date.parse(r.hour.replace('Z', ':00Z')) > now - 7 * 24 * HOUR).slice(-200);
+      const R = state.rainGaugeScoreP; if (R.length) { const N = R.reduce((a, r) => a + r.n, 0), rm = +Math.sqrt(R.reduce((a, r) => a + r.n * r.cell[0] ** 2, 0) / N).toFixed(3),
+        Rk = R.filter(r => r.cell[1] != null), Nk = Rk.reduce((a, r) => a + r.n, 0), mr = Nk ? +(Rk.reduce((a, r) => a + r.n * r.cell[1], 0) / Nk).toFixed(3) : null,
+        c = R.reduce((a, r) => { const x = r.cell; if (x.length >= 6) { a[0] += x[3]; a[1] += x[4]; a[2] += x[5]; } return a; }, [0, 0, 0]);
+        log(`PARDIG vs ThaiWater gauges, ${R.length} hours, ${N} gauge-hours: RMSE ${rm} mm/h, mean hourly r ${mr}; rain hours >= 0.5 mm/h caught ${c[0]}/${c[0] + c[1]}, false ${Math.round(100 * c[2] / Math.max(1, c[0] + c[2]))} %`);
+        rainInfo && (rainInfo.gaugesPardig = { hours: R.length, gaugeHours: N, rmse: rm, r: mr, caught: c[0], wet: c[0] + c[1], falseAlarms: c[2] }); }
     }
     // daily observed-rain archive for the Mac evaluation (rainobs-YYYYMMDD.csv, Thai day, written once from 10:00 Thai time so the
     // GSMaP NRT hours of the day have arrived; from 06:00): GSMaP (cell, bilinear, 0.025° value) at the Air4Thai stations and at the ThaiWater gauges
@@ -477,12 +526,15 @@ async function main() {
       const yday = thaiDate(now - 24 * HOUR), rf = path.join(DATA, 'history', yday.slice(0, 7), `rainobs-${yday.replace(/-/g, '')}.csv`);
       if (new Date(now + 7 * HOUR).getUTCHours() >= 6 && await fs.access(rf).then(() => false, () => true)) {   // from 06:00 Thai (GSMaP NRT for 24:00 arrives ~05:00; NOW fills any gap), before the Mac's 09:30 evaluation
         const d0 = Date.parse(yday + 'T00:00:00+07:00'), rowsR = []; let nH = 0;
-        for (let te = d0 + HOUR; te <= d0 + 24 * HOUR; te += HOUR) { const ts = te - HOUR, hasG = !!gcache.hours?.[ts]; if (!hasG && !rcache?.hours?.[ts]) continue; nH++;   // an hour counts with GSMaP or the radar: the radar truth is written even when GSMaP is missing
+        for (let te = d0 + HOUR; te <= d0 + 24 * HOUR; te += HOUR) { const ts = te - HOUR, hasG = !!gcache.hours?.[ts], hasP = !!pcache?.hours?.[ts]; if (!hasG && !hasP && !rcache?.hours?.[ts]) continue; nH++;   // an hour counts with GSMaP or the radar: the radar truth is written even when GSMaP is missing
           const he = new Date(te).toISOString().slice(0, 13) + ':00Z';
-          for (const s of a4tSt) { const g = hasG ? await gsmapAt(gcache, DATA, s.lat, s.lon, ts) : null, rd = radarAt(rcache, s.lat, s.lon, ts, RADAR_F0); if (g || rd != null) rowsR.push([he, 'a4t', s.id, s.lat, s.lon, '', g?.cell ?? '', g?.bil ?? '', g?.fine ?? '', g?.src ?? '', rd ?? '']); }
-          for (const [la, lo, mm] of state.gaugeRain?.[ts] || []) { const g = await gsmapAt(gcache, DATA, la, lo, ts); rowsR.push([he, 'gauge', '', la, lo, mm, g?.cell ?? '', g?.bil ?? '', g?.fine ?? '', g?.src ?? '', radarAt(rcache, la, lo, ts, RADAR_F0) ?? '']); } }
-        if (nH >= 20) { await appendCSV(rf, 'hour_end_utc,kind,station_id,lat,lon,gauge_mm,gsmap_cell,gsmap_bil,gsmap_fine,gsmap_src,radar_mmh', rowsR); log(`observed-rain archive ${path.basename(rf)}: ${nH} hours, ${rowsR.length} rows`); }
-        else log(`observed-rain archive for ${yday}: only ${nH} GSMaP/radar hours held, not written`);
+          for (const s of a4tSt) { const g = hasG ? await gsmapAt(gcache, DATA, s.lat, s.lon, ts) : null, pd = hasP ? await gsmapAt(pcache, DATA, s.lat, s.lon, ts) : null, rd = radarAt(rcache, s.lat, s.lon, ts, RADAR_F0);
+            if (g || pd || rd != null) rowsR.push([he, 'a4t', s.id, s.lat, s.lon, '', g?.cell ?? '', g?.bil ?? '', g?.fine ?? '', g?.src ?? '', rd ?? '', pd?.cell ?? '', pd?.fine ?? '']); }
+          for (const [la, lo, mm] of state.gaugeRain?.[ts] || []) { const g = hasG ? await gsmapAt(gcache, DATA, la, lo, ts) : null, pd = hasP ? await gsmapAt(pcache, DATA, la, lo, ts) : null;
+            rowsR.push([he, 'gauge', '', la, lo, mm, g?.cell ?? '', g?.bil ?? '', g?.fine ?? '', g?.src ?? '', radarAt(rcache, la, lo, ts, RADAR_F0) ?? '', pd?.cell ?? '', pd?.fine ?? '']); } }
+        // pardig_* at the end, so readers by position (rainDetectCheck: radar_mmh = column 10) are unchanged
+        if (nH >= 20) { await appendCSV(rf, 'hour_end_utc,kind,station_id,lat,lon,gauge_mm,gsmap_cell,gsmap_bil,gsmap_fine,gsmap_src,radar_mmh,pardig_cell,pardig_fine', rowsR); log(`observed-rain archive ${path.basename(rf)}: ${nH} hours, ${rowsR.length} rows`); }
+        else log(`observed-rain archive for ${yday}: only ${nH} GSMaP/PARDIG/radar hours held, not written`);
       }
     } catch (e) { log(`observed-rain archive failed: ${e.message}`); }
   } catch (e) { log(`GSMaP observed rain failed: ${e.message}`); if (process.env.GITHUB_ACTIONS) console.log(`::warning title=GSMaP rain::${e.message}`); }

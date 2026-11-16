@@ -37,6 +37,11 @@ See `README.md` for the method and data sources.
 - Judge rain corrections by rain hours caught (>= 0.5 mm/h) and false alarms, not only by error on ln(R + 0.2): that error
   can be lowered by forecasting less rain everywhere. `fit_rain_blend.py` and the weather-ML rain gate (`rainDetectCheck` in
   `scripts/update.mjs`) both require catching at least as many rain hours as uncorrected ECMWF, with no more false alarms.
+- Observed satellite rain: Google DeepMind PARDIG (`scripts/pardig.mjs`, public bucket, no key; its cache rides inside
+  `gsmap-cache.json`) with GSMaP for the newest hours and as fallback; `obsRainCheck` in `scripts/update.mjs` scores both against the
+  ThaiWater gauges daily (rainobs `pardig_cell`, `gsmap_cell`) and hands the page back to GSMaP if PARDIG falls behind. PARDIG uses
+  ECMWF fields among its inputs: don't use it as the truth for fitting or judging ECMWF rain corrections. Don't add files to the
+  workflow's Actions-cache path list: it changes the cache key and the next run starts without its state.
 - Public page is `/` (redesign), the original layout is `/classic.html`, the developer page `/dev.html`.
 - The redesign's glass menu frames: styles in `index_modern.html` ("Glass menu frames"), motion in `glass/nav.mjs`, WebGL2 water
   (wide layout only) in `glass/water.mjs`, wired by `glass/boot.mjs`; the workflow publishes these three to `_site/glass/`.

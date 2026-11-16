@@ -68,7 +68,7 @@ const HOUR = 3600e3;
 // ---------------------------------------------------------------- features
 // raw columns written to the forecast log every hour (fcst-*.csv) and used here
 export const FEAT_COLS = ['inc', 'fire', 'blh', 'ws', 'pr', 'obs_last', 'obs24_last', 'kfAb', 'hloc', 'doy', 't2', 'rh', 'ws10', 'wd', 'o_ws', 'o_wd', 'o_t2', 'o_rh'];   // wd = 100-m wind direction the wind blows from (deg); o_* = measured at the station at issue time
-const NAMES = ['lead', 'lnF', 'lnCams', 'lnInc', 'lnFire', 'lnBlh', 'ws', 'pr', 'lnObsLast', 'lnObs24', 'kfAb', 'hsin', 'hcos', 'dsin', 'dcos', 'lat', 'lon', 't2', 'rh', 'ws10', 'wdsin', 'wdcos', 'oT2', 'oRh', 'oWs', 'oWdsin', 'oWdcos', 'dT2', 'dRh', 'dWs'];   // added 3 Oct 2026 (older rows: NaN); o* measured at issue time, d* = forecast − measured
+export const NAMES = ['lead', 'lnF', 'lnCams', 'lnInc', 'lnFire', 'lnBlh', 'ws', 'pr', 'lnObsLast', 'lnObs24', 'kfAb', 'hsin', 'hcos', 'dsin', 'dcos', 'lat', 'lon', 't2', 'rh', 'ws10', 'wdsin', 'wdcos', 'oT2', 'oRh', 'oWs', 'oWdsin', 'oWdcos', 'dT2', 'dRh', 'dWs'];   // added 3 Oct 2026 (older rows: NaN); o* measured at issue time, d* = forecast − measured
 const ln1 = v => Math.log(Math.max(0, v) + 1);
 export function featureVector(r) {   // r: {lead, F, cams, inc, fire, blh, ws, pr, obs_last, obs24_last, kfAb, hloc, doy, lat, lon}
   const n = v => (v == null || v === '' || !isFinite(+v) ? NaN : +v);

@@ -17,6 +17,7 @@ import { updateRadar, scoreRadar, mergeRadarIntoMet, nowcast as radarNowcast, we
 import { updateGsmap, mergeIntoMet, webRain, GSCFG } from './gsmap.mjs';
 import { fetchGauges, scoreGauges, gsmapAt, rainFactor } from './thaiwater.mjs';
 import { updatePardig, obsRain } from './pardig.mjs';
+import { ENG2, ML2, loadObsHourly, rows2From, predict2, pmHighCheck } from './ml2.mjs';
 import { WXML, T2_NAMES, PR_NAMES, T2ENG, PRENG, t2Features, prFeatures, loadWxDataset, storeWxDay, loadWxSeason } from './mlwx.mjs';
 import { downscaleT2, packDEM, T2CFG, t2SeaLevel, t2Bin, t2Down } from './t2down.mjs';
 import { buildLandcover, landcoverAt, packLandcover, unpackLandcover } from './landcover.mjs';
@@ -875,6 +876,17 @@ async function main() {
       log(`ML store: ${nStored} rows for ${yday}; season ${seasonRows.season}: ${seasonRows.days} days, ${seasonRows.rows.length} rows`);
       mlRec = dailyLearn(state, rows, { now, dayStart, dayEnd, season, seasonRows, log });
       await writeJSON(path.join(DATA, 'history', yday.slice(0, 7), `ml-${yday.replace(/-/g, '')}.json`), mlRec);
+      // candidate correction v2 (scripts/ml2.mjs): the same rows with station history added and the error on the concentration
+      // scale as the target; then the daily check that decides whether v2 or the live correction is published
+      try {
+        const obsH = await loadObsHourly(path.join(DATA, 'history'), dayEnd - 46 * 864e5);
+        state.ml2 ||= {};
+        const rec2 = ENG2.dailyLearn(state.ml2, rows2From(rows, obsH), { now, dayStart, dayEnd, label: 'PM2.5 v2', log });
+        const k = state.ml2.check = await pmHighCheck(path.join(DATA, 'history'), dayEnd, obsH);
+        const m = `PM2.5 correction v2 check (${k.days} d, ${k.n} station-hours at hourly reference monitors, ${k.high} at >= ${ML2.thr}): caught ${k.hit2} v2 vs ${k.hit1} live, false alarms ${Math.round(k.fa2 * 100)} % vs ${Math.round(k.fa1 * 100)} %, RMSE ${k.rmse2} vs ${k.rmse1} -> ${!k.decided ? 'too few rows yet, live correction kept' : k.ok ? 'v2 published' : 'live correction kept'}`;
+        log(m); if (process.env.GITHUB_ACTIONS) console.log(`::notice title=PM2.5 correction v2::${m}`);
+        mlRec.v2 = { ...rec2, check: k }; await writeJSON(path.join(DATA, 'history', yday.slice(0, 7), `ml-${yday.replace(/-/g, '')}.json`), mlRec);
+      } catch (e) { log(`PM2.5 correction v2 daily learning failed: ${e.message}`); if (process.env.GITHUB_ACTIONS) console.log(`::warning title=PM2.5 correction v2::${e.message}`); }
     } catch (e) { log(`ML daily learning failed: ${e.message}`); }
   }
   const mlOn = mlActive(state, season); let mlField = null;
@@ -890,13 +902,25 @@ async function main() {
   };
   const featCache = new Map();
   const feats = (s, i, j) => { const k = `${i}|${j}`; if (!featCache.has(k)) featCache.set(k, featAt(s, i, j)); return featCache.get(k); };
+  // candidate correction v2: computed and logged at every hourly station once an expert has weight; published in place of the
+  // live correction only while yesterday's check says so (state.ml2.check.ok)
+  let use2 = false; const corr1Of = new Map(), corr2Of = new Map();   // per station id, for the forecast log (kept out of latest.json)
+  if (ENG2.active(state.ml2)) try {
+    const obsH = await loadObsHourly(path.join(DATA, 'history'), now - ML2.obsDays * 864e5, state.obsHist); let n2 = 0;
+    outStations.forEach((o, i) => { const s = stations[i]; if (isAvg24(s) || !o.corrA) return;
+      corr2Of.set(s.id, o.corrA.map((v, j) => { if (v == null || j <= jNow || (hours[j] - t0) / HOUR > ML2.maxLeadH) return v;
+        return r1(predict2(state.ml2, { ...feats(s, i, j), lead: (hours[j] - t0) / HOUR, F: v, cams: o.raw[j], lat: s.lat, lon: s.lon }, obsH, String(s.id), t0, hours[j])); })); n2++; });
+    use2 = mlOn && state.ml2.check?.ok === true;
+    log(`PM2.5 correction v2 computed at ${n2} hourly stations (weights ${JSON.stringify(Object.fromEntries(Object.entries(state.ml2.weights).map(([k, v]) => [k, +v.toFixed(3)])))}); ${use2 ? 'published' : 'logged only'}`);
+  } catch (e) { use2 = false; log(`PM2.5 correction v2 failed: ${e.message}`); if (process.env.GITHUB_ACTIONS) console.log(`::warning title=PM2.5 correction v2::${e.message}`); }
   if (mlOn) {
     let nAdj = 0;
     outStations.forEach((o, i) => {
       const s = stations[i]; if (isAvg24(s) || !o.corrA) return;
-      const corrM = o.corrA.map((v, j) => { if (v == null || j <= jNow || (hours[j] - t0) / HOUR > MLCFG.applyMaxLeadH) return v;
+      const corrV1 = o.corrA.map((v, j) => { if (v == null || j <= jNow || (hours[j] - t0) / HOUR > MLCFG.applyMaxLeadH) return v;
         const f = feats(s, i, j), q = mlCorrection(state, { ...f, lead: (hours[j] - t0) / HOUR, F: v, cams: o.raw[j], lat: s.lat, lon: s.lon, x: null }, season);
         return r1(Math.max(0, (v + 1) * Math.exp(q) - 1)); });
+      corr1Of.set(s.id, corrV1); const corrM = use2 && corr2Of.has(s.id) ? corr2Of.get(s.id) : corrV1;   // published: v2 while its check passes, else the live correction; both are logged
       // 24-h means for the AQI: measured hours up to now, ML-corrected forecast after, blended with persistence as before
       const o24n = obs24(s.id, s); let fc24M = o.fc24A;
       if (o24n && o24n.valid) { const hist = new Map((state.obsHist[s.id] || []).map(([t, v]) => [t, v]));
@@ -1031,7 +1055,8 @@ async function main() {
   await writeJSON(path.join(DATA, 'latest.json'), {
     generated: now, camsIssued: C.at, bbox: CFG.bbox, runlog: RUNLOG,
     method: { kf: CFG.kf, biasLeadEfoldH: CFG.biasLeadEfoldH, rk: { ...CFG.rk, lowcost: { use: LCc.use, a: LCc.a, b: LCc.b, windowD: LCc.windowD, minDays: LCc.minDays } } },
-    rk, rkA, assim: assimSummary(assim), ml: state.ml ? { active: mlOn, weights: state.ml.weights, lastDay: state.ml.lastDay, experts: Object.keys(state.ml.models || {}).concat(season ? ['season'] : []), last: mlRec, field: mlField } : null, dem: dem ? { file: 'data/static/elev.json', step: dem.step, source: dem.source } : null,
+    rk, rkA, assim: assimSummary(assim), ml: state.ml ? { active: mlOn, weights: state.ml.weights, lastDay: state.ml.lastDay, experts: Object.keys(state.ml.models || {}).concat(season ? ['season'] : []), last: mlRec, field: mlField,
+      v2: state.ml2?.weights ? { published: use2, weights: state.ml2.weights, check: state.ml2.check || null } : null } : null, dem: dem ? { file: 'data/static/elev.json', step: dem.step, source: dem.source } : null,
     t2down: t2Info,
     rainObs: rainInfo,
     met: met ? { file: 'data/met-web.json', model: met.model, fetched: met.fetched, grids: met.grids.map(g => ({ step: g.step, bbox: [g.lon0, g.lat0, g.lon0 + (g.nx - 1) * g.step, g.lat0 + (g.ny - 1) * g.step] })) } : null,
@@ -1059,9 +1084,10 @@ async function main() {
     fRows.push([new Date(now).toISOString().slice(0, 13) + ':00Z', new Date(hours[j]).toISOString().slice(0, 13) + ':00Z', s.id, L, s.raw[j], s.corr[j],
       s.fc24 ? m24(s.raw, j) : '', s.fc24 ? m24(s.corr, j) : '', s.fc24?.[j] != null ? s.fc24[j] : '', s.avg24 ? '24' : 'h',
       s.corrA?.[j] ?? '', s.fc24A?.[j] != null ? s.fc24A[j] : '', s.corrM?.[j] ?? '', s.fc24M?.[j] != null ? s.fc24M[j] : '',
-      ...(() => { const i = stIndex.get(s.id), f = feats(stations[i], i, j); return FEAT_COLS.map(k => f[k] === '' || f[k] == null ? '' : (typeof f[k] === 'number' ? +f[k].toFixed(3) : f[k])); })(), s.monitor ? 1 : 0]); }
+      ...(() => { const i = stIndex.get(s.id), f = feats(stations[i], i, j); return FEAT_COLS.map(k => f[k] === '' || f[k] == null ? '' : (typeof f[k] === 'number' ? +f[k].toFixed(3) : f[k])); })(), s.monitor ? 1 : 0,
+      corr1Of.get(s.id)?.[j] ?? '', corr2Of.get(s.id)?.[j] ?? '']); }   // the live correction and the candidate v2, whichever is published (correctedML)
   const fcstFile = path.join(hdir, `fcst-${stamp}.csv`);   // one file per issue hour: a second run in the same hour must not double-count it
-  if (await fs.access(fcstFile).then(() => false, () => true)) await appendCSV(fcstFile, 'issued_utc,valid_utc,station_id,lead_h,cams_raw,corrected,cams24,corr24,blend24,obs_basis,correctedA,blend24A,correctedML,blend24ML,' + FEAT_COLS.join(',') + ',monitor', fRows);
+  if (await fs.access(fcstFile).then(() => false, () => true)) await appendCSV(fcstFile, 'issued_utc,valid_utc,station_id,lead_h,cams_raw,corrected,cams24,corr24,blend24,obs_basis,correctedA,blend24A,correctedML,blend24ML,' + FEAT_COLS.join(',') + ',monitor,correctedML1,correctedML2', fRows);
   else log(`forecast log for ${stamp} already written this hour`);
   await writeJSON(path.join(DATA, 'state.json'), state);
   log(`done: ${outStations.length} stations, ${hot.length} hotspots, grid ${nx}×${ny}×${hours.length}`);

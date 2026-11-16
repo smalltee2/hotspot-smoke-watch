@@ -115,12 +115,15 @@ export async function updateRadar(cache, now, { get, sleep, log = console.log } 
       cache.mask = { t: now, d: packU8(m), covered: +(m.reduce((a, v) => a + v, 0) / m.length).toFixed(3) }; log(`radar coverage mask: ${(cache.mask.covered * 100).toFixed(0)} % of the Thailand box covered`); }
     catch (e) { log(`radar coverage mask failed: ${e.message}${cache.mask ? ' (keeping previous)' : ''}`); }
   }
-  const mask = cache.mask ? unpackU8(cache.mask.d) : null;
+  // without a mask a pixel with no echo cannot be told from a place no radar sees: it would be stored as 0 mm/h, replace ECMWF
+  // rain there and enter the logs as measured dry. Only possible on a first run (a failed refresh keeps the previous mask).
+  if (!cache.mask) throw new Error('no radar coverage mask yet, frames not read');
+  const mask = unpackU8(cache.mask.d);
   // new frames
   let nNew = 0;
   for (const f of past.sort((a, b) => a.time - b.time)) { const t = f.time * 1000; if (cache.frames[t]) continue;
     try { const { sum, cnt } = frameField(await fetchTiles((x, y) => `${api.host}${f.path}/${RVCFG.size}/${RVCFG.z}/${x}/${y}/${RVCFG.color}/${RVCFG.opts}.png`));
-      const a = new Int16Array(sum.length); for (let c = 0; c < a.length; c++) a[c] = !cnt[c] || (mask && !mask[c]) ? -1 : Math.min(3000, Math.round(sum[c] / cnt[c] * 10));
+      const a = new Int16Array(sum.length); for (let c = 0; c < a.length; c++) a[c] = !cnt[c] || !mask[c] ? -1 : Math.min(3000, Math.round(sum[c] / cnt[c] * 10));
       cache.frames[t] = packI16(a); nNew++; }
     catch (e) { log(`radar frame ${new Date(t).toISOString().slice(11, 16)}Z failed: ${e.message}`); } }
   for (const k of Object.keys(cache.frames)) if (+k < now - RVCFG.keepFramesH * HOUR) delete cache.frames[k];
@@ -225,7 +228,7 @@ export function nowcast(cache) {
 
 // ---- page file part: the last webH hourly fields, the coverage mask, the factor and the nowcast
 export function webRadar(cache, now, factor, nc) {
-  const ts = Object.keys(cache?.hours || {}).map(Number).filter(t => t >= now - RVCFG.webH * HOUR).sort((a, b) => a - b);
+  const ts = Object.keys(cache?.hours || {}).map(Number).filter(t => t >= Math.floor(now / HOUR) * HOUR - RVCFG.webH * HOUR).sort((a, b) => a - b);   // from the hour 24 h before the issue hour: the page's persistence member at lead 1 reads it
   if (!ts.length && !nc) return null;
   return { source: 'Weather radar via RainViewer (Thailand: Thai Meteorological Department), Universal Blue colours -> dBZ -> Marshall–Palmer rain rate, hourly mean over the hour starting at each time, 0.025° cells; -1 = no radar coverage',
            lon0: GRID.lon0, lat0: GRID.lat0, step: GRID.step, nx: GRID.nx, ny: GRID.ny, scale: 10, enc: 'deflate-int16', factor,

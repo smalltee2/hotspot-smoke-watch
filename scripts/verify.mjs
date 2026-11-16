@@ -32,12 +32,12 @@ for (const e of await fs.readdir(HIST, { withFileTypes: true }).catch(() => []))
 const cutoff = Date.now() - WINDOW_DAYS * 864e5;
 const obs = new Map(), hk = t => new Date(Math.round(t / 3600e3) * 3600e3).toISOString().slice(0, 13);
 for (const f of files.filter(f => path.basename(f).startsWith('obs-'))) for (const r of await readCSV(path.join(HIST, f))) {
-  const t = Date.parse(r.time_utc); if (t < cutoff - 864e5) continue;
+  const t = Date.parse(r.time_utc); if (!isFinite(t) || t < cutoff - 864e5 || !isFinite(+r.obs_pm25) || r.obs_pm25 === '' || r.obs_pm25 == null) continue;   // a cut-off last line (a run killed while writing) must not stop the verification
   obs.set(`${r.station_id}|${hk(t)}`, +r.obs_pm25);
 }
 // Air4Thai direct (from 3 Oct 2026): daily archive of hourly values (hour-ending time stamps) fills hours the runs missed
 for (const f of files.filter(f => path.basename(f).startsWith('a4t-'))) for (const r of await readCSV(path.join(HIST, f))) {
-  const t = Date.parse(r.hour_end_utc); if (t < cutoff - 864e5 || !isFinite(+r.pm25)) continue;
+  const t = Date.parse(r.hour_end_utc); if (!isFinite(t) || t < cutoff - 864e5 || r.pm25 === '' || r.pm25 == null || !isFinite(+r.pm25)) continue;
   const k = `${r.station_id}|${hk(t)}`; if (!obs.has(k)) obs.set(k, +r.pm25);
 }
 // observed 24-h mean ending at an hour, from hourly values (≥ 18 of 24, the usual 75 % rule)
@@ -48,6 +48,7 @@ function obs24From(id, hour) { const t1 = Date.parse(hour + ':00:00Z'); let s = 
 const byLead = new Map(), legacy = new Map(), hourly = new Map();
 for (const f of files.filter(f => path.basename(f).startsWith('fcst-'))) { const seen = new Set(); for (const r of await readCSV(path.join(HIST, f))) {
   // several runs in one hour (manual or overlapping triggers) appended to the same file before 2 Oct 2026: keep the first forecast per station and lead
+  if (!r.valid_utc || !isFinite(Date.parse(r.valid_utc)) || !isFinite(+r.lead_h) || r.cams_raw === undefined) continue;   // cut-off or damaged row
   const key = `${r.station_id}|${r.lead_h}|${r.valid_utc}`; if (seen.has(key)) continue; seen.add(key);
   if (r.monitor === '0') continue;   // the page's verification table: reference monitors only
   if (Date.parse(r.valid_utc) < cutoff) continue;

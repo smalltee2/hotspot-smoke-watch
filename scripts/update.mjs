@@ -471,6 +471,8 @@ async function main() {
   catch (e) { log(`radar update failed: ${e.message}${rcache ? ' (keeping previous frames)' : ''}`); if (process.env.GITHUB_ACTIONS) console.log(`::warning title=radar::${e.message}`); }
   globalThis.TIMER('rain');
   if (met && !late('GSMaP, gauges and rain diagnostic')) try {
+    // gauges first: ThaiWater serves only the latest reading, so an error further down must not cost the hour's gauge values
+    state.gaugeRain = await fetchGauges(state.gaugeRain, now, { get, log });
     let gcache = await readJSON(path.join(DATA, 'gsmap-cache.json'), null);
     gcache = await updateGsmap(gcache, now, { log });
     gcacheG = gcache;
@@ -479,9 +481,12 @@ async function main() {
     // newest hours (PARDIG runs ~4-5 h behind) and as the fallback; the daily check below can hand the page back to GSMaP
     // (its cache rides inside gsmap-cache.json: a new file in the workflow's cache list would change the cache key and lose the state)
     let pcache = gcache.pardig || null;
-    try { pcache = await updatePardig(pcache, now, { log }); gcache.pardig = pcache; await writeJSON(path.join(DATA, 'gsmap-cache.json'), gcache); }
+    try { pcache = await updatePardig(pcache, now, { log, deadline: Date.now() + 3 * 60e3 }); /* at most 3 min: the block may start at minute 16 of 25 */ gcache.pardig = pcache; await writeJSON(path.join(DATA, 'gsmap-cache.json'), gcache); }
     catch (e) { log(`PARDIG failed: ${e.message}`); if (process.env.GITHUB_ACTIONS) console.log(`::warning title=PARDIG rain::${e.message}`); }
-    if (state.obsRainCheck?.day !== thaiDate(now)) {
+    // once a day, after yesterday's rainobs file is written (from 06:00 Thai), so the newest day is in the check; from noon regardless
+    const ydayRO = thaiDate(now - 24 * HOUR), thHourRO = new Date(now + 7 * HOUR).getUTCHours();
+    const roReady = await fs.access(path.join(DATA, 'history', ydayRO.slice(0, 7), `rainobs-${ydayRO.replace(/-/g, '')}.csv`)).then(() => true, () => false);
+    if (state.obsRainCheck?.day !== thaiDate(now) && (roReady || thHourRO >= 12 || !state.obsRainCheck)) {
       const k = await obsRainCheck(path.join(DATA, 'history'), Date.parse(thaiDate(now) + 'T00:00:00+07:00'));
       state.obsRainCheck = { day: thaiDate(now), ...k };
       const m = `observed rain vs ThaiWater gauges (${k.nDays} of 14 d logged, ${k.n} gauge-hours, ${k.wet} wet >= 0.5 mm): rain hours caught PARDIG ${k.hit_p} vs GSMaP ${k.hit_g}, false alarms ${Math.round(k.fa_p * 100)} % vs ${Math.round(k.fa_g * 100)} %, CSI ${k.csi_p} vs ${k.csi_g} -> ${!k.decided ? 'too few days logged yet, PARDIG kept' : k.pardigOK ? 'PARDIG on the page' : 'GSMaP on the page'}`;
@@ -495,8 +500,7 @@ async function main() {
     if (web) { await writeJSON(path.join(DATA, 'rain-obs.json'), web); rainInfo = { file: 'data/rain-obs.json', times: [web.times[0], web.times[web.times.length - 1]], src: web.source, verify: v }; }
     if (v?.n) { const m = `observed rain (hours by source ${JSON.stringify(nSrc)}) replaced ECMWF rain at ${v.nRep} node-hours up to ${new Date(v.tLast).toISOString().slice(0, 13)}Z; ECMWF vs observed at ${v.n} north-grid node-hours: total ratio ${v.ratio}, r ${v.r}, hits of ≥0.5 mm/h ${v.pod}, false alarms ${v.far}; node totals r ${v.diag?.rTotals} (${v.diag?.nNodes} nodes); hourly r with the observation shifted -3..+3 h: ${JSON.stringify(v.diag?.rByShiftH)}`;
       log(m); if (process.env.GITHUB_ACTIONS) console.log(`::notice title=observed rain::${m}`); state.rainScore ||= []; state.rainScore.push([new Date(now).toISOString().slice(0, 13) + 'Z', v.n, v.ratio, v.r, v.pod, v.far]); state.rainScore = state.rainScore.slice(-400); }
-    // independent check against ThaiWater rain gauges (hourly), pooled over the last 7 days
-    state.gaugeRain = await fetchGauges(state.gaugeRain, now, { get, log });
+    // independent check against ThaiWater rain gauges (hourly), pooled over the last 7 days (the readings were fetched above)
     state.gaugeScored ||= {}; for (const k of Object.keys(state.gaugeScored)) if (+k < now - 48 * HOUR) delete state.gaugeScored[k];
     const sc = await scoreGauges(state.gaugeRain, gcache, DATA, state.gaugeScored);
     state.rainGaugeScore = [...(state.rainGaugeScore || []).filter(r => !sc.some(x => x.hour === r.hour)), ...sc].filter(r => Date.parse(r.hour.replace('Z', ':00Z')) > now - 7 * 24 * HOUR).slice(-200);
@@ -566,14 +570,20 @@ async function main() {
     // at the hourly stations by lead; the truth is the gauge-adjusted radar of the hour in rainobs-*.csv (radar_mmh)
     if (met && a4tSt.length && new Date(now).getUTCHours() % 3 === 0) { const rows = [], iss = new Date(now).toISOString().slice(0, 16) + 'Z', H0 = Math.floor(now / HOUR) * HOUR;
       const Hobs = rcache.latest ? Math.floor(rcache.latest / HOUR) * HOUR - HOUR : H0 - 2 * HOUR;   // latest complete radar hour (start)
+      // The "shift" member is read from the met grids AFTER observed rain replaced their past hours, as the page reads it: with a
+      // negative shift, leads 1-2 take hours already observed, so the member is partly recent observed rain, not ECMWF read
+      // earlier (found Nov 2026; the fitted 1-2 h weights were fitted and verified on exactly this member, so they stand).
+      // ecmwf_shift_pure_mmh logs the same reading from the pure ECMWF fields (met.json), so a later fit can tell the two apart.
+      const metPure = D && D.shiftH ? await readJSON(path.join(DATA, 'met.json'), null) : null;
       for (const L of CFG.rainLogLeads) { const H = H0 + (L - 1) * HOUR, ki = nc ? nc.hours.indexOf(H) : -1;
         for (const st of a4tSt) { const e = sampleMet(met, st.lat, st.lon, H + HOUR)?.pr; if (e == null) continue;
           const es = D ? sampleMet(met, st.lat, st.lon, H + HOUR + D.shiftH * HOUR)?.pr : null, fa = D ? diagFactorAt(D, st.lat, st.lon) : null, pe = persistAt(rcache, sc.factor, st.lat, st.lon, H, Hobs);
+          const esP = !D ? null : D.shiftH ? (metPure ? sampleMet(metPure, st.lat, st.lon, H + HOUR + D.shiftH * HOUR)?.pr : null) : es;
           let nv = ''; if (ki >= 0 && H >= nc.t0) { const G = webR, ix = Math.round((st.lon - G.lon0) / G.step), iy = Math.round((st.lat - G.lat0) / G.step); if (ix >= 0 && iy >= 0 && ix < G.nx && iy < G.ny) { const q = nc.fields[ki][iy * G.nx + ix]; if (q >= 0) nv = +(q / 10 * sc.factor).toFixed(2); } }
-          rows.push([iss, new Date(H).toISOString().slice(0, 13) + ':00Z', L, st.id, st.lat, st.lon, +e.toFixed(2), es == null ? '' : +es.toFixed(2), fa == null ? '' : +(e * fa).toFixed(2), pe ?? '', nv, +(await rainFactor(DATA, st.lat, st.lon, H)).toFixed(3)]); } }
+          rows.push([iss, new Date(H).toISOString().slice(0, 13) + ':00Z', L, st.id, st.lat, st.lon, +e.toFixed(2), es == null ? '' : +es.toFixed(2), fa == null ? '' : +(e * fa).toFixed(2), pe ?? '', nv, +(await rainFactor(DATA, st.lat, st.lon, H)).toFixed(3), esP == null ? '' : +esP.toFixed(2)]); } }
       const d = thaiDate(now), rfc = path.join(DATA, 'history', d.slice(0, 7), `rainfc-${d.replace(/-/g, '')}.csv`);
       if (await fs.readFile(rfc, 'utf8').then(s => s.includes('\n' + iss.slice(0, 13)), () => false)) log('rain forecast log: this issue hour is already logged (second run in the hour)');   // fit_rain_blend.py does not dedupe
-      else { await appendCSV(rfc,'issued_utc,hour_start_utc,lead_h,station_id,lat,lon,ecmwf_mmh,ecmwf_shift_mmh,ecmwf_amount_mmh,persist_mmh,nowcast_mmh,chelsa_factor', rows);
+      else { await appendCSV(rfc,'issued_utc,hour_start_utc,lead_h,station_id,lat,lon,ecmwf_mmh,ecmwf_shift_mmh,ecmwf_amount_mmh,persist_mmh,nowcast_mmh,chelsa_factor,ecmwf_shift_pure_mmh', rows);
       log(`rain forecast log: ${rows.length} station-leads`); } }
     if (D) rainInfo && (rainInfo.corr = { t: D.t, shiftH: D.shiftH, lon0: D.lon0, lat0: D.lat0, step: D.step, nx: D.nx, ny: D.ny, lnf100: D.lnf100, w: CFG.rainBlend, latestH: rcache.latest ? Math.floor(rcache.latest / HOUR) * HOUR - HOUR : null });
   } catch (e) { log(`radar scoring/nowcast failed: ${e.message}`); if (process.env.GITHUB_ACTIONS) console.log(`::warning title=radar::${e.message}`); }
@@ -627,7 +637,10 @@ async function main() {
     // when an expert has earned weight, log both versions, and spread the corrections over the map (wx-ml.json)
     const wxMeta = new Map(a4tSt.map(s => [String(s.id), { lat: s.lat, lon: s.lon }])), thH = new Date(now + 7 * HOUR).getUTCHours(), ydayW = thaiDate(now - 24 * HOUR);
     state.wxml ||= { t2: {}, pr: {} };
-    if (thH >= 7 && state.wxml.lastDay !== ydayW) {
+    // the rain engine and the rain check need yesterday's observed-rain archive: wait for it until noon (it is written from 06:00
+    // unless the rain block was skipped or too few hours were held), then go on without it rather than never learn the day
+    const roW = await fs.access(path.join(DATA, 'history', ydayW.slice(0, 7), `rainobs-${ydayW.replace(/-/g, '')}.csv`)).then(() => true, () => false);
+    if (thH >= 7 && state.wxml.lastDay !== ydayW && (roW || thH >= 12)) {
       try {
         const dayStart = Date.parse(ydayW + 'T00:00:00+07:00'), dayEnd = dayStart + 864e5;
         const D = await loadWxDataset(path.join(DATA, 'history'), wxMeta, { from: dayEnd - 36 * 864e5, to: dayEnd }), recs = {};

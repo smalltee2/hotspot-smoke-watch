@@ -3545,6 +3545,30 @@ function syncLegendToLayer(){ const m=layerMode();
 for(const el of document.querySelectorAll('input[name=layer]')) el.addEventListener('change',()=>{
   syncLegendToLayer(); if(layerMode()!=='nasa') nasaReset(); redrawTime();});
 syncLegendToLayer();
+// redesigned page: the long explanation of a layer behind an (i) button beside its name (.lyinfo, data-info = the legend block
+// whose .note holds the text, kept hidden there so the language switch still updates it). Hover or focus shows it on computers,
+// a tap toggles it on phones; Escape, a tap elsewhere or scrolling the panel closes it. No buttons (classic page): nothing happens.
+(function initLayerInfo(){ const btns=[...document.querySelectorAll('.lyinfo')]; if(!btns.length) return;
+  const tip=document.createElement('div'); tip.className='lytip'; tip.id='lyTip'; tip.setAttribute('role','tooltip'); tip.hidden=true; document.body.appendChild(tip);
+  let cur=null, pinned=false;
+  const place=b=>{ const r=b.getBoundingClientRect(), w=tip.offsetWidth, h=tip.offsetHeight, vw=innerWidth, vh=innerHeight;
+    let top=r.bottom+6; if(top+h>vh-8) top=Math.max(8,r.top-6-h); tip.style.top=top+'px'; tip.style.left=Math.min(Math.max(8,r.right-w),vw-w-8)+'px'; };
+  const show=(b,pin)=>{ const n=document.querySelector('#'+b.dataset.info+'>.note'); if(!n) return;
+    if(cur&&cur!==b) cur.setAttribute('aria-expanded','false');
+    tip.innerHTML=n.innerHTML; tip.hidden=false; cur=b; pinned=!!pin; b.setAttribute('aria-expanded','true'); b.setAttribute('aria-describedby','lyTip'); place(b); };
+  const hide=()=>{ if(!cur) return; tip.hidden=true; cur.setAttribute('aria-expanded','false'); cur.removeAttribute('aria-describedby'); cur=null; pinned=false; };
+  const hover=matchMedia('(hover: hover)');
+  for(const b of btns){
+    b.addEventListener('mouseenter',()=>{ if(hover.matches&&!pinned) show(b); });
+    b.addEventListener('mouseleave',()=>{ if(hover.matches&&!pinned&&cur===b) hide(); });
+    b.addEventListener('focus',()=>{ if(!pinned&&b.matches(':focus-visible')) show(b); });
+    b.addEventListener('blur',()=>{ if(!pinned&&cur===b) hide(); });
+    b.addEventListener('click',e=>{ e.preventDefault(); e.stopPropagation(); if(cur===b&&pinned) hide(); else show(b,true); });   // a button inside the label: the layer is not chosen by it
+  }
+  document.addEventListener('click',e=>{ if(cur&&!tip.contains(e.target)&&!e.target.closest('.lyinfo')) hide(); });
+  document.addEventListener('keydown',e=>{ if(e.key==='Escape') hide(); });
+  $('legend')?.addEventListener('scroll',hide,{passive:true}); addEventListener('resize',hide);
+})();
 $('rainBar').innerHTML=RAIN_SCALE.slice(1).map(([,c])=>`<i style="background:${c}"></i>`).join(''); $('tempBar').style.background=`linear-gradient(to right,${TEMP_STOPS.map(([v,c])=>`${c} ${((v-5)/35*100).toFixed(1)}%`).join(',')})`;
 $('uncBar').innerHTML=UNC_COL.map(c=>`<i style="background:${c}"></i>`).join('');
 $('ventBar').innerHTML=VENT_SCALE.map(([,c])=>`<i style="background:${c}"></i>`).join('');

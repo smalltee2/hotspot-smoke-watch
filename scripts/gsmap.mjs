@@ -78,10 +78,11 @@ export async function updateGsmap(cache, now, { log = console.log } = {}) {
   return cache;
 }
 
-// observed rain as the met pr (mm in the hour ENDING at the met time): node value = mean of the 0.1° cells within the node's box;
+// observed rain as the met pr (mm in the hour ENDING at the met time): node value = mean of the 0.1° cells within the node's box
+// (the GSMaP grid, or the grid the cache carries: the combined PARDIG/GSMaP field of scripts/pardig.mjs);
 // replaces the ECMWF value only where ≥ 50 % of the cells are valid. Returns the verification against the replaced ECMWF values.
 export function mergeIntoMet(M, cache) {
-  const c = GSCFG, hours = new Map(Object.entries(cache?.hours || {}).map(([k, v]) => [+k, v]));
+  const c = cache?.grid || GSCFG, hours = new Map(Object.entries(cache?.hours || {}).map(([k, v]) => [+k, v]));
   if (!hours.size) return null;
   const pairs = [];   // [ecmwf, observed] at north-grid nodes, for the log
   let nRep = 0, tLast = -Infinity;
@@ -120,10 +121,11 @@ export function mergeIntoMet(M, cache) {
            pod: wetO.length ? +(hit / wetO.length).toFixed(2) : null, far: wetE.length ? +(1 - hit / wetE.length).toFixed(2) : null };
 }
 
-// page file: the last webH hours of 0.1° observed rain, deflated Int16 per hour (rows south to north, 0.1 mm/h, -1 missing)
-export function webRain(cache, now) {
-  const c = GSCFG, ts = Object.keys(cache?.hours || {}).map(Number).filter(t => t >= now - GSCFG.webH * HOUR).sort((a, b) => a - b);
+// page file: the last webH hours of 0.1° observed rain, deflated Int16 per hour (rows south to north, 0.1 mm/h, -1 missing);
+// src per hour: 'pardig' (Google DeepMind PARDIG), 'nrt' / 'now' (GSMaP)
+export function webRain(cache, now, source = 'JAXA GSMaP gauge-calibrated (Gauge_NRT v6 / Gauge_NOW), hourly mean rain rate over the hour starting at each time') {
+  const c = cache?.grid || GSCFG, ts = Object.keys(cache?.hours || {}).map(Number).filter(t => t >= now - GSCFG.webH * HOUR).sort((a, b) => a - b);
   if (!ts.length) return null;
-  return { source: 'JAXA GSMaP gauge-calibrated (Gauge_NRT v6 / Gauge_NOW), hourly mean rain rate over the hour starting at each time',
+  return { source,
            lon0: c.lon0, lat0: c.lat0, step: 0.1, nx: c.nx, ny: c.ny, scale: 10, enc: 'deflate-int16', times: ts, src: ts.map(t => cache.hours[t].src), d: ts.map(t => cache.hours[t].d) };
 }

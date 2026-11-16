@@ -47,7 +47,7 @@ async function factor(dataDir, m) {
 
 // score every stored gauge hour that GSMaP now covers and that has not been scored; returns summary rows
 export async function scoreGauges(store, gcache, dataDir, scored = {}) {
-  const c = GSCFG, out = [];
+  const c = gcache?.grid || GSCFG, out = [];   // GSMaP's grid, or the one the cache carries (PARDIG)
   for (const [k, G] of Object.entries(store || {})) {
     const h = gcache?.hours?.[k]; if (!h || scored[k] === h.src) continue;
     const a = unpack(h.d), F = await factor(dataDir, new Date(+k + 7 * HOUR).getUTCMonth() + 1), e = { cell: [], bil: [], fine: [] }, ob = [];
@@ -64,7 +64,8 @@ export async function scoreGauges(store, gcache, dataDir, scored = {}) {
     if (ob.length < 30) continue;
     const st = p => { const n = ob.length, mo = ob.reduce((x, y) => x + y, 0) / n, mp = p.reduce((x, y) => x + y, 0) / n; let cv = 0, vo = 0, vp = 0, se = 0;
       for (let i = 0; i < n; i++) { cv += (p[i] - mp) * (ob[i] - mo); vo += (ob[i] - mo) ** 2; vp += (p[i] - mp) ** 2; se += (p[i] - ob[i]) ** 2; }
-      return [+Math.sqrt(se / n).toFixed(3), vo && vp ? +(cv / Math.sqrt(vo * vp)).toFixed(3) : null, +(mp - mo).toFixed(3)]; };
+      let hit = 0, miss = 0, fa = 0; for (let i = 0; i < n; i++) { const o = ob[i] >= 0.5, f = p[i] >= 0.5; if (o && f) hit++; else if (o) miss++; else if (f) fa++; }   // rain hours >= 0.5 mm/h
+      return [+Math.sqrt(se / n).toFixed(3), vo && vp ? +(cv / Math.sqrt(vo * vp)).toFixed(3) : null, +(mp - mo).toFixed(3), hit, miss, fa]; };
     // timing check: interpolated GSMaP of the neighbouring hours against the same gauge readings
     const lag = {};
     for (const L of [-2, -1, 1, 2]) { const hL = gcache.hours[+k + L * HOUR]; if (!hL) continue; const aL = unpack(hL.d), p = [], o = [];
@@ -76,10 +77,11 @@ export async function scoreGauges(store, gcache, dataDir, scored = {}) {
   return out;
 }
 
-// GSMaP at a point for the hour starting tStart: 0.1° cell, bilinear, bilinear × CHELSA factor (the page's 0.025° value); null if not held
+// GSMaP (or PARDIG: any cache with its own .grid) at a point for the hour starting tStart: 0.1° cell, bilinear, bilinear × CHELSA
+// factor (the page's 0.025° value); null if not held
 export async function gsmapAt(gcache, dataDir, lat, lon, tStart) {
   const h = gcache?.hours?.[tStart]; if (!h) return null;
-  const c = GSCFG, a = h._a || (h._a = unpack(h.d)), fx = (lon - c.lon0) / 0.1, fy = (lat - c.lat0) / 0.1, xi = Math.round(fx), yi = Math.round(fy);
+  const c = gcache.grid || GSCFG, a = h._a || (h._a = unpack(h.d)), fx = (lon - c.lon0) / 0.1, fy = (lat - c.lat0) / 0.1, xi = Math.round(fx), yi = Math.round(fy);
   if (xi < 0 || yi < 0 || xi >= c.nx || yi >= c.ny) return null;
   const cell = a[yi * c.nx + xi]; if (cell < 0) return null;
   const x0 = Math.max(0, Math.min(c.nx - 2, Math.floor(fx))), y0 = Math.max(0, Math.min(c.ny - 2, Math.floor(fy))), ax = fx - x0, ay = fy - y0;

@@ -3090,8 +3090,9 @@ function drawHotspots(){
     L.circleMarker([h.lat,h.lon],{radius:2.5+Math.min(big,Math.sqrt(h.frp)*k),weight:1,color:ring,fillColor:ember,fillOpacity:age<12?0.9:0.45,opacity:age<12?0.9:0.45})
      .bindTooltip(()=>{if(h.prov===undefined)h.prov=provinceOf(h.lat,h.lon);return `${h.prov?esc(provName(h.prov))+(LANG!=='th'&&h.prov.th?' ('+esc(h.prov.th)+')':'')+'<br>':''}FRP ${fmtN(h.frp)} MW · ${h.sat} · ${fmtT(h.t)}`;}).addTo(hotLayer);}
 }
+// smoke paths from the fire clusters (dashed): the developer page only; on the public pages "Hotspots" shows the fire points alone
 function drawTraj(){
-  trajLayer.clearLayers(); if(!S.sim) return; const c=cssVar('--smoke');
+  trajLayer.clearLayers(); if(!S.sim||PUBLIC) return; const c=cssVar('--smoke');
   S.sim.traj.slice(0,40).forEach(path=>{if(path.length>2) L.polyline(path.filter((_,i)=>i%3===0),{color:c,weight:1.2,opacity:.55,dashArray:'4 4'}).addTo(trajLayer);});
 }
 function drawTowns(){

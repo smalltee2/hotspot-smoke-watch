@@ -803,8 +803,6 @@ tbody tr:hover {
   font-size: var(--fs-xs);
   color: var(--muted);
 }
-.legend .keys { display: grid; gap: 5px; margin-top: 8px; }
-.legend .keys span { display: flex; gap: 8px; align-items: center; }
 .layerpick { display: grid; gap: 4px; margin-bottom: 8px; }
 .showpick {
   display: grid;
@@ -1197,7 +1195,6 @@ tbody tr:hover {
 .legend summary{position:sticky;top:-12px;z-index:1;background:var(--panel);padding:2px 0 6px}
 @media (max-width:860px){
   .legend{top:8px;right:8px;max-width:min(200px,calc(100vw - 120px));padding:8px 10px;font-size:var(--fs-xs);max-height:calc(100% - 8px - var(--scrubH,52px) - 14px - 12px)}
-  .legend .keys{display:none}
   .scrub{gap:8px;padding:6px 10px;border-radius:18px}
   .scrub .t{min-width:6.8em;font-size:var(--fs-sm)}
   #btnPlay{width:32px;height:32px}
@@ -1360,7 +1357,7 @@ aside:has(#hereBox:not([hidden])) .sheet-peek:not(:has(#clickCard:not([hidden]))
   .advsw input::after{content:"";position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:#fff;transition:transform .15s;box-shadow:0 1px 2px rgba(0,0,0,.25)}
   .advsw input:checked{background:var(--ink)} .advsw input:checked::after{transform:translateX(14px)}
   /* simple mode (public first): the display unit, long notes, symbol keys and expert overlays wait behind "advanced" */
-  body:not(.adv) .legend .field,body:not(.adv) .legend .note,body:not(.adv) .legend .keys,
+  body:not(.adv) .legend .field,body:not(.adv) .legend .note,
   body:not(.adv) .showpick label:has(#shContour),body:not(.adv) .showpick label:has(#shA4t),body:not(.adv) #a4tStat,body:not(.adv) .showpick label:has(#shSt){display:none}
   .legtoggle{top:10px;right:10px}
   .basemap-switch{left:52px;top:10px}
@@ -1371,6 +1368,15 @@ aside:has(#hereBox:not([hidden])) .sheet-peek:not(:has(#clickCard:not([hidden]))
   .sidetoggle{display:none}
   #toast{top:calc(var(--hdrH) + 10px)}
 }
+/* ---- Map symbols inside "Show on map": each item shows its symbol and, in small type, how to read it (the separate key
+   list under the layers is gone) ---- */
+.showpick label:has(.sp-t){align-items:flex-start}
+.showpick label:has(.sp-t) input{margin-top:4px}
+.showpick .sp-sym{flex:none;width:16px;display:inline-grid;place-items:center;margin-top:6px}
+.showpick .sp-t{display:flex;flex-direction:column;min-width:0}
+.showpick .sp-d{font-size:var(--fs-xs);color:var(--muted);line-height:1.35}
+#legWind{margin:0 0 4px 22px}
+
 /* ---- Layer explanations behind an (i) button (page code: initLayerInfo) ----
    The long note under each layer's colour scale (rain, temperature, ventilation, uncertainty, fire smoke) is kept in the page,
    hidden, and shown as a tooltip from the (i) button beside the layer's name: hover or keyboard focus on computers, tap on phones. */
@@ -1871,31 +1877,24 @@ header .status>.btn{--water-fill:.72}
         <div class="bandkey" id="fireKey"></div>
         <div class="note" style="font-size:var(--fs-xs)" data-th="PM&lt;sub&gt;2.5&lt;/sub&gt; ที่เพิ่มจากควันไฟ (µg/m³) สีดำ = มากกว่า 300">PM<sub>2.5</sub> added by fire smoke, µg/m³; black above 300.</div>
       </div>
-      <div class="keys">
-        <span><i class="dot" style="background:var(--ember);box-shadow:0 0 0 1px var(--fire-ring)"></i><span data-th="จุดความร้อน (ใหญ่ = ไฟแรง)">Fire hotspot (larger = stronger fire)</span></span>
-        <span><i class="dot" style="border:2px solid var(--fg)"></i><span data-th="เมือง">Town</span></span>
-        <span><i style="display:inline-block;width:14px;height:10px;vertical-align:-1px"><svg viewBox="0 0 14 10" width="14" height="10"><path d="M0 5h10M7 1l4 4-4 4" fill="none" stroke="var(--fg)" stroke-width="1.6"/></svg></i><span data-th="ลม: อนุภาคเคลื่อนตามลม สีและความเร็วบอกความแรงลม">Wind: particles move with the wind; colour and speed show its strength</span></span>
+      <div class="showpick"><strong data-th="แสดงบนแผนที่">Show on map</strong>
+        <label><input type="checkbox" id="shContour" checked> <i class="sp-sym" aria-hidden="true"><svg viewBox="0 0 14 10" width="14" height="10" aria-hidden="true"><path d="M1 8c3-6 6 2 12-5" fill="none" stroke="var(--fg)" stroke-width="1.4" stroke-linecap="round"/></svg></i><span class="sp-t"><span data-th="เส้นแบ่งระดับ">Contour lines</span></span></label>
+        <label><input type="checkbox" id="shWind"> <i class="sp-sym" aria-hidden="true"><svg viewBox="0 0 14 10" width="14" height="10" aria-hidden="true"><path d="M0 5h10M7 1l4 4-4 4" fill="none" stroke="var(--fg)" stroke-width="1.6"/></svg></i><span class="sp-t"><span data-th="ลม 10 ม. (อนุภาคเคลื่อนที่)">Wind, 10 m (moving particles)</span><small class="sp-d" data-th="อนุภาคเคลื่อนตามลม สีและความเร็วบอกความแรงลม">particles move with the wind; colour and speed show its strength</small></span></label>
         <div id="legWind" hidden><div class="pcdbar" id="windBar" style="grid-template-columns:repeat(6,1fr)"></div>
           <div class="ticks"><span>0</span><span>1.6</span><span>3.4</span><span>5.5</span><span>8</span><span>10.8</span><span>m/s</span></div>
           <div class="note" style="font-size:var(--fs-xs)" data-th="ลม 10 ม. แบ่งตามมาตราโบฟอร์ต (WMO): สงบ–ลมเบา (0–1), ลมอ่อน (2), ลมโชย (3), ลมปานกลาง (4), ลมแรงพอควร (5), ลมแรงขึ้นไป (6+)">10-m wind by Beaufort force (WMO): calm–light air (0–1), light breeze (2), gentle (3), moderate (4), fresh (5), strong and above (6+)</div></div>
-        <span><i class="dot" style="background:var(--aq2);box-shadow:0 0 0 3px var(--aq4);border:1px solid var(--fg)"></i><span data-th="Air4Thai: ด้านใน = ค่าตรวจวัด, วงนอก = แบบจำลอง">Air4Thai: inside = measured, ring = model</span></span>
-        <span><i class="dot" style="border-radius:2px;border:1.5px solid var(--fg);background:var(--aq2)"></i><span data-th="สถานีตรวจวัด (ค่าปัจจุบัน)">Monitor (measured now)</span></span>
-      </div>
-      <div class="showpick"><strong data-th="แสดงบนแผนที่">Show on map</strong>
-        <label><input type="checkbox" id="shContour" checked> <span data-th="เส้นแบ่งระดับ">Contour lines</span></label>
-        <label><input type="checkbox" id="shWind"> <span data-th="ลม 10 ม. (อนุภาคเคลื่อนที่)">Wind, 10 m (moving particles)</span></label>
-        <label><input type="checkbox" id="shRadar"> <span data-th="เรดาร์ตรวจอากาศ (ฝน 2 ชม. ล่าสุด)">Weather radar (rain, last 2 h)</span></label>
+        <label><input type="checkbox" id="shRadar"> <i class="sp-sym" aria-hidden="true"><i style="display:block;width:12px;height:12px;border-radius:3px;background:linear-gradient(135deg,#00a3e0,#005588 40%,#ffaa00 70%,#c10000)"></i></i><span class="sp-t"><span data-th="เรดาร์ตรวจอากาศ (ฝน 2 ชม. ล่าสุด)">Weather radar (rain, last 2 h)</span></span></label>
         <div id="legRadar" class="radarleg" hidden><div class="pcdbar" id="radarBar" style="grid-template-columns:repeat(6,1fr)"></div>
           <div class="ticks"><span>10</span><span>20</span><span>30</span><span>40</span><span>50</span><span>60</span><span>dBZ</span></div>
           <div class="radarctl"><button type="button" class="btn" id="radarPlay" aria-label="Play the last 2 hours">▶</button><input type="range" id="radarSlider" min="0" max="0" value="0" aria-label="Radar time"><span id="radarTime" class="note"></span></div>
           <div class="note" id="radarNote" style="font-size:var(--fs-xs)" data-th="เรดาร์ตรวจอากาศผ่าน RainViewer (ไทย: กรมอุตุนิยมวิทยา) ทุก 10 นาที ย้อนหลัง 2 ชม. (ไม่ใช่เวลาบนแถบเวลาพยากรณ์) รวมเรดาร์ของหลายประเทศที่ RainViewer ได้รับ (ไทย เวียดนาม มาเลเซีย ฯลฯ ไม่มีในลาว กัมพูชา และส่วนใหญ่ของเมียนมา) บางสถานีอาจปิดอยู่ ประมาณฝน: 20 dBZ ≈ 0.6, 30 ≈ 3, 40 ≈ 12, 50 ≈ 50 มม./ชม. (Marshall–Palmer)">Weather radar via RainViewer (Thailand: Thai Meteorological Department), every 10 min for the last 2 h (not the forecast hour on the time bar). Composite of the national radar networks RainViewer receives (Thailand, Viet Nam, Malaysia and others; none over Laos, Cambodia or most of Myanmar); some radars may be offline. Rain rate roughly: 20 dBZ ≈ 0.6, 30 ≈ 3, 40 ≈ 12, 50 ≈ 50 mm/h (Marshall–Palmer).</div></div>
         <label class="dev-only"><input type="checkbox" id="shWindArr"> <span data-th="ลูกศรลมพร้อมค่า (ชี้ดู)">Wind arrows with values (hover)</span></label>
-        <label><input type="checkbox" id="shProv"> <span data-th="เขตและชื่อจังหวัด">Province borders and names</span></label>
-        <label><input type="checkbox" id="shA4t" checked> <span data-th="Air4Thai: ค่าตรวจวัดเทียบแบบจำลอง">Air4Thai: measured vs model</span></label>
+        <label><input type="checkbox" id="shProv"> <i class="sp-sym" aria-hidden="true"><svg viewBox="0 0 14 10" width="14" height="10" aria-hidden="true"><path d="M1 5h12" fill="none" stroke="var(--fg)" stroke-width="1.4" stroke-dasharray="3 2"/></svg></i><span class="sp-t"><span data-th="เขตและชื่อจังหวัด">Province borders and names</span></span></label>
+        <label><input type="checkbox" id="shA4t" checked> <i class="sp-sym" aria-hidden="true"><i class="dot" style="background:var(--aq2);box-shadow:0 0 0 3px var(--aq4);border:1px solid var(--fg)"></i></i><span class="sp-t"><span data-th="Air4Thai: ค่าตรวจวัดเทียบแบบจำลอง">Air4Thai: measured vs model</span><small class="sp-d" data-th="ด้านใน = ค่าตรวจวัด, วงนอก = แบบจำลอง">inside = measured, ring = model</small></span></label>
         <div id="a4tStat" class="note" style="font-size:var(--fs-xs);margin:-2px 0 4px 22px"></div>
-        <label><input type="checkbox" id="shSt" checked> <span data-th="สถานี OpenAQ">OpenAQ stations</span></label>
-        <label><input type="checkbox" id="shHot" checked> <span data-th="จุดความร้อน">Hotspots</span></label>
-        <label><input type="checkbox" id="shTown" checked> <span data-th="เมือง">Towns</span></label>
+        <label><input type="checkbox" id="shSt" checked> <i class="sp-sym" aria-hidden="true"><i class="dot" style="border-radius:2px;border:1.5px solid var(--fg);background:var(--aq2)"></i></i><span class="sp-t"><span data-th="สถานี OpenAQ">OpenAQ stations</span><small class="sp-d" data-th="สถานีตรวจวัด ค่าปัจจุบัน">monitor, measured now</small></span></label>
+        <label><input type="checkbox" id="shHot" checked> <i class="sp-sym" aria-hidden="true"><i class="dot" style="background:var(--ember);box-shadow:0 0 0 1px var(--fire-ring)"></i></i><span class="sp-t"><span data-th="จุดความร้อน">Hotspots</span><small class="sp-d" data-th="ใหญ่ = ไฟแรง">larger = stronger fire</small></span></label>
+        <label><input type="checkbox" id="shTown" checked> <i class="sp-sym" aria-hidden="true"><i class="dot" style="border:2px solid var(--fg)"></i></i><span class="sp-t"><span data-th="เมือง">Towns</span></span></label>
       </div></details>
     </div>
     <div class="basemap-switch"><label for="bmSel" class="vh">Basemap</label>

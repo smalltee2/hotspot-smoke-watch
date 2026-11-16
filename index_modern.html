@@ -4664,8 +4664,14 @@ $('btnLang').onclick=()=>{ LANG=LANG==='th'?'en':'th'; store.set('hsw.lang',LANG
 setWarnView(store.get('hsw.warnView')||'prov'); $('warnView').addEventListener('change',e=>setWarnView(e.target.value));
 $('unitSel').addEventListener('change',()=>{store.set('hsw.unitSel',$('unitSel').value); renderLegend(); renderAll(); redrawTime();});
 renderLegend();
+// the legend follows the chosen layer; "Show as" (PM2.5 hourly / 24-h / AQI) applies to the PM2.5 layers only, so it is hidden for
+// rain, temperature, ventilation and the NASA image (it used to stay, reading "PM2.5 hourly" under the rain scale)
+function syncLegendToLayer(){ const m=layerMode();
+  $('legNasa').hidden=m!=='nasa'; $('legTotal').hidden=!gridMode(); $('legFire').hidden=m!=='fire'; $('legUnc').hidden=m!=='unc'; $('legRain').hidden=m!=='rain'; $('legTemp').hidden=m!=='temp'; $('legVent').hidden=m!=='vent';
+  const uf=$('unitSel').closest('.field'); if(uf) uf.style.display=['rain','temp','vent','nasa'].includes(m)?'none':''; }
 for(const el of document.querySelectorAll('input[name=layer]')) el.addEventListener('change',()=>{
-  $('legNasa').hidden=layerMode()!=='nasa'; if(layerMode()!=='nasa') nasaReset(); $('legTotal').hidden=!gridMode(); $('legFire').hidden=layerMode()!=='fire'; $('legUnc').hidden=layerMode()!=='unc'; $('legRain').hidden=layerMode()!=='rain'; $('legTemp').hidden=layerMode()!=='temp'; $('legVent').hidden=layerMode()!=='vent'; redrawTime();});
+  syncLegendToLayer(); if(layerMode()!=='nasa') nasaReset(); redrawTime();});
+syncLegendToLayer();
 $('rainBar').innerHTML=RAIN_SCALE.slice(1).map(([,c])=>`<i style="background:${c}"></i>`).join(''); $('tempBar').style.background=`linear-gradient(to right,${TEMP_STOPS.map(([v,c])=>`${c} ${((v-5)/35*100).toFixed(1)}%`).join(',')})`;
 $('uncBar').innerHTML=UNC_COL.map(c=>`<i style="background:${c}"></i>`).join('');
 $('ventBar').innerHTML=VENT_SCALE.map(([,c])=>`<i style="background:${c}"></i>`).join('');

@@ -23,7 +23,10 @@ const HOUR = 3600e3;
 export const ML2 = { clip: 60, maxLeadH: 24, thr: 37.5, checkDays: 14, minRows: 20000, minHigh: 100, obsDays: 10 };
 export const HIST_NAMES = ['lnOSame', 'lnOSame2', 'lnMax24', 'lnP90_72', 'lnClimH'];
 export const NAMES2 = [...NAMES, ...HIST_NAMES];
-export const ENG2 = makeEngine(NAMES2, ML2.clip, { ...CORECFG, minRowsDay: 300 });
+// The boosted trees carry v2 (the replay's model was one of them): they start after 10 verified days, not 30, and are deeper
+// than the live correction's (depth 5: the history inputs act through interactions with the hour and the lead).
+export const CFG2 = { ...CORECFG, minRowsDay: 300, minDays: { day: 1, week: 7, month: 10 }, gbm: { ...CORECFG.gbm, nTrees: 200, depth: 5, minLeaf: 60 } };
+export const ENG2 = makeEngine(NAMES2, ML2.clip, CFG2);
 
 const ln1 = v => Math.log(Math.max(0, v) + 1);
 const parseCSV = txt => { const [head, ...lines] = txt.trim().split('\n'); if (!head) return []; const h = head.split(',');

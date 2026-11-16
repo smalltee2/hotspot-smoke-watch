@@ -38,6 +38,9 @@ See `README.md` for the method and data sources.
   can be lowered by forecasting less rain everywhere. `fit_rain_blend.py` and the weather-ML rain gate (`rainDetectCheck` in
   `scripts/update.mjs`) both require catching at least as many rain hours as uncorrected ECMWF, with no more false alarms.
 - Public page is `/` (redesign), the original layout is `/classic.html`, the developer page `/dev.html`.
+- The redesign's glass menu frames: styles in `index_modern.html` ("Glass menu frames"), motion in `glass/nav.mjs`, WebGL2 water
+  (wide layout only) in `glass/water.mjs`, wired by `glass/boot.mjs`; the workflow publishes these three to `_site/glass/`.
+  Run `node --test glass/*.test.mjs` after changing them. Text on the glass must keep >= 4.5:1 in both themes.
 
 ## Scheduled work
 

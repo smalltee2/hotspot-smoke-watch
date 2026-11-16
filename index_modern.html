@@ -1192,7 +1192,9 @@ tbody tr:hover {
 .daybar button.on{color:var(--ink);background:var(--ink-soft)}
 /* layer panel: scrolls instead of running under the floating time bar (bar height measured into --scrubH) */
 .legend{max-height:calc(100% - 16px - var(--scrubH,58px) - 24px - 12px);overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin}
-.legend summary{position:sticky;top:-12px;z-index:1;background:inherit;padding:2px 0}
+/* the heading stays at the top while the panel scrolls: it needs its own solid background (inherit took the <details>'s, which
+   is transparent, so the scrolled text showed through it) and it sticks at minus the panel's top padding */
+.legend summary{position:sticky;top:-12px;z-index:1;background:var(--panel);padding:2px 0 6px}
 @media (max-width:860px){
   .legend{top:8px;right:8px;max-width:min(200px,calc(100vw - 120px));padding:8px 10px;font-size:var(--fs-xs);max-height:calc(100% - 8px - var(--scrubH,52px) - 14px - 12px)}
   .legend .keys{display:none}
@@ -1347,7 +1349,7 @@ aside:has(#hereBox:not([hidden])) .sheet-peek:not(:has(#clickCard:not([hidden]))
   /* layers: a pop-up panel above the tab bar */
   .legend{position:fixed;left:8px;right:8px;top:auto;bottom:calc(var(--tabH) + 8px);max-width:none;max-height:68dvh;z-index:1350;
     padding:14px 16px 12px;font-size:var(--fs-md);border-radius:18px;background:var(--panel);box-shadow:0 -4px 30px rgba(15,23,42,.22)}
-  .legend summary{pointer-events:none;font-size:var(--fs-base);padding-right:34px}
+  .legend summary{pointer-events:none;font-size:var(--fs-base);padding-right:34px;top:-14px}
   .legend summary::after{display:none}
   .leg-close{display:grid;place-items:center;position:absolute;top:8px;right:10px;z-index:2;width:32px;height:32px;border:0;border-radius:50%;background:var(--panel-hover);color:var(--muted);font-size:1.3rem;line-height:1;cursor:pointer}
   .layerpick{gap:2px}

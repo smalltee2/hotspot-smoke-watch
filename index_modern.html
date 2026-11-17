@@ -4291,12 +4291,24 @@ function boxMean(F,nx,ny,k){ // mean over a (2k+1)² window, via an integral ima
       out[y*nx+x]=(I[yb*W+xb]-I[ya*W+xb]-I[yb*W+xa]+I[ya*W+xa])/((yb-ya)*(xb-xa));}}
   return out;
 }
+// One line under the fire-smoke scale saying what the layer holds at this hour. Smoke below 1 µg/m³ is not drawn, so outside the
+// burning season the layer is often empty: without this line an empty map reads as a fault (Nov 2026: highest value 1.4 µg/m³).
+function fireStatus(txt){ const box=$('legFire'); if(!box) return; let el=box.querySelector('.lgstatus');
+  if(!el){ el=document.createElement('div'); el.className='lgstatus'; el.setAttribute('role','status'); el.style.cssText='margin:6px 0 2px;font-size:.8125rem;line-height:1.4;color:var(--fg)'; box.appendChild(el); }
+  el.textContent=txt; S.fieldInfo=txt; }
 function drawPlume(){
-  clearPlume(); if(!S.sim) return; const si=simIdx(curT()); const s=si>=0?S.sim.snaps[si]:null; if(!s||!s.n||layerMode()!=='fire') return;
+  clearPlume(); if(layerMode()!=='fire') return;
+  if(!S.sim){ fireStatus(P.data||S.hots.length?T('No fire smoke to show: no fire strong enough is being detected right now.','ไม่มีควันไฟให้แสดง: ขณะนี้ไม่พบไฟที่แรงพอ'):T('Fire smoke appears once the hotspot data have loaded.','ควันไฟจะแสดงเมื่อโหลดข้อมูลจุดความร้อนแล้ว')); return; }
+  const si=simIdx(curT()); const s=si>=0?S.sim.snaps[si]:null;
+  if(!s||!s.n){ fireStatus(T('No fire smoke at this hour.','ไม่มีควันไฟในชั่วโมงนี้')); return; }
   let w=180,so=90,e=-180,n=-90;
   for(let i=0;i<s.n;i++){const r=3*s.sy[i]/MPD;w=Math.min(w,s.lon[i]-r*1.1);e=Math.max(e,s.lon[i]+r*1.1);so=Math.min(so,s.lat[i]-r);n=Math.max(n,s.lat[i]+r);}
   let cell=0.02; while(((e-w)/cell)*((n-so)/cell)>360000) cell*=1.25;
   const nx=Math.ceil((e-w)/cell), ny=Math.ceil((n-so)/cell), G=puffField(s,w,so,nx,ny,cell);
+  let gmax=0; for(let i=0;i<G.length;i++) if(G[i]>gmax) gmax=G[i];
+  const gtxt=gmax>=10?Math.round(gmax):gmax>=0.1?gmax.toFixed(1):'< 0.1';
+  fireStatus(gmax>=1?T(`Highest fire smoke at this hour: about ${gtxt} µg/m³.`,`ควันไฟสูงสุดในชั่วโมงนี้: ประมาณ ${gtxt} µg/m³`)
+    :T(`Fire smoke is below 1 µg/m³ everywhere at this hour (highest about ${gtxt}), so nothing is drawn. Few fires are burning now.`,`ชั่วโมงนี้ควันไฟต่ำกว่า 1 µg/m³ ทุกพื้นที่ (สูงสุดประมาณ ${gtxt}) จึงไม่มีสีบนแผนที่ ขณะนี้มีไฟน้อย`));
   const nTop=so+ny*cell, eR=w+nx*cell;
   const url=regionCanvas(so,w,nTop,eR,nx,Math.max(1,Math.round(ny*(mercY(nTop)-mercY(so))/((nTop-so)*DEG))),(lat,lon)=>{
     const x=Math.floor((lon-w)/cell), y=Math.floor((lat-so)/cell); if(x<0||y<0||x>=nx||y>=ny) return null;

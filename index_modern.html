@@ -4309,10 +4309,15 @@ function drawPlume(){
   const gtxt=gmax>=10?Math.round(gmax):gmax>=0.1?gmax.toFixed(1):'< 0.1';
   fireStatus(gmax>=1?T(`Highest fire smoke at this hour: about ${gtxt} µg/m³.`,`ควันไฟสูงสุดในชั่วโมงนี้: ประมาณ ${gtxt} µg/m³`)
     :T(`Fire smoke is below 1 µg/m³ everywhere at this hour (highest about ${gtxt}), so nothing is drawn. Few fires are burning now.`,`ชั่วโมงนี้ควันไฟต่ำกว่า 1 µg/m³ ทุกพื้นที่ (สูงสุดประมาณ ${gtxt}) จึงไม่มีสีบนแผนที่ ขณะนี้มีไฟน้อย`));
-  const nTop=so+ny*cell, eR=w+nx*cell;
+  const nTop=so+ny*cell, eR=w+nx*cell; let edge=[100,116,139]; try{ edge=hexRGB(cssVar('--muted').trim())||edge; }catch(e){}
   const url=regionCanvas(so,w,nTop,eR,nx,Math.max(1,Math.round(ny*(mercY(nTop)-mercY(so))/((nTop-so)*DEG))),(lat,lon)=>{
     const x=Math.floor((lon-w)/cell), y=Math.floor((lat-so)/cell); if(x<0||y<0||x>=nx||y>=ny) return null;
-    const col=rampColor(G[y*nx+x]); return col?[col[0],col[1],col[2],col[3]*255]:null;});
+    const v=G[y*nx+x], col=rampColor(v); if(!col) return null;
+    // weak smoke must still be seen on this layer: the lowest band's pale blue at its faint fade-in opacity vanished on the light
+    // map (a cluster of 300 small crop fires gives 2-3 µg/m³ by late afternoon), so the smoke area gets an edge at 1 µg/m³ and
+    // its fill is never fainter than 0.5 here (the total-PM2.5 layer keeps the fade-in: clean air stays faint there)
+    if(v<1.3) return [edge[0],edge[1],edge[2],170];
+    return [col[0],col[1],col[2],Math.max(col[3],0.5)*255];});
   plume=L.imageOverlay(url,[[so,w],[nTop,eR]],{opacity:1,interactive:false,className:'plume',pane:'field'}).addTo(map);
 }
 // day bar under the time slider (like Windy): one segment per Thai calendar day, width by its hours; hours before now shaded;

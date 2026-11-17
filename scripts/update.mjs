@@ -738,6 +738,14 @@ async function main() {
     log(`land cover at hotspots (IGBP ${LC.year}): ${Object.entries(cnt).sort((a, b) => b[1] - a[1]).map(([k, v]) => `${k}:${v}`).join(' ')}`);
   }
   const hotFetched = firmsHotspots.ok && !hotReused ? now : null;   // only a real FIRMS reply resets the age of the hotspot set
+  // Daily hotspot archive (hot-YYYYMMDD.csv, by UTC day of detection): the fire-smoke model could not be checked against the
+  // stations afterwards, because the detections (time, strength, satellite) were kept nowhere. Written once, from 08:00 UTC, when
+  // yesterday's UTC day is complete in FIRMS near-real-time (late passes arrive ~3 h after the overpass).
+  try { const dU = new Date(now - 24 * HOUR).toISOString().slice(0, 10), hf = path.join(DATA, 'history', dU.slice(0, 7), `hot-${dU.replace(/-/g, '')}.csv`);
+    if (hotFetched && new Date(now).getUTCHours() >= 8 && await fs.access(hf).then(() => false, () => true)) {
+      const rowsH = hot.filter(r => new Date(r[3]).toISOString().slice(0, 10) === dU).map(r => [new Date(r[3]).toISOString().slice(0, 16) + 'Z', r[0], r[1], r[2], r[4] ?? '', r[5] ?? '', r[6] ?? '']);
+      if (rowsH.length) { await appendCSV(hf, 'time_utc,lat,lon,frp_mw,conf,sat,igbp', rowsH); log(`hotspot archive ${path.basename(hf)}: ${rowsH.length} detections`); } } }
+  catch (e) { log(`hotspot archive failed: ${e.message}`); }
 
   // 3d. fire-emission data assimilation (scripts/assim.mjs): the last ~48 h of measurements correct the emissions of each fire
   //     group (0.5° × local day) in our puff model; the rescaled fires give a forecast increment that moves with the wind.
@@ -760,6 +768,7 @@ async function main() {
       assim = assimilateFires({ M, hots, W: { times: met.times, sample: (la, lo, t) => sampleMet(met, la, lo, t) }, obs: aobs, now, kappa: state.assimKappa || undefined, log });
       assim.at = now;
       if (assim.status === 'ok') state.assimKappa = assim.kappaNext; else log(`fire assimilation: ${assim.status}`);
+      if (assim.diag) log(`fire model at the monitors (last ${assim.cfg.windowH} h): ${assim.diag.nObs} observations, modelled fire smoke >= 0.1 µg/m³ at ${assim.diag.n01}, >= 1 at ${assim.diag.n1}, highest ${assim.diag.maxF}; ${assim.diag.nSrc} fire clusters, FRP total ${assim.diag.frp} MW`);
     } catch (e) { log(`fire assimilation failed: ${e.message}`); assim = null; }
   }
   const incAt = (s, t, kind) => assim?.inc ? assim.incAt(s.lat, s.lon, t, kind) : 0;

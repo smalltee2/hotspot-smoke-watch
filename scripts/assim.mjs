@@ -72,7 +72,7 @@ export function assimilateFires({ M, hots, W, obs, now, kappa = ASSIM.kappa0, cf
   const nG = groups.length, H0 = prior.hours[0], tMin = Math.max(now - cfg.windowH * 3600e3, prior.tStart + cfg.spinupH * 3600e3);
   const fireAt = (lat, lon, t, kind = 'h') => simValue(prior, lat, lon, t, kind);
   // sensitivities
-  const rows = [];
+  const rows = [], diag = { nObs: 0, n01: 0, n1: 0, maxF: 0, nSrc: sources.length, frp: Math.round(sources.reduce((a, s) => a + s.frp, 0)) };   // what the model gives at the monitors, also when nothing can be assimilated
   for (const o of obs) {
     if (o.t > now || o.t < tMin + (o.kind === '24' ? 23 * 3600e3 : 0)) continue;
     const k = Math.round((o.t - H0) / 3600e3); if (k < 0 || k >= prior.snaps.length) continue;
@@ -81,12 +81,13 @@ export function assimilateFires({ M, hots, W, obs, now, kappa = ASSIM.kappa0, cf
     else if (o.kind === 'hm' && k > 0) { addContrib(prior.snaps[k - 1], o.lat, o.lon, F, 0.5, srcG); addContrib(prior.snaps[k], o.lat, o.lon, F, 0.5, srcG); }
     else addContrib(prior.snaps[k], o.lat, o.lon, F, 1, srcG);
     let Fs = 0; const nz = []; for (let g = 0; g < nG; g++) if (F[g] > 1e-6) { Fs += F[g]; nz.push(g); }
+    diag.nObs++; if (Fs >= 0.1) diag.n01++; if (Fs >= 1) diag.n1++; if (Fs > diag.maxF) diag.maxF = +Fs.toFixed(2);
     if (Fs < cfg.minF) continue;
     const sk = Math.max(cfg.sigmaMin, cfg.rel * Math.max(o.y, 0));
     rows.push({ o, F, nz, Fs, d: o.y - o.c, r: kappa * (sk * sk + (cfg.epsModel * Fs) ** 2) });
   }
   const seen = new Array(nG).fill(0); for (const r of rows) for (const g of r.nz) if (r.F[g] >= 0.5) seen[g]++;
-  const base = { nObs: rows.length, nStations: new Set(rows.map(r => r.o.id)).size, nGroups: nG, kappa: +kappa.toFixed(2), cfg, prior, fireAt };
+  const base = { diag, nObs: rows.length, nStations: new Set(rows.map(r => r.o.id)).size, nGroups: nG, kappa: +kappa.toFixed(2), cfg, prior, fireAt };
   if (rows.length < 5) return { ...empty(`too few fire-influenced observations (${rows.length})`), ...base, groups: groups.map((g, i) => ({ ...g, frp: Math.round(g.frp), s: 1, lo: 0.5, hi: 2, seen: seen[i] })) };
   // Gauss–Newton with step halving
   const Binv = 1 / cfg.sigmaB ** 2, x = new Float64Array(nG);

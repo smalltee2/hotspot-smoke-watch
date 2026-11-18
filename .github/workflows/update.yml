@@ -101,6 +101,12 @@ jobs:
         timeout-minutes: 5
         run: node scripts/perf.mjs
 
+      - name: Public accuracy summary (accuracy.json; last 7 days at the hourly reference monitors, rebuilt every run)
+        if: always()
+        continue-on-error: true
+        timeout-minutes: 3
+        run: node scripts/accuracy.mjs
+
       - name: Save working state for the next run
         if: always()
         uses: actions/cache/save@v4
@@ -211,7 +217,7 @@ jobs:
               const m = JSON.parse(fs.readFileSync("data/met.json", "utf8")), t = JSON.parse(fs.readFileSync("data/latest.json", "utf8")).generated, H = 3600e3;
               const tr = t ? packTraj(m, t - 49 * H, t + 75 * H) : null; if (tr) fs.writeFileSync("data/met-traj.json", JSON.stringify(tr));' || echo "::warning title=met-traj::could not rebuild met-traj.json"
           fi
-          for f in latest.json met-web.json met-traj.json ml-field.json t2-corr.json rain-obs.json wx-ml.json perf.json perf-series.json rk-bias.json rk-bias-A.json verify.json runlog.json; do [ -f "data/$f" ] && cp "data/$f" _site/data/ || true; done
+          for f in latest.json met-web.json met-traj.json ml-field.json t2-corr.json rain-obs.json wx-ml.json perf.json perf-series.json rk-bias.json rk-bias-A.json verify.json runlog.json accuracy.json; do [ -f "data/$f" ] && cp "data/$f" _site/data/ || true; done
           for f in elev.json elev025.json; do [ -f data/static/$f ] && cp data/static/$f _site/data/static/ || true; done
           [ -d data/static/prclim ] && cp -r data/static/prclim _site/data/static/ || true
           ls -la _site _site/data

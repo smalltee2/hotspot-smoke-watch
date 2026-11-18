@@ -399,6 +399,29 @@ td.num{text-align:right;font-family:var(--font-data);font-variant-numeric:tabula
 .leaflet-tooltip{position:absolute;padding:3px 6px;background:var(--panel);color:var(--fg);border:1px solid var(--line);border-radius:3px;white-space:nowrap;pointer-events:none;font-size:11px;box-shadow:0 1px 3px rgba(0,0,0,.25)}
 .leaflet-tooltip-top:before,.leaflet-tooltip-bottom:before,.leaflet-tooltip-left:before,.leaflet-tooltip-right:before{display:none}
 #btnLang{padding:4px 9px;font-size:.78rem;min-width:0}
+/* forecast accuracy (accBox, accuracy badges) */
+.accbox{margin:0 0 12px;border:1px solid var(--line);border-radius:6px;padding:8px 10px;background:var(--panel)}
+.accbox>summary{cursor:pointer}
+.accbox .acct{font-weight:600}
+.accbox .acchead{display:block;font-size:.72rem;color:var(--muted);margin:2px 0 0 1.1em}
+.accseg{display:flex;gap:4px;margin:8px 0 6px;flex-wrap:wrap}
+.accseg button{flex:1 1 auto;font:inherit;font-size:.74rem;padding:5px 8px;border:1px solid var(--line);border-radius:999px;background:transparent;color:var(--fg);cursor:pointer}
+.accseg button[aria-pressed="true"]{background:var(--fg);color:var(--panel);border-color:var(--fg)}
+.accseg button:focus-visible{outline:2px solid var(--focus);outline-offset:1px}
+.acctab{table-layout:fixed;width:100%}
+.acctab th,.acctab td{white-space:normal;vertical-align:top;overflow-wrap:anywhere}
+.acctab thead th:first-child,.acctab tbody th{width:38%}
+.acctab th small{display:block;font-weight:400;color:var(--muted);font-size:.66rem}
+.acctab td small{color:var(--muted)}
+.acctab tbody th{font-weight:500;text-align:left}
+.acccap{margin:2px 0 4px}
+.accreg{margin:4px 0}
+.accmore{margin-top:6px;font-size:.72rem}
+.accmore>summary{cursor:pointer;color:var(--muted)}
+.linkbtn{border:0;background:none;padding:0;color:var(--focus);text-decoration:underline;cursor:pointer;font:inherit;font-size:.72rem}
+.accbadge{position:relative;display:grid;place-items:center;width:32px;height:17px;border-radius:4px;background:var(--panel);color:var(--fg);border:1px solid var(--fg);font:600 10px/1 var(--font-data);overflow:hidden;box-shadow:0 1px 2px rgba(0,0,0,.3)}
+.accbadge b{position:relative}
+.accbadge i{position:absolute;left:0;bottom:0;height:3px;background:var(--focus)}
 </style>
 </head>
 <body>
@@ -439,6 +462,18 @@ td.num{text-align:right;font-family:var(--font-data);font-variant-numeric:tabula
 
     <section class="pane" id="pane-warn" role="tabpanel">
       <div id="banner"></div>
+      <details id="accBox" class="accbox" hidden>
+        <summary><span class="acct" data-th="แบบจำลองแม่นแค่ไหน">How right has the forecast been?</span><span id="accHead" class="acchead"></span></summary>
+        <div class="accseg" role="group" aria-label="Area">
+          <button type="button" data-acc="here" aria-pressed="true" data-th="ที่นี่">Here</button>
+          <button type="button" data-acc="region" aria-pressed="false" data-th="ภาค">Region</button>
+          <button type="button" data-acc="th" aria-pressed="false" data-th="ไทย">Thailand</button>
+          <button type="button" data-acc="all" aria-pressed="false" data-th="ทั้งแผนที่">Whole map</button>
+        </div>
+        <div id="accBody"></div>
+        <details class="accmore"><summary data-th="ตัวเลขเหล่านี้คืออะไร">What these numbers mean</summary>
+          <p class="note" data-th="เทียบค่าพยากรณ์รายชั่วโมงที่หน้านี้แสดง กับค่าที่สถานีตรวจวัดมาตรฐานวัดได้จริงในช่วง 7 วันล่าสุด คำนวณใหม่ทุกชั่วโมง&lt;br&gt;• &lt;b&gt;บอกระดับสีถูก&lt;/b&gt;: สัดส่วนชั่วโมงที่ค่าพยากรณ์อยู่ในระดับสีเดียวกับค่าที่วัดได้ ตามเกณฑ์ของกรมควบคุมมลพิษ (0–15, 15–25, 25–37.5, 37.5–75 และมากกว่า 75 µg/m³)&lt;br&gt;• &lt;b&gt;คลาดเคลื่อนโดยทั่วไป&lt;/b&gt;: ค่าต่างเฉลี่ยระหว่างพยากรณ์กับค่าที่วัดได้ ไม่ว่าสูงหรือต่ำ&lt;br&gt;• &lt;b&gt;ชั่วโมงฝุ่นเกิน 37.5&lt;/b&gt;: จากชั่วโมงที่วัดได้เกิน 37.5 µg/m³ พยากรณ์เตือนไว้ได้กี่ชั่วโมง และจากที่เตือนไว้ มีกี่ครั้งที่ไม่เกินจริง (ใช้ค่ารายชั่วโมงเทียบกับระดับ 37.5)&lt;br&gt;• &lt;b&gt;ชั่วโมงข้างหน้า&lt;/b&gt; = พยากรณ์ที่ออกก่อน 1–6 ชม. &lt;b&gt;วันพรุ่งนี้&lt;/b&gt; = ออกก่อน 12–24 ชม.&lt;br&gt;ที่ที่อากาศสะอาดเกือบตลอด บอกระดับสีถูกได้ง่าย จึงควรดูคู่กับค่าคลาดเคลื่อนและชั่วโมงฝุ่นเกิน 37.5<br>ไม่นับเซนเซอร์ราคาประหยัด พื้นที่ที่อยู่ห่างจากสถานีตรวจสอบได้เพียงทางอ้อม จึงอาจคลาดเคลื่อนมากกว่าตัวเลขนี้">The hourly forecast this page shows, compared with what the hourly reference monitors measured over the last 7 days; recomputed every hour.<br>• <b>Colour band right</b>: the share of hours whose forecast fell in the same Thai PCD colour band as the measurement (0–15, 15–25, 25–37.5, 37.5–75 and above 75 µg/m³).<br>• <b>Typical error</b>: the mean difference between forecast and measurement, either way.<br>• <b>Hours above 37.5</b>: of the hours measured above 37.5 µg/m³, how many the forecast also put above it; and of the forecasts above it, how many did not happen (hourly values against the 37.5 level).<br>• <b>Next hours</b> = forecasts made 1–6 h before; <b>next day</b> = 12–24 h before.<br>Where the air is clean almost all the time the colour band is easy to get right, so read it with the typical error and the hours above 37.5.<br>Low-cost sensors are not counted. Places far from a monitor are checked only indirectly and may be less accurate than these numbers.</p></details>
+      </details>
       <div class="wview"><label for="warnView" data-th="แสดงพยากรณ์">Show forecast</label>
         <select id="warnView">
           <option value="prov" data-th="รายจังหวัด (เฉลี่ยทั้งจังหวัด)">By province (province average)</option>
@@ -762,6 +797,7 @@ td.num{text-align:right;font-family:var(--font-data);font-variant-numeric:tabula
         <label><input type="checkbox" id="shProv"> <span data-th="เขตและชื่อจังหวัด">Province borders and names</span></label>
         <label><input type="checkbox" id="shA4t" checked> <span data-th="Air4Thai: ค่าตรวจวัดเทียบแบบจำลอง">Air4Thai: measured vs model</span></label>
         <div id="a4tStat" class="note" style="font-size:.68rem;margin:-2px 0 4px 22px"></div>
+        <label><input type="checkbox" id="shAcc"> <span data-th="ความแม่นยำที่สถานี (7 วันล่าสุด)">Forecast accuracy at monitors (last 7 days)</span></label>
         <label><input type="checkbox" id="shSt" checked> <span data-th="สถานี OpenAQ">OpenAQ stations</span></label>
         <label><input type="checkbox" id="shHot" checked> <span data-th="จุดความร้อน">Hotspots</span></label>
         <label><input type="checkbox" id="shTown" checked> <span data-th="เมือง">Towns</span></label>
@@ -1662,7 +1698,7 @@ async function runAuto(quiet){ try{ return await runAuto_(quiet); }catch(e){ bus
 async function runAuto_(quiet){
   if(!quiet) busy(T('Loading the latest hourly data…','กำลังโหลดข้อมูลรายชั่วโมงล่าสุด…'));
   const d=await loadPipeline();
-  if(d){P.data=d; busy(T('Loading meteorology…','กำลังโหลดข้อมูลอุตุนิยมวิทยา…')); await Promise.all([loadDEM(),loadMet(),loadMlField(),loadRkFine(),loadWxml()]); await runModel(pipelineHotspots(d),'live',null,quiet); showFreshness(); loadVerify(); renderRK(); renderAssim(); renderML();}
+  if(d){P.data=d; busy(T('Loading meteorology…','กำลังโหลดข้อมูลอุตุนิยมวิทยา…')); await Promise.all([loadDEM(),loadMet(),loadMlField(),loadRkFine(),loadWxml()]); await runModel(pipelineHotspots(d),'live',null,quiet); showFreshness(); loadVerify(); loadAccuracy(); renderRK(); renderAssim(); renderML();}
   else if(!quiet){ if(PUBLIC&&P.data){ busy(null); toast(T('The latest data could not be loaded; the page keeps the data it had.','โหลดข้อมูลล่าสุดไม่สำเร็จ หน้าเว็บยังแสดงข้อมูลเดิมอยู่')); return false; }
     if(PUBLIC){ busy(null); loadFail(true); return false; }   // public: reading FIRMS from the browser needs a key and a proxy the public page does not have
     P.data=null; await runLive(); }
@@ -1959,6 +1995,88 @@ async function loadVerify(){
   }catch(e){}
 }
 
+// ---- how right the forecast has been lately (data/accuracy.json from scripts/accuracy.mjs, rebuilt every run: the last 7 days
+// of hourly values at the hourly reference monitors, per station; summed here for the chosen area)
+let ACCD=null, ACC_AT=null, ACC_LEVEL=store.get('hsw.accLevel')||'here', ACC_REG=store.get('hsw.accReg')||'';
+const accLayer=L.layerGroup();
+const ACC_MIN=200, ACC_MIN_ST=100, ACC_NEAR_KM=25, ACC_HIGH_MIN=10;   // pairs for an area, pairs for one monitor, "near" radius, high hours to score
+const PROV_REG=(()=>{const m={}; for(const [k,a] of Object.entries(REGION_PROV)) for(const n of a) m[n]=k; return m;})();
+const REG_N={north:['Northern Thailand','ภาคเหนือ'],northeast:['Northeastern Thailand','ภาคตะวันออกเฉียงเหนือ'],central:['Central Thailand','ภาคกลาง'],east:['Eastern Thailand','ภาคตะวันออก'],south:['Southern Thailand','ภาคใต้']};
+const regName=k=>T(...REG_N[k]);
+function regionAt(lat,lon){const p=provinceOf(lat,lon); return p&&p.c==='THA'?PROV_REG[p.n]||null:null;}
+async function loadAccuracy(){
+  try{const r=await fetch('data/accuracy.json?ts='+Date.now(),{cache:'no-store'}); if(!r.ok) return; const d=await r.json();
+    if(d.version!==1||!Array.isArray(d.stations)) return; for(const s of d.stations) s.reg=regionAt(s.lat,s.lon); ACCD=d;}catch(e){return;}
+  renderAcc(); drawAcc(); if(hereLL&&!$('hereBox').hidden) renderHereBox();
+}
+function accSum(list,k){const a=[0,0,0,0,0,0,0,0]; let n=0; for(const s of list){ if(!s[k]?.[0]) continue; n++; s[k].forEach((v,i)=>a[i]+=v);} return {a,n};}
+function accSc(a,minN){ if(!a||a[0]<minN) return null; const n=a[0]; return {n,band:a[4]/n,mae:a[1]/n,bias:a[2]/n,obs:a[3]/n,high:a[5],caught:a[7],warned:a[6],fa:a[6]-a[7]}; }
+// the monitors of a level and their scores; 'here': the nearest monitor within ACC_NEAR_KM, else the Thai region, else the whole map
+function accGroup(level,lat,lon){ if(!ACCD) return null; const all=ACCD.stations; let g;
+  if(level==='here'){ let best=null,dB=1e9; for(const s of all){ if(s.s[0]+s.l[0]<ACC_MIN_ST) continue; const d=haversineKm(lat,lon,s.lat,s.lon); if(d<dB){dB=d;best=s;} }
+    if(best&&dB<=ACC_NEAR_KM) g={label:T(`monitor ${stName(best)}, ${dB.toFixed(0)} km away`,`สถานี ${stName(best)} ห่าง ${dB.toFixed(0)} กม.`),list:[best],minN:ACC_MIN_ST};
+    else { const rg=regionAt(lat,lon); g=accGroup(rg?'region:'+rg:'all'); if(g) g.label=T(`no monitor within ${ACC_NEAR_KM} km, so ${rg?REG_N[rg][0]:'the whole map'}`,`ไม่มีสถานีในรัศมี ${ACC_NEAR_KM} กม. จึงใช้ค่าของ${rg?REG_N[rg][1]:'ทั้งแผนที่'}`); return g; } }
+  else if(level.startsWith('region:')){ const rg=level.slice(7); g={label:regName(rg),list:all.filter(s=>s.reg===rg),minN:ACC_MIN}; }
+  else if(level==='th') g={label:T('Thailand','ประเทศไทย'),list:all.filter(s=>s.cc==='TH'),minN:ACC_MIN};
+  else g={label:T('whole map (mainland Southeast Asia)','ทั้งแผนที่ (ภาคพื้นทวีปเอเชียตะวันออกเฉียงใต้)'),list:all,minN:ACC_MIN};
+  const S_=accSum(g.list,'s'), L_=accSum(g.list,'l'); g.s=accSc(S_.a,g.minN); g.l=accSc(L_.a,g.minN); g.nSt=Math.max(S_.n,L_.n); return g;
+}
+const accPct=x=>Math.round(x*100)+'%';
+const accIn10=(k,n)=>Math.round(10*k/Math.max(1,n));
+function accTend(sc){ const tol=Math.max(1.5,0.1*sc.obs);
+  return Math.abs(sc.bias)<=tol?T('close to the measured values','ใกล้เคียงค่าจริง'):sc.bias<0?T(`often too low, by about ${fmtN(-sc.bias)}`,`มักต่ำกว่าจริง ราว ${fmtN(-sc.bias)}`):T(`often too high, by about ${fmtN(sc.bias)}`,`มักสูงกว่าจริง ราว ${fmtN(sc.bias)}`); }
+function accHigh(sc){ if(sc.high<ACC_HIGH_MIN) return sc.high?T(`only ${sc.high} such hours, too few to judge`,`มีเพียง ${sc.high} ชม. น้อยเกินกว่าจะประเมิน`):T('no such hours in 7 days','ไม่มีใน 7 วันนี้');
+  return T(`${accIn10(sc.caught,sc.high)} in 10 <small>(${sc.caught} of ${sc.high} h)</small>`,`${accIn10(sc.caught,sc.high)} ใน 10 <small>(${sc.caught} จาก ${sc.high} ชม.)</small>`); }
+function accFA(sc){ if(!sc.warned) return T('no warnings','ไม่มีการเตือน'); if(sc.warned<ACC_HIGH_MIN) return T(`${sc.fa} of ${sc.warned}`,`${sc.fa} จาก ${sc.warned} ครั้ง`);
+  return T(`${accIn10(sc.fa,sc.warned)} in 10 <small>(${sc.fa} of ${sc.warned})</small>`,`${accIn10(sc.fa,sc.warned)} ใน 10 <small>(${sc.fa} จาก ${sc.warned})</small>`); }
+function accTable(g){ if(!g||(!g.s&&!g.l)) return `<p class="note">${T('Not enough measured hours here yet to judge the forecast.','ยังมีชั่วโมงที่ตรวจวัดไม่พอจะประเมินความแม่นยำที่นี่')}</p>`;
+  const c=(sc,f)=>`<td>${sc?f(sc):'–'}</td>`, row=(th,f)=>`<tr><th>${th}</th>${c(g.s,f)}${c(g.l,f)}</tr>`;
+  return `<div class="tablewrap"><table class="acctab"><thead><tr><th></th><th>${T('Next hours','ชั่วโมงข้างหน้า')}<small>${T('1–6 h ahead','ล่วงหน้า 1–6 ชม.')}</small></th><th>${T('Next day','วันพรุ่งนี้')}<small>${T('12–24 h ahead','ล่วงหน้า 12–24 ชม.')}</small></th></tr></thead><tbody>`+
+    row(T('Colour band right','บอกระดับสีถูก'),sc=>`<b>${accPct(sc.band)}</b>`)+
+    row(T('Typical error','คลาดเคลื่อนโดยทั่วไป'),sc=>`±${fmtN(sc.mae)} µg/m³`)+
+    row(T('Hours above 37.5 warned in time','ชั่วโมงฝุ่นเกิน 37.5 ที่เตือนทัน'),accHigh)+
+    row(T('Warnings that did not happen','เตือนแล้วไม่เกินจริง'),accFA)+
+    row(T('Tendency','แนวโน้ม'),accTend)+'</tbody></table></div>'; }
+function accWhere(){ if(ACC_AT) return {...ACC_AT,mine:false,st:true}; if(hereLL) return {lat:hereLL.lat,lon:hereLL.lon,mine:true}; const c=map.getCenter(); return {lat:c.lat,lon:c.lng,mine:false}; }
+function renderAcc(){
+  const box=$('accBox'); if(!box) return; box.hidden=!ACCD; if(!ACCD) return;
+  const th=accGroup('th'); $('accHead').textContent=th?.l?T(`Thailand, next day: colour band right ${accPct(th.l.band)}`,`ไทย พยากรณ์วันพรุ่งนี้ บอกระดับสีถูก ${accPct(th.l.band)}`):'';
+  for(const b of box.querySelectorAll('[data-acc]')) b.setAttribute('aria-pressed',String(b.dataset.acc===ACC_LEVEL));
+  let g, extra='';
+  if(ACC_LEVEL==='here'){ const w=accWhere(); g=accGroup('here',w.lat,w.lon);
+    extra=`<p class="note">${w.st?T('At the monitor you picked on the map','ที่สถานีที่เลือกบนแผนที่'):w.mine?T('At your location','ที่ตำแหน่งของคุณ'):T('At the centre of the map (tap ◎ on the map to use your location)','ที่กลางแผนที่ (แตะ ◎ บนแผนที่เพื่อใช้ตำแหน่งของคุณ)')}: ${esc(g?.label||'')}</p>`; }
+  else if(ACC_LEVEL==='region'){ const w=accWhere(), rg=REG_N[ACC_REG]?ACC_REG:(regionAt(w.lat,w.lon)||'north'); g=accGroup('region:'+rg);
+    extra=`<div class="field accreg"><label for="accReg">${T('Region','ภาค')}</label><select id="accReg">${Object.keys(REG_N).map(k=>`<option value="${k}"${k===rg?' selected':''}>${regName(k)}</option>`).join('')}</select></div>`; }
+  else { g=accGroup(ACC_LEVEL==='th'?'th':'all');
+    if(ACC_LEVEL==='all'){ const cn={}; for(const s of ACCD.stations) if(s.s[0]+s.l[0]) cn[s.cc||'?']=(cn[s.cc||'?']||0)+1;
+      extra=`<p class="note">${T('Monitors by country','จำนวนสถานีแยกประเทศ')}: ${Object.entries(cn).sort((a,b)=>b[1]-a[1]).map(([k,n])=>`${esc(k)} ${n}`).join(' · ')}${(cn.TH||0)>0.6*ACCD.stations.length?T(' (mostly in Thailand, so this says little about the other countries)',' (ส่วนใหญ่อยู่ในไทย จึงบอกความแม่นยำของประเทศอื่นได้น้อย)'):''}</p>`; } }
+  $('accBody').innerHTML=extra+(g&&g.nSt?`<p class="note acccap">${ACC_LEVEL==='here'?'':esc(g.label.charAt(0).toUpperCase()+g.label.slice(1))+' · '}${T(`${g.nSt} monitor${g.nSt>1?'s':''}`,`${g.nSt} สถานี`)} · ${T('last 7 days to','7 วันล่าสุด ถึง')} ${fmtT(ACCD.tEnd)}</p>`:'')+accTable(g);
+  const sel=$('accReg'); if(sel) sel.onchange=()=>{ACC_REG=sel.value; store.set('hsw.accReg',ACC_REG); renderAcc();};
+}
+function openAcc(level){ if(level){ACC_LEVEL=level; store.set('hsw.accLevel',level);}
+  if(window.PHONEUI?.active()){ document.querySelector('#tabbar [data-go="warn"]')?.click(); PHONEUI.set('full'); } else $('tab-warn')?.click();   // phones: the card is in the bottom sheet
+  const d=$('accBox'); if(!d) return; d.open=true; renderAcc(); d.scrollIntoView({behavior:'smooth',block:'start'}); }
+function accHereRow(lat,lon){ const g=accGroup('here',lat,lon); if(!g) return ''; const sc=g.l||g.s; if(!sc) return '';
+  return `<tr><th>${T('Forecast accuracy, last 7 days','ความแม่นยำ 7 วันล่าสุด')}</th><td>${T('colour band right','บอกระดับสีถูก')} ${accPct(sc.band)} · ±${fmtN(sc.mae)} µg/m³ ${g.l?T('(next day)','(พรุ่งนี้)'):T('(next hours)','(ชั่วโมงข้างหน้า)')}`+
+    `<br><span class="note">${esc(g.label)}</span> <button class="linkbtn" type="button" id="hereAcc">${T('Details','รายละเอียด')}</button></td></tr>`; }
+function drawAcc(){
+  accLayer.clearLayers(); if(!ACCD) return;
+  // the badges are thinned on screen: where two would touch, the monitor with more scored hours keeps its badge (zoom in for all)
+  const placed=[], list=ACCD.stations.filter(s=>inRegion(s.lat,s.lon)).sort((a,b)=>(b.l[0]+b.s[0])-(a.l[0]+a.s[0]));
+  for(const s of list){ const l=accSc(s.l,ACC_MIN_ST), sh=accSc(s.s,ACC_MIN_ST), sc=l||sh; if(!sc) continue;
+    const pt=map.latLngToLayerPoint([s.lat,s.lon]); if(placed.some(q=>Math.abs(q.x-pt.x)<36&&Math.abs(q.y-pt.y)<20)) continue; placed.push(pt);   // each badge sits just above its monitor, clear of the town names beside the dots
+    const icon=L.divIcon({className:'',html:`<div class="accbadge"><b>${accPct(sc.band)}</b><i style="width:${Math.round(sc.band*100)}%"></i></div>`,iconSize:[32,17],iconAnchor:[16,22]});
+    const line=(x,t)=>x?`${t}: ${T('colour band right','สีถูก')} <b>${accPct(x.band)}</b> · ±${fmtN(x.mae)} µg/m³ · ${accTend(x)}`:'';
+    L.marker([s.lat,s.lon],{icon,keyboard:false,zIndexOffset:500}).bindTooltip(()=>`<b>${esc(stName(s))}</b><br>${T('Last 7 days, hourly values','7 วันล่าสุด ค่ารายชั่วโมง')}<br>`+
+      [line(sh,T('Next hours','ชั่วโมงข้างหน้า')),line(l,T('Next day','วันพรุ่งนี้'))].filter(Boolean).join('<br>')).on('click',()=>{ACC_AT={lat:s.lat,lon:s.lon}; openAcc('here');}).addTo(accLayer); }
+  if(shown('shAcc')) map.addLayer(accLayer); else map.removeLayer(accLayer);
+}
+map.on('zoomend',()=>{ if(ACCD&&shown('shAcc')) drawAcc(); });
+$('shAcc')?.addEventListener('change',()=>{ if($('shAcc').checked) drawAcc(); });
+document.querySelectorAll('#accBox [data-acc]').forEach(b=>b.addEventListener('click',()=>{ACC_AT=null; ACC_LEVEL=b.dataset.acc; store.set('hsw.accLevel',ACC_LEVEL); renderAcc();}));
+{let tm=0; map.on('moveend',()=>{ if(ACC_LEVEL==='here'&&!hereLL&&$('accBox')?.open){clearTimeout(tm); tm=setTimeout(renderAcc,250);} });}
+$('accBox')?.addEventListener('toggle',()=>{ if($('accBox').open) renderAcc(); });
+
 // ---- total PM2.5 grid layer and station markers
 let gridLayer=null; const stationLayer=L.layerGroup().addTo(map), a4tLayer=L.layerGroup().addTo(map);
 const layerMode=()=>$('lyNasa').checked?'nasa':$('lyUnc').checked?'unc':$('lyFire').checked?'fire':$('lyFine').checked?'fine':$('lyRain').checked?'rain':$('lyTemp').checked?'temp':$('lyVent').checked?'vent':'total';
@@ -2236,12 +2354,12 @@ function drawContours(){
   contourLayer.addTo(map);
 }
 function applyVisibility(){
-  for(const [id,layers] of [['shHot',[hotLayer,trajLayer]],['shTown',[townLayer]],['shSt',[stationLayer]],['shA4t',[a4tLayer]]])
+  for(const [id,layers] of [['shHot',[hotLayer,trajLayer]],['shTown',[townLayer]],['shSt',[stationLayer]],['shA4t',[a4tLayer]],['shAcc',[accLayer]]])
     for(const l of layers){ if(shown(id)) map.addLayer(l); else map.removeLayer(l); }
   drawContours(); drawWind();
 }
 document.getElementById('shProv').addEventListener('change',e=>{store.set('hsw.shProv',e.target.checked?'1':'0');styleBase();});
-for(const id of ['shContour','shSt','shA4t','shHot','shTown','shWind','shWindArr']){
+for(const id of ['shContour','shSt','shA4t','shAcc','shHot','shTown','shWind','shWindArr']){
   const v=store.get('hsw.'+id); if(v!=null) $(id).checked=v==='1';
   $(id).addEventListener('change',()=>{store.set('hsw.'+id,$(id).checked?'1':'0');applyVisibility();});
 }
@@ -2354,6 +2472,7 @@ function hereHTML(lat,lon,acc){
       ${(()=>{const w=wxAt(lat,lon,tNow); return w?`<tr><th>${T('Weather now','อากาศขณะนี้')}</th><td>${wxText(w)}</td></tr>`:'';})()}
       <tr><th>${T('Fire smoke now','ควันไฟขณะนี้')}</th><td class="num">${fire>=0.1?fmtN(fire)+' µg/m³':T('none modelled','ไม่พบในแบบจำลอง')}</td></tr>
       <tr><th>${T('Nearest monitor','สถานีใกล้ที่สุด')}</th><td>${st?`${esc(stName(st))}<br>${fmtN(st.obs.v)} µg/m³${st.avg24?T(' (24-h avg)',' (เฉลี่ย 24 ชม.)'):''}, ${dSt.toFixed(0)} ${T('km','กม.')}`:'–'}</td></tr>
+      ${accHereRow(lat,lon)}
       <tr><th>${T('Hotspots','จุดความร้อน')}</th><td class="num">${nHot} ${T('within 20 km','ในรัศมี 20 กม.')}${dHot<1e9?`, ${T('nearest','ใกล้สุด')} ${dHot.toFixed(1)} ${T('km','กม.')}`:''}</td></tr>
     </tbody></table>
     ${hereTrend(lat,lon)}
@@ -2368,13 +2487,15 @@ function renderHereBox(){
   box.innerHTML=`<div class="hhead"><strong>${T('My location','ตำแหน่งของฉัน')}</strong><button class="x" type="button" id="hereClose" aria-label="${T('Close my location','ปิด')}">×</button></div>`+
     hereHTML(hereLL.lat,hereLL.lon,hereLL.acc)+(inside?'':`<p class="note">${T('You are outside the selected region. Pick a larger region to see your location on the map.','คุณอยู่นอกพื้นที่ที่เลือก เลือกพื้นที่ที่ใหญ่ขึ้นในแท็บตั้งค่าเพื่อเห็นตำแหน่งบนแผนที่')}</p>`);
   box.hidden=false;
-  $('hereClose').onclick=()=>{hereLL=null; box.hidden=true; if(hereLayer){map.removeLayer(hereLayer);hereLayer=null;} document.querySelector('.locate-btn')?.classList.remove('on');};
+  $('hereClose').onclick=()=>{hereLL=null; ACC_AT=null; box.hidden=true; renderAcc(); if(hereLayer){map.removeLayer(hereLayer);hereLayer=null;} document.querySelector('.locate-btn')?.classList.remove('on');};
+  {const a=$('hereAcc'); if(a) a.onclick=()=>openAcc('here');}
+  if(ACC_LEVEL==='here'&&$('accBox')?.open) renderAcc();
   const b=$('hereAdd'); if(b) b.onclick=()=>{
     S.myPts.push({name:'My location',lat:+hereLL.lat.toFixed(4),lon:+hereLL.lon.toFixed(4),cc:'★'}); store.set('hsw.points',JSON.stringify(S.myPts));
     computeReceptors(); drawTowns(); renderWarnings(); b.textContent=T('Added','เพิ่มแล้ว'); b.disabled=true;};
 }
 function showHere(lat,lon,acc,fly){
-  hereLL={lat,lon,acc};
+  hereLL={lat,lon,acc}; ACC_AT=null;
   if(hereLayer) map.removeLayer(hereLayer);
   const col=cssVar('--focus');
   const mk=L.circleMarker([lat,lon],{radius:7,color:'#fff',weight:2,fillColor:col,fillOpacity:1})
@@ -3012,7 +3133,7 @@ function computeReceptors(){
 // ---- rendering
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 function nearestTown(lat,lon){let best=null,d=1e9;for(const t of TOWNS){const k=haversineKm(lat,lon,t.lat,t.lon);if(k<d){d=k;best=t;}}return {t:best,d};}
-function renderAll(){renderSummary();renderAreaTrend();renderWarnings();renderStations();renderSources();drawTowns();updateTimeLabel();}
+function renderAll(){renderSummary();renderAreaTrend();renderWarnings();renderStations();renderSources();drawTowns();updateTimeLabel();renderAcc();drawAcc();}
 function renderSummary(){
   const hr=S.hots.filter(h=>inRegion(h.lat,h.lon)), sr=S.sources.filter(c=>inRegion(c.lat,c.lon));
   // groups are per 0.1° cell and local day; count each cell once and take its strongest day

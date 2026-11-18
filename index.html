@@ -468,11 +468,10 @@ td.num{text-align:right;font-family:var(--font-data);font-variant-numeric:tabula
           <button type="button" data-acc="here" aria-pressed="true" data-th="ที่นี่">Here</button>
           <button type="button" data-acc="region" aria-pressed="false" data-th="ภาค">Region</button>
           <button type="button" data-acc="th" aria-pressed="false" data-th="ไทย">Thailand</button>
-          <button type="button" data-acc="all" aria-pressed="false" data-th="ทั้งแผนที่">Whole map</button>
         </div>
         <div id="accBody"></div>
         <details class="accmore"><summary data-th="ตัวเลขเหล่านี้คืออะไร">What these numbers mean</summary>
-          <p class="note" data-th="เทียบค่าพยากรณ์รายชั่วโมงที่หน้านี้แสดง กับค่าที่สถานีตรวจวัดมาตรฐานวัดได้จริงในช่วง 7 วันล่าสุด คำนวณใหม่ทุกชั่วโมง&lt;br&gt;• &lt;b&gt;บอกระดับสีถูก&lt;/b&gt;: สัดส่วนชั่วโมงที่ค่าพยากรณ์อยู่ในระดับสีเดียวกับค่าที่วัดได้ ตามเกณฑ์ของกรมควบคุมมลพิษ (0–15, 15–25, 25–37.5, 37.5–75 และมากกว่า 75 µg/m³)&lt;br&gt;• &lt;b&gt;คลาดเคลื่อนโดยทั่วไป&lt;/b&gt;: ค่าต่างเฉลี่ยระหว่างพยากรณ์กับค่าที่วัดได้ ไม่ว่าสูงหรือต่ำ&lt;br&gt;• &lt;b&gt;ชั่วโมงฝุ่นเกิน 37.5&lt;/b&gt;: จากชั่วโมงที่วัดได้เกิน 37.5 µg/m³ พยากรณ์เตือนไว้ได้กี่ชั่วโมง และจากที่เตือนไว้ มีกี่ครั้งที่ไม่เกินจริง (ใช้ค่ารายชั่วโมงเทียบกับระดับ 37.5)&lt;br&gt;• &lt;b&gt;ชั่วโมงข้างหน้า&lt;/b&gt; = พยากรณ์ที่ออกก่อน 1–6 ชม. &lt;b&gt;วันพรุ่งนี้&lt;/b&gt; = ออกก่อน 12–24 ชม.&lt;br&gt;ที่ที่อากาศสะอาดเกือบตลอด บอกระดับสีถูกได้ง่าย จึงควรดูคู่กับค่าคลาดเคลื่อนและชั่วโมงฝุ่นเกิน 37.5<br>ไม่นับเซนเซอร์ราคาประหยัด พื้นที่ที่อยู่ห่างจากสถานีตรวจสอบได้เพียงทางอ้อม จึงอาจคลาดเคลื่อนมากกว่าตัวเลขนี้">The hourly forecast this page shows, compared with what the hourly reference monitors measured over the last 7 days; recomputed every hour.<br>• <b>Colour band right</b>: the share of hours whose forecast fell in the same Thai PCD colour band as the measurement (0–15, 15–25, 25–37.5, 37.5–75 and above 75 µg/m³).<br>• <b>Typical error</b>: the mean difference between forecast and measurement, either way.<br>• <b>Hours above 37.5</b>: of the hours measured above 37.5 µg/m³, how many the forecast also put above it; and of the forecasts above it, how many did not happen (hourly values against the 37.5 level).<br>• <b>Next hours</b> = forecasts made 1–6 h before; <b>next day</b> = 12–24 h before.<br>Where the air is clean almost all the time the colour band is easy to get right, so read it with the typical error and the hours above 37.5.<br>Low-cost sensors are not counted. Places far from a monitor are checked only indirectly and may be less accurate than these numbers.</p></details>
+          <p class="note" data-th="เทียบค่าพยากรณ์รายชั่วโมงที่หน้านี้แสดง กับค่าที่สถานีตรวจวัดมาตรฐานในประเทศไทยวัดได้จริงในช่วง 7 วันล่าสุด คำนวณใหม่ทุกชั่วโมง&lt;br&gt;• &lt;b&gt;บอกระดับสีถูก&lt;/b&gt;: สัดส่วนชั่วโมงที่ค่าพยากรณ์อยู่ในระดับสีเดียวกับค่าที่วัดได้ ตามเกณฑ์ของกรมควบคุมมลพิษ (0–15, 15–25, 25–37.5, 37.5–75 และมากกว่า 75 µg/m³)&lt;br&gt;• &lt;b&gt;คลาดเคลื่อนโดยทั่วไป&lt;/b&gt;: ค่าต่างเฉลี่ยระหว่างพยากรณ์กับค่าที่วัดได้ ไม่ว่าสูงหรือต่ำ&lt;br&gt;• &lt;b&gt;ชั่วโมงฝุ่นเกิน 37.5&lt;/b&gt;: จากชั่วโมงที่วัดได้เกิน 37.5 µg/m³ พยากรณ์เตือนไว้ได้กี่ชั่วโมง และจากที่เตือนไว้ มีกี่ครั้งที่ไม่เกินจริง (ใช้ค่ารายชั่วโมงเทียบกับระดับ 37.5)&lt;br&gt;• &lt;b&gt;ชั่วโมงข้างหน้า&lt;/b&gt; = พยากรณ์ที่ออกก่อน 1–6 ชม. &lt;b&gt;วันพรุ่งนี้&lt;/b&gt; = ออกก่อน 12–24 ชม.&lt;br&gt;ที่ที่อากาศสะอาดเกือบตลอด บอกระดับสีถูกได้ง่าย จึงควรดูคู่กับค่าคลาดเคลื่อนและชั่วโมงฝุ่นเกิน 37.5<br>นอกประเทศไทยมีสถานีมาตรฐานรายชั่วโมงน้อยเกินไปจึงไม่แสดง ไม่นับเซนเซอร์ราคาประหยัด พื้นที่ที่อยู่ห่างจากสถานีตรวจสอบได้เพียงทางอ้อม จึงอาจคลาดเคลื่อนมากกว่าตัวเลขนี้">The hourly forecast this page shows, compared with what the hourly reference monitors in Thailand measured over the last 7 days; recomputed every hour.<br>• <b>Colour band right</b>: the share of hours whose forecast fell in the same Thai PCD colour band as the measurement (0–15, 15–25, 25–37.5, 37.5–75 and above 75 µg/m³).<br>• <b>Typical error</b>: the mean difference between forecast and measurement, either way.<br>• <b>Hours above 37.5</b>: of the hours measured above 37.5 µg/m³, how many the forecast also put above it; and of the forecasts above it, how many did not happen (hourly values against the 37.5 level).<br>• <b>Next hours</b> = forecasts made 1–6 h before; <b>next day</b> = 12–24 h before.<br>Where the air is clean almost all the time the colour band is easy to get right, so read it with the typical error and the hours above 37.5.<br>Outside Thailand there are too few hourly reference monitors, so none is shown. Low-cost sensors are not counted. Places far from a monitor are checked only indirectly and may be less accurate than these numbers.</p></details>
       </details>
       <div class="wview"><label for="warnView" data-th="แสดงพยากรณ์">Show forecast</label>
         <select id="warnView">
@@ -1997,7 +1996,7 @@ async function loadVerify(){
 
 // ---- how right the forecast has been lately (data/accuracy.json from scripts/accuracy.mjs, rebuilt every run: the last 7 days
 // of hourly values at the hourly reference monitors, per station; summed here for the chosen area)
-let ACCD=null, ACC_AT=null, ACC_LEVEL=store.get('hsw.accLevel')||'here', ACC_REG=store.get('hsw.accReg')||'';
+let ACCD=null, ACC_AT=null, ACC_LEVEL=({here:1,region:1,th:1}[store.get('hsw.accLevel')]&&store.get('hsw.accLevel'))||'here', ACC_REG=store.get('hsw.accReg')||'';
 const accLayer=L.layerGroup();
 const ACC_MIN=200, ACC_MIN_ST=100, ACC_NEAR_KM=25, ACC_HIGH_MIN=10;   // pairs for an area, pairs for one monitor, "near" radius, high hours to score
 const PROV_REG=(()=>{const m={}; for(const [k,a] of Object.entries(REGION_PROV)) for(const n of a) m[n]=k; return m;})();
@@ -2006,19 +2005,21 @@ const regName=k=>T(...REG_N[k]);
 function regionAt(lat,lon){const p=provinceOf(lat,lon); return p&&p.c==='THA'?PROV_REG[p.n]||null:null;}
 async function loadAccuracy(){
   try{const r=await fetch('data/accuracy.json?ts='+Date.now(),{cache:'no-store'}); if(!r.ok) return; const d=await r.json();
-    if(d.version!==1||!Array.isArray(d.stations)) return; for(const s of d.stations) s.reg=regionAt(s.lat,s.lon); ACCD=d;}catch(e){return;}
+    if(d.version!==1||!Array.isArray(d.stations)) return;
+    // Thailand only: outside it there are too few hourly reference monitors (one in Nov 2026) to say how right the forecast is
+    d.stations=d.stations.filter(s=>s.cc==='TH'); for(const s of d.stations) s.reg=regionAt(s.lat,s.lon); ACCD=d;}catch(e){return;}
   renderAcc(); drawAcc(); if(hereLL&&!$('hereBox').hidden) renderHereBox();
 }
 function accSum(list,k){const a=[0,0,0,0,0,0,0,0]; let n=0; for(const s of list){ if(!s[k]?.[0]) continue; n++; s[k].forEach((v,i)=>a[i]+=v);} return {a,n};}
 function accSc(a,minN){ if(!a||a[0]<minN) return null; const n=a[0]; return {n,band:a[4]/n,mae:a[1]/n,bias:a[2]/n,obs:a[3]/n,high:a[5],caught:a[7],warned:a[6],fa:a[6]-a[7]}; }
-// the monitors of a level and their scores; 'here': the nearest monitor within ACC_NEAR_KM, else the Thai region, else the whole map
+// the monitors of a level and their scores; 'here': the nearest monitor within ACC_NEAR_KM, else the Thai region (outside Thailand: none)
 function accGroup(level,lat,lon){ if(!ACCD) return null; const all=ACCD.stations; let g;
   if(level==='here'){ let best=null,dB=1e9; for(const s of all){ if(s.s[0]+s.l[0]<ACC_MIN_ST) continue; const d=haversineKm(lat,lon,s.lat,s.lon); if(d<dB){dB=d;best=s;} }
     if(best&&dB<=ACC_NEAR_KM) g={label:T(`monitor ${stName(best)}, ${dB.toFixed(0)} km away`,`สถานี ${stName(best)} ห่าง ${dB.toFixed(0)} กม.`),list:[best],minN:ACC_MIN_ST};
-    else { const rg=regionAt(lat,lon); g=accGroup(rg?'region:'+rg:'all'); if(g) g.label=T(`no monitor within ${ACC_NEAR_KM} km, so ${rg?REG_N[rg][0]:'the whole map'}`,`ไม่มีสถานีในรัศมี ${ACC_NEAR_KM} กม. จึงใช้ค่าของ${rg?REG_N[rg][1]:'ทั้งแผนที่'}`); return g; } }
+    else { const rg=regionAt(lat,lon); if(!rg) return {label:T('outside Thailand','นอกประเทศไทย'),list:[],s:null,l:null,nSt:0,out:true};
+      g=accGroup('region:'+rg); g.label=T(`no monitor within ${ACC_NEAR_KM} km, so ${REG_N[rg][0]}`,`ไม่มีสถานีในรัศมี ${ACC_NEAR_KM} กม. จึงใช้ค่าของ${REG_N[rg][1]}`); return g; } }
   else if(level.startsWith('region:')){ const rg=level.slice(7); g={label:regName(rg),list:all.filter(s=>s.reg===rg),minN:ACC_MIN}; }
-  else if(level==='th') g={label:T('Thailand','ประเทศไทย'),list:all.filter(s=>s.cc==='TH'),minN:ACC_MIN};
-  else g={label:T('whole map (mainland Southeast Asia)','ทั้งแผนที่ (ภาคพื้นทวีปเอเชียตะวันออกเฉียงใต้)'),list:all,minN:ACC_MIN};
+  else g={label:T('Thailand','ประเทศไทย'),list:all,minN:ACC_MIN};
   const S_=accSum(g.list,'s'), L_=accSum(g.list,'l'); g.s=accSc(S_.a,g.minN); g.l=accSc(L_.a,g.minN); g.nSt=Math.max(S_.n,L_.n); return g;
 }
 const accPct=x=>Math.round(x*100)+'%';
@@ -2029,7 +2030,8 @@ function accHigh(sc){ if(sc.high<ACC_HIGH_MIN) return sc.high?T(`only ${sc.high}
   return T(`${accIn10(sc.caught,sc.high)} in 10 <small>(${sc.caught} of ${sc.high} h)</small>`,`${accIn10(sc.caught,sc.high)} ใน 10 <small>(${sc.caught} จาก ${sc.high} ชม.)</small>`); }
 function accFA(sc){ if(!sc.warned) return T('no warnings','ไม่มีการเตือน'); if(sc.warned<ACC_HIGH_MIN) return T(`${sc.fa} of ${sc.warned}`,`${sc.fa} จาก ${sc.warned} ครั้ง`);
   return T(`${accIn10(sc.fa,sc.warned)} in 10 <small>(${sc.fa} of ${sc.warned})</small>`,`${accIn10(sc.fa,sc.warned)} ใน 10 <small>(${sc.fa} จาก ${sc.warned})</small>`); }
-function accTable(g){ if(!g||(!g.s&&!g.l)) return `<p class="note">${T('Not enough measured hours here yet to judge the forecast.','ยังมีชั่วโมงที่ตรวจวัดไม่พอจะประเมินความแม่นยำที่นี่')}</p>`;
+function accTable(g){ if(g?.out) return `<p class="note">${T('The forecast is checked only at monitors in Thailand, so there is no score for this place.','ตรวจความแม่นยำได้เฉพาะที่สถานีในประเทศไทย จึงไม่มีค่าสำหรับที่นี่')}</p>`;
+  if(!g||(!g.s&&!g.l)) return `<p class="note">${T('Not enough measured hours here yet to judge the forecast.','ยังมีชั่วโมงที่ตรวจวัดไม่พอจะประเมินความแม่นยำที่นี่')}</p>`;
   const c=(sc,f)=>`<td>${sc?f(sc):'–'}</td>`, row=(th,f)=>`<tr><th>${th}</th>${c(g.s,f)}${c(g.l,f)}</tr>`;
   return `<div class="tablewrap"><table class="acctab"><thead><tr><th></th><th>${T('Next hours','ชั่วโมงข้างหน้า')}<small>${T('1–6 h ahead','ล่วงหน้า 1–6 ชม.')}</small></th><th>${T('Next day','วันพรุ่งนี้')}<small>${T('12–24 h ahead','ล่วงหน้า 12–24 ชม.')}</small></th></tr></thead><tbody>`+
     row(T('Colour band right','บอกระดับสีถูก'),sc=>`<b>${accPct(sc.band)}</b>`)+
@@ -2047,9 +2049,7 @@ function renderAcc(){
     extra=`<p class="note">${w.st?T('At the monitor you picked on the map','ที่สถานีที่เลือกบนแผนที่'):w.mine?T('At your location','ที่ตำแหน่งของคุณ'):T('At the centre of the map (tap ◎ on the map to use your location)','ที่กลางแผนที่ (แตะ ◎ บนแผนที่เพื่อใช้ตำแหน่งของคุณ)')}: ${esc(g?.label||'')}</p>`; }
   else if(ACC_LEVEL==='region'){ const w=accWhere(), rg=REG_N[ACC_REG]?ACC_REG:(regionAt(w.lat,w.lon)||'north'); g=accGroup('region:'+rg);
     extra=`<div class="field accreg"><label for="accReg">${T('Region','ภาค')}</label><select id="accReg">${Object.keys(REG_N).map(k=>`<option value="${k}"${k===rg?' selected':''}>${regName(k)}</option>`).join('')}</select></div>`; }
-  else { g=accGroup(ACC_LEVEL==='th'?'th':'all');
-    if(ACC_LEVEL==='all'){ const cn={}; for(const s of ACCD.stations) if(s.s[0]+s.l[0]) cn[s.cc||'?']=(cn[s.cc||'?']||0)+1;
-      extra=`<p class="note">${T('Monitors by country','จำนวนสถานีแยกประเทศ')}: ${Object.entries(cn).sort((a,b)=>b[1]-a[1]).map(([k,n])=>`${esc(k)} ${n}`).join(' · ')}${(cn.TH||0)>0.6*ACCD.stations.length?T(' (mostly in Thailand, so this says little about the other countries)',' (ส่วนใหญ่อยู่ในไทย จึงบอกความแม่นยำของประเทศอื่นได้น้อย)'):''}</p>`; } }
+  else g=accGroup('th');
   $('accBody').innerHTML=extra+(g&&g.nSt?`<p class="note acccap">${ACC_LEVEL==='here'?'':esc(g.label.charAt(0).toUpperCase()+g.label.slice(1))+' · '}${T(`${g.nSt} monitor${g.nSt>1?'s':''}`,`${g.nSt} สถานี`)} · ${T('last 7 days to','7 วันล่าสุด ถึง')} ${fmtT(ACCD.tEnd)}</p>`:'')+accTable(g);
   const sel=$('accReg'); if(sel) sel.onchange=()=>{ACC_REG=sel.value; store.set('hsw.accReg',ACC_REG); renderAcc();};
 }

@@ -18,6 +18,7 @@ import { updateGsmap, mergeIntoMet, webRain, GSCFG } from './gsmap.mjs';
 import { fetchGauges, scoreGauges, gsmapAt, rainFactor } from './thaiwater.mjs';
 import { updatePardig, obsRain } from './pardig.mjs';
 import { ENG2, ML2, loadObsHourly, rows2From, predict2, pmHighCheck } from './ml2.mjs';
+import { loadSilam, asModel, forPage } from './silam.mjs';
 import { WXML, T2_NAMES, PR_NAMES, T2ENG, PRENG, t2Features, prFeatures, loadWxDataset, storeWxDay, loadWxSeason } from './mlwx.mjs';
 import { downscaleT2, packDEM, T2CFG, t2SeaLevel, t2Bin, t2Down } from './t2down.mjs';
 import { buildLandcover, landcoverAt, packLandcover, unpackLandcover } from './landcover.mjs';
@@ -56,6 +57,7 @@ const CFG = {
   rk: { residStep: 0.025, coarseStep: 0.1, demStep: 0.05, minStations: 15, K: 16, declusterDeg: 0.25, lowcost: LOWCOST },
   mlField: 0.1,                  // deg; grid of the learned map correction (kriged station corrections, every 3 h to 48 h)   // cell declustering of the regression (0.25° ≈ 28 km cells)  // regression kriging; residual grid and DEM resolution
   logLeads: [1, 3, 6, 12, 24, 48],
+  silamLogLeads: [1, 3, 6, 12, 24, 48, 72, 96],   // h; SILAM vs CAMS at the monitors (silam-*.csv)
   // Air4Thai stations on OpenAQ report PM2.5 as a 24-h running mean, not hourly values (verified on Jan–Apr 2026: flat daily cycle,
   // mean hour-to-hour change 0.4 µg/m3); their correction and kriging therefore compare like with like (24-h means)
   avg24Providers: ['Air4Thai', 'Air4Thai · Bangkok (BMA)'],
@@ -981,15 +983,18 @@ async function main() {
     } catch (e) { log(`DEM unavailable, regression without elevation: ${e.message}`); dem = null; }
   }
   const rs = CFG.rk.residStep, rnx = Math.round((g[2] - g[0]) / rs) + 1, rny = Math.round((g[3] - g[1]) / rs) + 1;
-  function runRK(withInc) {
-    const label = withInc ? 'RK+assim' : 'RK';
+  // M: the model corrected (CAMS by default; SILAM for its own layer): times, st[i] = series at station i, grid[p] = series at the
+  // model's grid node p on gdef, name, file suffix of the 0.025° correction
+  const CAMSM = { name: 'CAMS', times: C.times, st: C.st, grid: C.grid, gdef: { lon0: g[0], lat0: g[1], step, nx, ny } };
+  function runRK(withInc, M = CAMSM) {
+    const label = withInc ? 'RK+assim' : M === CAMSM ? 'RK' : `RK ${M.name}`, suffix = withInc ? '-A' : M === CAMSM ? '' : '-' + M.name[0];
     const rkObs = [];
     // the kriging works on 24-h means (what Air4Thai reports and what the AQI uses): observed 24-h mean vs model 24-h mean
     stations.forEach((s, i) => {
       if (!(s.monitor || lcIn(s)) || !s.obs || now - s.obs.t > CFG.obsMaxAgeH * HOUR) return;
       const o24 = obs24(s.id, s); if (!o24 || !o24.valid) return;
       const ov = s.monitor ? o24.v : scaleLowcost(o24.v, LCc);   // low-cost sensors on the reference scale
-      let c = mean24T(C.times, C.st[i], s.obs.t); if (c == null) return;
+      let c = mean24T(M.times, M.st[i], s.obs.t); if (c == null) return;
       if (withInc) c = Math.max(0, c + incPrev(s, s.obs.t, '24'));   // the increment forecast for this hour by an earlier run (out of sample)
       const x = [Math.log(c + 1)]; if (dem) { const e = sampleGrid(dem, s.lat, s.lon); if (e == null) return; x.push(e / 1000); }
       if (met) { const m = sampleMet(met, s.lat, s.lon, s.obs.t); x.push(Math.log(Math.max(m.blh, 50) / 1000), m.ws); }
@@ -1008,7 +1013,7 @@ async function main() {
     const byType = {}; rkObs.forEach((r, i) => { (byType[r.lc ? 'low-cost' : 'reference'] ||= []).push(i); });
     const typeCV = Object.fromEntries(Object.entries(byType).map(([a, ix]) => [a, { n: ix.length, cams: err(ix.map(i => rkObs[i].cams), ix.map(i => rkObs[i].obs)), rk: err(ix.map(i => out.cv[i]), ix.map(i => rkObs[i].obs)) }]));
     const o = rkObs.map(r => r.obs), tSorted = rkObs.map(r => r.t).sort((a, b) => a - b);
-    const rk = { t: tSorted[Math.floor(tSorted.length / 2)], n: rkObs.length, nLowcost: rkObs.filter(r => r.lc).length, withAssim: withInc, beta: out.beta.map(b => +b.toFixed(4)), predictors: ['ln(CAMS+1)', ...(dem ? ['elevation_km'] : []), ...(met ? ['ln(BLH_km)', 'wind100_ms'] : [])].slice(0, out.nPred),
+    const rk = { t: tSorted[Math.floor(tSorted.length / 2)], n: rkObs.length, nLowcost: rkObs.filter(r => r.lc).length, withAssim: withInc, beta: out.beta.map(b => +b.toFixed(4)), predictors: [M === CAMSM ? 'ln(CAMS+1)' : `ln(${M.name}+1)`, ...(dem ? ['elevation_km'] : []), ...(met ? ['ln(BLH_km)', 'wind100_ms'] : [])].slice(0, out.nPred),
       xRange: out.xRange.map(r => r.map(v => +v.toFixed(4))), maxLogCorr: +out.maxLogCorr.toFixed(4),
       vario: { ...out.vario, c0: +out.vario.c0.toFixed(4), c1: +out.vario.c1.toFixed(4) }, maxKm: out.maxKm, leadEfoldH: CFG.biasLeadEfoldH,
       cv: { n: o.length, cams: err(rkObs.map(r => r.cams), o), rk: err(out.cv, o), cover1s: out.cvCover1s, sdMedian: out.cvSdMedian,
@@ -1018,12 +1023,12 @@ async function main() {
     Object.defineProperty(rk, 'cvRows', { value: rkObs.map((r, k) => [r.id, r.lc ? 0 : 1, +r.obs.toFixed(1), +r.cams.toFixed(1), +out.cv[k].toFixed(1)]), enumerable: false });
     // bias field for the page: B = predicted ln(PM24+1) − ln(C24+1) on the residual grid, applied to the hourly C as (c+1)·e^(w·B) − 1;
     // total σ (kriged residual + regression part) on the same grid
-    const R = out.resid, cg = C.grid, gnx = nx, gny = ny, B = new Array(R.nx * R.ny), SD = new Array(R.nx * R.ny);
+    const R = out.resid, cg = M.grid, GD = M.gdef, gnx = GD.nx, gny = GD.ny, B = new Array(R.nx * R.ny), SD = new Array(R.nx * R.ny);
     const inc24 = withInc && assim?.inc ? assim.incGrid24({ lon0: R.lon0, lat0: R.lat0, step: R.step, nx: R.nx, ny: R.ny }, rk.t) : null;
-    const cams24At = (lat, lon) => { const fx = (lon - g[0]) / step, fy = (lat - g[1]) / step; if (fx < 0 || fy < 0 || fx > gnx - 1 || fy > gny - 1) return null;
+    const cams24At = (lat, lon) => { const fx = (lon - GD.lon0) / GD.step, fy = (lat - GD.lat0) / GD.step; if (fx < 0 || fy < 0 || fx > gnx - 1 || fy > gny - 1) return null;
       const x0 = Math.min(Math.floor(fx), gnx - 2), y0 = Math.min(Math.floor(fy), gny - 2), ax = fx - x0, ay = fy - y0;
       const P = [[y0 * gnx + x0, (1 - ax) * (1 - ay)], [y0 * gnx + x0 + 1, ax * (1 - ay)], [(y0 + 1) * gnx + x0, (1 - ax) * ay], [(y0 + 1) * gnx + x0 + 1, ax * ay]];
-      let su = 0, n = 0; for (let h = 0; h < 24; h++) { let v = 0, ok = true; for (const [p, w] of P) { const q = interpT(C.times, cg[p], rk.t - h * HOUR); if (q == null) { ok = false; break; } v += w * q; } if (ok) { su += v; n++; } }
+      let su = 0, n = 0; for (let h = 0; h < 24; h++) { let v = 0, ok = true; for (const [p, w] of P) { const q = interpT(M.times, cg[p], rk.t - h * HOUR); if (q == null) { ok = false; break; } v += w * q; } if (ok) { su += v; n++; } }
       return n >= 18 ? su / n : null; };
     const { s2n, xbar, covSlope } = out.regCov; let nClamp = 0, nBound = 0;
     for (let iy = 0; iy < R.ny; iy++) for (let ix = 0; ix < R.nx; ix++) {
@@ -1045,9 +1050,10 @@ async function main() {
     for (let iy = 0; iy < cny; iy++) for (let ix = 0; ix < cnx; ix++) { const q = iy * k * R.nx + ix * k; Bc.push(B[q]); SDc.push(SD[q]); }
     rk.basis = '24h'; rk.bias = { lon0: R.lon0, lat0: R.lat0, step: +(R.step * k).toFixed(4), nx: cnx, ny: cny, values: Bc, sd: SDc };
     const enc = new Array(R.nx * R.ny); for (let iy = 0; iy < R.ny; iy++) { let prev = 0; for (let ix = 0; ix < R.nx; ix++) { const q = iy * R.nx + ix, v = Math.round(B[q] * 1000); enc[q] = v - prev; prev = v; } }
-    rk.biasFine = { file: `data/rk-bias${withInc ? '-A' : ''}.json`, t: rk.t, lon0: R.lon0, lat0: R.lat0, step: R.step, nx: R.nx, ny: R.ny };
-    rkFineFiles.push([path.join(DATA, `rk-bias${withInc ? '-A' : ''}.json`), { ...rk.biasFine, enc: 'int-dx', scale: 1000, values: enc }]);
+    rk.biasFine = { file: `data/rk-bias${suffix}.json`, t: rk.t, lon0: R.lon0, lat0: R.lat0, step: R.step, nx: R.nx, ny: R.ny };
+    rkFineFiles.push([path.join(DATA, `rk-bias${suffix}.json`), { ...rk.biasFine, enc: 'int-dx', scale: 1000, values: enc }]);
     rk.guards = { nPred: out.nPred, clampedCells: nClamp, boundedCells: nBound, cells: R.nx * R.ny };
+    rk.model = M.name; Object.defineProperty(rk, 'Bf', { value: { lon0: R.lon0, lat0: R.lat0, step: R.step, nx: R.nx, ny: R.ny, values: B }, enumerable: false });   // the 0.025° field, for the station log
     rk.decluster = { cellDeg: out.declusterDeg, weightRange: out.weightRange };
     log(`${label} guards: ${out.nPred} of ${1 + (dem ? 1 : 0) + (met ? 2 : 0)} predictors, aux predictors clamped to the monitors' range in ${nClamp} of ${R.nx * R.ny} cells, correction bounded to ±${out.maxLogCorr.toFixed(2)} in ${nBound}`);
     log(`${label}: ${rk.n} inputs (${rk.nLowcost} low-cost sensors; declustered, ${out.declusterDeg}° cells, weights ${out.weightRange.join('–')}), beta=[${rk.beta.join(', ')}], range ${rk.vario.a_km} km, LOO RMSE model ${rk.cv.cams.rmse} → RK ${rk.cv.rk.rmse} µg/m³ (declustered ${rk.cv.declustered.cams.rmse} → ${rk.cv.declustered.rk.rmse}), ±1σ coverage ${rk.cv.cover1s}`);
@@ -1056,15 +1062,28 @@ async function main() {
   }
   const rkFineFiles = [];
   const rk = runRK(false), rkA = anyInc ? runRK(true) : null;   // without an increment rkA would equal rk
+  // SILAM (FMI, 0.2°, about 5 days ahead) beside CAMS: the newest runs extracted by scripts/silam.py, through the same map
+  // correction (its own fit to the same monitors, no fire assimilation: SILAM has its own fire emissions); its own page layer
+  let SIL = null, rkS = null;
+  try {
+    SIL = await loadSilam(path.join(DATA, 'history'), now, { log });
+    if (SIL && SIL.times.at(-1) > now + 24 * HOUR) {
+      const SILM = asModel(SIL, stations); Object.defineProperty(SIL, 'model', { value: SILM, enumerable: false });
+      log(`SILAM: run${SIL.runs.length > 1 ? 's' : ''} ${SIL.runs.join(' + ')}, ${SIL.times.length} h to ${new Date(SIL.times.at(-1)).toISOString().slice(0, 13)}Z`);
+      rkS = runRK(false, SILM);
+    } else { if (SIL) log(`SILAM: newest run ends ${new Date(SIL.times.at(-1)).toISOString().slice(0, 13)}Z, too old: layer off`); SIL = null; }
+  } catch (e) { log(`SILAM unavailable: ${e.message}`); SIL = null; rkS = null; }
   for (const [f, obj] of rkFineFiles) { await writeJSON(f, obj); log(`map correction ${path.basename(f)}: ${obj.nx}×${obj.ny} at ${obj.step}°, ${(JSON.stringify(obj).length / 1048576).toFixed(1)} MB`); }
   const gridRaw = hours.map((t, j) => gridPts.map((_, p) => { const v = C.grid[p][i0 + j]; return v == null ? -1 : r1(v); }));
 
   globalThis.TIMER('outputs');
   // 7. outputs
+  // SILAM for the page: from 26 h back (24-h means) to the end of its newest run; removed when there is no current run
+  if (SIL) await writeJSON(path.join(DATA, 'silam.json'), forPage(SIL, now - 26 * HOUR)); else await fs.rm(path.join(DATA, 'silam.json'), { force: true });
   await writeJSON(path.join(DATA, 'latest.json'), {
     generated: now, camsIssued: C.at, bbox: CFG.bbox, runlog: RUNLOG,
     method: { kf: CFG.kf, biasLeadEfoldH: CFG.biasLeadEfoldH, rk: { ...CFG.rk, lowcost: { use: LCc.use, a: LCc.a, b: LCc.b, windowD: LCc.windowD, minDays: LCc.minDays } } },
-    rk, rkA, assim: assimSummary(assim), ml: state.ml ? { active: mlOn, weights: state.ml.weights, lastDay: state.ml.lastDay, experts: Object.keys(state.ml.models || {}).concat(season ? ['season'] : []), last: mlRec, field: mlField,
+    rk, rkA, rkS, silam: SIL ? { file: 'data/silam.json', run: SIL.run, runs: SIL.runs, source: SIL.source, t0: SIL.times[0], t1: SIL.times.at(-1), step: SIL.step } : null, assim: assimSummary(assim), ml: state.ml ? { active: mlOn, weights: state.ml.weights, lastDay: state.ml.lastDay, experts: Object.keys(state.ml.models || {}).concat(season ? ['season'] : []), last: mlRec, field: mlField,
       v2: state.ml2?.weights ? { published: use2, weights: state.ml2.weights, check: state.ml2.check || null } : null } : null, dem: dem ? { file: 'data/static/elev.json', step: dem.step, source: dem.source } : null,
     t2down: t2Info,
     rainObs: rainInfo,
@@ -1098,6 +1117,19 @@ async function main() {
   const fcstFile = path.join(hdir, `fcst-${stamp}.csv`);   // one file per issue hour: a second run in the same hour must not double-count it
   if (await fs.access(fcstFile).then(() => false, () => true)) await appendCSV(fcstFile, 'issued_utc,valid_utc,station_id,lead_h,cams_raw,corrected,cams24,corr24,blend24,obs_basis,correctedA,blend24A,correctedML,blend24ML,' + FEAT_COLS.join(',') + ',monitor,correctedML1,correctedML2', fRows);
   else log(`forecast log for ${stamp} already written this hour`);
+  // SILAM at the monitors beside CAMS, for the comparison: raw and with its map correction, leads to 96 h (CAMS columns where CAMS
+  // reaches); one file per issue hour, like the forecast log
+  if (SIL && newRun) {
+    const SM = SIL.model, Bf = rkS?.Bf, tI = Math.floor(now / HOUR) * HOUR, sRows = [];
+    stations.forEach((s, i) => { if (!s.monitor) return; const o = outStations[i];
+      const B = Bf ? sampleGrid(Bf, s.lat, s.lon) : null;
+      for (const L of CFG.silamLogLeads) { const tv = tI + L * HOUR, raw = interpT(SIL.times, SM.st[i], tv); if (raw == null) continue;
+        const w = Math.exp(-Math.max(0, tv - (rkS?.t ?? tv)) / HOUR / CFG.biasLeadEfoldH), j = jNow + L;
+        sRows.push([new Date(tI).toISOString().slice(0, 13) + ':00Z', new Date(tv).toISOString().slice(0, 13) + ':00Z', s.id, L, o.avg24 ? '24' : 'h', 1,
+          r1(raw), B != null ? r1(Math.max(0, (raw + 1) * Math.exp(w * B) - 1)) : '', j < hours.length ? (o.raw[j] ?? '') : '',
+          j < hours.length ? (o.corrM?.[j] ?? o.corrA?.[j] ?? o.corr[j] ?? '') : '']); } });
+    await appendCSV(path.join(hdir, `silam-${stamp}.csv`), 'issued_utc,valid_utc,station_id,lead_h,obs_basis,monitor,silam_raw,silam_map,cams_raw,cams_published', sRows);
+  }
   await writeJSON(path.join(DATA, 'state.json'), state);
   log(`done: ${outStations.length} stations, ${hot.length} hotspots, grid ${nx}×${ny}×${hours.length}`);
 }

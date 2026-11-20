@@ -86,6 +86,12 @@ jobs:
           if [ "$(ssh-keygen -lf kh 2>/dev/null | awk '{print $2}')" = "SHA256:kkL3TavqWMH/An1zfx3nL20SrWZfgivga+K6Ro+UIY8" ]; then cat kh >> ~/.ssh/known_hosts; else echo "::warning title=GSMaP::server key not as expected, observed rain skipped"; fi
           rm -f kh
 
+      - name: SILAM forecast (FMI open data, NetCDF-4 read in Python; a new run about once a day, kept on the history branch)
+        if: steps.restore.outcome == 'success'
+        continue-on-error: true
+        timeout-minutes: 6
+        run: python3 scripts/silam.py
+
       - name: Fetch data, correct forecast, write JSON
         env:
           OPENAQ_API_KEY: ${{ secrets.OPENAQ_API_KEY }}
@@ -217,7 +223,7 @@ jobs:
               const m = JSON.parse(fs.readFileSync("data/met.json", "utf8")), t = JSON.parse(fs.readFileSync("data/latest.json", "utf8")).generated, H = 3600e3;
               const tr = t ? packTraj(m, t - 49 * H, t + 75 * H) : null; if (tr) fs.writeFileSync("data/met-traj.json", JSON.stringify(tr));' || echo "::warning title=met-traj::could not rebuild met-traj.json"
           fi
-          for f in latest.json met-web.json met-traj.json ml-field.json t2-corr.json rain-obs.json wx-ml.json perf.json perf-series.json rk-bias.json rk-bias-A.json verify.json runlog.json accuracy.json; do [ -f "data/$f" ] && cp "data/$f" _site/data/ || true; done
+          for f in latest.json met-web.json met-traj.json ml-field.json t2-corr.json rain-obs.json wx-ml.json perf.json perf-series.json rk-bias.json rk-bias-A.json verify.json runlog.json accuracy.json silam.json rk-bias-S.json; do [ -f "data/$f" ] && cp "data/$f" _site/data/ || true; done
           for f in elev.json elev025.json; do [ -f data/static/$f ] && cp data/static/$f _site/data/static/ || true; done
           [ -d data/static/prclim ] && cp -r data/static/prclim _site/data/static/ || true
           ls -la _site _site/data

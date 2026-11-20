@@ -2134,8 +2134,29 @@ function hourField(i,so,w,fx,fy,cell,fine){
   while(FIELD_CACHE.size>maxF) FIELD_CACHE.delete(FIELD_CACHE.keys().next().value);
   return F;
 }
+// ---- painting a field (S.fine: values at cell centres) onto the map: values blended between the four nearest cell centres
+// (bilinear, as the contour lines are drawn), and only the part in view, at the screen's resolution, so band edges are smooth
+// curves at any zoom instead of cell-sized steps; repainted after the map is moved or zoomed
+let FIELD_PAINT=null;   // {colour(v) -> [r,g,b,a] | null, bounds [s,w,n,e], img}
+function fieldValue(Fs,lat,lon){ const {F,nx,ny,cell}=Fs, fx=(lon-Fs.w)/cell-.5, fy=(lat-Fs.so)/cell-.5;
+  if(fx<-.5||fy<-.5||fx>nx-.5||fy>ny-.5) return NaN;
+  const x0=Math.max(0,Math.min(nx-2,Math.floor(fx))), y0=Math.max(0,Math.min(ny-2,Math.floor(fy))), ax=Math.max(0,Math.min(1,fx-x0)), ay=Math.max(0,Math.min(1,fy-y0));
+  const a=F[y0*nx+x0], b=F[y0*nx+x0+1], c=F[(y0+1)*nx+x0], d=F[(y0+1)*nx+x0+1];
+  if(a!==a||b!==b||c!==c||d!==d) return F[Math.min(ny-1,Math.max(0,Math.round(fy)))*nx+Math.min(nx-1,Math.max(0,Math.round(fx)))];   // edge of the data: nearest cell
+  return (1-ax)*(1-ay)*a+ax*(1-ay)*b+(1-ax)*ay*c+ax*ay*d; }
+function paintField(){ const P_=FIELD_PAINT, Fs=S.fine; if(!P_||!Fs||!gridLayer) return;
+  if(P_.img){ gridLayer.removeLayer(P_.img); P_.img=null; }
+  let [so,w,n,e]=P_.bounds; const v=map.getBounds(), px=(v.getEast()-v.getWest())*0.15, py=(v.getNorth()-v.getSouth())*0.15;
+  so=Math.max(so,v.getSouth()-py); n=Math.min(n,v.getNorth()+py); w=Math.max(w,v.getWest()-px); e=Math.min(e,v.getEast()+px); if(!(n>so&&e>w)) return;
+  const p0=map.latLngToLayerPoint([n,w]), p1=map.latLngToLayerPoint([so,e]); let k=Math.min(2,window.devicePixelRatio||1);
+  const cw=Math.max(1,p1.x-p0.x), ch=Math.max(1,p1.y-p0.y); k=Math.min(k,Math.sqrt(1.6e6/(cw*ch)));   // ≤ 1.6 million pixels
+  const W=Math.max(2,Math.round(cw*k)), H=Math.max(2,Math.round(ch*k));
+  const url=regionCanvas(so,w,n,e,W,H,(lat,lon)=>{ const x=fieldValue(Fs,lat,lon); return x===x?P_.colour(x):null; });
+  P_.img=L.imageOverlay(url,[[so,w],[n,e]],{interactive:false,pane:'field'}); gridLayer.addLayer(P_.img); }
+function showField(colour,bounds){ FIELD_PAINT={colour,bounds,img:null}; paintField(); }
+{ let tm=0; map.on('moveend',()=>{ clearTimeout(tm); if(FIELD_PAINT) tm=setTimeout(paintField,80); }); }
 function drawGrid(){
-  if(gridLayer){map.removeLayer(gridLayer);gridLayer=null;}
+  FIELD_PAINT=null; if(gridLayer){map.removeLayer(gridLayer);gridLayer=null;}
   S.fine=null; S.fieldInfo='';
   if(P.data&&layerMode()==='unc') return drawUnc();
   if(wxMode()) return drawWx();
@@ -2160,15 +2181,10 @@ function drawGrid(){
     S.fieldInfo=T(`24-h mean ending ${fmtT(P.data.hours[i])}`,`ค่าเฉลี่ย 24 ชม. สิ้นสุด ${fmtT(P.data.hours[i])}`);
   }
   S.fine={F,w,so,nx:fx,ny:fy,cell};
-  const value=(lat,lon)=>{const x=Math.floor((lon-w)/cell), y=Math.floor((lat-so)/cell); if(x<0||y<0||x>=fx||y>=fy) return -1; const v=F[y*fx+x]; return v===v?v:-1;};
-  const ppd=fine?80:60;
-  const W=Math.min(1100,Math.round((e-w)*ppd)), H=Math.min(1100,Math.round((mercY(n)-mercY(so))/DEG*ppd));
-  const url=regionCanvas(so,w,n,e,W,H,(lat,lon)=>{const v=value(lat,lon); if(v<0) return null;
-    if(ms){const c=rampColor(v); return c?[c[0],c[1],c[2],c[3]*255]:null;}   // µg/m³: EPA colours, same as the fire-smoke layer
-    const rgb=scheme.find(b=>v<=b.max).rgb; return [rgb[0],rgb[1],rgb[2],v<15?40+v*2:Math.min(160,70+v*1.2)];});
-  const parts=[L.imageOverlay(url,[[so,w],[n,e]],{interactive:false,pane:'field'})];
-  if(!R) parts.push(L.rectangle([[so,w],[n,e]],{color:cssVar('--muted'),weight:1,dashArray:'4 4',fill:false,interactive:false}));
-  gridLayer=L.layerGroup(parts).addTo(map);
+  const colour=v=>{ if(ms){const c=rampColor(v); return c?[c[0],c[1],c[2],c[3]*255]:null;}   // µg/m³: EPA colours, same as the fire-smoke layer
+    const rgb=scheme.find(b=>v<=b.max).rgb; return [rgb[0],rgb[1],rgb[2],v<15?40+v*2:Math.min(160,70+v*1.2)];};
+  const parts=[]; if(!R) parts.push(L.rectangle([[so,w],[n,e]],{color:cssVar('--muted'),weight:1,dashArray:'4 4',fill:false,interactive:false}));
+  gridLayer=L.layerGroup(parts).addTo(map); showField(colour,[so,w,n,e]);
 }
 // ---- weather layers (ECMWF forecast from the pipeline): rain and 2-m temperature as shaded fields, 10-m wind as arrows
 // ventilation index (m²/s) = boundary-layer height × 100-m wind speed (ECMWF): dark where smoke is trapped
@@ -2241,10 +2257,8 @@ function drawWx(){
       F[y*fx+x]=v==null?NaN:v;} else {const v=t2At(la,lo,t); F[y*fx+x]=v==null?NaN:v;}}
   S.fine={F,w,so,nx:fx,ny:fy,cell};
   S.fieldInfo=mode==='vent'?(down?T(`Ventilation index, m²/s: ECMWF boundary-layer height × 100-m wind, the wind adjusted for terrain exposure and sheltering on the 0.025° DEM (MicroMet weighting, ±40 % at most), drawn at ${cell.toFixed(3)}°`,`ดัชนีการระบายอากาศ ม.²/วินาที: ความสูงชั้นบรรยากาศขอบเขต ECMWF × ลมที่ 100 ม. ปรับลมตามการเปิดรับและกำบังของภูมิประเทศบน DEM 0.025° (น้ำหนักแบบ MicroMet ไม่เกิน ±40%) วาดที่ ${cell.toFixed(3)}°`):T('Ventilation index, m²/s: ECMWF boundary-layer height × 100-m wind, 0.1° (0.25° over northern Thailand)','ดัชนีการระบายอากาศ ม.²/วินาที: ความสูงชั้นบรรยากาศขอบเขต ECMWF × ลมที่ 100 ม. ความละเอียด 0.1° (0.25° ในภาคเหนือ)')):mode==='rain'?(radarH?T(`Observed rain, mm/h: weather radar where a radar sees (hourly mean, gauge factor ${RAINOBS.radar.factor}), ${obsSatName(t)} elsewhere, ${cell.toFixed(3)}°`,`ฝนที่ตรวจวัด มม./ชม.: เรดาร์ตรวจอากาศในพื้นที่ที่เรดาร์มองเห็น (เฉลี่ยรายชั่วโมง ปรับด้วยเครื่องวัดฝน ×${RAINOBS.radar.factor}) ที่อื่นใช้ ${obsSatName(t,1)} ${cell.toFixed(3)}°`):nowH?T(`Rain, mm/h: ECMWF blended with the radar nowcast (echoes extrapolated from the latest frames) where a radar sees, weight ${nowcastWShown(t).toFixed(2)} at this lead${nowcastFitted()?'':' (provisional weights)'}, ${cell.toFixed(3)}°`,`ฝน มม./ชม.: ECMWF ผสมกับการคาดการณ์ระยะสั้นจากเรดาร์ (ต่อขยายการเคลื่อนที่ของกลุ่มฝน) ในพื้นที่ที่เรดาร์มองเห็น น้ำหนัก ${nowcastWShown(t).toFixed(2)} ที่ระยะนี้${nowcastFitted()?'':' (น้ำหนักชั่วคราว)'} ${cell.toFixed(3)}°`):obsRain?T(`Observed rain, mm/h: ${obsSatName(t)}${fineRain?`, interpolated to ${cell.toFixed(3)}° and shaped by the CHELSA rain climatology (±7 % typical)`:', 0.1°'}`,`ฝนที่ตรวจวัด มม./ชม.: ${obsSatName(t,1)}${fineRain?' ประมาณค่าเป็น '+cell.toFixed(3)+'° และปรับรูปแบบด้วยภูมิอากาศฝน CHELSA (ปกติ ±7 %)':' 0.1°'}`):(fineRain?T(`Rain forecast, mm/h: ECMWF (0.25° north, 1° elsewhere) interpolated to ${cell.toFixed(3)}° and shaped by the CHELSA rain climatology`,`ฝนพยากรณ์ มม./ชม.: ECMWF (0.25° ภาคเหนือ 1° พื้นที่อื่น) ประมาณค่าเป็น ${cell.toFixed(3)}° และปรับรูปแบบด้วยภูมิอากาศฝน CHELSA`):T('Rain forecast, mm/h (ECMWF)','ฝนพยากรณ์ มม./ชม. (ECMWF)'))):down?T(`Temperature at 2 m, °C: ECMWF downscaled to ${cell.toFixed(3)}° with terrain${T2D.corr?' and Air4Thai stations':''}`,`อุณหภูมิ 2 ม. °C: ECMWF ย่อส่วนเป็น ${cell.toFixed(3)}° ด้วยภูมิประเทศ${T2D.corr?' และสถานี Air4Thai':''}`):T('Temperature at 2 m, °C (ECMWF)','อุณหภูมิ 2 ม. °C (ECMWF)');
-  const W=Math.min(1100,Math.round((e-w)*60)), H=Math.min(1100,Math.round((mercY(n)-mercY(so))/DEG*60));
-  const url=regionCanvas(so,w,n,e,W,H,(lat,lon)=>{const x=Math.floor((lon-w)/cell), y=Math.floor((lat-so)/cell); if(x<0||y<0||x>=fx||y>=fy) return null;
-    const v=F[y*fx+x]; if(v!==v) return null; if(mode==='temp'){const rgb=tempRGB(v); return [rgb[0],rgb[1],rgb[2],150];} const c=wxColor(mode,v); if(!c) return null; const rgb=hexRGB(c); return [rgb[0],rgb[1],rgb[2],150];});
-  gridLayer=L.layerGroup([L.imageOverlay(url,[[so,w],[n,e]],{interactive:false,pane:'field'})]).addTo(map);
+  gridLayer=L.layerGroup().addTo(map);
+  showField(v=>{ if(mode==='temp'){const rgb=tempRGB(v); return [rgb[0],rgb[1],rgb[2],150];} const c=wxColor(mode,v); if(!c) return null; const rgb=hexRGB(c); return [rgb[0],rgb[1],rgb[2],150];},[so,w,n,e]);
 }
 let windLayer=L.layerGroup().addTo(map);
 // moving particles like Windy: each particle drifts with the 10-m wind at the slider time, leaving a fading trail;

@@ -1312,7 +1312,10 @@ main.side-hidden .sidetoggle svg{transform:rotate(180deg)}
   main{display:block;position:static}
   .mapwrap{position:fixed;left:0;right:0;top:calc(var(--hdrH) + env(safe-area-inset-top,0px));bottom:calc(var(--tabH) + var(--peekH) - 16px);height:auto;min-height:0;z-index:1}
   .leaflet-control-zoom{display:none}   /* pinch to zoom on phones */
-  .scrub{bottom:24px}
+  .scrub{bottom:34px}
+  /* map credits: one line just above the sheet, clear of the time bar; tap to read them in full (page code toggles .open) */
+  .leaflet-bottom.leaflet-right .leaflet-control-attribution{margin:0 0 16px!important;max-width:calc(100vw - 12px);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer}
+  .leaflet-bottom.leaflet-right .leaflet-control-attribution.open{white-space:normal;position:relative;z-index:1300}
   /* the bottom sheet */
   aside{position:fixed;left:0;right:0;bottom:var(--tabH);z-index:1200;height:var(--peekH);border:0;border-top:0;border-radius:18px 18px 0 0;
     background:var(--panel);box-shadow:0 -6px 24px rgba(15,23,42,.14);overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;
@@ -2693,6 +2696,7 @@ async function nasaArea(bx){
   $('nasaClose').onclick=nasaReset; $('nasaCrop').classList.remove('on'); document.querySelector('.mapwrap').classList.remove('cropping'); map.dragging.enable(); NA.rect=null; }
 function setTiles(){
   if(tiles){map.removeLayer(tiles);tiles=null;}
+  map.attributionControl.removeAttribution('Borders: World Bank Official Boundaries');   // the plain map's credit; the tile layers carry their own
   if(bm!=='plain'){const [url,opt]=TILESETS[bm]();let fails=0,ok=0;
     tiles=L.tileLayer(url,{...opt,attribution:opt.attribution+' · Fires: NASA FIRMS · Wind: Open-Meteo · Borders: World Bank Official Boundaries'})
       .on('tileload',()=>ok++).on('tileerror',()=>{if(++fails>6&&!ok){setBasemap('plain');banner(()=>T('Online map tiles could not load here, so the page switched to the built-in outline map. Fires, wind and smoke still work.','โหลดแผนที่ออนไลน์ไม่ได้ จึงเปลี่ยนเป็นแผนที่เส้นขอบในตัว จุดไฟ ลม และควันยังแสดงได้ตามปกติ'),'info');}}).addTo(map);}
@@ -2700,6 +2704,9 @@ function setTiles(){
   styleBase();
   $('bmSel').value=bm;
 }
+// phones: the credits line is cut to one line; a tap shows it in full, another tap folds it again
+{ const c=map.attributionControl.getContainer(); c.title=T('Map credits (tap to show all)','เครดิตแผนที่ (แตะเพื่อดูทั้งหมด)');
+  c.addEventListener('click',e=>{ if(!e.target.closest('a')) c.classList.toggle('open'); }); }
 function setBasemap(k){bm=k;store.set('hsw.basemap2',k);setTiles();}
 $('bmSel').onchange=e=>setBasemap(e.target.value);
 

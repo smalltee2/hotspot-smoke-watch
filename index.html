@@ -722,7 +722,8 @@ td.num{text-align:right;font-family:var(--font-data);font-variant-numeric:tabula
     <div id="map" aria-label="Map of hotspots and smoke forecast"></div>
     <div class="legend" id="legend"><details id="legDet" open><summary data-th="ชั้นข้อมูลและคำอธิบาย">Layers and legend</summary>
       <div class="layerpick" role="radiogroup" aria-label="Map layer">
-        <label><input type="radio" name="layer" id="lyTotal" value="total" checked> <span data-th="PM&lt;sub&gt;2.5&lt;/sub&gt; รวม (พยากรณ์)">Total PM<sub>2.5</sub> forecast</span></label>
+        <label><input type="radio" name="layer" id="lyTotal" value="total" checked> <span data-th="PM&lt;sub&gt;2.5&lt;/sub&gt; รวม พยากรณ์จาก CAMS (~3 วัน)">Total PM<sub>2.5</sub> forecast from CAMS (~3 days)</span></label>
+        <label hidden><input type="radio" name="layer" id="lySilam" value="silam"> <span data-th="PM&lt;sub&gt;2.5&lt;/sub&gt; รวม พยากรณ์จาก SILAM (~5 วัน)">Total PM<sub>2.5</sub> forecast from SILAM (~5 days)</span></label>
         <label class="dev-only"><input type="radio" name="layer" id="lyFine" value="fine"> <span data-th="PM&lt;sub&gt;2.5&lt;/sub&gt; รวม + รายละเอียดไฟ (ทดลอง)">Total PM<sub>2.5</sub> + fire detail (experimental)</span></label>
         <label><input type="radio" name="layer" id="lyFire" value="fire"> <span data-th="เฉพาะควันไฟ">Fire smoke only</span></label>
         <label class="dev-only"><input type="radio" name="layer" id="lyUnc" value="unc"> <span data-th="ความไม่แน่นอนของแผนที่ (±1σ)">Map uncertainty (±1σ)</span></label>
@@ -1660,6 +1661,7 @@ const gIdx=t=>P.data?idxIn(P.data.hours,t):-1;
 function setTimeline(){
   const keep=curT();
   S.times=S.sim?S.sim.hours:(P.data?P.data.hours:[]);
+  if(layerMode()==='silam'&&SILD) S.times=SILD.times.slice();   // SILAM layer: its own hours (about 5 days ahead)
   if(S.sim&&P.data&&P.data.hours.length) S.times=S.times.filter(t=>t>=P.data.hours[0]);   // emission may start at local midnight, before the map data
   { const d0=todayStart(); const f=S.times.filter(t=>t>=d0); if(f.length) S.times=f; }   // forecast view: the time bar starts today
   const sl=$('slider'); sl.max=Math.max(0,S.times.length-1);
@@ -1702,7 +1704,7 @@ async function runAuto(quiet){ try{ return await runAuto_(quiet); }catch(e){ bus
 async function runAuto_(quiet){
   if(!quiet) busy(T('Loading the latest hourly data…','กำลังโหลดข้อมูลรายชั่วโมงล่าสุด…'));
   const d=await loadPipeline();
-  if(d){P.data=d; busy(T('Loading meteorology…','กำลังโหลดข้อมูลอุตุนิยมวิทยา…')); await Promise.all([loadDEM(),loadMet(),loadMlField(),loadRkFine(),loadWxml()]); await runModel(pipelineHotspots(d),'live',null,quiet); showFreshness(); loadVerify(); loadAccuracy(); renderRK(); renderAssim(); renderML();}
+  if(d){P.data=d; syncSilamUI(); if(layerMode()==='silam') ensureSilam(); busy(T('Loading meteorology…','กำลังโหลดข้อมูลอุตุนิยมวิทยา…')); await Promise.all([loadDEM(),loadMet(),loadMlField(),loadRkFine(),loadWxml()]); await runModel(pipelineHotspots(d),'live',null,quiet); showFreshness(); loadVerify(); loadAccuracy(); renderRK(); renderAssim(); renderML();}
   else if(!quiet){ if(PUBLIC&&P.data){ busy(null); toast(T('The latest data could not be loaded; the page keeps the data it had.','โหลดข้อมูลล่าสุดไม่สำเร็จ หน้าเว็บยังแสดงข้อมูลเดิมอยู่')); return false; }
     if(PUBLIC){ busy(null); loadFail(true); return false; }   // public: reading FIRMS from the browser needs a key and a proxy the public page does not have
     P.data=null; await runLive(); }
@@ -1891,7 +1893,7 @@ const curRK=()=>P.data?(useA()&&P.data.rkA?P.data.rkA:P.data.rk):null;
 let MLF=null;
 // the map correction at 0.025° (data/rk-bias.json, rk-bias-A.json: integers ×scale as differences along x); latest.json keeps a 0.1° copy
 const RKF={};
-async function loadRkFine(){ for(const rk of [P.data&&P.data.rk,P.data&&P.data.rkA]){ const m=rk&&rk.biasFine; if(!m) continue;
+async function loadRkFine(){ for(const rk of [P.data&&P.data.rk,P.data&&P.data.rkA,P.data&&P.data.rkS]){ const m=rk&&rk.biasFine; if(!m) continue;
     const key=m.file+'|'+P.data.generated; if(RKF[m.file]&&RKF[m.file].key===key){rk.biasF=RKF[m.file].G; continue;}
     try{const r=await fetch(m.file+'?g='+P.data.generated); if(!r.ok) continue; const F=await r.json(); const v=new Float32Array(F.nx*F.ny);
       for(let iy=0;iy<F.ny;iy++){let q=0; for(let ix=0;ix<F.nx;ix++){const k=iy*F.nx+ix; q+=F.values[k]; v[k]=q/F.scale;}}
@@ -1914,6 +1916,9 @@ function rkX(c,lat,lon,t){
   const m=MET&&names.includes('ln(BLH_km)')?sampleMet(MET,lat,lon,t):null;
   return names.map(nm=>nm==='ln(CAMS+1)'?Math.log(c+1):nm==='elevation_km'?(sampleRegular(DEM,lat,lon)??0)/1000:nm==='ln(BLH_km)'?Math.log(Math.max(m.blh,50)/1000):nm==='wind100_ms'?m.ws:0);
 }
+// the 24-h-basis map correction of any model: rkS for SILAM (fitted to SILAM at the same monitors), curRK() for CAMS
+function rkApply(rk,c,lat,lon,t){ if(!rk||c<0||!rk.bias) return c; const B=sampleRegular(rk.biasF||rk.bias,lat,lon); if(B==null) return c;
+  const w=Math.exp(-Math.max(0,(t-rk.t)/36e5)/(rk.leadEfoldH||48)); return Math.max(0,(c+1)*Math.exp(w*B)-1); }
 function rkValue(c,lat,lon,t){
   const rk=curRK(); if(!rk||c<0) return c;
   if(rk.bias){ // 24-h basis (from 2 Oct 2026): bias field B = ln(PM24+1) − ln(CAMS24+1) at the analysis hour, applied to hourly CAMS
@@ -2086,9 +2091,9 @@ $('accBox')?.addEventListener('toggle',()=>{ if($('accBox').open) renderAcc(); }
 
 // ---- total PM2.5 grid layer and station markers
 let gridLayer=null; const stationLayer=L.layerGroup().addTo(map), a4tLayer=L.layerGroup().addTo(map);
-const layerMode=()=>$('lyNasa').checked?'nasa':$('lyUnc').checked?'unc':$('lyFire').checked?'fire':$('lyFine').checked?'fine':$('lyRain').checked?'rain':$('lyTemp').checked?'temp':$('lyVent').checked?'vent':'total';
+const layerMode=()=>$('lySilam')?.checked?'silam':$('lyNasa').checked?'nasa':$('lyUnc').checked?'unc':$('lyFire').checked?'fire':$('lyFine').checked?'fine':$('lyRain').checked?'rain':$('lyTemp').checked?'temp':$('lyVent').checked?'vent':'total';
 const wxMode=()=>layerMode()==='rain'||layerMode()==='temp'||layerMode()==='vent';
-const gridMode=()=>layerMode()==='total'||layerMode()==='fine';
+const gridMode=()=>layerMode()==='total'||layerMode()==='fine'||layerMode()==='silam';
 const unitMode=()=>$('unitSel').value;   // 'ug' | 'ug24' | 'th' | 'us'
 const avg24=()=>unitMode()!=='ug';
 function bandFor(v){ if(unitMode()==='us'){const b=US_BANDS.find(b=>v<=b.max); return {color:b.color,en:T(b.en,b.th),ink:(b.max<=35.4)?'#1d2321':'#fff'};}
@@ -2141,6 +2146,29 @@ function hourField(i,so,w,fx,fy,cell,fine){
   while(FIELD_CACHE.size>maxF) FIELD_CACHE.delete(FIELD_CACHE.keys().next().value);
   return F;
 }
+// ---- SILAM layer (FMI global forecast, 0.2°, about 5 days ahead): data/silam.json, loaded the first time the layer is chosen;
+// drawn like the CAMS layer, with the map correction the pipeline fits to SILAM at the same monitors (P.data.rkS)
+let SILD=null, SILD_LOADING=null;
+function ensureSilam(){ const m=P.data&&P.data.silam; if(!m) return Promise.resolve(null);
+  const key=m.file+'|'+m.run+'|'+P.data.generated; if(SILD&&SILD.key===key) return Promise.resolve(SILD); if(SILD_LOADING) return SILD_LOADING;
+  return SILD_LOADING=(async()=>{ try{ const r=await fetch(m.file+'?g='+P.data.generated); if(!r.ok) throw new Error('HTTP '+r.status); const F=await r.json();
+      const fields=F.values.map(a=>{const v=new Float32Array(F.nx*F.ny); for(let y=0;y<F.ny;y++){let q=0; for(let x=0;x<F.nx;x++){const k=y*F.nx+x; q+=a[k]; v[k]=q<0?NaN:q/F.scale;}} return v;});
+      SILD={key,run:F.run,runs:F.runs,lon0:F.lon0,lat0:F.lat0,step:F.step,nx:F.nx,ny:F.ny,times:F.times,fields}; }
+    catch(e){ SILD=null; banner(()=>T('The SILAM forecast could not be loaded. The CAMS layer still works.','โหลดพยากรณ์ SILAM ไม่สำเร็จ ชั้น CAMS ยังใช้ได้ตามปกติ'),'info'); }
+    SILD_LOADING=null; if(layerMode()==='silam'){ S.keepSel=true; setTimeline(); redrawTime(); } return SILD; })(); }
+// the SILAM item is shown only when the pipeline published a current run
+function syncSilamUI(){ const el=$('lySilam'); if(!el) return; const lb=el.closest('label'), on=!!(P.data&&P.data.silam); lb.hidden=!on;
+  if(!on&&el.checked){ $('lyTotal').checked=true; syncLegendToLayer(); } }
+function silamValue(f,lat,lon){ const D=SILD, fx=(lon-D.lon0)/D.step, fy=(lat-D.lat0)/D.step; if(fx<0||fy<0||fx>D.nx-1||fy>D.ny-1) return -1;
+  const x0=Math.min(Math.floor(fx),D.nx-2), y0=Math.min(Math.floor(fy),D.ny-2), ax=fx-x0, ay=fy-y0;
+  const a=f[y0*D.nx+x0], b=f[y0*D.nx+x0+1], c=f[(y0+1)*D.nx+x0], d=f[(y0+1)*D.nx+x0+1];
+  return (a>=0&&b>=0&&c>=0&&d>=0)?(1-ax)*(1-ay)*a+ax*(1-ay)*b+(1-ax)*ay*c+ax*ay*d:-1; }
+function silamField(k,so,w,fx,fy,cell){ const rk=P.data.rkS, key=['S',SILD.key,k,so.toFixed(3),w.toFixed(3),fx,fy,cell,rk&&rk.biasF?'f':'c'].join('|');
+  if(FIELD_CACHE.has(key)) return FIELD_CACHE.get(key);
+  const f=SILD.fields[k], t=SILD.times[k], F=new Float32Array(fx*fy);
+  for(let y=0;y<fy;y++) for(let x=0;x<fx;x++){ const la=so+(y+.5)*cell, lo=w+(x+.5)*cell, c=silamValue(f,la,lo); F[y*fx+x]=c<0?NaN:rkApply(rk,c,la,lo,t); }
+  FIELD_CACHE.set(key,F); const maxF=Math.max(26,Math.min(60,Math.floor(1.5e7/F.length))); while(FIELD_CACHE.size>maxF) FIELD_CACHE.delete(FIELD_CACHE.keys().next().value);
+  return F; }
 // ---- painting a field (S.fine: values at cell centres) onto the map: values blended between the four nearest cell centres
 // (bilinear, as the contour lines are drawn), and only the part in view, at the screen's resolution, so band edges are smooth
 // curves at any zoom instead of cell-sized steps; repainted after the map is moved or zoomed
@@ -2167,7 +2195,12 @@ function drawGrid(){
   S.fine=null; S.fieldInfo='';
   if(P.data&&layerMode()==='unc') return drawUnc();
   if(wxMode()) return drawWx();
-  if(!P.data||!gridMode()) return; const G=P.data.grid, i=gIdx(curT()); if(i<0) return;
+  if(!P.data||!gridMode()) return;
+  const sil=layerMode()==='silam';
+  if(sil&&!SILD){ ensureSilam(); S.fieldInfo=T('Loading the SILAM forecast…','กำลังโหลดพยากรณ์ SILAM…'); return; }
+  const G=sil?SILD:P.data.grid, Hs=sil?SILD.times:P.data.hours, i=idxIn(Hs,curT());
+  if(i<0){ if(sil) S.fieldInfo=T('SILAM has no forecast for this hour.','SILAM ไม่มีพยากรณ์สำหรับชั่วโมงนี้'); return; }
+  if(sil) S.fieldInfo=T(`SILAM (FMI) run ${SILD.run}, 0.2°, corrected with the monitors like the CAMS layer`,`SILAM (FMI) รอบ ${SILD.run} ความละเอียด 0.2° ปรับด้วยค่าสถานีแบบเดียวกับชั้น CAMS`);
   const R=regionShape();
   const scheme=msScale()?MS_BANDS.map(b=>({max:b.max,rgb:hexRGB(b.color)})):unitMode()==='us'?US_BANDS.map(b=>({max:b.max,rgb:hexRGB(b.color)})):PCD.map(b=>({max:b.max,rgb:hexRGB(cssVar('--'+b.key))}));
   let so=G.lat0, w=G.lon0, n=G.lat0+(G.ny-1)*G.step, e=G.lon0+(G.nx-1)*G.step;
@@ -2177,15 +2210,16 @@ function drawGrid(){
   const cell=0.025;   // every view is drawn at the 0.025° grid of the map correction (no coarsening for large views or 24-h means)
   const fx=Math.ceil((e-w)/cell), fy=Math.ceil((n-so)/cell);
   let F;
-  if(!avg) F=hourField(i,so,w,fx,fy,cell,fine);
+  const field=k=>sil?silamField(k,so,w,fx,fy,cell):hourField(k,so,w,fx,fy,cell,fine);
+  if(!avg) F=field(i);
   else {
     // standard averaging time for AQI: mean of the 24 hourly values ending at the selected hour (needs ≥ 18 of them)
     const idx=[]; for(let k=Math.max(0,i-23);k<=i;k++) idx.push(k);
     if(idx.length<18){S.fieldInfo=T('24-h mean needs 18 hours of data before this time.','ค่าเฉลี่ย 24 ชม. ต้องมีข้อมูล 18 ชั่วโมงก่อนเวลานี้'); return;}
     F=new Float32Array(fx*fy); const cnt=new Uint8Array(fx*fy);
-    for(const k of idx){const Fk=hourField(k,so,w,fx,fy,cell,fine); for(let q=0;q<F.length;q++){const v=Fk[q]; if(v===v){F[q]+=v;cnt[q]++;}}}
+    for(const k of idx){const Fk=field(k); for(let q=0;q<F.length;q++){const v=Fk[q]; if(v===v){F[q]+=v;cnt[q]++;}}}
     for(let q=0;q<F.length;q++) F[q]=cnt[q]>=18?F[q]/cnt[q]:NaN;
-    S.fieldInfo=T(`24-h mean ending ${fmtT(P.data.hours[i])}`,`ค่าเฉลี่ย 24 ชม. สิ้นสุด ${fmtT(P.data.hours[i])}`);
+    S.fieldInfo=(sil?S.fieldInfo+' · ':'')+T(`24-h mean ending ${fmtT(Hs[i])}`,`ค่าเฉลี่ย 24 ชม. สิ้นสุด ${fmtT(Hs[i])}`);
   }
   S.fine={F,w,so,nx:fx,ny:fy,cell};
   const colour=v=>{ if(ms){const c=rampColor(v); return c?[c[0],c[1],c[2],c[3]*255]:null;}   // µg/m³: EPA colours, same as the fire-smoke layer
@@ -2363,8 +2397,8 @@ function isoSegments(g,NX,NY,lv){
 }
 function drawContours(){
   if(contourLayer){map.removeLayer(contourLayer);contourLayer=null;}
-  if(!P.data||!gridMode()||!shown('shContour')) return; const G=P.data.grid, i=gIdx(curT()); if(i<0) return;
-  if(!S.fine) return;
+  if(!P.data||!gridMode()||!shown('shContour')) return;
+  if(!S.fine) return;   // drawn from the field on the map (CAMS or SILAM layer)
   const {F:g,nx:NX,ny:NY,cell:st}=S.fine, la0=S.fine.so+st/2, lo0=S.fine.w+st/2;
   contourLayer=L.layerGroup();
   contourScheme().forEach(({lv,color},j)=>{const segs=isoSegments(g,NX,NY,lv); if(!segs.length) return;
@@ -3723,8 +3757,11 @@ renderLegend();
 function syncLegendToLayer(){ const m=layerMode();
   $('legNasa').hidden=m!=='nasa'; $('legTotal').hidden=!gridMode(); $('legFire').hidden=m!=='fire'; $('legUnc').hidden=m!=='unc'; $('legRain').hidden=m!=='rain'; $('legTemp').hidden=m!=='temp'; $('legVent').hidden=m!=='vent';
   const uf=$('unitSel').closest('.field'); if(uf) uf.style.display=['rain','temp','vent','nasa'].includes(m)?'none':''; }
+let LAYER_WAS=layerMode();
 for(const el of document.querySelectorAll('input[name=layer]')) el.addEventListener('change',()=>{
-  syncLegendToLayer(); if(layerMode()!=='nasa') nasaReset(); redrawTime();});
+  syncLegendToLayer(); if(layerMode()!=='nasa') nasaReset();
+  const m=layerMode(); if((m==='silam')!==(LAYER_WAS==='silam')){ S.keepSel=true; setTimeline(); }   // SILAM has its own, longer time bar
+  LAYER_WAS=m; redrawTime(); if(m==='silam') ensureSilam();});
 syncLegendToLayer();
 // redesigned page: the long explanation of a layer behind an (i) button beside its name (.lyinfo, data-info = the legend block
 // whose .note holds the text, kept hidden there so the language switch still updates it). Hover or focus shows it on computers,

@@ -1,8 +1,8 @@
 // How right the published PM2.5 forecast has been lately, for the public page (data/accuracy.json, rebuilt every run from the
 // logs in data/history). Scored at the hourly reference monitors (true 1-h values; low-cost sensors and the 24-h-mean feeds are
 // left out), hourly values (as the map shows them), over the measured hours of the last 7 days, in two horizons: the next hours
-// (forecasts issued 1, 3 and 6 h before) and the next day (12 and 24 h before; the leads the log keeps). Pooling all leads would
-// flatter the score: the 1-h forecast is close to the latest measurement.
+// (forecasts issued 1, 3 and 6 h before), the next day (12 and 24 h before) and two days ahead (48 h before; the leads the log
+// keeps). Pooling all leads would flatter the score: the 1-h forecast is close to the latest measurement.
 // Per station the sums only; the page adds them up for any area (here, a Thai region, Thailand, the whole map) and turns them into
 //   colour band right   share of hours whose forecast falls in the same Thai PCD band as the measurement (15 / 25 / 37.5 / 75)
 //   typical error       mean absolute error, µg/m³
@@ -13,7 +13,7 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 
-export const ACC = { days: 7, horizons: { s: [1, 3, 6], l: [12, 24] }, bands: [15, 25, 37.5, 75], thr: 37.5 };
+export const ACC = { days: 7, horizons: { s: [1, 3, 6], l: [12, 24], d2: [48] }, bands: [15, 25, 37.5, 75], thr: 37.5 };
 const HZ = Object.fromEntries(Object.entries(ACC.horizons).flatMap(([k, ls]) => ls.map(L => [L, k])));
 const H = 3600e3;
 const num = v => { if (v == null || v === '') return null; const x = +v; return Number.isFinite(x) ? x : null; };
@@ -38,7 +38,7 @@ export function scores(a, minN = 1) {
 
 /** Scores the forecast log rows against the measurements. rows: fcst CSV rows; obs: Map "id|YYYY-MM-DDTHH" -> µg/m³;
  *  isMonitor(id): fallback for rows logged before the monitor column; tEnd: newest valid hour counted (ms).
- *  Returns Map id -> { s: sums for the next hours, l: sums for the next day } over the last ACC.days days. */
+ *  Returns Map id -> { s: next hours, l: next day, d2: two days ahead } (sums) over the last ACC.days days. */
 export function scoreRows(rows, obs, tEnd, isMonitor = () => true, out = new Map()) {
   const t0 = tEnd - ACC.days * 24 * H, seen = new Set();
   for (const r of rows) {
@@ -48,7 +48,7 @@ export function scoreRows(rows, obs, tEnd, isMonitor = () => true, out = new Map
     const key = `${r.station_id}|${L}|${r.valid_utc.slice(0, 13)}`; if (seen.has(key)) continue; seen.add(key);
     const o = obs.get(`${r.station_id}|${r.valid_utc.slice(0, 13)}`), f = first(r.correctedML, r.correctedA, r.corrected);
     if (o == null || f == null) continue;
-    let s = out.get(r.station_id); if (!s) out.set(r.station_id, s = { s: NEW(), l: NEW() });
+    let s = out.get(r.station_id); if (!s) out.set(r.station_id, s = { s: NEW(), l: NEW(), d2: NEW() });
     addPair(s[hz], f, o);
   }
   return out;
@@ -75,17 +75,17 @@ async function main() {
   for (const k of obs.keys()) { const t = Date.parse(k.split('|')[1] + ':00Z'); if (t > tEnd) tEnd = t; }
   if (!tEnd) { console.log('accuracy: no measurements in the logs'); return; }
   const isMon = id => meta.get(id)?.monitor !== false, out = new Map();
-  for (const f of files.filter(f => /fcst-\d{8}T\d{2}\.csv$/.test(f) && fileT(f) >= tEnd - (ACC.days * 24 + 25) * H))
+  for (const f of files.filter(f => /fcst-\d{8}T\d{2}\.csv$/.test(f) && fileT(f) >= tEnd - (ACC.days * 24 + 49) * H))
     scoreRows(parse(await fs.readFile(f, 'utf8')), obs, tEnd, isMon, out);
   const r1 = a => a.map((v, i) => (i === 1 || i === 2 || i === 3 ? +v.toFixed(1) : v)), stations = [];
   for (const [id, s] of out) { const m = meta.get(id); if (!m || m.lat == null) continue;
-    stations.push({ id, name: m.name || id, ...(m.nameTH ? { nameTH: m.nameTH } : {}), lat: m.lat, lon: m.lon, cc: m.cc || '', s: r1(s.s), l: r1(s.l) }); }
+    stations.push({ id, name: m.name || id, ...(m.nameTH ? { nameTH: m.nameTH } : {}), lat: m.lat, lon: m.lon, cc: m.cc || '', s: r1(s.s), l: r1(s.l), d2: r1(s.d2) }); }
   const doc = { version: 1, generated: Date.now(), tEnd, days: ACC.days, horizons: ACC.horizons, bands: ACC.bands, thr: ACC.thr,
     cols: ['n', 'sumAbsErr', 'sumErr', 'sumObs', 'sameBand', 'obsHigh', 'fcHigh', 'caught'], stations };
   await fs.writeFile(path.join(DATA, 'accuracy.json'), JSON.stringify(doc));
   const part = k => { const a = NEW(); for (const s of stations) s[k].forEach((v, i) => a[i] += v); const S = scores(a);
-    return S ? `${k === 's' ? 'next hours' : 'next day'} ${S.n} pairs, colour band right ${(S.bandRight * 100).toFixed(0)} %, typical error ${S.mae.toFixed(1)} µg/m³, bias ${S.bias.toFixed(1)}, hours >= ${ACC.thr} caught ${S.caught} of ${S.high}, false alarms ${S.falseAlarms} of ${S.warned}` : `${k}: none`; };
-  const msg = `${stations.length} monitors, ${ACC.days} days to ${k13(tEnd)}Z; ${part('s')}; ${part('l')} (${((Date.now() - t00) / 1e3).toFixed(1)} s)`;
+    return S ? `${{ s: 'next hours', l: 'next day', d2: 'two days ahead' }[k]} ${S.n} pairs, colour band right ${(S.bandRight * 100).toFixed(0)} %, typical error ${S.mae.toFixed(1)} µg/m³, bias ${S.bias.toFixed(1)}, hours >= ${ACC.thr} caught ${S.caught} of ${S.high}, false alarms ${S.falseAlarms} of ${S.warned}` : `${k}: none`; };
+  const msg = `${stations.length} monitors, ${ACC.days} days to ${k13(tEnd)}Z; ${part('s')}; ${part('l')}; ${part('d2')} (${((Date.now() - t00) / 1e3).toFixed(1)} s)`;
   console.log('accuracy: ' + msg);
 }
 if (import.meta.url === `file://${process.argv[1]}`) main().catch(e => { console.error('accuracy failed:', e.stack || e.message); if (process.env.GITHUB_ACTIONS) console.log(`::warning title=accuracy::accuracy.mjs failed: ${e.message}`); process.exitCode = 0; });

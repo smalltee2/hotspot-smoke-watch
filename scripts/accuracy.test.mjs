@@ -18,14 +18,15 @@ test('sums and scores: band, error, bias, high hours caught and false alarms', (
   assert.equal(s.high, 2); assert.equal(s.caught, 1); assert.equal(s.warned, 2); assert.equal(s.falseAlarms, 1);
   assert.equal(scores(a, 5), null);
 });
-test('log rows: hourly reference monitors only, two horizons, window, one row per station × lead × hour', () => {
+test('log rows: hourly reference monitors only, three horizons, window, one row per station × lead × hour', () => {
   const H = 3600e3, tEnd = Date.parse('2026-11-18T05:00Z'), iso = t => new Date(t).toISOString().slice(0, 16) + 'Z';
   const obs = new Map([['a|2026-11-18T05', 40], ['a|2026-11-18T04', 10], ['b|2026-11-18T05', 40], ['c|2026-11-18T05', 40], ['a|2026-11-10T05', 10]]);
   const row = (id, L, tv, f, x = {}) => ({ station_id: id, lead_h: String(L), valid_utc: iso(tv), obs_basis: 'h', monitor: '1', correctedML: String(f), correctedA: '1', corrected: '1', ...x });
   const rows = [
     row('a', 1, tEnd, 41), row('a', 1, tEnd, 99),          // the repeat is ignored
     row('a', 24, tEnd, 20), row('a', 12, tEnd - H, 12),
-    row('a', 48, tEnd, 40),                                 // lead not scored
+    row('a', 48, tEnd, 40),                                 // two days ahead
+    row('a', 36, tEnd, 40),                                 // lead not scored
     row('a', 6, tEnd + H, 40),                              // after the newest measured hour
     row('a', 6, Date.parse('2026-11-10T05:00Z'), 10),       // older than 7 days
     row('b', 3, tEnd, 40, { monitor: '0' }),                // low-cost sensor
@@ -37,6 +38,8 @@ test('log rows: hourly reference monitors only, two horizons, window, one row pe
   const a = m.get('a');
   assert.equal(a.s[0], 1); assert.equal(a.s[7], 1);         // 41 vs 40: caught
   assert.equal(a.l[0], 2); assert.equal(a.l[5], 1); assert.equal(a.l[7], 0); assert.equal(a.l[1], 20 + 2);
+  assert.equal(a.d2[0], 1); assert.equal(a.d2[7], 1);      // 40 vs 40 at 48 h: caught
+  assert.equal(a.s[0] + a.l[0] + a.d2[0], 4);              // the 36-h row is not counted
   assert.equal(m.get('b').s[0], 1); assert.equal(m.get('b').s[7], 1);
-  assert.deepEqual(ACC.horizons, { s: [1, 3, 6], l: [12, 24] });
+  assert.deepEqual(ACC.horizons, { s: [1, 3, 6], l: [12, 24], d2: [48] });
 });

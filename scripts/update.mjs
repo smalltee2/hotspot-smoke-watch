@@ -18,7 +18,7 @@ import { updateGsmap, mergeIntoMet, webRain, GSCFG } from './gsmap.mjs';
 import { fetchGauges, scoreGauges, gsmapAt, rainFactor } from './thaiwater.mjs';
 import { updatePardig, obsRain } from './pardig.mjs';
 import { ENG2, ML2, loadObsHourly, rows2From, predict2, pmHighCheck } from './ml2.mjs';
-import { loadSilam, asModel, forPage } from './silam.mjs';
+import { loadSilam, seriesAt } from './silam.mjs';
 import { WXML, T2_NAMES, PR_NAMES, T2ENG, PRENG, t2Features, prFeatures, loadWxDataset, storeWxDay, loadWxSeason } from './mlwx.mjs';
 import { downscaleT2, packDEM, T2CFG, t2SeaLevel, t2Bin, t2Down } from './t2down.mjs';
 import { buildLandcover, landcoverAt, packLandcover, unpackLandcover } from './landcover.mjs';
@@ -27,6 +27,7 @@ import { assimilateFires, assimSummary } from './assim.mjs';
 import { LOWCOST, scaleLowcost, updateDaily, lowcostQC } from './lowcost.mjs';
 import { loadDataset, dailyLearn, mlCorrection, mlActive, FEAT_COLS, storeDay, loadSeasonRows, MLCFG } from './ml.mjs';
 import zlib from 'node:zlib';
+import crypto from 'node:crypto';
 
 // ------------------------------------------------------------------ config
 const CFG = {
@@ -57,7 +58,6 @@ const CFG = {
   rk: { residStep: 0.025, coarseStep: 0.1, demStep: 0.05, minStations: 15, K: 16, declusterDeg: 0.25, lowcost: LOWCOST },
   mlField: 0.1,                  // deg; grid of the learned map correction (kriged station corrections, every 3 h to 48 h)   // cell declustering of the regression (0.25° ≈ 28 km cells)  // regression kriging; residual grid and DEM resolution
   logLeads: [1, 3, 6, 12, 24, 48],
-  silamLogLeads: [1, 3, 6, 12, 24, 48, 72, 96],   // h; SILAM vs CAMS at the monitors (silam-*.csv)
   // Air4Thai stations on OpenAQ report PM2.5 as a 24-h running mean, not hourly values (verified on Jan–Apr 2026: flat daily cycle,
   // mean hour-to-hour change 0.4 µg/m3); their correction and kriging therefore compare like with like (24-h means)
   avg24Providers: ['Air4Thai', 'Air4Thai · Bangkok (BMA)'],
@@ -94,7 +94,13 @@ const inBelt = (lat, lon) => { const B = CFG.blendBelt.box; return lon >= B[0] &
 const blendW = (L, s = null) => { const T = s && inBelt(s.lat, s.lon) ? CFG.blendBelt.byLead : CFG.blendByLead; if (L <= T[0][0]) return T[0][1]; if (L >= T[T.length - 1][0]) return T[T.length - 1][1];
   let k = 0; while (T[k + 1][0] < L) k++; const a = (Math.log(L) - Math.log(T[k][0])) / (Math.log(T[k + 1][0]) - Math.log(T[k][0])); return T[k][1] + a * (T[k + 1][1] - T[k][1]); };
 const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
-const DATA = path.join(ROOT, 'data');
+// SILAM mode (scripts/silam_chain.mjs runs this same program a second time): HSW_MODEL=silam takes the SILAM forecast in the place
+// of CAMS, so SILAM goes through every step CAMS does (fire assimilation, Kalman filters, station forecasts, self-learning
+// corrections, map correction, logs), with its own state, logs and outputs under HSW_DATA. Steps that do not depend on the PM2.5
+// model (radar, observed rain, temperature, weather learning) are left to the CAMS run.
+const SIL = process.env.HSW_MODEL === 'silam'; let SILRUN = null;
+const DATA = SIL && process.env.HSW_DATA ? path.resolve(process.env.HSW_DATA) : path.join(ROOT, 'data');
+if (SIL) { CFG.gridBbox = [92.0, 5.4, 110.0, 24.2]; CFG.gridStep = 0.2; }   // SILAM's own 0.2° nodes
 const now = Date.now();
 const HOUR = 3600e3;
 const RUNLOG = [];
@@ -162,12 +168,18 @@ async function appendCSV(p, header, rows) {
   await fs.appendFile(p, (exists ? '' : header + '\n') + rows.map(r => r.join(',')).join('\n') + '\n');
 }
 const sleep = ms => new Promise(r => setTimeout(r, ms));
+// HSW_HTTP_CACHE (a folder, set by the workflow): the CAMS run keeps every reply it got there and the SILAM run that follows reads
+// them back, so both work from the same measurements and the data sources are asked once. A miss falls through to the network.
+const HTTPC = process.env.HSW_HTTP_CACHE || '';
+const httpFile = url => path.join(HTTPC, crypto.createHash('sha1').update(url).digest('hex'));
 async function get(url, opt = {}, tries = 3, waitMs = 2000, timeoutMs = 60e3) {
+  if (HTTPC && SIL && !opt.method) { try { return new Response(await fs.readFile(httpFile(url))); } catch { } }
   for (let i = 0; i < tries; i++) {
     try {
       const r = await fetch(url, { ...opt, signal: AbortSignal.timeout(timeoutMs) });
       if (r.status === 429) { await sleep(5000 * (i + 1)); continue; }
       if (!r.ok) throw new Error(`HTTP ${r.status} ${(await r.text()).slice(0, 200)}`);
+      if (HTTPC && !SIL && !opt.method) { let buf = null; try { buf = Buffer.from(await r.clone().arrayBuffer()); await fs.mkdir(HTTPC, { recursive: true }); await fs.writeFile(httpFile(url), buf); } catch { } }
       return r;
     } catch (e) {
       if (e.cause?.code && !e.message.includes(e.cause.code)) e.message += ` (${e.cause.code})`;   // e.g. ECONNRESET, UND_ERR_CONNECT_TIMEOUT
@@ -340,7 +352,7 @@ const isAvg24 = s => !s.hourly && CFG.avg24Providers.includes(s.provider);   // 
 // ------------------------------------------------------------------ main
 async function main() {
   const T0 = Date.now(); let tPrev = T0, tLab = 'start', tAcc = [];
-  const late = lab => { const min = (Date.now() - T0) / 60e3, over = min > CFG.budget.optionalMin; if (over) log(`time budget: ${lab} skipped, ${min.toFixed(0)} min into the run`); return over; };
+  const late = lab => { if (SIL) return true; const min = (Date.now() - T0) / 60e3, over = min > CFG.budget.optionalMin; if (over) log(`time budget: ${lab} skipped, ${min.toFixed(0)} min into the run`); return over; };
   globalThis.TIMER = lab => { const t = Date.now(); tAcc.push(`${tLab} ${((t - tPrev) / 1000).toFixed(0)} s`); tPrev = t; tLab = lab; if (lab === 'outputs' && process.env.GITHUB_ACTIONS) console.log(`::notice title=timing::${tAcc.join(' · ')}`); };
   if (!process.env.OPENAQ_API_KEY) throw new Error('OPENAQ_API_KEY is not set');
   const state = await readJSON(path.join(DATA, 'state.json'), {});
@@ -382,10 +394,14 @@ async function main() {
   const gridPts = []; for (let iy = 0; iy < ny; iy++) for (let ix = 0; ix < nx; ix++) gridPts.push([g[1] + iy * step, g[0] + ix * step]);
   const stIds = stations.map(s => s.id).join(',');
   const gridKey = `${g.join(',')}|${step}`;
-  if (!state.cams || now - state.cams.at > CFG.camsRefreshH * HOUR || state.cams.stIds !== stIds || state.cams.gridKey !== gridKey) {
+  if (SIL || !state.cams || now - state.cams.at > CFG.camsRefreshH * HOUR || state.cams.stIds !== stIds || state.cams.gridKey !== gridKey) {
     const pts = stations.map(s => [s.lat, s.lon]).concat(gridPts);
     try {
-      const { times, series } = await camsSeries(pts);
+      let times, series;
+      if (SIL) {   // the newest SILAM runs (extracts of scripts/silam.py on the main history folder), at the stations and on its own grid
+        SILRUN = await loadSilam(path.join(ROOT, 'data', 'history'), now, { keep: 3, maxAgeD: 4, log }); if (!SILRUN) throw new Error('no SILAM run extracted');
+        times = SILRUN.times; series = pts.map(([la, lo]) => seriesAt(SILRUN, la, lo));
+      } else ({ times, series } = await camsSeries(pts));
       state.cams = { at: now, times, stIds, gridKey, st: series.slice(0, stations.length), grid: series.slice(stations.length) };
       log(`CAMS refreshed: ${pts.length} points × ${times.length} h`);
     } catch (e) {
@@ -973,10 +989,11 @@ async function main() {
   //    Two versions: C = CAMS (rk, public) and C = CAMS + assimilation increment (rkA): the kriging then corrects only what the
   //    assimilation leaves, so the same error is not corrected twice. The page applies B to the hourly C with a lead-time fade.
   let dem = await readJSON(path.join(DATA, 'static', 'elev.json'), null);
-  const demKey = `${g.join(',')}|${CFG.rk.demStep}`;
+  const demBox = SIL ? [92.0, 5.5, 110.0, 24.0] : g;   // SILAM mode shares the CAMS run's terrain file (its grid reaches 0.1–0.2° further: no elevation there)
+  const demKey = `${demBox.join(',')}|${CFG.rk.demStep}`;
   if (!dem || dem.key !== demKey) {
     try {
-      dem = await buildDEM(g, CFG.rk.demStep, { log, fetchTile: async (z, x, y) =>
+      dem = await buildDEM(demBox, CFG.rk.demStep, { log, fetchTile: async (z, x, y) =>
         Buffer.from(await (await get(`https://s3.amazonaws.com/elevation-tiles-prod/terrarium/${z}/${x}/${y}.png`)).arrayBuffer()) });
       dem.key = demKey;
       await writeJSON(path.join(DATA, 'static', 'elev.json'), dem);
@@ -1062,28 +1079,16 @@ async function main() {
   }
   const rkFineFiles = [];
   const rk = runRK(false), rkA = anyInc ? runRK(true) : null;   // without an increment rkA would equal rk
-  // SILAM (FMI, 0.2°, about 5 days ahead) beside CAMS: the newest runs extracted by scripts/silam.py, through the same map
-  // correction (its own fit to the same monitors, no fire assimilation: SILAM has its own fire emissions); its own page layer
-  let SIL = null, rkS = null;
-  try {
-    SIL = await loadSilam(path.join(DATA, 'history'), now, { log });
-    if (SIL && SIL.times.at(-1) > now + 24 * HOUR) {
-      const SILM = asModel(SIL, stations); Object.defineProperty(SIL, 'model', { value: SILM, enumerable: false });
-      log(`SILAM: run${SIL.runs.length > 1 ? 's' : ''} ${SIL.runs.join(' + ')}, ${SIL.times.length} h to ${new Date(SIL.times.at(-1)).toISOString().slice(0, 13)}Z`);
-      rkS = runRK(false, SILM);
-    } else { if (SIL) log(`SILAM: newest run ends ${new Date(SIL.times.at(-1)).toISOString().slice(0, 13)}Z, too old: layer off`); SIL = null; }
-  } catch (e) { log(`SILAM unavailable: ${e.message}`); SIL = null; rkS = null; }
   for (const [f, obj] of rkFineFiles) { await writeJSON(f, obj); log(`map correction ${path.basename(f)}: ${obj.nx}×${obj.ny} at ${obj.step}°, ${(JSON.stringify(obj).length / 1048576).toFixed(1)} MB`); }
   const gridRaw = hours.map((t, j) => gridPts.map((_, p) => { const v = C.grid[p][i0 + j]; return v == null ? -1 : r1(v); }));
 
   globalThis.TIMER('outputs');
   // 7. outputs
-  // SILAM for the page: from 26 h back (24-h means) to the end of its newest run; removed when there is no current run
-  if (SIL) await writeJSON(path.join(DATA, 'silam.json'), forPage(SIL, now - 26 * HOUR)); else await fs.rm(path.join(DATA, 'silam.json'), { force: true });
   await writeJSON(path.join(DATA, 'latest.json'), {
     generated: now, camsIssued: C.at, bbox: CFG.bbox, runlog: RUNLOG,
     method: { kf: CFG.kf, biasLeadEfoldH: CFG.biasLeadEfoldH, rk: { ...CFG.rk, lowcost: { use: LCc.use, a: LCc.a, b: LCc.b, windowD: LCc.windowD, minDays: LCc.minDays } } },
-    rk, rkA, rkS, silam: SIL ? { file: 'data/silam.json', run: SIL.run, runs: SIL.runs, source: SIL.source, t0: SIL.times[0], t1: SIL.times.at(-1), step: SIL.step } : null, assim: assimSummary(assim), ml: state.ml ? { active: mlOn, weights: state.ml.weights, lastDay: state.ml.lastDay, experts: Object.keys(state.ml.models || {}).concat(season ? ['season'] : []), last: mlRec, field: mlField,
+    model: SIL ? { name: 'SILAM', run: SILRUN?.run, runs: SILRUN?.runs, source: SILRUN?.source } : { name: 'CAMS' },
+    rk, rkA, assim: assimSummary(assim), ml: state.ml ? { active: mlOn, weights: state.ml.weights, lastDay: state.ml.lastDay, experts: Object.keys(state.ml.models || {}).concat(season ? ['season'] : []), last: mlRec, field: mlField,
       v2: state.ml2?.weights ? { published: use2, weights: state.ml2.weights, check: state.ml2.check || null } : null } : null, dem: dem ? { file: 'data/static/elev.json', step: dem.step, source: dem.source } : null,
     t2down: t2Info,
     rainObs: rainInfo,
@@ -1117,19 +1122,6 @@ async function main() {
   const fcstFile = path.join(hdir, `fcst-${stamp}.csv`);   // one file per issue hour: a second run in the same hour must not double-count it
   if (await fs.access(fcstFile).then(() => false, () => true)) await appendCSV(fcstFile, 'issued_utc,valid_utc,station_id,lead_h,cams_raw,corrected,cams24,corr24,blend24,obs_basis,correctedA,blend24A,correctedML,blend24ML,' + FEAT_COLS.join(',') + ',monitor,correctedML1,correctedML2', fRows);
   else log(`forecast log for ${stamp} already written this hour`);
-  // SILAM at the monitors beside CAMS, for the comparison: raw and with its map correction, leads to 96 h (CAMS columns where CAMS
-  // reaches); one file per issue hour, like the forecast log
-  if (SIL && newRun) {
-    const SM = SIL.model, Bf = rkS?.Bf, tI = Math.floor(now / HOUR) * HOUR, sRows = [];
-    stations.forEach((s, i) => { if (!s.monitor) return; const o = outStations[i];
-      const B = Bf ? sampleGrid(Bf, s.lat, s.lon) : null;
-      for (const L of CFG.silamLogLeads) { const tv = tI + L * HOUR, raw = interpT(SIL.times, SM.st[i], tv); if (raw == null) continue;
-        const w = Math.exp(-Math.max(0, tv - (rkS?.t ?? tv)) / HOUR / CFG.biasLeadEfoldH), j = jNow + L;
-        sRows.push([new Date(tI).toISOString().slice(0, 13) + ':00Z', new Date(tv).toISOString().slice(0, 13) + ':00Z', s.id, L, o.avg24 ? '24' : 'h', 1,
-          r1(raw), B != null ? r1(Math.max(0, (raw + 1) * Math.exp(w * B) - 1)) : '', j < hours.length ? (o.raw[j] ?? '') : '',
-          j < hours.length ? (o.corrM?.[j] ?? o.corrA?.[j] ?? o.corr[j] ?? '') : '']); } });
-    await appendCSV(path.join(hdir, `silam-${stamp}.csv`), 'issued_utc,valid_utc,station_id,lead_h,obs_basis,monitor,silam_raw,silam_map,cams_raw,cams_published', sRows);
-  }
   await writeJSON(path.join(DATA, 'state.json'), state);
   log(`done: ${outStations.length} stations, ${hot.length} hotspots, grid ${nx}×${ny}×${hours.length}`);
 }

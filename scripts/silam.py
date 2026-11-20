@@ -34,6 +34,30 @@ def get(url, timeout=120):
         return r.read()
 
 
+def need_netcdf4():
+    """Makes `import netCDF4` work; returns an error text or None. pip installs into the user's site folder (the runner's system
+    Python is not writable); that folder may not exist when Python starts, so it is added to the import path afterwards."""
+    import importlib, site, subprocess
+    try:
+        importlib.import_module('netCDF4')
+        return None
+    except ImportError:
+        pass
+    base = [sys.executable, '-m', 'pip', 'install', '--quiet', '--disable-pip-version-check', '--user', 'netCDF4']
+    r = subprocess.run(base, capture_output=True, text=True)
+    if r.returncode and 'externally-managed' in (r.stderr + r.stdout):
+        r = subprocess.run(base + ['--break-system-packages'], capture_output=True, text=True)   # PEP 668 Pythons: a user install only
+    if r.returncode:
+        return (r.stderr or r.stdout).strip()[-300:]
+    site.addsitedir(site.getusersitepackages())
+    importlib.invalidate_caches()
+    try:
+        importlib.import_module('netCDF4')
+        return None
+    except ImportError as e:
+        return f'installed but not importable: {e}'
+
+
 def runs():
     """Run dates (YYYYMMDD) with all DAYS PM2.5 files present, newest first."""
     xml = get(f'{BUCKET}/?list-type=2&delimiter=/&prefix=global/').decode()
@@ -96,13 +120,9 @@ def main():
     todo = [(d, f) for d, f in rs[:2] if not os.path.exists(os.path.join(HIST, f'{d[:4]}-{d[4:6]}', f'silam-{d}.json'))]
     if not todo:
         return print(f'SILAM: runs {", ".join(d for d, _ in rs[:2])} already extracted')
-    try:   # the reader is installed only when a new run is to be read (about once a day)
-        import netCDF4  # noqa: F401
-    except ImportError:
-        import subprocess
-        r = subprocess.run([sys.executable, '-m', 'pip', 'install', '--quiet', '--disable-pip-version-check', 'netCDF4'], capture_output=True, text=True)
-        if r.returncode:
-            return warn(f'netCDF4 could not be installed: {r.stderr.strip()[-300:]}')
+    err = need_netcdf4()   # the reader is installed only when a new run is to be read (about once a day)
+    if err:
+        return warn(f'netCDF4 could not be installed: {err}')
     for date, files in todo:
         out = os.path.join(HIST, f'{date[:4]}-{date[4:6]}', f'silam-{date}.json')
         try:

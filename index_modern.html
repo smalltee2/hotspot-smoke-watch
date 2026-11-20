@@ -5,6 +5,7 @@
 <meta name="build" content="dev">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>SEA-HAF · Southeast Asia Hybrid Air-quality Forecast</title>
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anuphan:wght@500;600;700&family=IBM+Plex+Sans+Thai+Looped:wght@400;500;600&display=swap">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
@@ -1558,6 +1559,17 @@ header .status>.btn{--water-fill:.72}
 .alert.c2.many .fc2{grid-column:2/-1}
 .fc2.many .d{padding:3px 2px 4px}
 .fc2.many .d b{font-size:var(--fs-base)}
+/* SEA-HAF logo (assets/): the mark beside the title, colours of the logo (Ember #E5560F, Smoke #33414F; dark #FF7A33, #C9D3DC) */
+.brand .mark{flex:none;width:28px;height:28px;align-self:center}
+.brand .mark .i{stroke:#33414F}.brand .mark .e{stroke:#E5560F}.brand .mark .d{fill:#E5560F}
+.brand h1 .dash{color:#E5560F}
+.aboutlogo{display:block;width:min(100%,300px);height:auto;margin:2px 0 14px}
+.aboutlogo.dk{display:none}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .brand .mark .i{stroke:#C9D3DC}:root:not([data-theme="light"]) .brand .mark .e{stroke:#FF7A33}:root:not([data-theme="light"]) .brand .mark .d{fill:#FF7A33}:root:not([data-theme="light"]) .brand h1 .dash{color:#FF7A33}
+  :root:not([data-theme="light"]) .aboutlogo.lt{display:none}:root:not([data-theme="light"]) .aboutlogo.dk{display:block}}
+:root[data-theme="dark"] .brand .mark .i{stroke:#C9D3DC}:root[data-theme="dark"] .brand .mark .e{stroke:#FF7A33}:root[data-theme="dark"] .brand .mark .d{fill:#FF7A33}:root[data-theme="dark"] .brand h1 .dash{color:#FF7A33}
+:root[data-theme="dark"] .aboutlogo.lt{display:none}:root[data-theme="dark"] .aboutlogo.dk{display:block}
+@media (max-width:860px){.brand .mark{width:22px;height:22px}}
 </style>
 <script type="module" src="glass/boot.mjs"></script>
 </head>
@@ -1567,7 +1579,8 @@ header .status>.btn{--water-fill:.72}
 <div id="locPop" class="locpop" hidden role="dialog" aria-modal="true" aria-labelledby="locPopT"><div class="lpcard" id="locPopCard"></div></div>
 <header>
   <div class="brand">
-    <h1>SEA-<span>HAF</span></h1>
+    <svg class="mark" viewBox="0 0 64 64" aria-hidden="true" focusable="false"><path class="i" d="M44 20 A12 12 0 1 0 32 32" fill="none" stroke-width="9" stroke-linecap="round"/><path class="e" d="M32 32 A12 12 0 1 1 20 44" fill="none" stroke-width="9" stroke-linecap="round"/><circle class="d" cx="50.5" cy="10.5" r="4.5"/></svg>
+    <h1>SEA<span class="dash">-</span>HAF</h1>
     <small class="tagline" data-th="พยากรณ์ฝุ่น PM&lt;sub&gt;2.5&lt;/sub&gt; ควันไฟ และอากาศ รายชั่วโมง">Hour-by-hour forecast of PM<sub>2.5</sub>, smoke and weather</small>
   </div>
   <div class="status">
@@ -1724,6 +1737,8 @@ header .status>.btn{--water-fill:.72}
     </section>
 
     <section class="pane about pub-only" id="pane-about" role="tabpanel" hidden>
+      <img class="aboutlogo lt" src="assets/sea-haf-logo-light.svg" alt="SEA-HAF · Southeast Asia Hybrid Air Quality Forecast" width="242" height="64">
+      <img class="aboutlogo dk" src="assets/sea-haf-logo-dark.svg" alt="SEA-HAF · Southeast Asia Hybrid Air Quality Forecast" width="242" height="64">
       <h3 data-th="หน้านี้แสดงอะไร">What this page shows</h3>
       <p class="note" data-th="จุดไฟป่าและการเผาจากดาวเทียมของ NASA และพยากรณ์ฝุ่น PM&lt;sub&gt;2.5&lt;/sub&gt; ล่วงหน้า 2 วัน ที่ปรับให้ตรงกับค่าที่สถานีตรวจวัดวัดได้จริง อัปเดตทุกชั่วโมง">Fires seen by NASA satellites, and a two-day PM<sub>2.5</sub> forecast adjusted to what monitoring stations actually measure. Updated every hour.</p>
       <h3 data-th="วิธีใช้">How to use it</h3>

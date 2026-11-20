@@ -48,7 +48,8 @@ See `README.md` for the method and data sources.
   no larger RMSE, over 14 days. Don't switch it on by hand or loosen the check to make it pass; judge PM2.5 changes by high hours
   caught and false alarms as well as RMSE (`analysis/highpm_replay.py` reruns the diagnosis on any copy of the logs).
 - SILAM (FMI) is a second model beside CAMS: `scripts/silam.py` extracts the runs (the one Python step: NetCDF-4), then
-  `scripts/silam_chain.mjs` runs `update.mjs` again with `HSW_MODEL=silam`, so SILAM goes through the same program as CAMS. Don't
+  `scripts/silam_chain.mjs` runs `update.mjs` again with `HSW_MODEL=silam`, so SILAM goes through the same program as CAMS
+  (without the fire assimilation: SILAM has its own fire emissions). Don't
   write SILAM-only copies of pipeline steps: change `update.mjs` once and both models get it; guard with `SIL` only what must differ.
   Its state is `state.silamState` (keys `MODEL_KEYS` in `silam_chain.mjs`: add a key there when `update.mjs` gets new per-model
   state), logs in `data/history/silam/`, page files in `data/silam/`. The default page data, the warnings shown first and the

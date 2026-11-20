@@ -101,6 +101,7 @@ const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..')
 const SIL = process.env.HSW_MODEL === 'silam'; let SILRUN = null;
 const DATA = SIL && process.env.HSW_DATA ? path.resolve(process.env.HSW_DATA) : path.join(ROOT, 'data');
 if (SIL) { CFG.gridBbox = [92.0, 5.4, 110.0, 24.2]; CFG.gridStep = 0.2; }   // SILAM's own 0.2° nodes
+if (SIL) CFG.assimilate = false;   // no fire-emission assimilation for SILAM: it carries its own fire emissions (decided 21 Nov 2026)
 const now = Date.now();
 const HOUR = 3600e3;
 const RUNLOG = [];

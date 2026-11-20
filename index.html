@@ -423,6 +423,11 @@ td.num{text-align:right;font-family:var(--font-data);font-variant-numeric:tabula
 .accbadge{position:relative;display:grid;place-items:center;width:32px;height:17px;border-radius:4px;background:var(--panel);color:var(--fg);border:1px solid var(--fg);font:600 10px/1 var(--font-data);overflow:hidden;box-shadow:0 1px 2px rgba(0,0,0,.3)}
 .accbadge b{position:relative}
 .accbadge i{position:absolute;left:0;bottom:0;height:3px;background:var(--focus)}
+/* cards with more than two periods (SILAM, about 5 days): the periods go on their own row under the name */
+.alert.c2.many{grid-template-columns:8px minmax(0,1fr)}
+.alert.c2.many .fc2{grid-column:2/-1}
+.fc2.many .d{padding:3px 2px 4px}
+.fc2.many .d b{font-size:.9rem}
 </style>
 </head>
 <body>
@@ -3062,10 +3067,11 @@ function renderStations(){
   const st24=s=>{const st=seriesStats(sCorr(s),P.data.hours,now), F=sFc24(s); if(!F) return st;
     let best=0,tB=null; P.data.hours.forEach((t,i)=>{const v=F[i]; if(t>now&&v!=null&&v>best){best=v;tB=t;}}); return best>0?{...st,mean24:best,tMean:tB}:st;};
   const H=P.data.hours, tNow=Math.floor(now/HR)*HR;
-  const rows=(ref.length?ref:inReg).map(s=>{const F=sFc24(s), ws=WIN.map(([a,b])=>F?winMax(H,F,tNow,a,b,true):winMax(H,sCorr(s),tNow,a,b,false)); return {s,ws};})
-    .sort((x,y)=>Math.max(y.ws[0]?.v??0,y.ws[1]?.v??0)-Math.max(x.ws[0]?.v??0,x.ws[1]?.v??0)).slice(0,15);
+  const W=wins(), top=ws=>Math.max(0,...ws.map(w=>w?.v??0));
+  const rows=(ref.length?ref:inReg).map(s=>{const F=sFc24(s), ws=W.map(([a,b])=>F?winMax(H,F,tNow,a,b,true):winMax(H,sCorr(s),tNow,a,b,false)); return {s,ws};})
+    .sort((x,y)=>top(y.ws)-top(x.ws)).slice(0,15);
   $('stList').innerHTML=rows.length?rows.map(({s,ws})=>card2({attr:`data-sid="${s.id}"`,name:stName(s),tag:(s.cc||'')+(s.monitor?'':T(' · low-cost sensor',' · เซนเซอร์ราคาประหยัด')),ws,
-      wx:WIN.map(([a,b])=>wxWinPt(s.lat,s.lon,tNow,a,b)),
+      W,wx:W.map(([a,b])=>wxWinPt(s.lat,s.lon,tNow,a,b)),
       sub:s.obs?`${s.avg24?T('measured now (24-h avg)','วัดได้ขณะนี้ (เฉลี่ย 24 ชม.)'):T('measured now','วัดได้ขณะนี้')} ${fmtN(s.obs.v)}`:T('no recent reading','ไม่มีค่าล่าสุด')})).join('')
     :T('No reporting stations in this region.','ไม่มีสถานีที่รายงานข้อมูลในพื้นที่นี้');
   if(ref.length&&lowN) $('stList').insertAdjacentHTML('beforeend',`<p class="note">${T(`Reference monitors only. ${lowN} low-cost sensors are on the map (faded) but not ranked here.`,`จัดอันดับเฉพาะสถานีมาตรฐาน มีเซนเซอร์ราคาประหยัด ${lowN} จุดแสดงบนแผนที่ (สีจาง) แต่ไม่นำมาจัดอันดับ`)}</p>`);
@@ -3179,6 +3185,10 @@ function renderSummary(){
 // ---- the next 24 h and 24–48 h side by side (provinces, towns, stations alike): highest 24-h mean PM2.5 whose 24 h end in the
 // period (a series that already holds 24-h means is used as it is), with the lowest–highest temperature and rain total of the period
 const WIN=[[0,24],[24,48]];
+// periods of the forecast cards: the next 24 h and 24–48 h (CAMS); the SILAM data set runs about 5 days, so its cards get one
+// period per day up to the end of its forecast (at most 6)
+function wins(){ const H=P.data&&P.data.hours; if(!P.data?.isSilam||!H?.length) return WIN;
+  const ahead=(H[H.length-1]-Math.floor(Date.now()/HR)*HR)/HR, out=[]; for(let a=0;a<ahead&&out.length<6;a+=24) out.push([a,a+24]); return out.length>=2?out:WIN; }
 function winMax(H,ser,tNow,a,b,is24){ let best=null,tB=null;
   for(let i=0;i<H.length;i++){ const t=H[i]; if(t<=tNow+a*HR||t>tNow+b*HR) continue; let v=null;
     if(is24) v=ser[i]; else { let s=0,n=0; for(let j=Math.max(0,i-23);j<=i;j++){ const x=ser[j]; if(x!=null){s+=x;n++;} } v=n>=18?s/n:null; }
@@ -3194,21 +3204,22 @@ function wxWinArea(H,wx,tNow,a,b){ if(!wx) return null; let lo=Infinity,hi=-Infi
   H.forEach((t,i)=>{ if(t<=tNow+a*HR||t>tNow+b*HR) return; const x=wx.t2[i], p=wx.pr[i]; if(x!=null){lo=Math.min(lo,x);hi=Math.max(hi,x);} if(p!=null){r+=p;n++;}
     const h=bkkHour(t); if(wx.cc&&wx.cc[i]!=null&&h>=7&&h<=18){cs+=wx.cc[i];cn++;} });
   return n?{lo:isFinite(lo)?lo:null,hi:isFinite(hi)?hi:null,rain:r,cc:cn?cs/cn:null}:null; }
-function fc2(ws,wx){ const lab=[T('Next 24 h','24 ชม. แรก'),T('24–48 h','24–48 ชม.')];
-  return `<div class="fc2">${ws.map((w,k)=>{ const x=wx?.[k];
-    return `<div class="d"><span class="h">${lab[k]}</span><span class="ic">${w?pmIcon(w.v):''}${x?wxDayIcon(x)||'':''}</span>${w?`<b>${valNum(w.v)}</b><i class="bar" style="background:${bandFor(w.v).color}"></i>`:'<b>–</b><i class="bar"></i>'}${x?`${x.lo!=null?`<span class="w">${Math.round(x.lo)}–${Math.round(x.hi)} °C</span>`:''}<span class="w">${x.rain<0.1?T('no rain','ไม่มีฝน'):`${T('rain','ฝน')} ${x.rain<10?x.rain.toFixed(1):Math.round(x.rain)} ${T('mm','มม.')}`}</span>`:''}</div>`; }).join('')}</div>`; }
-function card2({attr,name,tag,sub,ws,wx}){ const worst=ws.reduce((m,w)=>w&&(m==null||w.v>m)?w.v:m,null);
-  return `<div class="alert c2" ${attr}><i class="sev" style="background:${worst!=null?bandFor(worst).color:'var(--line)'}"></i>
-    <div style="min-width:0"><div class="name">${esc(name)} ${tag?`<span class="note">${esc(tag)}</span>`:''}</div><div class="sub">${worst!=null?pill(worst)+' ':''}${sub||''}</div></div>${fc2(ws,wx)}</div>`; }
+function fc2(ws,wx,W=WIN){ const many=W.length>2;   // five columns on a phone: short labels, the hours in the tooltip
+  const lab=W.map(([a,b],k)=>many?T(`Day ${k+1}`,`วันที่ ${k+1}`):k===0?T('Next 24 h','24 ชม. แรก'):T(`${a}–${b} h`,`${a}–${b} ชม.`)), tip=W.map(([a,b])=>T(`highest 24-h mean, ${a}–${b} h ahead`,`ค่าเฉลี่ย 24 ชม. สูงสุด ช่วง ${a}–${b} ชม. ข้างหน้า`));
+  return `<div class="fc2${ws.length>2?' many':''}"${ws.length>2?` style="grid-template-columns:repeat(${ws.length},minmax(0,1fr))"`:''}>${ws.map((w,k)=>{ const x=wx?.[k];
+    return `<div class="d"${many?` title="${tip[k]}"`:''}><span class="h">${lab[k]}</span><span class="ic">${w?pmIcon(w.v):''}${x?wxDayIcon(x)||'':''}</span>${w?`<b>${valNum(w.v)}</b><i class="bar" style="background:${bandFor(w.v).color}"></i>`:'<b>–</b><i class="bar"></i>'}${x?`${x.lo!=null?`<span class="w">${Math.round(x.lo)}–${Math.round(x.hi)} °C</span>`:''}<span class="w">${x.rain<0.1?T('no rain','ไม่มีฝน'):`${T('rain','ฝน')} ${x.rain<10?x.rain.toFixed(1):Math.round(x.rain)} ${T('mm','มม.')}`}</span>`:''}</div>`; }).join('')}</div>`; }
+function card2({attr,name,tag,sub,ws,wx,W}){ const worst=ws.reduce((m,w)=>w&&(m==null||w.v>m)?w.v:m,null);
+  return `<div class="alert c2${ws.length>2?' many':''}" ${attr}><i class="sev" style="background:${worst!=null?bandFor(worst).color:'var(--line)'}"></i>
+    <div style="min-width:0"><div class="name">${esc(name)} ${tag?`<span class="note">${esc(tag)}</span>`:''}</div><div class="sub">${worst!=null?pill(worst)+' ':''}${sub||''}</div></div>${fc2(ws,wx,W)}</div>`; }
 function setWarnView(v){ if(!['prov','town','station'].includes(v)) v='prov'; $('warnView').value=v; store.set('hsw.warnView',v);
   for(const k of ['prov','town','station']) $('wv-'+k).hidden=k!==v; }
 function renderProvList(A){
   const box=$('provList'); if(!A){box.innerHTML='';return;} const H=A.H, tNow=Math.floor(Date.now()/HR)*HR, iNow=H.findIndex(t=>t>=tNow);
-  const nm=g=>g.p?provName(g.p):g.name;
-  const rows=[...A.groups.entries()].filter(([id])=>id!=='__all').map(([id,g])=>({id,g,ws:WIN.map(([a,b])=>winMax(H,g.mean,tNow,a,b,false))}))
-    .sort((x,y)=>Math.max(y.ws[0]?.v??0,y.ws[1]?.v??0)-Math.max(x.ws[0]?.v??0,x.ws[1]?.v??0));
+  const nm=g=>g.p?provName(g.p):g.name, W=wins(), top=ws=>Math.max(0,...ws.map(w=>w?.v??0));
+  const rows=[...A.groups.entries()].filter(([id])=>id!=='__all').map(([id,g])=>({id,g,ws:W.map(([a,b])=>winMax(H,g.mean,tNow,a,b,false))}))
+    .sort((x,y)=>top(y.ws)-top(x.ws));
   box.innerHTML=rows.length?rows.map(r=>card2({attr:`data-area="${esc(r.id)}"`,name:nm(r.g),tag:CN[r.g.p?.c]||'',
-      sub:iNow>=0&&r.g.mean[iNow]!=null?`${T('now','ขณะนี้')} ${fmtN(r.g.mean[iNow])}`:'',ws:r.ws,wx:WIN.map(([a,b])=>wxWinArea(H,r.g.wx,tNow,a,b))})).join('')
+      sub:iNow>=0&&r.g.mean[iNow]!=null?`${T('now','ขณะนี้')} ${fmtN(r.g.mean[iNow])}`:'',ws:r.ws,W,wx:W.map(([a,b])=>wxWinArea(H,r.g.wx,tNow,a,b))})).join('')
     :`<p class="note">${T('Pick a region with provinces in Settings to list them here.','เลือกพื้นที่ที่มีจังหวัดในแท็บตั้งค่าเพื่อแสดงรายการจังหวัด')}</p>`;
   box.querySelectorAll('.alert[data-area]').forEach(el=>el.onclick=()=>{areaSel=el.dataset.area; renderAreaTrend(); $('areaTrend').scrollIntoView?.({behavior:'smooth',block:'start'});});
 }
@@ -3217,10 +3228,11 @@ function renderWarnings(){
   if(!S.sim&&!S.hots.length&&!P.data){$('warnList').innerHTML=`<p class="note">${PUBLIC?(LOADFAIL?failTxt():T('Loading the latest data…','กำลังโหลดข้อมูลล่าสุด…')):T('No run yet. Press <b>Load live data</b>, or <b>Run demo</b> in Settings.','ยังไม่มีผล กด <b>โหลดข้อมูลล่าสุด</b> หรือ <b>ทดลองด้วยข้อมูลจำลอง</b> ในแท็บตั้งค่า')}</p>`;$('nearList').textContent='–';return;}
   const total=S.recep.some(r=>r.stT);   // live data: rank by total PM2.5; demo / no map data: fire smoke only (as before)
   const HT=total?P.data.hours:(S.sim?S.sim.hours:[]), tNow=Math.floor(Date.now()/HR)*HR, iNow=HT.findIndex(t=>t>=tNow);
-  const items=(total?S.recep.filter(r=>r.stT):S.recep.filter(r=>r.st.peak>=1)).map(r=>{const ser=total?r.tot:r.series; return {r,ws:WIN.map(([a,b])=>winMax(HT,ser,tNow,a,b,false))};})
-    .sort((x,y)=>Math.max(y.ws[0]?.v??0,y.ws[1]?.v??0)-Math.max(x.ws[0]?.v??0,x.ws[1]?.v??0)).slice(0,25);
+  const W=total?wins():WIN, top=ws=>Math.max(0,...ws.map(w=>w?.v??0));
+  const items=(total?S.recep.filter(r=>r.stT):S.recep.filter(r=>r.st.peak>=1)).map(r=>{const ser=total?r.tot:r.series; return {r,ws:W.map(([a,b])=>winMax(HT,ser,tNow,a,b,false))};})
+    .sort((x,y)=>top(y.ws)-top(x.ws)).slice(0,25);
   $('warnList').innerHTML = items.length? items.map(({r,ws})=>{const fire=r.st.mean24, ser=total?r.tot:r.series, vn=iNow>=0?ser?.[iNow]:null;
-    return card2({attr:`data-name="${esc(r.name)}"`,name:townName(r),tag:r.cc,ws,wx:WIN.map(([a,b])=>wxWinPt(r.lat,r.lon,tNow,a,b)),
+    return card2({attr:`data-name="${esc(r.name)}"`,name:townName(r),tag:r.cc,ws,W,wx:W.map(([a,b])=>wxWinPt(r.lat,r.lon,tNow,a,b)),
       sub:`${vn!=null?`${T('now','ขณะนี้')} ${fmtN(vn)}`:''}${total?`${vn!=null?' · ':''}${T('from fires','จากไฟ')} ${fire>=0.5?fmtN(fire):'< 0.5'}`:''}`});}).join('')
     : `<p class="note">${total?T('No forecast at the towns of this region yet.','ยังไม่มีค่าพยากรณ์ที่เมืองในพื้นที่นี้'):T('No town gets more than 1 µg/m³ of fire smoke in the forecast window (fire smoke only; for total PM₂.₅ see the map and the stations).','ไม่มีเมืองใดได้รับควันไฟเกิน 1 µg/m³ ในช่วงพยากรณ์ (เฉพาะควันไฟ ดูค่ารวมที่แผนที่และสถานีตรวจวัด)')}</p>`;
   $('warnList').querySelectorAll('.alert').forEach(el=>el.onclick=()=>focusTown(el.dataset.name));

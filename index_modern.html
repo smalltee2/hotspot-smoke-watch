@@ -1570,6 +1570,12 @@ header .status>.btn{--water-fill:.72}
 :root[data-theme="dark"] .brand .mark .i{stroke:#C9D3DC}:root[data-theme="dark"] .brand .mark .e{stroke:#FF7A33}:root[data-theme="dark"] .brand .mark .d{fill:#FF7A33}:root[data-theme="dark"] .brand h1 .dash{color:#FF7A33}
 :root[data-theme="dark"] .aboutlogo.lt{display:none}:root[data-theme="dark"] .aboutlogo.dk{display:block}
 @media (max-width:860px){.brand .mark{width:22px;height:22px}}
+.maplogo{pointer-events:none;padding:4px 7px 3px;border-radius:8px;background:color-mix(in srgb,var(--panel) 72%,transparent);line-height:0}
+.maplogo img{display:block;width:118px;height:auto}
+.maplogo img.dk{display:none}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .maplogo img.lt{display:none}:root:not([data-theme="light"]) .maplogo img.dk{display:block}}
+:root[data-theme="dark"] .maplogo img.lt{display:none}:root[data-theme="dark"] .maplogo img.dk{display:block}
+@media (max-width:860px){.maplogo img{width:96px}}
 </style>
 <script type="module" src="glass/boot.mjs"></script>
 </head>
@@ -1581,7 +1587,7 @@ header .status>.btn{--water-fill:.72}
   <div class="brand">
     <svg class="mark" viewBox="0 0 64 64" aria-hidden="true" focusable="false"><path class="i" d="M44 20 A12 12 0 1 0 32 32" fill="none" stroke-width="9" stroke-linecap="round"/><path class="e" d="M32 32 A12 12 0 1 1 20 44" fill="none" stroke-width="9" stroke-linecap="round"/><circle class="d" cx="50.5" cy="10.5" r="4.5"/></svg>
     <h1>SEA<span class="dash">-</span>HAF</h1>
-    <small class="tagline" data-th="พยากรณ์ฝุ่น PM&lt;sub&gt;2.5&lt;/sub&gt; ควันไฟ และอากาศ รายชั่วโมง">Hour-by-hour forecast of PM<sub>2.5</sub>, smoke and weather</small>
+    <small class="tagline" data-th="พยากรณ์ฝุ่น PM&lt;sub&gt;2.5&lt;/sub&gt; ควันไฟ และอากาศความละเอียดสูง (0.025°) รายชั่วโมง">Hour-by-hour high-resolution (0.025°) forecast of PM<sub>2.5</sub>, smoke and weather</small>
   </div>
   <div class="status">
     <span id="modeChip" class="chip">No data</span>
@@ -3728,6 +3734,13 @@ const LocateCtl=L.Control.extend({options:{position:'topleft'},onAdd(){
       {enableHighAccuracy:true,timeout:15000,maximumAge:60000});};
   return b;}});
 new LocateCtl().addTo(map);
+// the SEA-HAF logo on the map (assets/), so it stays on screenshots and shares: bottom-left on wide screens, top-left under the
+// locate button on phones (the time bar fills the bottom there); light or dark file with the theme; never takes clicks
+const LogoCtl=L.Control.extend({onAdd(){ const d=L.DomUtil.create('div','maplogo');
+  d.innerHTML='<img class="lt" src="assets/sea-haf-logo-light.svg" alt="SEA-HAF" width="242" height="64"><img class="dk" src="assets/sea-haf-logo-dark.svg" alt="" width="242" height="64">'; return d; }});
+{ const mq=matchMedia('(max-width:860px)'); let ctl=null;
+  const place=()=>{ if(ctl) ctl.remove(); ctl=new LogoCtl({position:mq.matches?'topleft':'bottomleft'}).addTo(map); };
+  place(); mq.addEventListener?.('change',place); }
 // ---- pop-up when the page opens: every parameter now and its forecast at the viewer's location
 // (PM2.5 as on the map; 2-m temperature and rain at 0.025° as in the warnings; wind and humidity from ECMWF).
 // The location is read once per visit, only if the browser allows it; it is not sent anywhere. "Show this when the page opens"

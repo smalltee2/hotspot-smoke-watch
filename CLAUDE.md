@@ -47,10 +47,12 @@ See `README.md` for the method and data sources.
   `pmHighCheck` publishes v2 only while it catches at least as many hours >= 37.5 µg/m³, with no larger false-alarm share and
   no larger RMSE, over 14 days. Don't switch it on by hand or loosen the check to make it pass; judge PM2.5 changes by high hours
   caught and false alarms as well as RMSE (`analysis/highpm_replay.py` reruns the diagnosis on any copy of the logs).
-- SILAM (FMI, `scripts/silam.py` + `scripts/silam.mjs`) is a second model beside CAMS, shown as its own layer and logged at the monitors
-  (`silam-*.csv`). Its NetCDF-4 files need the one Python step in the workflow (netCDF4 installed only when a new run is read); the
-  rest of the pipeline stays Node without dependencies. Don't make SILAM the base of the warnings or the accuracy card until the
-  logged comparison with CAMS shows it is at least as good.
+- SILAM (FMI) is a second model beside CAMS: `scripts/silam.py` extracts the runs (the one Python step: NetCDF-4), then
+  `scripts/silam_chain.mjs` runs `update.mjs` again with `HSW_MODEL=silam`, so SILAM goes through the same program as CAMS. Don't
+  write SILAM-only copies of pipeline steps: change `update.mjs` once and both models get it; guard with `SIL` only what must differ.
+  Its state is `state.silamState` (keys `MODEL_KEYS` in `silam_chain.mjs`: add a key there when `update.mjs` gets new per-model
+  state), logs in `data/history/silam/`, page files in `data/silam/`. The default page data, the warnings shown first and the
+  accuracy card stay CAMS until the logged comparison shows SILAM is at least as good.
 - Public page is `/` (redesign), the original layout is `/classic.html`, the developer page `/dev.html`.
 - The redesign's glass menu frames: styles in `index_modern.html` ("Glass menu frames"), motion in `glass/nav.mjs`, WebGL2 water
   (wide layout only) in `glass/water.mjs`, wired by `glass/boot.mjs`; the workflow publishes these three to `_site/glass/`.

@@ -43,3 +43,15 @@ test('log rows: hourly reference monitors only, three horizons, window, one row 
   assert.equal(m.get('b').s[0], 1); assert.equal(m.get('b').s[7], 1);
   assert.deepEqual(ACC.horizons, { s: [1, 3, 6], l: [12, 24], d2: [48] });
 });
+test('daily means: published 24-h mean 24 h and 48 h ahead against the measured 24-h mean (>= 18 hours), not other leads', () => {
+  const H = 3600e3, tEnd = Date.parse('2026-11-18T05:00Z'), iso = t => new Date(t).toISOString().slice(0, 16) + 'Z', obs = new Map();
+  for (let q = 0; q < 24; q++) obs.set(`a|${new Date(tEnd - q * H).toISOString().slice(0, 13)}`, 20);                 // measured 24-h mean 20
+  for (let q = 0; q < 17; q++) obs.set(`b|${new Date(tEnd - q * H).toISOString().slice(0, 13)}`, 40);                 // only 17 hours
+  const row = (id, L, f24) => ({ station_id: id, lead_h: String(L), valid_utc: iso(tEnd), obs_basis: 'h', monitor: '1', correctedML: '20', blend24ML: String(f24) });
+  const m = scoreRows([row('a', 24, 30), row('a', 48, 22), row('a', 12, 99), row('b', 24, 40)], obs, tEnd);
+  const a = m.get('a');
+  assert.equal(a.y1[0], 1); assert.equal(a.y1[4], 0); assert.equal(a.y1[1], 10);   // 30 vs 20: other band, error 10
+  assert.equal(a.y2[0], 1); assert.equal(a.y2[4], 1);                                // 22 vs 20: same band
+  assert.equal(a.l[0], 2);                                                           // the hourly scores are unchanged
+  assert.equal(m.get('b')?.y1?.[0] ?? 0, 0);                                         // too few measured hours
+});

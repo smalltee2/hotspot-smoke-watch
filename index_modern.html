@@ -3234,7 +3234,9 @@ function accGroup(level,lat,lon){ if(!ACCD) return null; const all=ACCD.stations
       g=accGroup('region:'+rg); g.label=T(`no monitor within ${ACC_NEAR_KM} km, so ${REG_N[rg][0]}`,`ไม่มีสถานีในรัศมี ${ACC_NEAR_KM} กม. จึงใช้ค่าของ${REG_N[rg][1]}`); return g; } }
   else if(level.startsWith('region:')){ const rg=level.slice(7); g={label:regName(rg),list:all.filter(s=>s.reg===rg),minN:ACC_MIN}; }
   else g={label:T('Thailand','ประเทศไทย'),list:all,minN:ACC_MIN};
-  const S_=accSum(g.list,'s'), L_=accSum(g.list,'l'), D_=accSum(g.list,'d2'); g.s=accSc(S_.a,g.minN); g.l=accSc(L_.a,g.minN); g.d2=accSc(D_.a,Math.round(g.minN/2)); g.nSt=Math.max(S_.n,L_.n); return g;
+  const S_=accSum(g.list,'s'), L_=accSum(g.list,'l'), D_=accSum(g.list,'d2'); g.s=accSc(S_.a,g.minN); g.l=accSc(L_.a,g.minN); g.d2=accSc(D_.a,Math.round(g.minN/2)); g.nSt=Math.max(S_.n,L_.n);
+  // daily means (24-h, the Thai AQI basis), forecast 24 h and 48 h before (accuracy.json from 23 Nov 2026; older files: none)
+  g.y1=accSc(accSum(g.list,'y1').a,Math.round(g.minN/2)); g.y2=accSc(accSum(g.list,'y2').a,Math.round(g.minN/2)); return g;
 }
 const accPct=x=>Math.round(x*100)+'%';
 const accIn10=(k,n)=>Math.round(10*k/Math.max(1,n));
@@ -3254,11 +3256,16 @@ function accTable(g){ if(g?.out) return `<p class="note">${T('The forecast is ch
     row(T('Warnings that did not happen','เตือนแล้วไม่เกินจริง'),accFA)+
     row(T('Tendency','แนวโน้ม'),accTend)+'</tbody></table></div>'+
     // two days ahead: one line, not a third column (the table must fit a phone); the log keeps no lead beyond 48 h
+    // daily means: the same score on the 24-h mean (what the Thai AQI and the health advice use), fully forecast days only
+    (g.y1||g.y2?`<p class="note accd2">${T('<b>Daily mean</b> (24-h, the Thai AQI basis), colour band right','<b>ค่าเฉลี่ยรายวัน</b> (24 ชม. ฐานของ AQI ไทย) บอกระดับความเข้มข้นถูก')}: `+
+      [g.y1?T(`next day <b>${accPct(g.y1.band)}</b> (±${fmtN(g.y1.mae)} µg/m³)`,`วันพรุ่งนี้ <b>${accPct(g.y1.band)}</b> (±${fmtN(g.y1.mae)} µg/m³)`):'',
+       g.y2?T(`two days ahead <b>${accPct(g.y2.band)}</b> (±${fmtN(g.y2.mae)} µg/m³)`,`ล่วงหน้า 2 วัน <b>${accPct(g.y2.band)}</b> (±${fmtN(g.y2.mae)} µg/m³)`):''].filter(Boolean).join(' · ')+'</p>':'')+
     `<p class="note accd2">${g.d2?T(`<b>Two days ahead</b> (48 h): colour band right <b>${accPct(g.d2.band)}</b> · typical error ±${fmtN(g.d2.mae)} µg/m³ · ${accTend(g.d2)}.`,`<b>ล่วงหน้า 2 วัน</b> (48 ชม.): บอกระดับความเข้มข้นถูก <b>${accPct(g.d2.band)}</b> · คลาดเคลื่อน ±${fmtN(g.d2.mae)} µg/m³ · ${accTend(g.d2)}`)+'<br>':''}${T('Further ahead (days 3–4) is not scored yet: use it for the trend.','ไกลกว่านี้ (วันที่ 3–4) ยังไม่มีผลตรวจ ใช้ดูแนวโน้ม')}</p>`; }
 function accWhere(){ if(ACC_AT) return {...ACC_AT,mine:false,st:true}; if(hereLL) return {lat:hereLL.lat,lon:hereLL.lon,mine:true}; const c=map.getCenter(); return {lat:c.lat,lon:c.lng,mine:false}; }
 function renderAcc(){
   const box=$('accBox'); if(!box) return; box.hidden=!ACCD; if(!ACCD) return;
-  const th=accGroup('th'); $('accHead').textContent=th?.l?T(`Thailand, next day: colour band right ${accPct(th.l.band)}`,`ไทย พยากรณ์วันพรุ่งนี้ บอกระดับความเข้มข้นถูก ${accPct(th.l.band)}`):'';
+  const th=accGroup('th'), y1=th?.y1?T(` (daily mean ${accPct(th.y1.band)})`,` (ค่าเฉลี่ยรายวัน ${accPct(th.y1.band)})`):'';
+  $('accHead').textContent=th?.l?T(`Thailand, next day: colour band right ${accPct(th.l.band)}`,`ไทย พยากรณ์วันพรุ่งนี้ บอกระดับความเข้มข้นถูก ${accPct(th.l.band)}`)+y1:'';
   for(const b of box.querySelectorAll('[data-acc]')) b.setAttribute('aria-pressed',String(b.dataset.acc===ACC_LEVEL));
   let g, extra='';
   if(ACC_LEVEL==='here'){ const w=accWhere(); g=accGroup('here',w.lat,w.lon);

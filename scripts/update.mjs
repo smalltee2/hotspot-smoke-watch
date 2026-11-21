@@ -17,7 +17,7 @@ import { updateRadar, scoreRadar, mergeRadarIntoMet, nowcast as radarNowcast, we
 import { updateGsmap, mergeIntoMet, webRain, GSCFG } from './gsmap.mjs';
 import { fetchGauges, scoreGauges, gsmapAt, rainFactor } from './thaiwater.mjs';
 import { updatePardig, obsRain } from './pardig.mjs';
-import { ENG2, ML2, loadObsHourly, rows2From, predict2, pmHighCheck } from './ml2.mjs';
+import { ENG2, ML2, NAMES2, loadObsHourly, rows2From, predict2, pmHighCheck, setClimatology } from './ml2.mjs';
 import { loadSilam, seriesAt } from './silam.mjs';
 import { WXML, T2_NAMES, PR_NAMES, T2ENG, PRENG, t2Features, prFeatures, loadWxDataset, storeWxDay, loadWxSeason } from './mlwx.mjs';
 import { downscaleT2, packDEM, T2CFG, t2SeaLevel, t2Bin, t2Down } from './t2down.mjs';
@@ -358,6 +358,11 @@ async function main() {
   if (!process.env.OPENAQ_API_KEY) throw new Error('OPENAQ_API_KEY is not set');
   const state = await readJSON(path.join(DATA, 'state.json'), {});
   state.kf ||= {}; state.kfSlow ||= {}; state.obsHist ||= {};
+  // multi-year background of the monitors for the correction v2 (scripts/climatology.mjs, rebuilt monthly); v2 learning
+  // restarts when its inputs change (the stored experts were fitted to the old input list), and its check then counts only
+  // rows logged since
+  { const nC = setClimatology(await readJSON(path.join(DATA, 'static', 'pm-clim.json'), null)); if (nC) log(`station climatology: ${nC} monitors`); }
+  if (state.ml2 && state.ml2.nFeat !== NAMES2.length) { if (state.ml2.weights) log(`PM2.5 correction v2: inputs changed (${state.ml2.nFeat ?? 35} -> ${NAMES2.length}), learning restarts`); state.ml2 = { nFeat: NAMES2.length, since: now }; }
 
   // 1. station list (daily)
   const a4tRetry = state.stations && !state.stations.some(s => s.hourly || s.feed24) && now - (state.a4tTried || 0) > CFG.a4t.retryH * HOUR;
@@ -908,9 +913,9 @@ async function main() {
       // scale as the target; then the daily check that decides whether v2 or the live correction is published
       try {
         const obsH = await loadObsHourly(path.join(DATA, 'history'), dayEnd - 46 * 864e5);
-        state.ml2 ||= {};
+        state.ml2 ||= { nFeat: NAMES2.length, since: now };
         const rec2 = ENG2.dailyLearn(state.ml2, rows2From(rows, obsH), { now, dayStart, dayEnd, label: 'PM2.5 v2', log });
-        const k = state.ml2.check = await pmHighCheck(path.join(DATA, 'history'), dayEnd, obsH);
+        const k = state.ml2.check = await pmHighCheck(path.join(DATA, 'history'), dayEnd, obsH, ML2.checkDays, state.ml2.since || 0);
         const m = `PM2.5 correction v2 check (${k.days} d, ${k.n} station-hours at hourly reference monitors, ${k.high} at >= ${ML2.thr}): caught ${k.hit2} v2 vs ${k.hit1} live, false alarms ${Math.round(k.fa2 * 100)} % vs ${Math.round(k.fa1 * 100)} %, RMSE ${k.rmse2} vs ${k.rmse1} -> ${!k.decided ? 'too few rows yet, live correction kept' : k.ok ? 'v2 published' : 'live correction kept'}`;
         log(m); if (process.env.GITHUB_ACTIONS) console.log(`::notice title=PM2.5 correction v2::${m}`);
         mlRec.v2 = { ...rec2, check: k }; await writeJSON(path.join(DATA, 'history', yday.slice(0, 7), `ml-${yday.replace(/-/g, '')}.json`), mlRec);

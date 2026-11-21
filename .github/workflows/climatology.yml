@@ -1,7 +1,8 @@
 name: Station climatology
 
 # Multi-year PM2.5 background of the monitors (scripts/climatology.mjs → data/static/pm-clim.json): the usual value and the
-# 90th percentile of each station by month and hour, from the last 3 years of Air4Thai and OpenAQ measurements. The correction
+# 90th percentile of each station by month and hour, from the last 3 years of measurements in the OpenAQ archive (its copies
+# of the Air4Thai stations hold 24-h running means; the Air4Thai service itself keeps only 2–3 months). The correction
 # v2 reads it as two of its inputs. Built once, as prior knowledge: the daily-learning experts adapt to what happens after it,
 # so it is not rebuilt on a schedule. "Run workflow" rebuilds it by hand if ever needed (e.g. many new stations).
 on:
@@ -49,6 +50,7 @@ jobs:
           restore-keys: pipeline-state-
       - name: Build the climatology (3 years of Air4Thai and OpenAQ hourly PM2.5)
         env:
+          OPENAQ_API_KEY: ${{ secrets.OPENAQ_API_KEY }}   # to find OpenAQ's copies of the Air4Thai stations (locations API)
           NODE_EXTRA_CA_CERTS: scripts/certs/air4thai-chain.pem   # Let's Encrypt intermediates the Air4Thai server fails to send
         run: node scripts/climatology.mjs
       - name: Commit data/static/pm-clim.json to main

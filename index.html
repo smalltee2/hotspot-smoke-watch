@@ -3385,6 +3385,13 @@ function renderDayBar(){
   bar.innerHTML=groups.map(g=>{ const t=Ts[g.i0], past=Ts.slice(g.i0,g.i0+g.n).filter(x=>x<now-HR/2).length;
     const w=(g.n/n*100).toFixed(3), lab=new Date(t).toLocaleDateString(LOC(),{weekday:'short',day:'numeric',timeZone:'Asia/Bangkok'});
     return `<button type="button" data-k="${g.k}" class="${g.k===ck?'on':''}" style="width:${w}%" title="${esc(new Date(t).toLocaleDateString(LOC(),{weekday:'long',day:'numeric',month:'short',timeZone:'Asia/Bangkok'}))}">${past?`<i class="past" style="width:${(past/g.n*100).toFixed(1)}%"></i>`:''}<span>${esc(lab)}</span></button>`; }).join('');
+  // a short day at either end (e.g. the last 7 hours of a SILAM run) is too narrow for "Wed 25": only the day number there, or no
+  // label when even that does not fit (the button's title still names the day); measured again once the web fonts are in
+  const fit=()=>bar.querySelectorAll('button').forEach(b=>{ const sp=b.querySelector('span'); if(!sp||!b.clientWidth) return;
+    if(sp.offsetWidth>b.clientWidth-4&&!b.dataset.short){ b.dataset.short='1'; b.style.padding='0';
+      sp.textContent=new Date(Ts[groups.find(g=>g.k===+b.dataset.k).i0]).toLocaleDateString(LOC(),{day:'numeric',timeZone:'Asia/Bangkok'}); }
+    if(sp.offsetWidth>b.clientWidth) sp.textContent=''; });
+  fit(); document.fonts?.ready.then(()=>{ if(bar.isConnected) fit(); });
   bar.querySelectorAll('button').forEach(b=>b.onclick=()=>{ const k=+b.dataset.k, hod=cur!=null?Math.round(((cur+BKK)%864e5)/HR):12;
     let best=-1,bd=1e9; Ts.forEach((t,i)=>{ if(dk(t)!==k) return; const d=Math.abs(Math.round(((t+BKK)%864e5)/HR)-hod); if(d<bd){bd=d;best=i;} });
     if(best>=0){ $('slider').value=best; S.hour=best; redrawTime(); } });

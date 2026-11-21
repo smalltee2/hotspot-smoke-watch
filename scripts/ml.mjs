@@ -9,6 +9,8 @@
 //            with n/(n + 20) (empirical-Bayes shrinkage; a simple model for little data)        ≥ 1 day of verified data
 //     week   ridge regression on standardized features, last 7 days                              ≥ 7 days
 //     month  gradient-boosted regression trees, last 30 days                                     ≥ 30 days
+//     hindcast gradient-boosted trees trained once on the CAMS hindcast of the 2024–26 burning seasons (scripts/hindcast.mjs);
+//            fixed (not retrained), active 18 Dec – 30 Apr only                                  when data/static/hc-model.json is there
 //     season gradient-boosted trees on the current Thai season to date plus the same season of earlier years, from our
 //            own forecasts and Air4Thai measurements (training store data/mltrain, kept for 2 years)  ≥ 30 days in the store
 //            Seasons of the Thai Meteorological Department: summer 16 Feb–15 May, rainy 16 May–15 Oct, winter 16 Oct–15 Feb
@@ -20,13 +22,18 @@
 // Feature leakage is avoided: only values available at issue time are used, and scoring is on days after the training data.
 import fs from 'node:fs/promises'; import path from 'node:path';
 import { solve } from './rk.mjs';
+import { hcExpert } from './hindcast.mjs';
+// hindcast expert (scripts/hindcast.mjs): a fixed model trained once on three burning seasons of archived CAMS forecasts; set by
+// update.mjs from data/static/hc-model.json (CAMS run only), never stored in the state; scored and weighted like the others
+let HCM = null;
+export const setHindcastModel = m => { HCM = m && m.trees ? m : null; return !!HCM; };
 
 export const MLCFG = { applyMaxLeadH: 24,   // applied to leads ≤ 24 h only: in the 2024–26 hindcast the learned correction helped at 24 h but not at 48 h
   maxLeadH: 48,   // forecasts are logged (and the experts trained) for leads up to 48 h; no extrapolation beyond
   windows: { day: 3, week: 7, month: 30 }, minDays: { day: 1, week: 7, month: 30 }, shrinkK: 20, ridgeLambda: 3,
   gbm: { nTrees: 150, depth: 3, lr: 0.08, minLeaf: 40, bins: 32, subsample: 0.8, lambda: 1, maxRows: 120000 },
   eta: 2, share: 0.05, clip: Math.LN2, minRowsDay: 300 };
-export const EXPERTS = ['base', 'day', 'week', 'month', 'season'];
+export const EXPERTS = ['base', 'day', 'week', 'month', 'season', 'hindcast'];
 
 // ---------------------------------------------------------------- Thai seasons and the long-term training store
 export function seasonOf(t) {   // Thai Meteorological Department seasons, Thai calendar date
@@ -113,7 +120,7 @@ export async function loadDataset(histDir, meta, { from = 0, to = Infinity, lowc
       const tV = Date.parse(r.valid_utc), tI = Date.parse(r.issued_utc); if (!(tV >= from && tV < to)) continue;
       const o = obs.get(`${r.station_id}|${tV}`); if (o == null) continue;
       const m = meta.get(r.station_id) || {};
-      rows.push({ tIssue: tI, tValid: tV, id: r.station_id, lead: +r.lead_h, F: +r.correctedA, cams: +r.cams_raw, inc: r.inc, fire: r.fire, blh: r.blh, ws: r.ws, pr: r.pr,
+      rows.push({ tIssue: tI, tValid: tV, id: r.station_id, lead: +r.lead_h, F: +r.correctedA, cams: +r.cams_raw, cams24: r.cams24, inc: r.inc, fire: r.fire, blh: r.blh, ws: r.ws, pr: r.pr,
         obs_last: r.obs_last, obs24_last: r.obs24_last, kfAb: r.kfAb, hloc: r.hloc, doy: r.doy, lat: m.lat, lon: m.lon, obs: o, t2: r.t2, rh: r.rh, ws10: r.ws10, wd: r.wd, o_ws: r.o_ws, o_wd: r.o_wd, o_t2: r.o_t2, o_rh: r.o_rh });
     }
   }
@@ -188,7 +195,7 @@ export function predGBM(m, r) {
 }
 export function predictExpert(m, r) {
   if (!m) return 0;
-  return m.type === 'day' ? predDay(m, r) : m.type === 'week' ? predRidge(m, r) : predGBM(m, r);
+  return m.type === 'day' ? predDay(m, r) : m.type === 'week' ? predRidge(m, r) : m.type === 'hindcast' ? hcExpert(m, r, predGBM) : predGBM(m, r);
 }
 
 // ---------------------------------------------------------------- daily learning step
@@ -198,7 +205,7 @@ export function dailyLearn(state, rows, { now, dayStart, dayEnd, season = null, 
   const ml = state.ml ||= { weights: { base: 1 }, models: {}, lastDay: null };
   // 1. score yesterday's models on the newly verified day (out of sample) and update the weights
   const test = rows.filter(r => r.tValid >= dayStart && r.tValid < dayEnd);
-  const models = { ...ml.models, ...(season ? { season } : {}) };
+  const models = { ...ml.models, ...(season ? { season } : {}), ...(HCM ? { hindcast: HCM } : {}) };
   const active = EXPERTS.filter(e => e === 'base' || models[e]);
   const loss = {};
   if (test.length >= 50) {
@@ -230,8 +237,8 @@ export function dailyLearn(state, rows, { now, dayStart, dayEnd, season = null, 
 export function mlCorrection(state, r, season = null) {
   const ml = state.ml; if (!ml) return 0;
   if (!r.x) r = { ...r, x: featureVector(r) };
-  const models = { ...ml.models, ...(season ? { season } : {}) }; let s = 0;
+  const models = { ...ml.models, ...(season ? { season } : {}), ...(HCM ? { hindcast: HCM } : {}) }; let s = 0;
   for (const [e, w] of Object.entries(ml.weights)) if (w > 0 && e !== 'base' && models[e]) s += w * predictExpert(models[e], r);
   return Math.max(-MLCFG.clip, Math.min(MLCFG.clip, s));
 }
-export const mlActive = (state, season = null) => !!state.ml && Object.entries(state.ml.weights || {}).some(([e, w]) => e !== 'base' && w > 0 && (e === 'season' ? !!(season || state.ml.models?.season) : !!state.ml.models?.[e]));
+export const mlActive = (state, season = null) => !!state.ml && Object.entries(state.ml.weights || {}).some(([e, w]) => e !== 'base' && w > 0 && (e === 'season' ? !!(season || state.ml.models?.season) : e === 'hindcast' ? !!HCM : !!state.ml.models?.[e]));

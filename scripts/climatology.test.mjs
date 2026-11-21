@@ -23,3 +23,12 @@ test('OpenAQ archive rows: pm25 only, quoted names with commas, time with offset
   assert.deepEqual(parseOaq(txt), [[Date.parse('2026-03-15T13:00:00Z'), 55.5]]);
   assert.deepEqual(parseOaq(''), []);
 });
+test('OpenAQ copies: the nearest location within 1 km, each location used once', async () => {
+  const { matchCopies } = await import('./climatology.mjs');
+  const st = [{ id: 'a4t:1', lat: 18.79, lon: 98.98 }, { id: 'a4t:2', lat: 18.7918, lon: 98.9818 }, { id: 'a4t:3', lat: 13.75, lon: 100.5 }];
+  const loc = [{ id: 10, lat: 18.7905, lon: 98.9805 }, { id: 11, lat: 18.80, lon: 98.98 }, { id: 12, lat: 13.80, lon: 100.5 }];
+  const m = matchCopies(st, loc, 1.0);
+  assert.equal(m.get('a4t:1'), 10);        // 0.07 km; station 2 is 0.18 km from it, so 10 goes to station 1
+  assert.equal(m.get('a4t:2'), 11);        // the next nearest free location, 0.9 km
+  assert.equal(m.has('a4t:3'), false);     // 5.6 km away: no copy
+});

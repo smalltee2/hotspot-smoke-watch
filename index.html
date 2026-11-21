@@ -145,6 +145,9 @@ td.num{text-align:right;font-family:var(--font-data);font-variant-numeric:tabula
 .daybar button:first-child{border-left:0}
 .daybar button.on{color:var(--fg);font-weight:700;background:color-mix(in srgb,var(--ember) 14%,transparent)}
 .daybar .past{position:absolute;left:0;top:0;bottom:0;background:color-mix(in srgb,var(--muted) 18%,transparent);pointer-events:none}
+/* part of a day without forecast data: hatched; a solid line marks where the forecast ends */
+.daybar .nofc{position:absolute;top:0;bottom:0;pointer-events:none;background:repeating-linear-gradient(135deg,color-mix(in srgb,var(--muted) 22%,transparent) 0 3px,transparent 3px 6px)}
+.daybar .nofc.end{border-left:2px solid var(--muted)}
 .daybar button span{position:relative}
 .scrub .t{font:500 .82rem/1.2 var(--font-data);font-variant-numeric:tabular-nums;text-align:right;min-width:9.5em}
 .scrub .t small{display:block;color:var(--muted);font-size:.7rem}
@@ -1686,6 +1689,8 @@ const curT=()=>S.times[S.hour];
 function idxIn(hours,t){if(!hours||!hours.length||t==null)return -1;const i=Math.round((t-hours[0])/HR);return i>=0&&i<hours.length?i:-1;}
 const simIdx=t=>S.sim?idxIn(S.sim.hours,t):-1;
 const gIdx=t=>P.data?idxIn(P.data.hours,t):-1;
+const slIdx=v=>Math.max(0,Math.min(S.times.length-1,Math.round(v)-(S.slOff||0)));   // slider position -> index in S.times
+const setSl=i=>{ $('slider').value=i+(S.slOff||0); };
 function setTimeline(){
   const keep=curT();
   // SILAM (about 5 days) runs past the smoke run of the page (about 3 days): its time bar follows the SILAM hours; past the smoke
@@ -1694,12 +1699,17 @@ function setTimeline(){
   S.times=S.sim&&!silLong?S.sim.hours:(P.data?P.data.hours:[]);
   if(S.sim&&!silLong&&P.data&&P.data.hours.length) S.times=S.times.filter(t=>t>=P.data.hours[0]);   // emission may start at local midnight, before the map data
   { const d0=todayStart(); const f=S.times.filter(t=>t>=d0); if(f.length) S.times=f; }   // forecast view: the time bar starts today
-  const sl=$('slider'); sl.max=Math.max(0,S.times.length-1);
+  // the slider covers whole Thai calendar days (as the day bar above it): S.slOff positions before the first hour with data; a
+  // position outside the data snaps back to the nearest hour that has it (slIdx / setSl)
+  const sl=$('slider'); { const T0=S.times[0], T1=S.times.at(-1);
+    if(T0==null){ S.slOff=0; sl.max=0; }
+    else { const d0=Math.floor((T0+BKK)/864e5)*864e5-BKK, d1=(Math.floor((T1+BKK)/864e5)+1)*864e5-BKK;
+      S.slOff=Math.round((T0-d0)/HR); sl.max=Math.max(0,Math.round((d1-d0)/HR)-1); } }
   // the hour shown as "now"; a manual refresh, or a view that was on "now", moves to the current hour; a chosen past/forecast hour is kept
   let iNow=S.times.findIndex(h=>h>=Date.now()-HR/2); if(iNow<0) iNow=Math.max(0,S.times.length-1);
   // every load and manual refresh shows the current hour (like Windy); an automatic refresh keeps a past or forecast hour the user chose
   let i=-1; if(S.keepSel&&keep!=null&&S.nowSel!=null&&keep!==S.nowSel) i=S.times.indexOf(keep); if(i<0) i=iNow;
-  S.keepSel=false; S.jumpNow=false; S.nowSel=S.times[iNow]; S.hour=i; sl.value=i; setGibs();
+  S.keepSel=false; S.jumpNow=false; S.nowSel=S.times[iNow]; S.hour=i; setSl(i); setGibs();
 }
 function redrawTime(){if(hereLL&&!$('hereBox').hidden) renderHereBox(); setGibs();
   updateTimeLabel();drawPlume();drawGrid();drawContours();drawTowns();drawStations();drawWind(); if(typeof refreshClickInfo==='function') refreshClickInfo();}
@@ -3376,16 +3386,19 @@ function drawPlume(){
     return [col[0],col[1],col[2],Math.max(col[3],0.5)*255];});
   plume=L.imageOverlay(url,[[so,w],[nTop,eR]],{opacity:1,interactive:false,className:'plume',pane:'field'}).addTo(map);
 }
-// day bar under the time slider (like Windy): one segment per Thai calendar day, width by its hours; hours before now shaded;
+// day bar under the time slider (like Windy): one segment per Thai calendar day, all of the same width (a whole day, as the slider);
+// hours before now shaded; the part of a day without data (end of the forecast, start of the data) hatched, with a line where it ends;
 // the day being shown is highlighted; tapping a day keeps the same hour of the day (or the nearest hour that exists)
 function renderDayBar(){
   const bar=$('dayBar'); if(!bar) return; const Ts=S.times; if(!Ts.length){bar.innerHTML='';return;}
   const dk=t=>Math.floor((t+BKK)/864e5), groups=[]; Ts.forEach((t,i)=>{const k=dk(t); let g=groups[groups.length-1]; if(!g||g.k!==k) groups.push(g={k,i0:i,n:0}); g.n++;});
-  const now=Date.now(), cur=curT(), n=Ts.length, ck=cur!=null?dk(cur):null;
+  const now=Date.now(), cur=curT(), ck=cur!=null?dk(cur):null, nd=groups.length;
   bar.innerHTML=groups.map(g=>{ const t=Ts[g.i0], past=Ts.slice(g.i0,g.i0+g.n).filter(x=>x<now-HR/2).length;
-    const w=(g.n/n*100).toFixed(3), lab=new Date(t).toLocaleDateString(LOC(),{weekday:'short',day:'numeric',timeZone:'Asia/Bangkok'});
-    return `<button type="button" data-k="${g.k}" class="${g.k===ck?'on':''}" style="width:${w}%" title="${esc(new Date(t).toLocaleDateString(LOC(),{weekday:'long',day:'numeric',month:'short',timeZone:'Asia/Bangkok'}))}">${past?`<i class="past" style="width:${(past/g.n*100).toFixed(1)}%"></i>`:''}<span>${esc(lab)}</span></button>`; }).join('');
-  // a short day at either end (e.g. the last 7 hours of a SILAM run) is too narrow for "Wed 25": only the day number there, or no
+    const h0=Math.round(((t+BKK)%864e5)/HR), h1=h0+g.n, pc=h=>(h/24*100).toFixed(1)+'%';   // hours of this day with data: [h0, h1)
+    const gap=(h0>0?`<i class="nofc" style="left:0;width:${pc(h0)}"></i>`:'')+(h1<24?`<i class="nofc end" style="left:${pc(h1)};right:0" title="${esc(T('Forecast ends ','พยากรณ์สิ้นสุด ')+new Date(Ts[g.i0+g.n-1]).toLocaleTimeString(LOC(),{hour:'2-digit',minute:'2-digit',timeZone:'Asia/Bangkok'}))}"></i>`:'');
+    const w=(100/nd).toFixed(3), lab=new Date(t).toLocaleDateString(LOC(),{weekday:'short',day:'numeric',timeZone:'Asia/Bangkok'});
+    return `<button type="button" data-k="${g.k}" class="${g.k===ck?'on':''}" style="width:${w}%" title="${esc(new Date(t).toLocaleDateString(LOC(),{weekday:'long',day:'numeric',month:'short',timeZone:'Asia/Bangkok'}))}">${past?`<i class="past" style="left:${pc(h0)};width:${pc(past)}"></i>`:''}${gap}<span>${esc(lab)}</span></button>`; }).join('');
+  // a day too narrow for "Wed 25" (phones, many days): only the day number there, or no
   // label when even that does not fit (the button's title still names the day); measured again once the web fonts are in
   const fit=()=>bar.querySelectorAll('button').forEach(b=>{ const sp=b.querySelector('span'); if(!sp||!b.clientWidth) return;
     if(sp.offsetWidth>b.clientWidth-4&&!b.dataset.short){ b.dataset.short='1'; b.style.padding='0';
@@ -3394,7 +3407,7 @@ function renderDayBar(){
   fit(); document.fonts?.ready.then(()=>{ if(bar.isConnected) fit(); });
   bar.querySelectorAll('button').forEach(b=>b.onclick=()=>{ const k=+b.dataset.k, hod=cur!=null?Math.round(((cur+BKK)%864e5)/HR):12;
     let best=-1,bd=1e9; Ts.forEach((t,i)=>{ if(dk(t)!==k) return; const d=Math.abs(Math.round(((t+BKK)%864e5)/HR)-hod); if(d<bd){bd=d;best=i;} });
-    if(best>=0){ $('slider').value=best; S.hour=best; redrawTime(); } });
+    if(best>=0){ setSl(best); S.hour=best; redrawTime(); } });
 }
 function updateTimeLabel(){
   renderDayBar();
@@ -3719,11 +3732,11 @@ $('csvIn').onchange=async e=>{const f=e.target.files[0]; if(!f) return;
   try{busy(T('Reading CSV…','กำลังอ่านไฟล์ CSV…'));const hots=rowsToHotspots(parseCSV(await f.text())).filter(h=>inBox(h.lat,h.lon,REGIONS.msea.bbox));
     if(!hots.length) throw new Error('No rows with latitude/longitude inside mainland Southeast Asia.');
     await runModel(hots,'file');}catch(err){busy(null);banner(`<b>${T('Upload failed.','อัปโหลดไม่สำเร็จ')}</b> ${esc(err.message)}`);} e.target.value='';};
-$('slider').oninput=e=>{S.hour=+e.target.value;redrawTime();};
+$('slider').oninput=e=>{ const i=slIdx(+e.target.value); if(i+(S.slOff||0)!==+e.target.value) setSl(i); if(i===S.hour) return; S.hour=i; redrawTime(); };
 let playT=null;
 $('btnPlay').onclick=()=>{if(playT){clearInterval(playT);playT=null;$('btnPlay').textContent='▶';return;}
   if(!S.times.length) return; $('btnPlay').textContent='❚❚';
-  playT=setInterval(()=>{const sl=$('slider');S.hour=(+sl.value+1)%(+sl.max+1);sl.value=S.hour;redrawTime();},450);};
+  playT=setInterval(()=>{S.hour=(S.hour+1)%Math.max(1,S.times.length);setSl(S.hour);redrawTime();},450);};
 for(const id of ['warnkm']) $(id).addEventListener('change',()=>{computeReceptors();renderAll();});
 // keep the view inside the chosen region: panning stops at its edge and zooming out stops when the whole region is in view
 // space taken by the controls that float over the map, so the region is fitted into the clear part

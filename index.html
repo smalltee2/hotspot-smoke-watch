@@ -446,8 +446,6 @@ td.num{text-align:right;font-family:var(--font-data);font-variant-numeric:tabula
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .maplogo img.lt{display:none}:root:not([data-theme="light"]) .maplogo img.dk{display:block}}
 :root[data-theme="dark"] .maplogo img.lt{display:none}:root[data-theme="dark"] .maplogo img.dk{display:block}
 @media (max-width:860px){.maplogo img{width:96px}}
-/* original layout: the time bar spans the bottom of the map, so the logo sits just above it (--scrubH: its measured height) */
-.leaflet-bottom.leaflet-left .maplogo{margin-bottom:calc(var(--scrubH,58px) + 20px)}
 </style>
 </head>
 <body>
@@ -455,7 +453,7 @@ td.num{text-align:right;font-family:var(--font-data);font-variant-numeric:tabula
   <div class="brand">
     <svg class="mark" viewBox="0 0 64 64" aria-hidden="true" focusable="false"><path class="i" d="M44 20 A12 12 0 1 0 32 32" fill="none" stroke-width="9" stroke-linecap="round"/><path class="e" d="M32 32 A12 12 0 1 1 20 44" fill="none" stroke-width="9" stroke-linecap="round"/><circle class="d" cx="50.5" cy="10.5" r="4.5"/></svg>
     <h1>SEA<span class="dash">-</span>HAF</h1>
-    <small class="tagline" data-th="พยากรณ์ฝุ่น PM&lt;sub&gt;2.5&lt;/sub&gt; ควันไฟ และอากาศความละเอียดสูง (0.025°) รายชั่วโมง">Hour-by-hour high-resolution (0.025°) forecast of PM<sub>2.5</sub>, smoke and weather</small>
+    <small class="tagline" data-th="พยากรณ์ฝุ่น PM&lt;sub&gt;2.5&lt;/sub&gt; ควันไฟ และอากาศความละเอียดสูง (0.025°) รายชั่วโมง 3 - 5 วัน">Hour-by-hour high-resolution (0.025°) forecast of PM<sub>2.5</sub>, smoke and weather, 3–5 days ahead</small>
   </div>
   <div class="status">
     <span id="modeChip" class="chip">No data</span>
@@ -2584,13 +2582,25 @@ const LocateCtl=L.Control.extend({options:{position:'topleft'},onAdd(){
       {enableHighAccuracy:true,timeout:15000,maximumAge:60000});};
   return b;}});
 new LocateCtl().addTo(map);
-// the SEA-HAF logo on the map (assets/), so it stays on screenshots and shares: bottom-left on wide screens, top-left under the
-// locate button on phones (the time bar fills the bottom there); light or dark file with the theme; never takes clicks
+// the SEA-HAF logo on the map (assets/), so it stays on screenshots and shares: top-right on every screen size, just left of
+// whatever already sits in that corner (the redesign's legend button, the original layout's legend panel), moved again when
+// those change size; light or dark file with the theme; never takes clicks
 const LogoCtl=L.Control.extend({onAdd(){ const d=L.DomUtil.create('div','maplogo');
   d.innerHTML='<img class="lt" src="assets/sea-haf-logo-light.svg" alt="SEA-HAF" width="242" height="64"><img class="dk" src="assets/sea-haf-logo-dark.svg" alt="" width="242" height="64">'; return d; }});
-{ const mq=matchMedia('(max-width:860px)'); let ctl=null;
-  const place=()=>{ if(ctl) ctl.remove(); ctl=new LogoCtl({position:mq.matches?'topleft':'bottomleft'}).addTo(map); };
-  place(); mq.addEventListener?.('change',place); }
+{ const el=new LogoCtl({position:'topright'}).addTo(map).getContainer();
+  // too narrow to fit beside them without covering the base-map menu (original layout on phones): below them instead
+  const fit=()=>{ const m=map.getContainer().getBoundingClientRect(); let right=10, top=10, below=0;
+    for(const id of ['btnLegToggle','legend']){ const e=document.getElementById(id); if(!e) continue; const r=e.getBoundingClientRect();
+      if(!r.width||!r.height||r.top-m.top>60||r.left<m.left) continue;          // hidden, or not in the top-right corner
+      right=Math.max(right,Math.round(m.right-r.left+8)); below=Math.max(below,Math.round((e.querySelector('summary')||e).getBoundingClientRect().bottom-m.top+6));   // its title row only
+      if(id==='btnLegToggle') top=Math.max(0,Math.round(r.top-m.top+(r.height-el.offsetHeight)/2)); }
+    const bm=document.querySelector('.basemap-switch')?.getBoundingClientRect();
+    const under=!!(bm&&bm.width&&bm.top-m.top<60&&m.right-right-el.offsetWidth<bm.right+8); if(under){ right=10; top=below; }
+    el.style.marginRight=right+'px'; el.style.marginTop=top+'px';
+    el.style.visibility=under&&document.querySelector('#legend details[open]')?'hidden':'';   // out of the way of an opened legend
+  };
+  fit(); addEventListener('resize',fit); map.whenReady(fit); setTimeout(fit,500);
+  const lg=document.getElementById('legend'); if(lg&&window.ResizeObserver) new ResizeObserver(fit).observe(lg); }
 // ---- pop-up when the page opens: every parameter now and its forecast at the viewer's location
 // (PM2.5 as on the map; 2-m temperature and rain at 0.025° as in the warnings; wind and humidity from ECMWF).
 // The location is read once per visit, only if the browser allows it; it is not sent anywhere. "Show this when the page opens"

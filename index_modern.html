@@ -2841,15 +2841,17 @@ const curT=()=>S.times[S.hour];
 function idxIn(hours,t){if(!hours||!hours.length||t==null)return -1;const i=Math.round((t-hours[0])/HR);return i>=0&&i<hours.length?i:-1;}
 const simIdx=t=>S.sim?idxIn(S.sim.hours,t):-1;
 const gIdx=t=>P.data?idxIn(P.data.hours,t):-1;
+const longTimeline=()=>!!(S.sim&&P.data?.hours?.length&&P.data.hours.at(-1)>S.sim.hours.at(-1)&&!['fire','fine'].includes(layerMode()));
 const slIdx=v=>Math.max(0,Math.min(S.times.length-1,Math.round(v)-(S.slOff||0)));   // slider position -> index in S.times
 const setSl=i=>{ $('slider').value=i+(S.slOff||0); };
 function setTimeline(){
   const keep=curT();
-  // SILAM (about 5 days) runs past the smoke run of the page (about 3 days): its time bar follows the SILAM hours; past the smoke
-  // run's end the fire-smoke part reads as none (simIdx −1), the SILAM total itself is there to its last hour
-  const silLong=!!(P.data?.isSilam&&S.sim&&P.data.hours.length&&P.data.hours.at(-1)>S.sim.hours.at(-1));
-  S.times=S.sim&&!silLong?S.sim.hours:(P.data?P.data.hours:[]);
-  if(S.sim&&!silLong&&P.data&&P.data.hours.length) S.times=S.times.filter(t=>t>=P.data.hours[0]);   // emission may start at local midnight, before the map data
+  // the forecast data set (CAMS about 3 days, SILAM about 5) runs past the page's own smoke run (the "Forecast ahead" setting,
+  // 48 h by default): the time bar follows the data set's hours, except on the layers that are the smoke run itself (fire smoke
+  // only, fire detail); past the smoke run's end the fire-smoke part reads as none (simIdx −1)
+  const longTl=S.tlLong=longTimeline();
+  S.times=S.sim&&!longTl?S.sim.hours:(P.data?P.data.hours:[]);
+  if(S.sim&&!longTl&&P.data&&P.data.hours.length) S.times=S.times.filter(t=>t>=P.data.hours[0]);   // emission may start at local midnight, before the map data
   { const d0=todayStart(); const f=S.times.filter(t=>t>=d0); if(f.length) S.times=f; }   // forecast view: the time bar starts today
   // the slider covers whole Thai calendar days (as the day bar above it): S.slOff positions before the first hour with data; a
   // position outside the data snaps back to the nearest hour that has it (slIdx / setSl)
@@ -4957,6 +4959,7 @@ for(const el of document.querySelectorAll('input[name=layer]')) el.addEventListe
   syncLegendToLayer(); if(layerMode()!=='nasa') nasaReset();
   // CAMS <-> SILAM: the page loads the other chain's data set (forecast, corrections, stations, warnings) and redraws everything
   if(P.data&&wantSilam()!==!!P.data.isSilam&&(P.data.isSilam||SILINFO)){ S.keepSel=true; runAuto(false); return; }
+  if(longTimeline()!==!!S.tlLong){ S.keepSel=true; setTimeline(); }   // to or from a smoke-run layer: its time bar is shorter
   redrawTime();});
 syncLegendToLayer();
 // redesigned page: the long explanation of a layer behind an (i) button beside its name (.lyinfo, data-info = the legend block

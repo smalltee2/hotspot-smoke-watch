@@ -25,7 +25,7 @@ import { buildLandcover, landcoverAt, packLandcover, unpackLandcover } from './l
 import { loadModel } from './model.mjs';
 import { assimilateFires, assimSummary } from './assim.mjs';
 import { LOWCOST, scaleLowcost, updateDaily, lowcostQC } from './lowcost.mjs';
-import { loadDataset, dailyLearn, mlCorrection, mlActive, FEAT_COLS, storeDay, loadSeasonRows, MLCFG } from './ml.mjs';
+import { loadDataset, dailyLearn, mlCorrection, mlActive, FEAT_COLS, storeDay, loadSeasonRows, MLCFG, setHindcastModel } from './ml.mjs';
 import zlib from 'node:zlib';
 import crypto from 'node:crypto';
 
@@ -368,6 +368,8 @@ async function main() {
   // restarts when its inputs change (the stored experts were fitted to the old input list), and its check then counts only
   // rows logged since
   { const nC = setClimatology(await readJSON(path.join(DATA, 'static', 'pm-clim.json'), null)); if (nC) log(`station climatology: ${nC} monitors`); }
+  // hindcast expert of the PM2.5 correction (scripts/hindcast.mjs): trained on archived CAMS forecasts, so the CAMS run only
+  if (!SIL && setHindcastModel((await readJSON(path.join(DATA, 'static', 'hc-model.json'), null))?.model)) log('hindcast expert loaded (data/static/hc-model.json)');
   if (state.ml2 && state.ml2.nFeat !== NAMES2.length) { if (state.ml2.weights) log(`PM2.5 correction v2: inputs changed (${state.ml2.nFeat ?? 35} -> ${NAMES2.length}), learning restarts`); state.ml2 = { nFeat: NAMES2.length, since: now }; }
 
   // 1. station list (daily)
@@ -952,12 +954,14 @@ async function main() {
     use2 = mlOn && state.ml2.check?.ok === true;
     log(`PM2.5 correction v2 computed at ${n2} hourly stations (weights ${JSON.stringify(Object.fromEntries(Object.entries(state.ml2.weights).map(([k, v]) => [k, +v.toFixed(3)])))}); ${use2 ? 'published' : 'logged only'}`);
   } catch (e) { use2 = false; log(`PM2.5 correction v2 failed: ${e.message}`); if (process.env.GITHUB_ACTIONS) console.log(`::warning title=PM2.5 correction v2::${e.message}`); }
+  // CAMS 24-h mean ending at hour j (as logged in the forecast log's cams24 column), for the hindcast expert
+  const rawM24 = (arr, j) => { let su = 0, n = 0; for (let q = j - 23; q <= j; q++) { const v = q >= 0 ? arr?.[q] : null; if (v != null) { su += v; n++; } } return n >= 18 ? su / n : null; };
   if (mlOn) {
     let nAdj = 0;
     outStations.forEach((o, i) => {
       const s = stations[i]; if (isAvg24(s) || !o.corrA) return;
       const corrV1 = o.corrA.map((v, j) => { if (v == null || j <= jNow || (hours[j] - t0) / HOUR > MLCFG.applyMaxLeadH) return v;
-        const f = feats(s, i, j), q = mlCorrection(state, { ...f, lead: (hours[j] - t0) / HOUR, F: v, cams: o.raw[j], lat: s.lat, lon: s.lon, x: null }, season);
+        const f = feats(s, i, j), q = mlCorrection(state, { ...f, lead: (hours[j] - t0) / HOUR, F: v, cams: o.raw[j], cams24: rawM24(o.raw, j), tValid: hours[j], lat: s.lat, lon: s.lon, x: null }, season);
         return r1(Math.max(0, (v + 1) * Math.exp(q) - 1)); });
       corr1Of.set(s.id, corrV1); const corrM = use2 && corr2Of.has(s.id) ? corr2Of.get(s.id) : corrV1;   // published: v2 while its check passes, else the live correction; both are logged
       // 24-h means for the AQI: measured hours up to now, ML-corrected forecast after, blended with persistence as before

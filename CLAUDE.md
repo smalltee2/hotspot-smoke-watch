@@ -55,6 +55,10 @@ See `README.md` for the method and data sources.
 - Station climatology (`scripts/climatology.mjs`, `.github/workflows/climatology.yml`, built once by hand) writes `data/static/pm-clim.json`,
   read by v2 as inputs. Changing v2's input list (`HIST_NAMES` in `scripts/ml2.mjs`) restarts its learning (`state.ml2.nFeat`) and
   its check counts only rows logged since (`state.ml2.since`): that is intended, don't carry old experts over.
+- Hindcast expert (`scripts/hindcast.mjs`, model `data/static/hc-model.json`, trained once by `scripts/hindcast_train.mjs` from the
+  `hindcast` branch's `data/hindcast/`): a fixed expert of the PM2.5 correction v1, trained on archived CAMS, so loaded in the CAMS
+  run only (never for SILAM) and active 18 Dec – 30 Apr. Don't give it weight by hand; the daily scoring decides. Keep the
+  Copernicus notice of the hindcast data when copying it.
 - SILAM (FMI) is a second model beside CAMS: `scripts/silam.py` extracts the runs (the one Python step: NetCDF-4), then
   `scripts/silam_chain.mjs` runs `update.mjs` again with `HSW_MODEL=silam`, so SILAM goes through the same program as CAMS
   (without the fire assimilation: SILAM has its own fire emissions). Don't

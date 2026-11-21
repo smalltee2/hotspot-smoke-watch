@@ -1,7 +1,7 @@
 // Unit tests of the candidate PM2.5 correction: node --test scripts/ml2.test.mjs
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { histFeatures, highScore, rows2From, NAMES2, HIST_NAMES, ML2 } from './ml2.mjs';
+import { histFeatures, highScore, rows2From, NAMES2, HIST_NAMES, ML2, setClimatology, climFeatures } from './ml2.mjs';
 import { NAMES } from './ml.mjs';
 
 const H = 3600e3, ln1 = v => Math.log(v + 1), near = (a, b) => assert.ok(Math.abs(a - b) < 1e-9, `${a} vs ${b}`);
@@ -10,8 +10,8 @@ const T0 = Date.parse('2026-11-10T00:00:00Z');
 const mk = (id, from, to, f) => { const m = new Map(); for (let t = from; t <= to; t += H) { const v = f(t); if (v != null) m.set(`${id}|${t}`, v); } return m; };
 const hod = t => new Date(t).getUTCHours();
 
-test('names: the live inputs plus five history inputs', () => {
-  assert.equal(NAMES2.length, NAMES.length + 5); assert.deepEqual(NAMES2.slice(-5), HIST_NAMES);
+test('names: the live inputs plus seven history inputs (five from the logs, two from the multi-year climatology)', () => {
+  assert.equal(NAMES2.length, NAMES.length + 7); assert.deepEqual(NAMES2.slice(-7), HIST_NAMES);
 });
 test('history: only hours ending by issue − 1 h are used; same hour on the newest known day', () => {
   const tI = T0 + 7 * H + 7 * 60e3, obs = mk('s', T0 - 12 * 24 * H, T0 + 30 * H, t => 10 + hod(t) + (t > T0 + 6 * H ? 1000 : 0));   // values after the cut-off are poisoned
@@ -19,7 +19,7 @@ test('history: only hours ending by issue − 1 h are used; same hour on the new
   let f = histFeatures(obs, 's', tI, T0 + 10 * H);
   near(f[0], ln1(20)); near(f[1], ln1(20)); near(f[4], ln1(20));
   near(f[2], ln1(33));                       // max of the last 24 known hours: hour 23 -> 33
-  assert.ok(f.every(v => v < ln1(100)), 'no value from after the cut-off');
+  assert.ok(f.slice(0, 5).every(v => v < ln1(100)), 'no value from after the cut-off');
   // lead 24 (valid 07:00 tomorrow): 07:00 today is not known yet (cut-off 06:00) -> yesterday 07:00, i.e. 48 h before the valid hour
   f = histFeatures(obs, 's', tI, T0 + 31 * H); near(f[0], ln1(17));
   // lead 23 (valid 06:00 tomorrow): 06:00 today is known -> 24 h before
@@ -50,4 +50,16 @@ test('check: v2 is published only when it is at least as good on hits, false-ala
   assert.equal(highScore([...P, ...many(10, 10, 60, 300)]).ok, false);           // many more false alarms
   assert.equal(highScore([...P, ...many(10, 10, 36, 4000)]).ok, false);          // same hits and false alarms, larger error
   k = highScore(P.slice(0, 500)); assert.equal(k.decided, false); assert.equal(k.ok, false);   // too few rows: not decided, live correction kept
+});
+
+test('climatology inputs: month × hour of the valid time in Thai time, × 10 integers, missing cells and stations give NaN', () => {
+  const mean = new Array(288).fill(-1), p90 = new Array(288).fill(-1);
+  mean[2 * 24 + 20] = 655; p90[2 * 24 + 20] = 1200;          // March, 20:00 Thai: mean 65.5, p90 120
+  assert.equal(setClimatology({ stations: { 'a4t:36t': { n: 9000, mean, p90 } } }), 1);
+  const t = Date.parse('2027-03-10T13:00:00Z');                // 20:00 Thai
+  const [m, p] = climFeatures('a4t:36t', t); near(m, ln1(65.5)); near(p, ln1(120));
+  assert.ok(climFeatures('a4t:36t', t + 3600e3).every(Number.isNaN));   // 21:00: cell below minN
+  assert.ok(climFeatures('other', t).every(Number.isNaN));
+  const f = histFeatures(new Map(), 'a4t:36t', t - 6 * 3600e3, t); near(f[5], ln1(65.5)); near(f[6], ln1(120));
+  assert.equal(setClimatology(null), 0); assert.ok(climFeatures('a4t:36t', t).every(Number.isNaN));
 });

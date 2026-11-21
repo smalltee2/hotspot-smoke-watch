@@ -21,7 +21,17 @@ import { NAMES, featureVector } from './ml.mjs';
 
 const HOUR = 3600e3;
 export const ML2 = { clip: 60, maxLeadH: 24, thr: 37.5, checkDays: 14, minRows: 20000, minHigh: 100, obsDays: 10 };
-export const HIST_NAMES = ['lnOSame', 'lnOSame2', 'lnMax24', 'lnP90_72', 'lnClimH'];
+export const HIST_NAMES = ['lnOSame', 'lnOSame2', 'lnMax24', 'lnP90_72', 'lnClimH', 'lnClimMH', 'lnP90MH'];
+// multi-year background of each monitor (data/static/pm-clim.json, scripts/climatology.mjs): the usual value and the 90th
+// percentile in the month and hour of the valid time, from 3 years of measurements, so v2 knows the seasons its own short logs
+// have not seen (above all the burning season). Set once per run with setClimatology(); without it the two inputs are missing.
+let CLIMS = null;
+export function setClimatology(doc) { CLIMS = doc && doc.stations ? doc.stations : null; return CLIMS ? Object.keys(CLIMS).length : 0; }
+export function climFeatures(id, tValid) {
+  const c = CLIMS && CLIMS[id]; if (!c) return [NaN, NaN];
+  const d = new Date(tValid + 7 * HOUR), k = d.getUTCMonth() * 24 + d.getUTCHours(), m = c.mean[k], p = c.p90[k];
+  return [m >= 0 ? ln1(m / 10) : NaN, p >= 0 ? ln1(p / 10) : NaN];
+}
 export const NAMES2 = [...NAMES, ...HIST_NAMES];
 // The boosted trees carry v2 (the replay's model was one of them): they start after 10 verified days, not 30, and are deeper
 // than the live correction's (depth 5: the history inputs act through interactions with the hour and the lead).
@@ -53,6 +63,7 @@ export async function loadObsHourly(histDir, from = 0, extra = null) {
  *    lnOSame   the value at the same hour on the newest day known       lnOSame2  the day before that
  *    lnMax24   the maximum of the last 24 known hours (>= 12 values)     lnP90_72  the 90th percentile of the last 72 (>= 36)
  *    lnClimH   the mean at that hour over the 7 days before the lnOSame day (>= 3 values)
+ *    lnClimMH, lnP90MH  the station's multi-year mean and 90th percentile for the month and hour of tValid (climFeatures)
  *  All as ln(v + 1); NaN where the station has no such values (the experts treat NaN as missing). */
 export function histFeatures(obs, id, tIssue, tValid) {
   const cut = Math.floor(tIssue / HOUR) * HOUR - HOUR, g = t => obs.get(`${id}|${t}`);
@@ -62,7 +73,7 @@ export function histFeatures(obs, id, tIssue, tValid) {
   const d24 = last.slice(-24).filter(v => v != null), d72 = last.filter(v => v != null).sort((a, b) => a - b);
   let s = 0, n = 0; for (let j = 1; j <= 7; j++) { const v = g(tS - j * 24 * HOUR); if (v != null && isFinite(v)) { s += v; n++; } }
   return [f(g(tS)), f(g(tS - 24 * HOUR)), d24.length >= 12 ? ln1(Math.max(...d24)) : NaN,
-    d72.length >= 36 ? ln1(d72[Math.min(d72.length - 1, Math.floor(0.9 * (d72.length - 1) + 0.5))]) : NaN, n >= 3 ? ln1(s / n) : NaN];
+    d72.length >= 36 ? ln1(d72[Math.min(d72.length - 1, Math.floor(0.9 * (d72.length - 1) + 0.5))]) : NaN, n >= 3 ? ln1(s / n) : NaN, ...climFeatures(id, tValid)];
 }
 
 /** Training rows of v2 from the live correction's rows (ml.mjs loadDataset: tIssue, tValid, id, lead, hloc, F, obs, x). */
@@ -93,12 +104,12 @@ export function highScore(pairs, thr = ML2.thr) {   // pairs: [[obs, live, v2], 
  *  v2 (column correctedML2) against the live correction (correctedML1; correctedML or correctedA in rows without it) on the same
  *  rows. v2 is published only while it catches at least as many hours >= 37.5 µg/m³, with no larger share of false alarms and no
  *  larger RMSE; otherwise the live correction stays (or returns) by itself. */
-export async function pmHighCheck(histDir, dayEnd, obs, days = ML2.checkDays) {
-  const from = dayEnd - days * 864e5, files = (await listFiles(histDir)).filter(f => /fcst-\d{8}T\d{2}\.csv$/.test(f) && fileDay(f) >= from - 3 * 864e5 && fileDay(f) < dayEnd).sort(), pairs = [];
+export async function pmHighCheck(histDir, dayEnd, obs, days = ML2.checkDays, since = 0) {   // since: rows issued before it (older v2 inputs) are not counted
+  const from = Math.max(dayEnd - days * 864e5, since), files = (await listFiles(histDir)).filter(f => /fcst-\d{8}T\d{2}\.csv$/.test(f) && fileDay(f) >= from - 3 * 864e5 && fileDay(f) < dayEnd).sort(), pairs = [];
   for (const f of files) { const txt = await fs.readFile(f, 'utf8'); if (!txt.slice(0, 600).includes('correctedML2')) continue;
     for (const r of parseCSV(txt)) {
       if (r.obs_basis !== 'h' || r.monitor === '0' || !(+r.lead_h <= ML2.maxLeadH) || r.correctedML2 === '' || r.correctedML2 === undefined) continue;
-      const tV = Date.parse(r.valid_utc); if (!(tV >= from && tV < dayEnd)) continue;
+      const tV = Date.parse(r.valid_utc); if (!(tV >= from && tV < dayEnd)) continue; if (since && Date.parse(r.issued_utc) < since) continue;
       const o = obs.get(`${r.station_id}|${tV}`), a = [r.correctedML1, r.correctedML, r.correctedA].find(v => v !== undefined && v !== ''); if (o == null || a === undefined) continue;
       pairs.push([o, +a, +r.correctedML2]); } }
   return { days, ...highScore(pairs) };

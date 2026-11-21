@@ -47,6 +47,9 @@ See `README.md` for the method and data sources.
   `pmHighCheck` publishes v2 only while it catches at least as many hours >= 37.5 µg/m³, with no larger false-alarm share and
   no larger RMSE, over 14 days. Don't switch it on by hand or loosen the check to make it pass; judge PM2.5 changes by high hours
   caught and false alarms as well as RMSE (`analysis/highpm_replay.py` reruns the diagnosis on any copy of the logs).
+- Station climatology (`scripts/climatology.mjs`, `.github/workflows/climatology.yml`, monthly) writes `data/static/pm-clim.json`,
+  read by v2 as inputs. Changing v2's input list (`HIST_NAMES` in `scripts/ml2.mjs`) restarts its learning (`state.ml2.nFeat`) and
+  its check counts only rows logged since (`state.ml2.since`): that is intended, don't carry old experts over.
 - SILAM (FMI) is a second model beside CAMS: `scripts/silam.py` extracts the runs (the one Python step: NetCDF-4), then
   `scripts/silam_chain.mjs` runs `update.mjs` again with `HSW_MODEL=silam`, so SILAM goes through the same program as CAMS
   (without the fire assimilation: SILAM has its own fire emissions). Don't

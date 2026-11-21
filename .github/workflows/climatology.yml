@@ -1,0 +1,62 @@
+name: Station climatology
+
+# Multi-year PM2.5 background of the monitors (scripts/climatology.mjs → data/static/pm-clim.json): the usual value and the
+# 90th percentile of each station by month and hour, from the last 3 years of Air4Thai and OpenAQ measurements. The correction
+# v2 reads it as two of its inputs. Rebuilt monthly; "Run workflow" rebuilds it at once.
+on:
+  schedule:
+    - cron: '43 2 3 * *'   # 3rd of each month, 09:43 Bangkok
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+concurrency:
+  group: climatology
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+      # the hourly run's station list (data/state.json). Restore only, with the hourly run's exact path list (the cache version
+      # depends on it); nothing is saved, so the hourly run's cache is not touched
+      - name: Restore the hourly run's state (station list)
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            data/state.json
+            data/met.json
+            data/latest.json
+            data/rk-bias.json
+            data/rk-bias-A.json
+            data/landcover.bin
+            data/verify.json
+            data/gsmap-cache.json
+            data/radar-cache.json
+            data/met-web.json
+            data/t2-corr.json
+            data/rain-obs.json
+            data/wx-ml.json
+            data/perf.json
+            data/perf-series.json
+            data/ml-field.json
+          key: climatology-none-${{ github.run_id }}
+          restore-keys: pipeline-state-
+      - name: Build the climatology (3 years of Air4Thai and OpenAQ hourly PM2.5)
+        env:
+          NODE_EXTRA_CA_CERTS: scripts/certs/air4thai-chain.pem   # Let's Encrypt intermediates the Air4Thai server fails to send
+        run: node scripts/climatology.mjs
+      - name: Commit data/static/pm-clim.json to main
+        run: |
+          git config user.name "hotspot-bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/static/pm-clim.json
+          git diff --cached --quiet && exit 0
+          git commit -qm "climatology: $(date -u +'%Y-%m-%d') (3 years, monitors by month and hour)"
+          for i in 1 2 3 4; do git pull --rebase -q && git push -q && exit 0; sleep 10; done; exit 1

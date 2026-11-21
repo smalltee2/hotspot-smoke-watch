@@ -35,6 +35,10 @@ Columns of `stations.csv`:
   - Where a location has several PM2.5 sensors, the one with the most hours is used, as in `replay/archive.mjs`.
   - Values ending at :30 (0.4 % of rows) are dropped.
 
+## Attribution and licences
+- **CAMS:** Contains modified Copernicus Atmosphere Monitoring Service information 2023–2026 (CAMS global atmospheric composition forecasts, https://doi.org/10.24381/04a0b097). The values were interpolated from the CAMS grid to the stations. Neither the European Commission nor ECMWF is responsible for any use that may be made of the Copernicus information or data it contains.
+- **PM2.5 observations:** retrieved through OpenAQ (https://openaq.org). The data come from the original providers: the Pollution Control Department of Thailand (Air4Thai), the Hanoi Air Quality Monitoring Network, AirNow, CPCB, SPARTAN and the AirGradient, HabitatMap and Clarity sensor networks. Licences are set by each provider; check the provider's terms on OpenAQ before redistributing the observations. Credit OpenAQ and the original provider when using them.
+
 ## Use with care
 - **Air4Thai values are 24-h running means, not hourly values** (`obs_basis = 24h_running_mean`). CAMS is instantaneous, so pair these with a 24-h mean of CAMS, or leave them out of hourly training.
 - **Low-cost values are raw.** The hindcast paper scales AirGradient to Air4Thai with ref = −3.286 + 0.9245·S (`replay/airgradient_colocation.json`).

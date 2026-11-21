@@ -1,0 +1,1445 @@
+season,station_id,sensor_id,name,provider,cc,lat,lon,type,obs_basis,site_qc
+2024,135,5077838,Prabadang Rehabiltation Center,Air4Thai,TH,13.664087,100.543436,reference,24h_running_mean,fail: mixed basis
+2024,701,1304255,Sukhothai Thammathirat Open University,Air4Thai,TH,13.907861,100.535641,reference,24h_running_mean,fail: mixed basis
+2024,717,1304268,Pluakdaeng District Health Office,Air4Thai,TH,12.97378333,101.21285,reference,24h_running_mean,pass
+2024,906,1304207,Residence for Dept. of Mineral Resources,Air4Thai,TH,13.652141,100.531805,reference,24h_running_mean,fail: mixed basis
+2024,2167,1304205,Highway District,Air4Thai,TH,13.7054879,100.315622,reference,24h_running_mean,fail: mixed basis
+2024,2326,1304072,Thai Meteorological Department,Air4Thai,TH,13.666183,100.605742,reference,24h_running_mean,fail: mixed basis
+2024,2328,1304242,"Natural Resources and Environment Office, Chiangrai",Air4Thai,TH,19.909217,99.823467,reference,24h_running_mean,pass
+2024,2352,5077771,Thonburi Power Sub-Station,Air4Thai,TH,13.727622,100.486568,reference,24h_running_mean,fail: mixed basis
+2024,2375,1304120,Bodindecha Sing Singhaseni School,Air4Thai,TH,13.769634,100.614567,reference,24h_running_mean,fail: mixed basis
+2024,2376,1304154,Samut Sakhon Wittayalai School,Air4Thai,TH,13.5502631,100.2647676,reference,24h_running_mean,fail: mixed basis
+2024,2407,1304052,Municipality Office Tungsadao,Air4Thai,TH,13.5885,101.2863333,reference,24h_running_mean,pass
+2024,2411,1304059,Health Promotion Hospital Banthasri,Air4Thai,TH,18.4267833,99.7576333,reference,24h_running_mean,too few days
+2024,5545,1304222,Chulalongkorn Hospital,Air4Thai,TH,13.729852,100.536501,reference,24h_running_mean,fail: mixed basis
+2024,7153,21633,Rangoon,AirNow,MM,16.8256,96.1445,reference,hourly,isolated
+2024,7441,21632,Hanoi,AirNow,VN,21.021939,105.818806,reference,hourly,pass
+2024,7747,1304249,Hydrogeological Group Water Resources Regional Office4 khonkaen,Air4Thai,TH,16.44538333,102.83525,reference,24h_running_mean,pass
+2024,7840,1304350,Laem Chabang Municipal Stadium,Air4Thai,TH,13.11923333,100.91855,reference,24h_running_mean,pass
+2024,7846,1611423,"Field Crop Research Center, Rayong",Air4Thai,TH,12.73518333,101.13565,reference,24h_running_mean,pass
+2024,8893,25947,Vientiane,AirNow,LA,17.896122,102.64,reference,hourly,pass
+2024,225567,1304055,Maesai Health Office,Air4Thai,TH,20.427325,99.883842,reference,24h_running_mean,pass
+2024,225568,1304254,"Bang Khen District Office, Bangkok",Air4Thai,TH,13.873603,100.595839,reference,24h_running_mean,pass
+2024,225569,1304408,Health Promotion Hospital Bankhaohin,Air4Thai,TH,13.054551,101.098128,reference,24h_running_mean,pass
+2024,225570,1304365,"Meteorological stations, Lampang",Air4Thai,TH,18.2783333,99.5064666,reference,24h_running_mean,pass
+2024,225571,1304176,"Bang Khun Thian District Office, Bangkok",Air4Thai,TH,13.659908,100.435902,reference,24h_running_mean,pass
+2024,225572,1304409,Kasertsart University,Air4Thai,TH,13.839923,100.575632,reference,24h_running_mean,pass
+2024,225573,1304393,Hat Yai Municipality,Air4Thai,TH,7.020434,100.484088,reference,24h_running_mean,pass
+2024,225574,1304286,"Phra Kanong District Office,  Bangkok",Air4Thai,TH,13.691511,100.61457,reference,24h_running_mean,pass
+2024,225575,1304403,Bangkok Noi Train Police Station,Air4Thai,TH,13.759619,100.481137,reference,24h_running_mean,pass
+2024,225576,1304250,Khai Surasinghanat,Air4Thai,TH,12.648576,101.32245,reference,24h_running_mean,pass
+2024,225577,1304381,"Bank of Ayuthaya Head Office Yan Nawa, Bangkok",Air4Thai,TH,13.679226,100.54687,reference,24h_running_mean,pass
+2024,225578,1304427,White Elephant Park,Air4Thai,TH,6.546205,101.283137,reference,24h_running_mean,fail: low r with neighbours
+2024,225579,1304368,Yupparaj Wittayalai School,Air4Thai,TH,18.7909333,98.99,reference,24h_running_mean,pass
+2024,225580,1304524,National Housing Authority Klongchan,Air4Thai,TH,13.779873,100.646009,reference,24h_running_mean,pass
+2024,225581,1304415,Chalermprakiet Hospital,Air4Thai,LA,19.5759666,101.0815166,reference,24h_running_mean,pass
+2024,225582,1304071,"Khlong Toei District Office, Bangkok",Air4Thai,TH,13.708488,100.583747,reference,24h_running_mean,pass
+2024,225584,1304161,Samut Songkhram Health Office,Air4Thai,TH,13.428581,100.024664,reference,24h_running_mean,pass
+2024,225585,1304133,Chom Nan Chaloem Phrakiat Public Park,Air4Thai,TH,16.820833,100.258056,reference,24h_running_mean,pass
+2024,225586,1304337,Elderly Health Rehabilitation Center,Air4Thai,TH,8.426923,99.961469,reference,24h_running_mean,isolated
+2024,225587,1304143,Water reservoir,Air4Thai,TH,13.832076,100.057961,reference,24h_running_mean,fail: mixed basis
+2024,225589,1304352,Kanjanapisek Park,Air4Thai,TH,13.691047,102.510442,reference,24h_running_mean,isolated
+2024,225590,1304153,"Sai Mai District Office, Bangkok",Air4Thai,TH,13.896035,100.660628,reference,24h_running_mean,pass
+2024,225591,1304377,"Ladphrao District Office, Bangkok",Air4Thai,TH,13.803587,100.607535,reference,24h_running_mean,pass
+2024,225593,1304057,Big C Supercenter Bang Na,Air4Thai,TH,13.667987,100.635313,reference,24h_running_mean,pass
+2024,225595,1304064,Bang Bon 5 Market,Air4Thai,TH,13.639165,100.372958,reference,24h_running_mean,pass
+2024,225596,1304091,"Sathon District Office, Bangkok",Air4Thai,TH,13.707763,100.526787,reference,24h_running_mean,too few days
+2024,225598,1304370,Bu Yai Bai Hall Station,Air4Thai,TH,13.917563,101.590529,reference,24h_running_mean,pass
+2024,225599,1304306,Bangrak Lovely Plaza,Air4Thai,TH,13.726136,100.528055,reference,24h_running_mean,pass
+2024,225600,1304282,Trat Provincial Central Stadium,Air4Thai,TH,12.234862,102.523721,reference,24h_running_mean,pass
+2024,225601,1304369,Chaloem Phrakiat Park Station 80th birthday celebration,Air4Thai,TH,15.373638,100.038725,reference,24h_running_mean,pass
+2024,225602,1304112,Municipal Waste Water Pumping Station,Air4Thai,TH,14.979537,102.098335,reference,24h_running_mean,pass
+2024,225604,1304378,Seacon Square,Air4Thai,TH,13.695561,100.647615,reference,24h_running_mean,pass
+2024,225605,1304302,Municipal Health Center,Air4Thai,TH,7.884488,98.391283,reference,24h_running_mean,pass
+2024,225606,1304310,Kanchanaburi Meteorological Station,Air4Thai,TH,14.022376,99.536195,reference,24h_running_mean,pass
+2024,225607,1304355,"Environment Agency Section 14, Surat Thani",Air4Thai,TH,9.126017,99.325145,reference,24h_running_mean,isolated
+2024,225609,1304122,Nakhonsawan Irrigation Project,Air4Thai,TH,15.68623,100.110556,reference,24h_running_mean,pass
+2024,225610,1304211,"Bueng Kum District Office, Bangkok",Air4Thai,TH,13.785212,100.669183,reference,24h_running_mean,pass
+2024,225611,1305053,Health Promotion Hospital Maptaput,Air4Thai,TH,12.70865,101.1659833,reference,24h_running_mean,pass
+2024,225612,1304328,Bansomdejchaopraya Rajabhat University,Air4Thai,TH,13.732846,100.487662,reference,24h_running_mean,fail: mixed basis
+2024,225613,1304281,Lat Krabang Hospital,Air4Thai,TH,13.72205,100.784069,reference,24h_running_mean,pass
+2024,225614,1305020,Tha phra Intersection,Air4Thai,TH,13.729431,100.474373,reference,24h_running_mean,pass
+2024,225615,1304331,"Meteorological stations, Nakhon Phanom",Air4Thai,TH,17.412345,104.7786123,reference,24h_running_mean,pass
+2024,225617,1304343,"Suan Luang District Office, Bangkok",Air4Thai,TH,13.731051,100.651705,reference,24h_running_mean,too few days
+2024,225619,1304237,"Don Mueng District Office, Bangkok",Air4Thai,TH,13.910986,100.594877,reference,24h_running_mean,pass
+2024,225620,1304135,Na Phralan Police Station,Air4Thai,TH,14.685833,100.871996,reference,24h_running_mean,pass
+2024,225621,1304323,Thon Buri Market Sanam Luang 2,Air4Thai,TH,13.746257,100.355099,reference,24h_running_mean,pass
+2024,225622,1304203,"Huai Khwang District Office, Bangkok",Air4Thai,TH,13.77682,100.579543,reference,24h_running_mean,pass
+2024,225623,1304360,Environmental Office 8 ratchaburi,Air4Thai,TH,13.52344,99.814082,reference,24h_running_mean,pass
+2024,225624,1304435,Odeon Circus,Air4Thai,TH,13.737136,100.512734,reference,24h_running_mean,pass
+2024,225625,1304232,"City Hall, Satun",Air4Thai,TH,6.624747,100.066159,reference,24h_running_mean,fail: low r with neighbours
+2024,225626,1304278,"Non-Formal Education Centre, Mea Sot",Air4Thai,TH,16.734413,98.566961,reference,24h_running_mean,isolated
+2024,225628,1305269,"Government Complex, Rayong",Air4Thai,TH,12.7066,101.18055,reference,24h_running_mean,pass
+2024,225629,1304077,Department of Disease Control,Air4Thai,TH,13.852778,100.529444,reference,24h_running_mean,fail: mixed basis
+2024,225630,1304063,"Meteorology Center, Phrae",Air4Thai,TH,18.1283666,100.1624333,reference,24h_running_mean,pass
+2024,225631,1304293,National Economic and Social Development Council Office,Air4Thai,TH,13.756281,100.514267,reference,24h_running_mean,pass
+2024,225632,1304130,"Chomthong District Office, Bangkok",Air4Thai,TH,13.677757,100.483861,reference,24h_running_mean,pass
+2024,225633,1304192,Siam University,Air4Thai,TH,13.718689,100.45391,reference,24h_running_mean,pass
+2024,225634,1304054,"Rat Burana District Office,  Bangkok",Air4Thai,TH,13.6821364,100.5060513,reference,24h_running_mean,pass
+2024,225635,1304123,"Wang Thonglang District Office, Bangkok",Air4Thai,TH,13.778981,100.622294,reference,24h_running_mean,pass
+2024,225636,1304300,Khao Noi Fire Station,Air4Thai,TH,14.526343,100.926047,reference,24h_running_mean,pass
+2024,225637,1304404,South Bangkok Power Plant,Air4Thai,TH,13.618,100.5562,reference,24h_running_mean,fail: mixed basis
+2024,225638,1304216,Samyan Mitrtown,Air4Thai,TH,13.733136,100.52829,reference,24h_running_mean,pass
+2024,225639,1304162,"City Hall, Narathiwat",Air4Thai,TH,6.426853,101.823388,reference,24h_running_mean,fail: low r with neighbours
+2024,225640,1304353,Library under King Taksin Bridge,Air4Thai,TH,13.719705,100.508782,reference,24h_running_mean,pass
+2024,225641,1304357,"Din Dang, Bangkok",Air4Thai,TH,13.7619223,100.558606,reference,24h_running_mean,pass
+2024,225642,1304146,"Bang Phlat District Office, Bangkok",Air4Thai,TH,13.793965,100.504956,reference,24h_running_mean,pass
+2024,225643,1304380,Bangkok University Rangsit Campus,Air4Thai,TH,14.03742,100.605216,reference,24h_running_mean,fail: mixed basis
+2024,225644,1304240,Suphan Buri Provincial Central Stadium,Air4Thai,TH,14.476214,100.086095,reference,24h_running_mean,pass
+2024,225645,1304420,National Housing Authority Bangplee,Air4Thai,TH,13.5705,100.7862867,reference,24h_running_mean,fail: mixed basis
+2024,225646,1304316,Provincial Waterworks Authority Mae Moh,Air4Thai,TH,18.2826333,99.6598166,reference,24h_running_mean,pass
+2024,225647,1304340,"Phra Nakhon District Office, Bangkok",Air4Thai,TH,13.76415,100.499077,reference,24h_running_mean,pass
+2024,225648,1304178,"Natural Resources and Environment Office, Mae Hongson",Air4Thai,TH,19.30455,97.97165,reference,24h_running_mean,pass
+2024,225649,1304375,"OTOP Center, Ubon Ratchathani",Air4Thai,TH,15.245413,104.846219,reference,24h_running_mean,pass
+2024,225650,1304152,The Government Public Relations Department,Air4Thai,TH,13.783185,100.540489,reference,24h_running_mean,fail: mixed basis
+2024,225651,1304179,"Saphan Sung District Office, Bangkok",Air4Thai,TH,13.768892,100.685743,reference,24h_running_mean,pass
+2024,225652,1304082,Public Park to commemorate the sixth anniversary of His Majesty the King,Air4Thai,TH,13.697252,100.497185,reference,24h_running_mean,pass
+2024,225653,1304128,Chokchai Police Station,Air4Thai,TH,13.7954248,100.5930298,reference,24h_running_mean,fail: mixed basis
+2024,225654,1304209,"Environment Agency Section 13, Chonburi",Air4Thai,TH,13.35461667,100.9792167,reference,24h_running_mean,pass
+2024,225655,1304245,"Meteorological Staions, Lamphun",Air4Thai,TH,18.567194,99.038639,reference,24h_running_mean,pass
+2024,225656,1304256,"Bang Sue District Office, Bangkok",Air4Thai,TH,13.809596,100.537883,reference,24h_running_mean,pass
+2024,225657,1304088,"child development centers, Betong",Air4Thai,TH,5.763873,101.067903,reference,24h_running_mean,fail: low r with neighbours
+2024,225660,1304438,"Chaloem Phrakiat Rama 9 Park Min buri, Bangkok",Air4Thai,TH,13.813578,100.73208,reference,24h_running_mean,pass
+2024,225661,1304186,"Nong Thin Public Park, Nong Khai",Air4Thai,TH,17.87748,102.728925,reference,24h_running_mean,fail: low r with neighbours
+2024,225663,1304140,Buriram City Hall,Air4Thai,TH,14.945452,103.105896,reference,24h_running_mean,pass
+2024,225666,1304315,"Phayao Provincial, Phayao",Air4Thai,TH,19.200226,99.893048,reference,24h_running_mean,pass
+2024,225667,1304114,Mahaisawan Intersection,Air4Thai,TH,13.70515,100.48465,reference,24h_running_mean,pass
+2024,225668,1304426,"Bang Kapi District Office, Bangkok",Air4Thai,TH,13.766478,100.647785,reference,24h_running_mean,pass
+2024,225669,1304220,"City Hall, Chiangmai",Air4Thai,TH,18.840732,98.96978,reference,24h_running_mean,pass
+2024,225671,1304229,"Khlong Sam Wa District Office, Bangkok",Air4Thai,TH,13.859911,100.704002,reference,24h_running_mean,pass
+2024,225672,1304078,Suan Sayam-Ram Intra Intersection,Air4Thai,TH,13.813844,100.686594,reference,24h_running_mean,pass
+2024,225673,1304204,National Housing Authority Dindaeng,Air4Thai,TH,13.76251667,100.5502,reference,24h_running_mean,fail: mixed basis
+2024,225674,1304191,"Municipality Office, Nan",Air4Thai,TH,18.7888833,100.7763166,reference,24h_running_mean,pass
+2024,225675,1304332,Meteorological Station Lopburi,Air4Thai,TH,14.800032,100.628548,reference,24h_running_mean,pass
+2024,225676,1304217,Ayutthaya Witthayalai School,Air4Thai,TH,14.35222,100.565325,reference,24h_running_mean,pass
+2024,225677,1304185,"Lak Si District Office, Bangkok",Air4Thai,TH,13.887395,100.579247,reference,24h_running_mean,pass
+2024,225678,1304073,"Bang Khae District Office, Bangkok",Air4Thai,TH,13.696314,100.409049,reference,24h_running_mean,pass
+2024,225679,1304309,"Dusit District Office, Bangkok",Air4Thai,TH,13.776664,100.520982,reference,24h_running_mean,pass
+2024,225681,1304248,"Soi Sukhumwit 63 Roadside Wattana, Bangkok",Air4Thai,TH,13.722096,100.584559,reference,24h_running_mean,pass
+2024,225682,1304111,King Mongkut's University of Technology Thonburi,Air4Thai,TH,13.651004,100.496673,reference,24h_running_mean,pass
+2024,225683,1304139,"Nong Chok District Office, Bangkok",Air4Thai,TH,13.855362,100.86267,reference,24h_running_mean,pass
+2024,225684,1304399,Army Apartment Sam Sen,Air4Thai,TH,13.783554,100.5344645,reference,24h_running_mean,pass
+2024,225685,1304097,National Housing  Huaykwang,Air4Thai,TH,13.77553,100.569195,reference,24h_running_mean,fail: mixed basis
+2024,225686,1304349,Highway NO.3902 km.13 +600,Air4Thai,TH,13.636514,100.414262,reference,24h_running_mean,fail: mixed basis
+2024,225688,1304305,"Ratchathewi District Office, Bangkok",Air4Thai,TH,13.7590851,100.5345788,reference,24h_running_mean,too few days
+2024,225689,1304065,Phutthamonthon 1 - Borommaratchachonnani Intersection,Air4Thai,TH,13.780778,100.426727,reference,24h_running_mean,pass
+2024,225690,1304087,Agricultural Office,Air4Thai,TH,12.67155,101.2758667,reference,24h_running_mean,pass
+2024,225691,1304326,"Ma Charean Roadside, Petcha Kasem 8, Nong Khaem",Air4Thai,TH,13.705582,100.343164,reference,24h_running_mean,pass
+2024,225692,1304247,"Health Promotion Hospital Sob Pad, Lampang",Air4Thai,TH,18.2508166,99.76395,reference,24h_running_mean,pass
+2024,225693,1304386,"Debaratana Vejjanukul Hospital, Mae Chaem",Air4Thai,TH,18.498333,98.379444,reference,24h_running_mean,pass
+2024,228541,1317087,"60th Anniversary Queen Sirikit Public Park, Loei",Air4Thai,TH,17.48462,101.732734,reference,24h_running_mean,pass
+2024,228542,1317103,"Nong Prajak Public Park, Udon Thani",Air4Thai,TH,17.414174,102.780926,reference,24h_running_mean,pass
+2024,228543,1317108,"72nd Anniversary King Bhumibol Public Park, Uttaradit",Air4Thai,TH,17.631352,100.09896,reference,24h_running_mean,pass
+2024,228544,1317093,"Meteorological stations, Sakon Nakhon",Air4Thai,TH,17.15662,104.133216,reference,24h_running_mean,pass
+2024,228627,1317584,"Polytechnic College, Trang",Air4Thai,TH,7.570238,99.588743,reference,24h_running_mean,isolated
+2024,229190,1320292,Grand Monaco Village,AirNow,TH,13.672332,100.698602,reference,hourly,pass
+2024,270250,1559904,Phetbura garden,Air4Thai,TH,16.418417,101.156556,reference,24h_running_mean,pass
+2024,278507,1584677,Mae Sariang District Public Health Office,Air4Thai,TH,18.163056,97.917778,reference,24h_running_mean,pass
+2024,351927,2000291,Le Thai Community Park,Air4Thai,TH,17.006059,99.81927,reference,24h_running_mean,pass
+2024,353740,2007834,Chanthaburi Meteorological Station,Air4Thai,TH,12.6095704,102.1040804,reference,24h_running_mean,pass
+2024,353741,2007819,"Phichit Provincial , Phichit",Air4Thai,TH,16.442554,100.322756,reference,24h_running_mean,pass
+2024,353742,2007836,Mukdahan Provincial Stadium,Air4Thai,TH,16.54257,104.7192,reference,24h_running_mean,pass
+2024,353743,2007829,Sirichit Thai Cultural Conservation Ground,Air4Thai,TH,16.475374,99.525425,reference,24h_running_mean,not checked
+2024,354124,2009817,Hua Hin Weather Station Prachuap Khiri Khan Meteorological Station,Air4Thai,TH,12.577835,99.953663,reference,24h_running_mean,pass
+2024,368390,2076218,Thawee Wanarom Park,Air4Thai,TH,13.7435329,100.3526893,reference,24h_running_mean,pass
+2024,368391,2076229,Suan Luang Rama IX,Air4Thai,TH,13.6881393,100.6579657,reference,24h_running_mean,pass
+2024,368392,2076223,Ramintra Sports Park,Air4Thai,TH,13.8778763,100.6207085,reference,24h_running_mean,pass
+2024,368393,2076221,Rommani Thungsikan Park,Air4Thai,TH,13.9288678,100.5684666,reference,24h_running_mean,pass
+2024,368394,2076227,Lumpini park,Air4Thai,TH,13.732225,100.5448381,reference,24h_running_mean,too few days
+2024,368395,2076215,Thonburirom Park,Air4Thai,TH,13.6502295,100.4909771,reference,24h_running_mean,pass
+2024,368396,2076225,Queen Sirikit Park,Air4Thai,TH,13.8055472,100.5488338,reference,24h_running_mean,pass
+2024,368397,2076216,Rama VIII Park,Air4Thai,TH,13.7693437,100.4945337,reference,24h_running_mean,pass
+2024,368399,2076232,Benjakitti Park,Air4Thai,TH,13.7328791,100.5600172,reference,24h_running_mean,pass
+2024,368400,2076219,"Bang Kho Laem District Office, Bangkok (Mobile)",Air4Thai,TH,13.69304,100.50244,reference,24h_running_mean,pass
+2024,368401,2076217,Nong Chok Park,Air4Thai,TH,13.855656,100.8585539,reference,24h_running_mean,pass
+2024,368402,2076231,Serithai Park,Air4Thai,TH,13.7855673,100.6733359,reference,24h_running_mean,pass
+2024,368403,2076226,Chatuchak Park,Air4Thai,TH,13.802546,100.5509191,reference,24h_running_mean,pass
+2024,368404,2076214,"60th Anniversary of Queen Sirikit Park ,Kheha Romklao Road, Lat Krabang, Bangkok",Air4Thai,TH,13.7631141,100.7302101,reference,24h_running_mean,pass
+2024,368405,2076222,Bang Khae Phirom Park,Air4Thai,TH,13.6863478,100.3844036,reference,24h_running_mean,pass
+2024,368406,2076224,80th Anniversary Commemoration Park,Air4Thai,TH,13.7716446,100.4681128,reference,24h_running_mean,pass
+2024,368407,2076220,Wacchirabenchatat Park,Air4Thai,TH,13.8118516,100.5535825,reference,24h_running_mean,too few days
+2024,368408,2076228,Phra Nakhon Park,Air4Thai,TH,13.7201042,100.7807077,reference,24h_running_mean,pass
+2024,368485,2076618,Benchasiri Park,Air4Thai,TH,13.7304916,100.5684634,reference,24h_running_mean,pass
+2024,385742,2158912,Chaloem Phra Kiat Water Park,Air4Thai,TH,14.606306,100.453589,reference,24h_running_mean,pass
+2024,387511,2166412,Wiang Subdistrict Disaster Prevention and Mitigation Center,Air4Thai,TH,20.2575,100.4025,reference,24h_running_mean,pass
+2024,387660,2167058,Mueang Na Subdistrict Municipality Office,Air4Thai,TH,19.593889,98.961667,reference,24h_running_mean,pass
+2024,388962,2172925,Li District Office,Air4Thai,TH,17.802222,98.949722,reference,24h_running_mean,pass
+2024,808649,4410573,"Natural Resources and Environment Office, Chainat",Air4Thai,TH,15.173056,100.126944,reference,24h_running_mean,pass
+2024,1172475,6455630,"Natural Resource and Environment, Phatthalung",Air4Thai,TH,7.614396,100.113766,reference,24h_running_mean,too few days
+2024,1180402,6467917,Ban Padang Community School,Air4Thai,TH,6.666143963588895,100.32734858721086,reference,24h_running_mean,too few days
+2024,1180409,6467919,Provincial Natural Resources and Environmental Office,Air4Thai,TH,6.890639752808323,101.25106087293467,reference,24h_running_mean,pass
+2024,1290682,6574439,Ranong Municipal office,Air4Thai,TH,9.961849,98.639341,reference,24h_running_mean,isolated
+2024,1299596,6589543,Phangnga Provincial Government Center,Air4Thai,TH,8.424964,98.528719,reference,24h_running_mean,not checked
+2024,1650686,7093737,Mueang Chaiyaphum Municipality Stadium,Air4Thai,TH,15.81148,102.02281,reference,24h_running_mean,pass
+2024,1650687,7093739,Phaya Thaen Public Park,Air4Thai,TH,15.783861,104.154639,reference,24h_running_mean,pass
+2024,1650688,7093743,SINGBURI SCHOOL,Air4Thai,TH,14.8933874,100.4130773,reference,24h_running_mean,pass
+2024,1785688,7338554,Amnat Charoen Municipality,Air4Thai,TH,15.8758,104.6223,reference,24h_running_mean,pass
+2024,1785690,7338537,KAENG DON KLANG PARK,Air4Thai,TH,16.4436,103.513,reference,24h_running_mean,pass
+2024,1785691,7338558,Nakhon Nayok Municipality Public Health Service Center,Air4Thai,TH,14.20422,101.21509,reference,24h_running_mean,pass
+2024,1785692,7338540,Nong Bueng Kan Park,Air4Thai,TH,18.362008,103.65977,reference,24h_running_mean,isolated
+2024,1785694,7338551,Surin Meteorological Center,Air4Thai,TH,14.8762222,103.4965833,reference,24h_running_mean,pass
+2024,1861095,7431257,Wiang Subdistrict Disaster Prevention and Mitigation Center,Air4Thai,TH,18.804894,98.900698,reference,24h_running_mean,pass
+2024,1864570,7434913,"Provincial Electricity Authority, Hot District Branch",Air4Thai,TH,18.172495,98.61069,reference,24h_running_mean,pass
+2024,1873401,7443668,Sisaket Meteorological Center,Air4Thai,TH,15.087087,104.326787,reference,24h_running_mean,pass
+2024,1896763,7468522,Pai Airport,Air4Thai,TH,19.369637,98.43596,reference,24h_running_mean,pass
+2024,1993935,7576283,Nong Bua Lamphu Provincial Administrative Organization,Air4Thai,TH,17.193824,102.4585009,reference,24h_running_mean,pass
+2024,1993936,7576284,"Somdet Phra Srinagarindra Park, Roi Et",Air4Thai,TH,16.057537,103.651372,reference,24h_running_mean,pass
+2024,2132593,7736413,Phetchaburi Municipality,Air4Thai,TH,13.11249031,99.9461325,reference,24h_running_mean,pass
+2024,2161290,7772012,An Khánh,Hanoi Air Quality Monitoring Network,VN,21.0024,105.7181,reference,hourly,pass
+2024,2161291,7772023,Cầu Diễn,Hanoi Air Quality Monitoring Network,VN,21.0398,105.7652,reference,hourly,not checked
+2024,2161292,7772032,"Số 46, phố Lưu Quang Vũ",Hanoi Air Quality Monitoring Network,VN,21.0152,105.7999,reference,hourly,fail: low r with neighbours
+2024,2161293,7772046,Chúc Sơn,Hanoi Air Quality Monitoring Network,VN,20.92,105.7123,reference,hourly,not checked
+2024,2161294,7772104,Cung thiếu nhi,Hanoi Air Quality Monitoring Network,VN,21.0284,105.8556,reference,hourly,too few days
+2024,2161295,7771992,Đầm Trấu,Hanoi Air Quality Monitoring Network,VN,21.0119,105.8644,reference,hourly,not checked
+2024,2161296,7772040,Đào Duy Từ,Hanoi Air Quality Monitoring Network,VN,21.0354,105.8529,reference,hourly,not checked
+2024,2161297,7771980,Đội Bình,Hanoi Air Quality Monitoring Network,VN,20.6486,105.8204,reference,hourly,too few days
+2024,2161298,7772025,Đông Kinh Nghĩa Thục,Hanoi Air Quality Monitoring Network,VN,21.032,105.8515,reference,hourly,too few days
+2024,2161299,7771996,Hàng Đậu,Hanoi Air Quality Monitoring Network,VN,21.0399,105.8473,reference,hourly,too few days
+2024,2161300,7771988,Hoàn Kiếm,Hanoi Air Quality Monitoring Network,VN,21.0263,105.8515,reference,hourly,not checked
+2024,2161301,7772073,Khương Trung,Hanoi Air Quality Monitoring Network,VN,20.9949,105.8167,reference,hourly,too few days
+2024,2161302,7771977,Kim Bài,Hanoi Air Quality Monitoring Network,VN,20.858,105.7656,reference,hourly,too few days
+2024,2161303,7772038,Kim Liên,Hanoi Air Quality Monitoring Network,VN,21.0074,105.8358,reference,hourly,too few days
+2024,2161304,7772096,Lê Trực,Hanoi Air Quality Monitoring Network,VN,21.0327,105.8329,reference,hourly,not checked
+2024,2161305,7772053,Liên Quan,Hanoi Air Quality Monitoring Network,VN,21.056,105.578,reference,hourly,pass
+2024,2161306,7772087,Minh Khai - Bắc Từ Liêm,Hanoi Air Quality Monitoring Network,VN,21.05,105.74,reference,hourly,fail: low r with neighbours
+2024,2161307,7771998,Mỹ Đình,Hanoi Air Quality Monitoring Network,VN,21.0269,105.7731,reference,hourly,not checked
+2024,2161309,7772016,Pháp Vân,Hanoi Air Quality Monitoring Network,VN,20.9481,105.8493,reference,hourly,pass
+2024,2161310,7772109,Quảng Phú Cầu,Hanoi Air Quality Monitoring Network,VN,20.7793,105.7851,reference,hourly,too few days
+2024,2161311,7772076,Sài Sơn,Hanoi Air Quality Monitoring Network,VN,21.0167,105.6478,reference,hourly,pass
+2024,2161312,7772037,Sóc Sơn,Hanoi Air Quality Monitoring Network,VN,21.2575,105.8514,reference,hourly,pass
+2024,2161313,7772003,Tân Mai,Hanoi Air Quality Monitoring Network,VN,20.9883,105.8549,reference,hourly,too few days
+2024,2161314,7771972,Tây Hồ Tây,Hanoi Air Quality Monitoring Network,VN,21.0563,105.7974,reference,hourly,too few days
+2024,2161315,7772004,Tây Mỗ,Hanoi Air Quality Monitoring Network,VN,21.0058,105.7485,reference,hourly,not checked
+2024,2161316,7772020,Thành Công,Hanoi Air Quality Monitoring Network,VN,21.0197,105.8147,reference,hourly,not checked
+2024,2161317,7772068,Thanh Xuân - Sóc Sơn,Hanoi Air Quality Monitoring Network,VN,21.2287,105.7583,reference,hourly,too few days
+2024,2161318,7772036,Tứ Liên,Hanoi Air Quality Monitoring Network,VN,21.0639,105.8338,reference,hourly,too few days
+2024,2161319,7771984,Vân Đình,Hanoi Air Quality Monitoring Network,VN,20.7339,105.7703,reference,hourly,too few days
+2024,2161320,7772059,Vân Hà,Hanoi Air Quality Monitoring Network,VN,21.1476,105.9159,reference,hourly,pass
+2024,2161321,7772099,Văn Quán,Hanoi Air Quality Monitoring Network,VN,20.972,105.7856,reference,hourly,too few days
+2024,2161322,7772079,Võng La,Hanoi Air Quality Monitoring Network,VN,21.1105,105.7605,reference,hourly,not checked
+2024,2161323,7772015,Xuân Mai,Hanoi Air Quality Monitoring Network,VN,20.8994,105.5773,reference,hourly,too few days
+2024,2524053,7974317,Prachinburi Provincial Public Health,Air4Thai,TH,14.0449046434287,101.3689396242558,reference,24h_running_mean,too few days
+2024,1235990,6530181,"Kasetsart university laboratory school 1, Chatuchak, Bangkok",AirGradient,TH,13.850829210818615,100.56881779163187,low-cost,hourly,pass
+2024,1235996,6530178,"Vieng Nua, Pai",AirGradient,TH,19.374620435850545,98.44561078410078,low-cost,hourly,pass
+2024,1235999,6530173,NARIT ASTROPARK (Parking),AirGradient,TH,18.85345541310349,98.95760600870581,low-cost,hourly,pass
+2024,1236002,6530207,"The National Science Museum, Thailand (NSM)",AirGradient,TH,14.059029941320787,100.72229270474135,low-cost,hourly,pass
+2024,1236013,6530208,"Soemngamwitthayakhom School 2, Some-Ngam, Lampang",AirGradient,TH,18.279805533636747,99.48051196520771,low-cost,hourly,pass
+2024,1236014,6530214,NARIT​-OPD,AirGradient,TH,18.85275424506312,98.95834692689932,low-cost,hourly,pass
+2024,1236022,6530236,แม่กวง,AirGradient,TH,18.8266136,99.0523185,low-cost,hourly,pass
+2024,1236024,6530233,สันโป่ง,AirGradient,TH,18.9375111,98.9566944,low-cost,hourly,pass
+2024,1236034,6530253,"Watkhemapirataram school 1, Mueang, Nonthaburi",AirGradient,TH,13.823306342907303,100.50341971861289,low-cost,hourly,pass
+2024,1236035,6530251,"Pathumthep witthayakarn school 1, Mueang, Nong Khai",AirGradient,TH,17.866408250878237,102.74806318240316,low-cost,hourly,pass
+2024,1236038,6530250,"Nuannoradit school 2, Phasi Charoen, Bangkok",AirGradient,TH,13.723905641056973,100.46672554559318,low-cost,hourly,pass
+2024,1236040,6530276,"Kaenoisuksa School 1, Chiang Dao, Chiang Mai",AirGradient,TH,19.394767432705724,98.92874614493202,low-cost,hourly,too few days
+2024,1236044,6530284,"Be Leaf Resort, Phuket",AirGradient,TH,8.028638989565119,98.35441155579035,low-cost,hourly,pass
+2024,1236050,6530303,Prem Tinsulanonda International School 1,AirGradient,TH,18.96255421231335,98.91562786546136,low-cost,hourly,pass
+2024,1236053,6530291,"Suwannaramwittayakom school 1, Bangkok Noi, Bangkok",AirGradient,TH,13.76312579330489,100.47612901861227,low-cost,hourly,pass
+2024,1236057,6530304,"Suwannakhuhapittayasan school 1, Suwan Khuha, Nong Bua Lamphu",AirGradient,TH,17.23816238132771,102.43412910724983,low-cost,hourly,pass
+2024,1236063,6530321,"intERLab, Pathumthani, Thailand",AirGradient,TH,14.077551603647665,100.61278750267229,low-cost,hourly,pass
+2024,1236066,6530317,NARIT ASTROPARK (Research building),AirGradient,TH,18.851438300930976,98.95771486398863,low-cost,hourly,pass
+2024,1236067,6530312,"Nonghanwittaya school 1, Nong Han, Udon Thani",AirGradient,TH,17.77979422107294,103.71065058858952,low-cost,hourly,too few days
+2024,1236069,6530310,Rajaphat Yala University,AirGradient,TH,6.549012748332888,101.2896306111374,low-cost,hourly,pass
+2024,1236072,6530330,"Srikranuanwittayakom school 1, Kranuan, Khon Kaen",AirGradient,TH,16.721984416175946,103.08173493955674,low-cost,hourly,pass
+2024,1236074,6530344,"Mahapruttaram girl's school 2, Bang Rak, Bangkok",AirGradient,TH,13.732667711114303,100.51601151861196,low-cost,hourly,pass
+2024,1236075,6530337,"Nongnangpittayakom school 1, Tha Bo, Nong Khai",AirGradient,TH,17.83218858266286,102.56660888425778,low-cost,hourly,too few days
+2024,1236078,6530333,"Waengpittiayakhom school 1, Sawang Daen Din, Sakon Nakhon ",AirGradient,TH,17.4689566685271,103.48612609959888,low-cost,hourly,pass
+2024,1305707,6595906,"Khunyuam Wittaya School 2, Khunyuam, Maehongson",AirGradient,TH,18.837399394128656,97.93995071660461,low-cost,hourly,too few days
+2024,1405439,6716468,"Chomthong School 1, Chomthong, Chiang Mai",AirGradient,TH,18.435156957109033,98.67718182473789,low-cost,hourly,pass
+2024,1641552,7076714,วังหมุ้น,AirGradient,TH,18.945298569548378,98.97347979467268,low-cost,hourly,pass
+2024,1641558,7076722,Prem Tinsulanonda International School 2,AirGradient,TH,18.966512871928927,98.91508369562034,low-cost,hourly,pass
+2024,1646752,7086282,ดาดฟ้า,AirGradient,TH,18.932618966437307,98.96445032014383,low-cost,hourly,pass
+2024,1698943,7186370,Savvi Condominium Phahol-Ari,AirGradient,TH,13.778406648867108,100.54654472577135,low-cost,hourly,pass
+2024,1753562,7281994,บ้านร้องเกิด,AirGradient,TH,18.92786395211318,98.96541049234524,low-cost,hourly,pass
+2024,1753563,7281995,ดวงดี,AirGradient,TH,18.91977780483509,98.95279736395602,low-cost,hourly,pass
+2024,1753564,7281997,แก้วสา,AirGradient,TH,18.928286035684813,98.94445179435797,low-cost,hourly,pass
+2024,1861445,7431742,"Fangchanupathum School 1, Fang, Chiang Mai",N/A,TH,19.863943477644817,99.17937755730453,low-cost,hourly,not checked
+2024,1877127,7447219,Acoem Thailand,AirGradient,TH,13.806197714948992,100.6154652387912,low-cost,hourly,pass
+2024,1894642,7466395,Savvi Condominium Phahol-Ari,Clarity,TH,13.77865,100.54655,low-cost,hourly,pass
+2024,1935353,7511192,Chiang Mai,AirGradient,TH,18.77435504104218,98.98365627447588,low-cost,hourly,pass
+2024,2041043,7628003,Mae Ann,AirGradient,TH,18.971315125096538,98.8784122467041,low-cost,hourly,pass
+2024,2124016,7725494,Wiang Nuea Beverly Hills Goat Farm,AirGradient,TH,19.385584,98.459714,low-cost,hourly,pass
+2024,2136949,7741884,Pai: Wednesday Market,AirGradient,TH,19.351845,98.4411552,low-cost,hourly,pass
+2024,2142493,7749647,Wiang Nuea Beverly Hills Hua Chang Dam,AirGradient,TH,19.383934,98.464782,low-cost,hourly,pass
+2024,2142801,7749859,Wiang Nuea: Wat Phra Phutthabat,AirGradient,TH,19.3910772,98.4534912,low-cost,hourly,too few days
+2024,2146217,7754671,Pai: Seng Tong Market,AirGradient,TH,19.3573394,98.4381079,low-cost,hourly,pass
+2024,2147304,7756030,Tin That,N/A,TH,19.3172193,98.439397,low-cost,hourly,too few days
+2024,2151718,7761087,Wiang Nuea Moat,AirGradient,TH,19.3747778,98.4453889,low-cost,hourly,pass
+2024,2154067,7763352,Kung Kaeng: Pai Munchkins Club / PLearn Pai Bilingual Learning Center,AirGradient,TH,19.342108,98.435391,low-cost,hourly,pass
+2024,2155602,7765489,Mae Hi: Bueng Pai Farm,AirGradient,TH,19.344337,98.446422,low-cost,hourly,pass
+2024,2158149,7768319,Pai: Dr. Neung Clinic near PTT gas station,AirGradient,TH,19.355492,98.436671,low-cost,hourly,too few days
+2024,2165656,7779239,Mae Yen: Ing Doi Guesthouse,AirGradient,TH,19.355916,98.448666,low-cost,hourly,pass
+2024,2169936,7784547,Hang Dong / Sameong,AirGradient,TH,18.719434,98.930183,low-cost,hourly,pass
+2024,2174592,7788909,Chiang moi,AirGradient,TH,18.78987,98.99583,low-cost,hourly,pass
+2024,2181641,7790011,ทองหล่อ 8,AirGradient,TH,13.7316,100.5834,low-cost,hourly,pass
+2024,2297552,7796486,Tha Pai Hot Springs,AirGradient,TH,19.307811,98.473538,low-cost,hourly,fail: low r with neighbours
+2024,2315448,7796897,Muang Soi Health Center,AirGradient,TH,19.395894,98.404624,low-cost,hourly,too few days
+2024,2327978,7797649,Mae Hi: Pittalew Art Gallery,AirGradient,TH,19.344769,98.453281,low-cost,hourly,pass
+2024,2340282,7798219,Paina Paita Home (near Coffee In Love),AirGradient,TH,19.336754,98.43217,low-cost,hourly,pass
+2024,2375197,7802105,Mae Khong Border Patrol,AirGradient,TH,19.385612,98.437128,low-cost,hourly,too few days
+2024,2379288,7806644,Sahakorn 5,AirGradient,TH,18.857987,99.261237,low-cost,hourly,pass
+2024,2384279,7812174,Mae Na Toeng School,AirGradient,TH,19.393767,98.42108,low-cost,hourly,pass
+2024,2384280,7812177,Wiang Nuea Moo 8 Mayor,AirGradient,TH,19.379253,98.445529,low-cost,hourly,pass
+2024,2384585,7812301,Mae Khong Health Center,AirGradient,TH,19.385735,98.439518,low-cost,hourly,too few days
+2024,2393909,7824196,Pai: NT/TOT office near Pai Hospital,AirGradient,TH,19.3621389,98.4375556,low-cost,hourly,pass
+2024,2402491,7834588," Wat Khlong Toey Nai School, Bangkok",Clarity,TH,13.71037,100.56115,low-cost,hourly,pass
+2024,2429011,7867835,The Mud House by CMG,AirGradient,TH,18.7069018,98.9153218,low-cost,hourly,too few days
+2024,2429963,7868945,Mae Ping Health Center,AirGradient,TH,19.28607,98.468214,low-cost,hourly,pass
+2024,2432814,7872540, ไดมอนด์,N/A,TH,18.941970789965023,98.94292144786002,low-cost,hourly,too few days
+2024,2439091,7880296,Wiang Nuea: Mon Far Pai Cottages,AirGradient,TH,19.369755,98.449955,low-cost,hourly,pass
+2024,2439859,7881259,Wat Mo Paeng,AirGradient,TH,19.379659,98.396488,low-cost,hourly,pass
+2024,2457250,7901662,Muang Rae Police Box,AirGradient,TH,19.241398,98.44963,low-cost,hourly,too few days
+2024,2461311,7905641,The Mud House by CMG,AirGradient,TH,18.70707013718418,98.91531793782238,low-cost,hourly,too few days
+2024,2470105,7915829,Pai: Paiformance Gym,AirGradient,TH,19.353232,98.438033,low-cost,hourly,too few days
+2024,2473770,7919323,"Talingchan, Bangkok, Thailand",AirGradient,TH,13.771228,100.434618,low-cost,hourly,too few days
+2024,2474515,7920113,Thung Yao South (near Two Huts),AirGradient,TH,19.317546,98.448532,low-cost,hourly,too few days
+2024,2492986,7943848,The Hideaway Village (near Wat Sop Phaem),AirGradient,TH,19.299787,98.443144,low-cost,hourly,too few days
+2024,2510432,7963855,Pa Yang School,AirGradient,TH,19.395591,98.387011,low-cost,hourly,too few days
+2024,2523394,7974127,Pai Immigration ,AirGradient,TH,19.361656,98.438967,low-cost,hourly,too few days
+2024,2575375,8429609,สันโป่ง,AirGradient,TH,18.941970789965023,98.94292144786002,low-cost,hourly,too few days
+2024,2608457,8502834,"Talingchan, Bangkok, Thailand",AirGradient,TH,13.771263,100.434679,low-cost,hourly,not checked
+2024,2674799,8655382,"Talingchan, Bangkok, Thailand",AirGradient,TH,13.771263,100.434679,low-cost,hourly,too few days
+2024,2692433,8694745,Soi Rimthang Rotfai 3,AirGradient,TH,13.723917563386962,100.4896320971784,low-cost,hourly,too few days
+2024,2692436,8694741,Soi Naradhiwas Rajanagarindra 17/1,AirGradient,TH,13.714227217771464,100.53463637224243,low-cost,hourly,too few days
+2024,2692437,8694734,Nana Nue Pier,AirGradient,TH,13.74828616518107,100.55400303589226,low-cost,hourly,too few days
+2024,2692438,8694782,Soi Wong Sawang 3,AirGradient,TH,13.818829640186134,100.5170517172806,low-cost,hourly,too few days
+2024,2692439,8694736,Wanglang Rd.,AirGradient,TH,13.759764,100.474672,low-cost,hourly,too few days
+2024,2692642,8695097,Suriya Thep Alley,AirGradient,TH,13.749383457371344,100.47691024942468,low-cost,hourly,too few days
+2024,2692643,8695100,Tang Trong Chit Alley,AirGradient,TH,13.768026699364972,100.46533225829832,low-cost,hourly,too few days
+2024,2692644,8695095,Kiak Kai Intersection,AirGradient,TH,13.79695026631216,100.5222724774432,low-cost,hourly,too few days
+2024,2692645,8695103,Vibhavadi Rangsit 11 Alley Lane 10,AirGradient,TH,13.824551234939227,100.55028307691722,low-cost,hourly,too few days
+2024,2694254,8698874,Soi Kheha Pattana 1,AirGradient,TH,13.709940984188846,100.57602189955097,low-cost,hourly,not checked
+2024,2739142,8797306,MSK Talat,AirGradient,TH,16.1033,103.1733,low-cost,hourly,too few days
+2024,2807918,8950924,ป่ากล้วย,AirGradient,TH,18.935269692344082,98.96733918346216,low-cost,hourly,too few days
+2024,2811479,8958977,โรงเรียนบ้านหนองโบสถ์ ,AirGradient,TH,14.631278247689572,102.71985109647431,low-cost,hourly,not checked
+2024,2811595,8959852,โรงเรียนบ้านสันดาบ,AirGradient,TH,13.538714910765675,100.34699792942607,low-cost,hourly,not checked
+2024,2811857,8961826,โรงเรียนบ้านงิ้วใหม่,AirGradient,TH,19.683041089169024,100.09608268612227,low-cost,hourly,not checked
+2024,2811859,8961825,เวียงเชียงรุ้ง   จ.เชียงราย,AirGradient,TH,20.01478348661569,100.06638223958373,low-cost,hourly,not checked
+2024,2813725,8971972,โรงเรียนอนุบาลพาน,AirGradient,TH,19.535827619120635,99.74097750939806,low-cost,hourly,not checked
+2024,2813975,8973908,โรงเรียนบ้านเกาะยวน,AirGradient,TH,6.87268456246548,99.80799344894625,low-cost,hourly,not checked
+2024,2813976,8973903,โรงเรียนบ้านบึงทับแรต,AirGradient,TH,16.702504348352143,99.86226286535995,low-cost,hourly,not checked
+2024,2813979,8973915,โรงเรียนบ้านสามช่อง,AirGradient,TH,8.300500343011905,98.42080755406148,low-cost,hourly,not checked
+2024,2821337,9029943,โรงเรียนผ่านศึกสงเคราะห์ 2,AirGradient,TH,20.1738211256972,100.06373951389979,low-cost,hourly,not checked
+2025,135,5077838,Prabadang Rehabiltation Center,Air4Thai,TH,13.664087,100.543436,reference,24h_running_mean,pass
+2025,701,1304255,Sukhothai Thammathirat Open University,Air4Thai,TH,13.907861,100.535641,reference,24h_running_mean,pass
+2025,717,1304268,Pluakdaeng District Health Office,Air4Thai,TH,12.97378333,101.21285,reference,24h_running_mean,fail: low r with neighbours
+2025,906,1304207,Residence for Dept. of Mineral Resources,Air4Thai,TH,13.652141,100.531805,reference,24h_running_mean,pass
+2025,2167,1304205,Highway District,Air4Thai,TH,13.7054879,100.315622,reference,24h_running_mean,pass
+2025,2326,1304072,Thai Meteorological Department,Air4Thai,TH,13.666183,100.605742,reference,24h_running_mean,too few days
+2025,2328,1304242,"Natural Resources and Environment Office, Chiangrai",Air4Thai,TH,19.909217,99.823467,reference,24h_running_mean,pass
+2025,2352,5077771,Thonburi Power Sub-Station,Air4Thai,TH,13.727622,100.486568,reference,24h_running_mean,pass
+2025,2375,1304120,Bodindecha Sing Singhaseni School,Air4Thai,TH,13.769634,100.614567,reference,24h_running_mean,pass
+2025,2376,1304154,Samut Sakhon Wittayalai School,Air4Thai,TH,13.5502631,100.2647676,reference,24h_running_mean,pass
+2025,2407,1304052,Municipality Office Tungsadao,Air4Thai,TH,13.5885,101.2863333,reference,24h_running_mean,pass
+2025,2411,1304059,Health Promotion Hospital Banthasri,Air4Thai,TH,18.4267833,99.7576333,reference,24h_running_mean,not checked
+2025,5545,1304222,Chulalongkorn Hospital,Air4Thai,TH,13.729852,100.536501,reference,24h_running_mean,pass
+2025,7441,21632,Hanoi,AirNow,VN,21.021939,105.818806,reference,hourly,pass
+2025,7747,1304249,Hydrogeological Group Water Resources Regional Office4 khonkaen,Air4Thai,TH,16.44538333,102.83525,reference,24h_running_mean,pass
+2025,7840,1304350,Laem Chabang Municipal Stadium,Air4Thai,TH,13.11923333,100.91855,reference,24h_running_mean,pass
+2025,7846,1611423,"Field Crop Research Center, Rayong",Air4Thai,TH,12.73518333,101.13565,reference,24h_running_mean,pass
+2025,8893,25947,Vientiane,AirNow,LA,17.896122,102.64,reference,hourly,pass
+2025,225567,1304055,Maesai Health Office,Air4Thai,TH,20.427325,99.883842,reference,24h_running_mean,pass
+2025,225568,1304254,"Bang Khen District Office, Bangkok",Air4Thai,TH,13.873603,100.595839,reference,24h_running_mean,pass
+2025,225569,1304408,Health Promotion Hospital Bankhaohin,Air4Thai,TH,13.054551,101.098128,reference,24h_running_mean,pass
+2025,225570,1304365,"Meteorological stations, Lampang",Air4Thai,TH,18.2783333,99.5064666,reference,24h_running_mean,not checked
+2025,225571,1304176,"Bang Khun Thian District Office, Bangkok",Air4Thai,TH,13.659908,100.435902,reference,24h_running_mean,pass
+2025,225572,1304409,Kasertsart University,Air4Thai,TH,13.839923,100.575632,reference,24h_running_mean,pass
+2025,225573,1304393,Hat Yai Municipality,Air4Thai,TH,7.020434,100.484088,reference,24h_running_mean,not checked
+2025,225574,1304286,"Phra Kanong District Office,  Bangkok",Air4Thai,TH,13.691511,100.61457,reference,24h_running_mean,pass
+2025,225575,1304403,Bangkok Noi Train Police Station,Air4Thai,TH,13.759619,100.481137,reference,24h_running_mean,pass
+2025,225576,1304250,Khai Surasinghanat,Air4Thai,TH,12.648576,101.32245,reference,24h_running_mean,pass
+2025,225577,1304381,"Bank of Ayuthaya Head Office Yan Nawa, Bangkok",Air4Thai,TH,13.679226,100.54687,reference,24h_running_mean,pass
+2025,225578,1304427,White Elephant Park,Air4Thai,TH,6.546205,101.283137,reference,24h_running_mean,too few days
+2025,225579,1304368,Yupparaj Wittayalai School,Air4Thai,TH,18.7909333,98.99,reference,24h_running_mean,pass
+2025,225580,1304524,National Housing Authority Klongchan,Air4Thai,TH,13.779873,100.646009,reference,24h_running_mean,pass
+2025,225581,1304415,Chalermprakiet Hospital,Air4Thai,LA,19.5759666,101.0815166,reference,24h_running_mean,pass
+2025,225582,1304071,"Khlong Toei District Office, Bangkok",Air4Thai,TH,13.708488,100.583747,reference,24h_running_mean,pass
+2025,225583,1304430,Mobile Air Quality Monitoring unit No.04,Air4Thai,TH,18.804718,98.896851,reference,24h_running_mean,not checked
+2025,225584,1304161,Samut Songkhram Health Office,Air4Thai,TH,13.428581,100.024664,reference,24h_running_mean,too few days
+2025,225585,1304133,Chom Nan Chaloem Phrakiat Public Park,Air4Thai,TH,16.820833,100.258056,reference,24h_running_mean,pass
+2025,225586,1304337,Elderly Health Rehabilitation Center,Air4Thai,TH,8.426923,99.961469,reference,24h_running_mean,not checked
+2025,225587,1304143,Water reservoir,Air4Thai,TH,13.832076,100.057961,reference,24h_running_mean,pass
+2025,225589,1304352,Kanjanapisek Park,Air4Thai,TH,13.691047,102.510442,reference,24h_running_mean,pass
+2025,225590,1304153,"Sai Mai District Office, Bangkok",Air4Thai,TH,13.896035,100.660628,reference,24h_running_mean,pass
+2025,225591,1304377,"Ladphrao District Office, Bangkok",Air4Thai,TH,13.803587,100.607535,reference,24h_running_mean,pass
+2025,225593,1304057,Big C Supercenter Bang Na,Air4Thai,TH,13.667987,100.635313,reference,24h_running_mean,pass
+2025,225595,1304064,Bang Bon 5 Market,Air4Thai,TH,13.639165,100.372958,reference,24h_running_mean,pass
+2025,225596,1304091,"Sathon District Office, Bangkok",Air4Thai,TH,13.707763,100.526787,reference,24h_running_mean,pass
+2025,225598,1304370,Bu Yai Bai Hall Station,Air4Thai,TH,13.917563,101.590529,reference,24h_running_mean,pass
+2025,225599,1304306,Bangrak Lovely Plaza,Air4Thai,TH,13.726136,100.528055,reference,24h_running_mean,pass
+2025,225600,1304282,Trat Provincial Central Stadium,Air4Thai,TH,12.234862,102.523721,reference,24h_running_mean,pass
+2025,225601,1304369,Chaloem Phrakiat Park Station 80th birthday celebration,Air4Thai,TH,15.373638,100.038725,reference,24h_running_mean,pass
+2025,225602,1304112,Municipal Waste Water Pumping Station,Air4Thai,TH,14.979537,102.098335,reference,24h_running_mean,pass
+2025,225604,1304378,Seacon Square,Air4Thai,TH,13.695561,100.647615,reference,24h_running_mean,pass
+2025,225605,1304302,Municipal Health Center,Air4Thai,TH,7.884488,98.391283,reference,24h_running_mean,not checked
+2025,225606,1304310,Kanchanaburi Meteorological Station,Air4Thai,TH,14.022376,99.536195,reference,24h_running_mean,pass
+2025,225607,1304355,"Environment Agency Section 14, Surat Thani",Air4Thai,TH,9.126017,99.325145,reference,24h_running_mean,not checked
+2025,225609,1304122,Nakhonsawan Irrigation Project,Air4Thai,TH,15.68623,100.110556,reference,24h_running_mean,pass
+2025,225610,1304211,"Bueng Kum District Office, Bangkok",Air4Thai,TH,13.785212,100.669183,reference,24h_running_mean,pass
+2025,225611,1305053,Health Promotion Hospital Maptaput,Air4Thai,TH,12.70865,101.1659833,reference,24h_running_mean,pass
+2025,225612,1304328,Bansomdejchaopraya Rajabhat University,Air4Thai,TH,13.732846,100.487662,reference,24h_running_mean,pass
+2025,225613,1304281,Lat Krabang Hospital,Air4Thai,TH,13.72205,100.784069,reference,24h_running_mean,pass
+2025,225614,1305020,Tha phra Intersection,Air4Thai,TH,13.729431,100.474373,reference,24h_running_mean,pass
+2025,225615,1304331,"Meteorological stations, Nakhon Phanom",Air4Thai,TH,17.412345,104.7786123,reference,24h_running_mean,pass
+2025,225617,1304343,"Suan Luang District Office, Bangkok",Air4Thai,TH,13.731051,100.651705,reference,24h_running_mean,pass
+2025,225619,1304237,"Don Mueng District Office, Bangkok",Air4Thai,TH,13.910986,100.594877,reference,24h_running_mean,pass
+2025,225620,1304135,Na Phralan Police Station,Air4Thai,TH,14.685833,100.871996,reference,24h_running_mean,pass
+2025,225621,1304323,Thon Buri Market Sanam Luang 2,Air4Thai,TH,13.746257,100.355099,reference,24h_running_mean,pass
+2025,225622,1304203,"Huai Khwang District Office, Bangkok",Air4Thai,TH,13.77682,100.579543,reference,24h_running_mean,pass
+2025,225623,1304360,Environmental Office 8 ratchaburi,Air4Thai,TH,13.52344,99.814082,reference,24h_running_mean,pass
+2025,225624,1304435,Odeon Circus,Air4Thai,TH,13.737136,100.512734,reference,24h_running_mean,pass
+2025,225625,1304232,"City Hall, Satun",Air4Thai,TH,6.624747,100.066159,reference,24h_running_mean,not checked
+2025,225626,1304278,"Non-Formal Education Centre, Mea Sot",Air4Thai,TH,16.734413,98.566961,reference,24h_running_mean,too few days
+2025,225628,1305269,"Government Complex, Rayong",Air4Thai,TH,12.7066,101.18055,reference,24h_running_mean,pass
+2025,225629,1304077,Department of Disease Control,Air4Thai,TH,13.852778,100.529444,reference,24h_running_mean,pass
+2025,225630,1304063,"Meteorology Center, Phrae",Air4Thai,TH,18.1283666,100.1624333,reference,24h_running_mean,pass
+2025,225631,1304293,National Economic and Social Development Council Office,Air4Thai,TH,13.756281,100.514267,reference,24h_running_mean,pass
+2025,225632,1304130,"Chomthong District Office, Bangkok",Air4Thai,TH,13.677757,100.483861,reference,24h_running_mean,pass
+2025,225633,1304192,Siam University,Air4Thai,TH,13.718689,100.45391,reference,24h_running_mean,pass
+2025,225634,1304054,"Rat Burana District Office,  Bangkok",Air4Thai,TH,13.6821364,100.5060513,reference,24h_running_mean,pass
+2025,225635,1304123,"Wang Thonglang District Office, Bangkok",Air4Thai,TH,13.778981,100.622294,reference,24h_running_mean,pass
+2025,225636,1304300,Khao Noi Fire Station,Air4Thai,TH,14.526343,100.926047,reference,24h_running_mean,pass
+2025,225637,1304404,South Bangkok Power Plant,Air4Thai,TH,13.618,100.5562,reference,24h_running_mean,pass
+2025,225638,1304216,Samyan Mitrtown,Air4Thai,TH,13.733136,100.52829,reference,24h_running_mean,pass
+2025,225639,1304162,"City Hall, Narathiwat",Air4Thai,TH,6.426853,101.823388,reference,24h_running_mean,too few days
+2025,225640,1304353,Library under King Taksin Bridge,Air4Thai,TH,13.719705,100.508782,reference,24h_running_mean,pass
+2025,225641,1304357,"Din Dang, Bangkok",Air4Thai,TH,13.7619223,100.558606,reference,24h_running_mean,pass
+2025,225642,1304146,"Bang Phlat District Office, Bangkok",Air4Thai,TH,13.793965,100.504956,reference,24h_running_mean,pass
+2025,225643,1304380,Bangkok University Rangsit Campus,Air4Thai,TH,14.03742,100.605216,reference,24h_running_mean,pass
+2025,225644,1304240,Suphan Buri Provincial Central Stadium,Air4Thai,TH,14.476214,100.086095,reference,24h_running_mean,pass
+2025,225645,1304420,National Housing Authority Bangplee,Air4Thai,TH,13.5705,100.7862867,reference,24h_running_mean,pass
+2025,225646,1304316,Provincial Waterworks Authority Mae Moh,Air4Thai,TH,18.2826333,99.6598166,reference,24h_running_mean,pass
+2025,225647,1304340,"Phra Nakhon District Office, Bangkok",Air4Thai,TH,13.76415,100.499077,reference,24h_running_mean,pass
+2025,225648,1304178,"Natural Resources and Environment Office, Mae Hongson",Air4Thai,TH,19.30455,97.97165,reference,24h_running_mean,pass
+2025,225649,1304375,"OTOP Center, Ubon Ratchathani",Air4Thai,TH,15.245413,104.846219,reference,24h_running_mean,pass
+2025,225650,1304152,The Government Public Relations Department,Air4Thai,TH,13.783185,100.540489,reference,24h_running_mean,pass
+2025,225651,1304179,"Saphan Sung District Office, Bangkok",Air4Thai,TH,13.768892,100.685743,reference,24h_running_mean,pass
+2025,225652,1304082,Public Park to commemorate the sixth anniversary of His Majesty the King,Air4Thai,TH,13.697252,100.497185,reference,24h_running_mean,pass
+2025,225653,1304128,Chokchai Police Station,Air4Thai,TH,13.7954248,100.5930298,reference,24h_running_mean,pass
+2025,225654,1304209,"Environment Agency Section 13, Chonburi",Air4Thai,TH,13.35461667,100.9792167,reference,24h_running_mean,pass
+2025,225655,1304245,"Meteorological Staions, Lamphun",Air4Thai,TH,18.567194,99.038639,reference,24h_running_mean,pass
+2025,225656,1304256,"Bang Sue District Office, Bangkok",Air4Thai,TH,13.809596,100.537883,reference,24h_running_mean,pass
+2025,225657,1304088,"child development centers, Betong",Air4Thai,TH,5.763873,101.067903,reference,24h_running_mean,isolated
+2025,225660,1304438,"Chaloem Phrakiat Rama 9 Park Min buri, Bangkok",Air4Thai,TH,13.813578,100.73208,reference,24h_running_mean,pass
+2025,225661,1304186,"Nong Thin Public Park, Nong Khai",Air4Thai,TH,17.87748,102.728925,reference,24h_running_mean,pass
+2025,225663,1304140,Buriram City Hall,Air4Thai,TH,14.945452,103.105896,reference,24h_running_mean,pass
+2025,225666,1304315,"Phayao Provincial, Phayao",Air4Thai,TH,19.200226,99.893048,reference,24h_running_mean,pass
+2025,225667,1304114,Mahaisawan Intersection,Air4Thai,TH,13.70515,100.48465,reference,24h_running_mean,pass
+2025,225668,1304426,"Bang Kapi District Office, Bangkok",Air4Thai,TH,13.766478,100.647785,reference,24h_running_mean,pass
+2025,225669,1304220,"City Hall, Chiangmai",Air4Thai,TH,18.840732,98.96978,reference,24h_running_mean,pass
+2025,225671,1304229,"Khlong Sam Wa District Office, Bangkok",Air4Thai,TH,13.859911,100.704002,reference,24h_running_mean,pass
+2025,225672,1304078,Suan Sayam-Ram Intra Intersection,Air4Thai,TH,13.813844,100.686594,reference,24h_running_mean,pass
+2025,225673,1304204,National Housing Authority Dindaeng,Air4Thai,TH,13.76251667,100.5502,reference,24h_running_mean,pass
+2025,225674,1304191,"Municipality Office, Nan",Air4Thai,TH,18.7888833,100.7763166,reference,24h_running_mean,pass
+2025,225675,1304332,Meteorological Station Lopburi,Air4Thai,TH,14.800032,100.628548,reference,24h_running_mean,pass
+2025,225676,1304217,Ayutthaya Witthayalai School,Air4Thai,TH,14.35222,100.565325,reference,24h_running_mean,pass
+2025,225677,1304185,"Lak Si District Office, Bangkok",Air4Thai,TH,13.887395,100.579247,reference,24h_running_mean,pass
+2025,225678,1304073,"Bang Khae District Office, Bangkok",Air4Thai,TH,13.696314,100.409049,reference,24h_running_mean,pass
+2025,225679,1304309,"Dusit District Office, Bangkok",Air4Thai,TH,13.776664,100.520982,reference,24h_running_mean,pass
+2025,225681,1304248,"Soi Sukhumwit 63 Roadside Wattana, Bangkok",Air4Thai,TH,13.722096,100.584559,reference,24h_running_mean,pass
+2025,225682,1304111,King Mongkut's University of Technology Thonburi,Air4Thai,TH,13.651004,100.496673,reference,24h_running_mean,pass
+2025,225683,1304139,"Nong Chok District Office, Bangkok",Air4Thai,TH,13.855362,100.86267,reference,24h_running_mean,pass
+2025,225684,1304399,Army Apartment Sam Sen,Air4Thai,TH,13.783554,100.5344645,reference,24h_running_mean,pass
+2025,225685,1304097,National Housing  Huaykwang,Air4Thai,TH,13.77553,100.569195,reference,24h_running_mean,pass
+2025,225686,1304349,Highway NO.3902 km.13 +600,Air4Thai,TH,13.636514,100.414262,reference,24h_running_mean,not checked
+2025,225688,1304305,"Ratchathewi District Office, Bangkok",Air4Thai,TH,13.7590851,100.5345788,reference,24h_running_mean,pass
+2025,225689,1304065,Phutthamonthon 1 - Borommaratchachonnani Intersection,Air4Thai,TH,13.780778,100.426727,reference,24h_running_mean,pass
+2025,225690,1304087,Agricultural Office,Air4Thai,TH,12.67155,101.2758667,reference,24h_running_mean,not checked
+2025,225691,1304326,"Ma Charean Roadside, Petcha Kasem 8, Nong Khaem",Air4Thai,TH,13.705582,100.343164,reference,24h_running_mean,pass
+2025,225692,1304247,"Health Promotion Hospital Sob Pad, Lampang",Air4Thai,TH,18.2508166,99.76395,reference,24h_running_mean,not checked
+2025,225693,1304386,"Debaratana Vejjanukul Hospital, Mae Chaem",Air4Thai,TH,18.498333,98.379444,reference,24h_running_mean,pass
+2025,228541,1317087,"60th Anniversary Queen Sirikit Public Park, Loei",Air4Thai,TH,17.48462,101.732734,reference,24h_running_mean,pass
+2025,228542,1317103,"Nong Prajak Public Park, Udon Thani",Air4Thai,TH,17.414174,102.780926,reference,24h_running_mean,pass
+2025,228543,1317108,"72nd Anniversary King Bhumibol Public Park, Uttaradit",Air4Thai,TH,17.631352,100.09896,reference,24h_running_mean,pass
+2025,228544,1317093,"Meteorological stations, Sakon Nakhon",Air4Thai,TH,17.15662,104.133216,reference,24h_running_mean,pass
+2025,228627,1317584,"Polytechnic College, Trang",Air4Thai,TH,7.570238,99.588743,reference,24h_running_mean,pass
+2025,270250,1559904,Phetbura garden,Air4Thai,TH,16.418417,101.156556,reference,24h_running_mean,pass
+2025,270702,1561932,Bueng Planchai,Air4Thai,TH,16.057448,103.651056,reference,24h_running_mean,pass
+2025,351927,2000291,Le Thai Community Park,Air4Thai,TH,17.006059,99.81927,reference,24h_running_mean,pass
+2025,353740,2007834,Chanthaburi Meteorological Station,Air4Thai,TH,12.6095704,102.1040804,reference,24h_running_mean,pass
+2025,353741,2007819,"Phichit Provincial , Phichit",Air4Thai,TH,16.442554,100.322756,reference,24h_running_mean,pass
+2025,353742,2007836,Mukdahan Provincial Stadium,Air4Thai,TH,16.54257,104.7192,reference,24h_running_mean,pass
+2025,353743,2007829,Sirichit Thai Cultural Conservation Ground,Air4Thai,TH,16.475374,99.525425,reference,24h_running_mean,pass
+2025,354124,2009817,Hua Hin Weather Station Prachuap Khiri Khan Meteorological Station,Air4Thai,TH,12.577835,99.953663,reference,24h_running_mean,pass
+2025,368390,2076218,Thawee Wanarom Park,Air4Thai,TH,13.7435329,100.3526893,reference,24h_running_mean,pass
+2025,368391,2076229,Suan Luang Rama IX,Air4Thai,TH,13.6881393,100.6579657,reference,24h_running_mean,pass
+2025,368392,2076223,Ramintra Sports Park,Air4Thai,TH,13.8778763,100.6207085,reference,24h_running_mean,pass
+2025,368393,2076221,Rommani Thungsikan Park,Air4Thai,TH,13.9288678,100.5684666,reference,24h_running_mean,pass
+2025,368394,2076227,Lumpini park,Air4Thai,TH,13.732225,100.5448381,reference,24h_running_mean,pass
+2025,368395,2076215,Thonburirom Park,Air4Thai,TH,13.6502295,100.4909771,reference,24h_running_mean,pass
+2025,368396,2076225,Queen Sirikit Park,Air4Thai,TH,13.8055472,100.5488338,reference,24h_running_mean,pass
+2025,368397,2076216,Rama VIII Park,Air4Thai,TH,13.7693437,100.4945337,reference,24h_running_mean,pass
+2025,368399,2076232,Benjakitti Park,Air4Thai,TH,13.7328791,100.5600172,reference,24h_running_mean,pass
+2025,368400,2076219,"Bang Kho Laem District Office, Bangkok (Mobile)",Air4Thai,TH,13.69304,100.50244,reference,24h_running_mean,pass
+2025,368401,2076217,Nong Chok Park,Air4Thai,TH,13.855656,100.8585539,reference,24h_running_mean,pass
+2025,368402,2076231,Serithai Park,Air4Thai,TH,13.7855673,100.6733359,reference,24h_running_mean,pass
+2025,368403,2076226,Chatuchak Park,Air4Thai,TH,13.802546,100.5509191,reference,24h_running_mean,pass
+2025,368404,2076214,"60th Anniversary of Queen Sirikit Park ,Kheha Romklao Road, Lat Krabang, Bangkok",Air4Thai,TH,13.7631141,100.7302101,reference,24h_running_mean,pass
+2025,368405,2076222,Bang Khae Phirom Park,Air4Thai,TH,13.6863478,100.3844036,reference,24h_running_mean,pass
+2025,368406,2076224,80th Anniversary Commemoration Park,Air4Thai,TH,13.7716446,100.4681128,reference,24h_running_mean,pass
+2025,368408,2076228,Phra Nakhon Park,Air4Thai,TH,13.7201042,100.7807077,reference,24h_running_mean,pass
+2025,368485,2076618,Benchasiri Park,Air4Thai,TH,13.7304916,100.5684634,reference,24h_running_mean,pass
+2025,385742,2158912,Chaloem Phra Kiat Water Park,Air4Thai,TH,14.606306,100.453589,reference,24h_running_mean,pass
+2025,387511,2166412,Wiang Subdistrict Disaster Prevention and Mitigation Center,Air4Thai,TH,20.2575,100.4025,reference,24h_running_mean,pass
+2025,387660,2167058,Mueang Na Subdistrict Municipality Office,Air4Thai,TH,19.593889,98.961667,reference,24h_running_mean,fail: low r with neighbours
+2025,388962,2172925,Li District Office,Air4Thai,TH,17.802222,98.949722,reference,24h_running_mean,pass
+2025,500068,2806242,Pai Municipality,Air4Thai,TH,19.3591522,98.4364794,reference,24h_running_mean,pass
+2025,808649,4410573,"Natural Resources and Environment Office, Chainat",Air4Thai,TH,15.173056,100.126944,reference,24h_running_mean,pass
+2025,1172475,6455630,"Natural Resource and Environment, Phatthalung",Air4Thai,TH,7.614396,100.113766,reference,24h_running_mean,pass
+2025,1180415,9657975,Provincial Natural Resources and Environmental Office,Air4Thai,TH,6.890639752808323,101.25106087293467,reference,24h_running_mean,pass
+2025,1290682,6574439,Ranong Municipal office,Air4Thai,TH,9.961849,98.639341,reference,24h_running_mean,pass
+2025,1299596,6589543,Phangnga Provincial Government Center,Air4Thai,TH,8.424964,98.528719,reference,24h_running_mean,pass
+2025,1650686,7093737,Mueang Chaiyaphum Municipality Stadium,Air4Thai,TH,15.81148,102.02281,reference,24h_running_mean,pass
+2025,1650687,7093739,Phaya Thaen Public Park,Air4Thai,TH,15.783861,104.154639,reference,24h_running_mean,pass
+2025,1650688,7093743,SINGBURI SCHOOL,Air4Thai,TH,14.8933874,100.4130773,reference,24h_running_mean,pass
+2025,1785688,7338554,Amnat Charoen Municipality,Air4Thai,TH,15.8758,104.6223,reference,24h_running_mean,pass
+2025,1785690,7338537,KAENG DON KLANG PARK,Air4Thai,TH,16.4436,103.513,reference,24h_running_mean,pass
+2025,1785691,7338558,Nakhon Nayok Municipality Public Health Service Center,Air4Thai,TH,14.20422,101.21509,reference,24h_running_mean,pass
+2025,1785692,7338540,Nong Bueng Kan Park,Air4Thai,TH,18.362008,103.65977,reference,24h_running_mean,pass
+2025,1785694,7338551,Surin Meteorological Center,Air4Thai,TH,14.8762222,103.4965833,reference,24h_running_mean,pass
+2025,1861095,7431257,Wiang Subdistrict Disaster Prevention and Mitigation Center,Air4Thai,TH,18.804894,98.900698,reference,24h_running_mean,pass
+2025,1864570,7434913,"Provincial Electricity Authority, Hot District Branch",Air4Thai,TH,18.172495,98.61069,reference,24h_running_mean,pass
+2025,1873401,7443668,Sisaket Meteorological Center,Air4Thai,TH,15.087087,104.326787,reference,24h_running_mean,pass
+2025,1993935,7576283,Nong Bua Lamphu Provincial Administrative Organization,Air4Thai,TH,17.193824,102.4585009,reference,24h_running_mean,pass
+2025,2132593,7736413,Phetchaburi Municipality,Air4Thai,TH,13.11249031,99.9461325,reference,24h_running_mean,pass
+2025,2161290,7772012,An Khánh,Hanoi Air Quality Monitoring Network,VN,21.0024,105.7181,reference,hourly,pass
+2025,2161292,7772032,"Số 46, phố Lưu Quang Vũ",Hanoi Air Quality Monitoring Network,VN,21.0152,105.7999,reference,hourly,pass
+2025,2161293,7772046,Chúc Sơn,Hanoi Air Quality Monitoring Network,VN,20.92,105.7123,reference,hourly,pass
+2025,2161294,7772104,Cung thiếu nhi,Hanoi Air Quality Monitoring Network,VN,21.0284,105.8556,reference,hourly,pass
+2025,2161296,7772040,Đào Duy Từ,Hanoi Air Quality Monitoring Network,VN,21.0354,105.8529,reference,hourly,pass
+2025,2161305,7772053,Liên Quan,Hanoi Air Quality Monitoring Network,VN,21.056,105.578,reference,hourly,too few days
+2025,2161306,7772087,Minh Khai - Bắc Từ Liêm,Hanoi Air Quality Monitoring Network,VN,21.05,105.74,reference,hourly,pass
+2025,2161309,7772016,Pháp Vân,Hanoi Air Quality Monitoring Network,VN,20.9481,105.8493,reference,hourly,pass
+2025,2161311,7772076,Sài Sơn,Hanoi Air Quality Monitoring Network,VN,21.0167,105.6478,reference,hourly,too few days
+2025,2161312,7772037,Sóc Sơn,Hanoi Air Quality Monitoring Network,VN,21.2575,105.8514,reference,hourly,pass
+2025,2161319,7771984,Vân Đình,Hanoi Air Quality Monitoring Network,VN,20.7339,105.7703,reference,hourly,pass
+2025,2161320,7772059,Vân Hà,Hanoi Air Quality Monitoring Network,VN,21.1476,105.9159,reference,hourly,pass
+2025,2161323,7772015,Xuân Mai,Hanoi Air Quality Monitoring Network,VN,20.8994,105.5773,reference,hourly,pass
+2025,2524053,7974317,Prachinburi Provincial Public Health,Air4Thai,TH,14.0449046434287,101.3689396242558,reference,24h_running_mean,pass
+2025,3008643,10203283,Chumchon Banpadang School,Air4Thai,TH,6.66638438023621,100.32726914385205,reference,24h_running_mean,pass
+2025,3047300,10494201,"Sports Stadium, Chumphon Province",Air4Thai,TH,10.495142389105824,99.18935409512319,reference,24h_running_mean,pass
+2025,3291325,11468827,Mae Sariang District Office,Air4Thai,TH,18.158912,97.93271,reference,24h_running_mean,pass
+2025,3337858,11805825,Health Promoting Hospital Khlong Sakae,Air4Thai,TH,14.499973,100.650785,reference,24h_running_mean,pass
+2025,3345301,11862934,Pramuan Suk Health Park,Air4Thai,TH,16.77283,103.29982399999999,reference,24h_running_mean,not checked
+2025,3345345,11863289,Rayong Provincial Stadium,Air4Thai,TH,12.678917,101.234664,reference,24h_running_mean,pass
+2025,3347581,11880411,Pramuan Suk Health Park,Air4Thai,TH,16.177283,103.299824,reference,24h_running_mean,pass
+2025,3368091,12020149,Land Development Station,Air4Thai,TH,13.520415,100.1506688,reference,24h_running_mean,pass
+2025,1235990,6530181,"Kasetsart university laboratory school 1, Chatuchak, Bangkok",AirGradient,TH,13.850829210818615,100.56881779163187,low-cost,hourly,pass
+2025,1235996,6530178,"Vieng Nua, Pai",AirGradient,TH,19.374620435850545,98.44561078410078,low-cost,hourly,pass
+2025,1235999,6530173,NARIT ASTROPARK (Parking),AirGradient,TH,18.85345541310349,98.95760600870581,low-cost,hourly,pass
+2025,1236013,6530208,"Soemngamwitthayakhom School 2, Some-Ngam, Lampang",AirGradient,TH,18.279805533636747,99.48051196520771,low-cost,hourly,pass
+2025,1236014,6530214,NARIT​-OPD,AirGradient,TH,18.85275424506312,98.95834692689932,low-cost,hourly,pass
+2025,1236022,6530236,แม่กวง,AirGradient,TH,18.8266136,99.0523185,low-cost,hourly,pass
+2025,1236024,6530233,สันโป่ง,AirGradient,TH,18.9375111,98.9566944,low-cost,hourly,pass
+2025,1236034,6530253,"Watkhemapirataram school 1, Mueang, Nonthaburi",AirGradient,TH,13.823306342907303,100.50341971861289,low-cost,hourly,pass
+2025,1236035,6530251,"Pathumthep witthayakarn school 1, Mueang, Nong Khai",AirGradient,TH,17.866408250878237,102.74806318240316,low-cost,hourly,pass
+2025,1236038,6530250,"Nuannoradit school 2, Phasi Charoen, Bangkok",AirGradient,TH,13.723905641056973,100.46672554559318,low-cost,hourly,pass
+2025,1236040,6530276,"Kaenoisuksa School 1, Chiang Dao, Chiang Mai",AirGradient,TH,19.394767432705724,98.92874614493202,low-cost,hourly,fail: mean differs from neighbours
+2025,1236044,6530284,"Be Leaf Resort, Phuket",AirGradient,TH,8.028638989565119,98.35441155579035,low-cost,hourly,pass
+2025,1236050,6530303,Prem Tinsulanonda International School 1,AirGradient,TH,18.96255421231335,98.91562786546136,low-cost,hourly,pass
+2025,1236053,6530291,"Suwannaramwittayakom school 1, Bangkok Noi, Bangkok",AirGradient,TH,13.76312579330489,100.47612901861227,low-cost,hourly,pass
+2025,1236057,6530304,"Suwannakhuhapittayasan school 1, Suwan Khuha, Nong Bua Lamphu",AirGradient,TH,17.23816238132771,102.43412910724983,low-cost,hourly,too few days
+2025,1236063,6530321,"intERLab, Pathumthani, Thailand",AirGradient,TH,14.077551603647665,100.61278750267229,low-cost,hourly,pass
+2025,1236066,6530317,NARIT ASTROPARK (Research building),AirGradient,TH,18.851438300930976,98.95771486398863,low-cost,hourly,too few days
+2025,1236069,6530310,Rajaphat Yala University,AirGradient,TH,6.549012748332888,101.2896306111374,low-cost,hourly,too few days
+2025,1236072,6530330,"Srikranuanwittayakom school 1, Kranuan, Khon Kaen",AirGradient,TH,16.721984416175946,103.08173493955674,low-cost,hourly,pass
+2025,1236074,6530344,"Mahapruttaram girl's school 2, Bang Rak, Bangkok",AirGradient,TH,13.732667711114303,100.51601151861196,low-cost,hourly,pass
+2025,1305707,6595906,"Khunyuam Wittaya School 2, Khunyuam, Maehongson",AirGradient,TH,18.837399394128656,97.93995071660461,low-cost,hourly,pass
+2025,1405439,6716468,"Chomthong School 1, Chomthong, Chiang Mai",AirGradient,TH,18.435156957109033,98.67718182473789,low-cost,hourly,pass
+2025,1641552,7076714,วังหมุ้น,AirGradient,TH,18.945298569548378,98.97347979467268,low-cost,hourly,pass
+2025,1641558,7076722,Prem Tinsulanonda International School 2,AirGradient,TH,18.966512871928927,98.91508369562034,low-cost,hourly,pass
+2025,1646752,7086282,ดาดฟ้า,AirGradient,TH,18.932618966437307,98.96445032014383,low-cost,hourly,pass
+2025,1698943,7186370,Savvi Condominium Phahol-Ari,AirGradient,TH,13.778406648867108,100.54654472577135,low-cost,hourly,pass
+2025,1753562,7281994,บ้านร้องเกิด,AirGradient,TH,18.92786395211318,98.96541049234524,low-cost,hourly,pass
+2025,1753563,7281995,ดวงดี,AirGradient,TH,18.91977780483509,98.95279736395602,low-cost,hourly,pass
+2025,1753564,7281997,แก้วสา,AirGradient,TH,18.928286035684813,98.94445179435797,low-cost,hourly,pass
+2025,1894642,7466395,Savvi Condominium Phahol-Ari,Clarity,TH,13.77865,100.54655,low-cost,hourly,pass
+2025,1935353,7511192,Chiang Mai,AirGradient,TH,18.77435504104218,98.98365627447588,low-cost,hourly,pass
+2025,2041043,7628003,Mae Ann,AirGradient,TH,18.971315125096538,98.8784122467041,low-cost,hourly,pass
+2025,2124016,7725494,Wiang Nuea Beverly Hills Goat Farm,AirGradient,TH,19.385584,98.459714,low-cost,hourly,pass
+2025,2136949,7741884,Pai: Wednesday Market,AirGradient,TH,19.351845,98.4411552,low-cost,hourly,pass
+2025,2142493,7749647,Wiang Nuea Beverly Hills Hua Chang Dam,AirGradient,TH,19.383934,98.464782,low-cost,hourly,pass
+2025,2142801,7749859,Wiang Nuea: Wat Phra Phutthabat,AirGradient,TH,19.3910772,98.4534912,low-cost,hourly,pass
+2025,2146217,7754671,Pai: Seng Tong Market,AirGradient,TH,19.3573394,98.4381079,low-cost,hourly,pass
+2025,2147304,7756030,Tin That,N/A,TH,19.3172193,98.439397,low-cost,hourly,pass
+2025,2151718,7761087,Wiang Nuea Moat,AirGradient,TH,19.3747778,98.4453889,low-cost,hourly,pass
+2025,2154067,7763352,Kung Kaeng: Pai Munchkins Club / PLearn Pai Bilingual Learning Center,AirGradient,TH,19.342108,98.435391,low-cost,hourly,pass
+2025,2155602,7765489,Mae Hi: Bueng Pai Farm,AirGradient,TH,19.344337,98.446422,low-cost,hourly,pass
+2025,2158149,7768319,Pai: Dr. Neung Clinic near PTT gas station,AirGradient,TH,19.355492,98.436671,low-cost,hourly,pass
+2025,2165656,7779239,Mae Yen: Ing Doi Guesthouse,AirGradient,TH,19.355916,98.448666,low-cost,hourly,pass
+2025,2169936,7784547,Hang Dong / Sameong,AirGradient,TH,18.719434,98.930183,low-cost,hourly,pass
+2025,2174592,7788909,Chiang moi,AirGradient,TH,18.78987,98.99583,low-cost,hourly,pass
+2025,2181641,7790011,ทองหล่อ 8,AirGradient,TH,13.7316,100.5834,low-cost,hourly,pass
+2025,2315448,7796897,Muang Soi Health Center,AirGradient,TH,19.395894,98.404624,low-cost,hourly,pass
+2025,2327978,7797649,Mae Hi: Pittalew Art Gallery,AirGradient,TH,19.344769,98.453281,low-cost,hourly,pass
+2025,2340282,7798219,Paina Paita Home (near Coffee In Love),AirGradient,TH,19.336754,98.43217,low-cost,hourly,pass
+2025,2375197,7802105,Mae Khong Border Patrol,AirGradient,TH,19.385612,98.437128,low-cost,hourly,pass
+2025,2379288,7806644,Sahakorn 5,AirGradient,TH,18.857987,99.261237,low-cost,hourly,pass
+2025,2384279,7812174,Mae Na Toeng School,AirGradient,TH,19.393767,98.42108,low-cost,hourly,pass
+2025,2384280,7812177,Wiang Nuea Moo 8 Mayor,AirGradient,TH,19.379253,98.445529,low-cost,hourly,pass
+2025,2384585,7812301,Mae Khong Health Center,AirGradient,TH,19.385735,98.439518,low-cost,hourly,pass
+2025,2393909,7824196,Pai: NT/TOT office near Pai Hospital,AirGradient,TH,19.3621389,98.4375556,low-cost,hourly,pass
+2025,2402491,7834588," Wat Khlong Toey Nai School, Bangkok",Clarity,TH,13.71037,100.56115,low-cost,hourly,pass
+2025,2429963,7868945,Mae Ping Health Center,AirGradient,TH,19.28607,98.468214,low-cost,hourly,pass
+2025,2439091,7880296,Wiang Nuea: Mon Far Pai Cottages,AirGradient,TH,19.369755,98.449955,low-cost,hourly,pass
+2025,2439859,7881259,Wat Mo Paeng,AirGradient,TH,19.379659,98.396488,low-cost,hourly,pass
+2025,2457250,7901662,Muang Rae Police Box,AirGradient,TH,19.241398,98.44963,low-cost,hourly,pass
+2025,2461311,7905641,The Mud House by CMG,AirGradient,TH,18.70707013718418,98.91531793782238,low-cost,hourly,too few days
+2025,2474515,7920113,Thung Yao South (near Two Huts),AirGradient,TH,19.317546,98.448532,low-cost,hourly,pass
+2025,2492986,7943848,The Hideaway Village (near Wat Sop Phaem),AirGradient,TH,19.299787,98.443144,low-cost,hourly,pass
+2025,2510432,7963855,Pa Yang School,AirGradient,TH,19.395591,98.387011,low-cost,hourly,pass
+2025,2575375,8429609,สันโป่ง,AirGradient,TH,18.941970789965023,98.94292144786002,low-cost,hourly,pass
+2025,2674799,8655382,"Talingchan, Bangkok, Thailand",AirGradient,TH,13.771263,100.434679,low-cost,hourly,too few days
+2025,2692433,8694745,Soi Rimthang Rotfai 3,AirGradient,TH,13.723917563386962,100.4896320971784,low-cost,hourly,pass
+2025,2692436,8694741,Soi Naradhiwas Rajanagarindra 17/1,AirGradient,TH,13.714227217771464,100.53463637224243,low-cost,hourly,pass
+2025,2692437,8694734,Nana Nue Pier,AirGradient,TH,13.74828616518107,100.55400303589226,low-cost,hourly,pass
+2025,2692438,8694782,Soi Wong Sawang 3,AirGradient,TH,13.818829640186134,100.5170517172806,low-cost,hourly,pass
+2025,2692439,8694736,Wanglang Rd.,AirGradient,TH,13.759764,100.474672,low-cost,hourly,pass
+2025,2692642,8695097,Suriya Thep Alley,AirGradient,TH,13.749383457371344,100.47691024942468,low-cost,hourly,pass
+2025,2692643,8695100,Tang Trong Chit Alley,AirGradient,TH,13.768026699364972,100.46533225829832,low-cost,hourly,pass
+2025,2692644,8695095,Kiak Kai Intersection,AirGradient,TH,13.79695026631216,100.5222724774432,low-cost,hourly,pass
+2025,2692645,8695103,Vibhavadi Rangsit 11 Alley Lane 10,AirGradient,TH,13.824551234939227,100.55028307691722,low-cost,hourly,pass
+2025,2694254,8698874,Soi Kheha Pattana 1,AirGradient,TH,13.709940984188846,100.57602189955097,low-cost,hourly,not checked
+2025,2739142,8797306,MSK Talat,AirGradient,TH,16.1033,103.1733,low-cost,hourly,pass
+2025,2806604,8948127,โรงเรียนมีชัยพัฒนา 1,AirGradient,TH,14.943276639744417,102.83871536708331,low-cost,hourly,pass
+2025,2811479,8958977,โรงเรียนบ้านหนองโบสถ์ ,AirGradient,TH,14.631278247689572,102.71985109647431,low-cost,hourly,pass
+2025,2811482,9223356,โรงเรียนบ้านซำแฮด,AirGradient,TH,14.85172457209533,102.91012168884586,low-cost,hourly,pass
+2025,2811595,8959852,โรงเรียนบ้านสันดาบ,AirGradient,TH,13.538714910765675,100.34699792942607,low-cost,hourly,pass
+2025,2811813,8961496,โรงเรียนบ้านบึง-ยางประชาสรรค์,AirGradient,TH,15.359517935267661,103.98238995374493,low-cost,hourly,pass
+2025,2811817,9223336,โรงเรียนบ้านแม่กองคา,AirGradient,TH,18.046652379471208,97.82096642561154,low-cost,hourly,too few days
+2025,2813651,9223352,โรงเรียนด่านใต้วิทยา,AirGradient,TH,16.24309780470331,103.72712951331772,low-cost,hourly,pass
+2025,2813653,8971449,โรงเรียนคูคำพิทยาสรรพ์,AirGradient,TH,16.522197658786855,103.01450808336814,low-cost,hourly,pass
+2025,2813725,8971972,โรงเรียนอนุบาลพาน,AirGradient,TH,19.535827619120635,99.74097750939806,low-cost,hourly,pass
+2025,2813903,8973353,โรงเรียนบ้านหินโคน,AirGradient,TH,15.0024514147974,102.49220967195023,low-cost,hourly,pass
+2025,2813904,9758240,โรงเรียนวัดจันเสน,AirGradient,TH,15.117804417115428,100.45916405575342,low-cost,hourly,pass
+2025,2813975,8973908,โรงเรียนบ้านเกาะยวน,AirGradient,TH,6.87268456246548,99.80799344894625,low-cost,hourly,pass
+2025,2813976,8973903,โรงเรียนบ้านบึงทับแรต,AirGradient,TH,16.702504348352143,99.86226286535995,low-cost,hourly,pass
+2025,2813978,9309891,โรงเรียนบ่อเกลือ,AirGradient,TH,19.079081341720972,101.15802814887805,low-cost,hourly,pass
+2025,2814051,8974471,โรงเรียนบ้านท่าคลอง,AirGradient,TH,6.712557412643191,101.05851274648653,low-cost,hourly,not checked
+2025,2821336,9029953,โรงเรียนโสตศึกษา ปราจีนบุรี,AirGradient,TH,14.176639629938995,101.37048562423693,low-cost,hourly,pass
+2025,2821337,9029943,โรงเรียนผ่านศึกสงเคราะห์ 2,AirGradient,TH,20.1738211256972,100.06373951389979,low-cost,hourly,pass
+2025,2821701,9223397,โรงเรียนราชประชานุเคราะห์ 45,AirGradient,TH,14.128972484746537,99.69294076763131,low-cost,hourly,pass
+2025,2822813,9041045,โรงเรียนบ้านหนองแวงมน,AirGradient,TH,15.738638477478045,102.4671765670442,low-cost,hourly,pass
+2025,2826926,9071970,โรงเรียนบ้านโคกกลางอนุสรณ์,AirGradient,TH,14.975487206390724,102.84285317073332,low-cost,hourly,not checked
+2025,2827389,9075411,"Saraphi, Chiang Mai",AirGradient,TH,18.69092576903741,99.04716043182036,low-cost,hourly,pass
+2025,2827390,9075438,โรงเรียนขุนยวมวิทยา,AirGradient,TH,18.83658958412909,97.93999695256035,low-cost,hourly,too few days
+2025,2827392,9075436,มหาวิทยาลัยราชภัฎภูเก็ต 1,AirGradient,TH,7.909639025949969,98.38698699663972,low-cost,hourly,pass
+2025,2827393,9075429,มหาวิทยาลัยราชภัฎภูเก็ต 2,AirGradient,TH,7.913188350254121,98.38594629958502,low-cost,hourly,pass
+2025,2827394,9075461,หอดูดาวสงขลา,AirGradient,TH,7.158502558743491,100.6113217561578,low-cost,hourly,pass
+2025,2827395,9075441,โรงเรียนแวงพิทยาคม,AirGradient,TH,17.42769650946683,103.61873634019608,low-cost,hourly,pass
+2025,2827396,9075458,โรงเรียนเสริมงามวิทยาคม,AirGradient,TH,18.050391606682883,99.23346803905622,low-cost,hourly,pass
+2025,2832266,9112194,โรงเรียนบีกริม,AirGradient,TH,13.638638923364107,102.39096382050207,low-cost,hourly,pass
+2025,2832600,9114724,โรงเรียนเสริมขวาวิทยา,AirGradient,TH,18.129044618992815,99.20212951372334,low-cost,hourly,pass
+2025,2843624,9196349,โรงเรียนทุ่งต้นปีก,AirGradient,TH,8.265338492002899,98.80838059044652,low-cost,hourly,not checked
+2025,2843625,9196380,โรงเรียนศรีสังวาลย์เชียงใหม่,AirGradient,TH,18.91706462015052,98.99813940307875,low-cost,hourly,not checked
+2025,2843627,9196354,โรงเรียนราชประชานุเคราะห์ 37,AirGradient,TH,8.267128021403797,99.04695559639762,low-cost,hourly,pass
+2025,2843630,9196355,โรงเรียนบ้านละทาย,AirGradient,TH,15.179903455765555,104.58213514232098,low-cost,hourly,fail: mean differs from neighbours
+2025,2843713,9197053,โรงเรียนโสตศึกษา สุรินทร์,AirGradient,TH,14.708486039648943,103.42312321153788,low-cost,hourly,pass
+2025,2843720,9197038,โรงเรียนราชประชานุเคราะห์ 56,AirGradient,TH,18.55614310402829,100.71911569413429,low-cost,hourly,pass
+2025,2843723,9563746,โรงเรียนชุมชนวัดเขาไม้แก้ว,AirGradient,TH,12.949917877088192,101.03639622869056,low-cost,hourly,pass
+2025,2843771,9197442,โรงเรียนบ้านน้อยห้วยรินวิทยา,AirGradient,TH,18.02707441554263,98.66349112279283,low-cost,hourly,pass
+2025,2845048,9207911,โรงเรียนบ้านคลองตัน ,AirGradient,TH,13.672005063516075,100.14150520971182,low-cost,hourly,too few days
+2025,2845347,9209428,โรงเรียนบ้านโคกขามโนนสมบูรณ์,AirGradient,TH,14.817848930975666,102.88950559496688,low-cost,hourly,pass
+2025,2846870,9221026,โรงเรียนบ้านกรูดหนองซำ,AirGradient,TH,15.16195622435345,103.4473178782824,low-cost,hourly,too few days
+2025,2847183,9223353,โรงเรียนบ้านน้ำอ้อมรัฐประชานุสรณ์,AirGradient,TH,14.656188098453697,104.6479380461637,low-cost,hourly,pass
+2025,2847191,9223407,โรงเรียนบ้านกาศประชานุเคราะห์,AirGradient,TH,18.082763142301825,100.17276032284325,low-cost,hourly,too few days
+2025,2847192,9223406,โรงเรียนวรดิตถ์วิทยาประสูทน์,AirGradient,TH,14.490412714080469,100.43669131922096,low-cost,hourly,pass
+2025,2847193,9223387,โรงเรียนเทศบาล3,AirGradient,TH,15.132768807414523,104.31156419354186,low-cost,hourly,too few days
+2025,2847196,9223430,โรงเรียนวัดกระเฉท,AirGradient,TH,12.75573100747808,101.22385802114438,low-cost,hourly,pass
+2025,2847199,9223487,"โรงเรียนบ้านกวางงอย ""รัฐราษฎ์อำนยวิทย์""",AirGradient,TH,14.924239991191783,102.83397082105887,low-cost,hourly,pass
+2025,2847201,9223453,โรงเรียนชุมชนตำบลนายาง,AirGradient,TH,17.914424417093098,99.30777676331053,low-cost,hourly,too few days
+2025,2847202,9223476,โรงเรียนศรีสังวาลย์ ขอนแก่น,AirGradient,TH,16.474516060555143,102.84070593309495,low-cost,hourly,pass
+2025,2847205,9223499,โรงเรียนบ้านโนนแสนคำหนองศาลาศรีสะอาด,AirGradient,TH,14.543129573360519,104.71854715911172,low-cost,hourly,pass
+2025,2847206,9223445,โรงเรียนราชประชานุเคราะห์ 15,AirGradient,TH,20.27491375532466,100.08676619657707,low-cost,hourly,too few days
+2025,2847207,9223473,โรงเรียนบ้านหนองแวง ,AirGradient,TH,15.08809077921939,102.97314965290245,low-cost,hourly,too few days
+2025,2848543,9234072,โรงเรียนบ้านหนองไห ,AirGradient,TH,16.2072670990296,102.6615149381862,low-cost,hourly,too few days
+2025,2848549,9234023,โรงเรียนบ้านห้วยเม็ง (ประสาทวิทย์),AirGradient,TH,20.297601712763182,100.38589414207362,low-cost,hourly,too few days
+2025,2848810,9235367,International School Bangkok - Nonthaburi ,AirGradient,TH,13.8929,100.5258,low-cost,hourly,pass
+2025,2848950,9236395,โรงเรียนพัฒนาสามัคคี,AirGradient,TH,15.810264445974283,104.71285338712057,low-cost,hourly,too few days
+2025,2850409,9247865,โรงเรียนบ้านห้วยไม้หก,AirGradient,TH,17.426687368214814,98.46186558690347,low-cost,hourly,pass
+2025,2856204,9290534,โรงเรียนโคกสวาสดิ์หนองสองห้องดอนแดง,AirGradient,TH,15.971762558214655,104.63396983717334,low-cost,hourly,too few days
+2025,2856334,9291530,โรงเรียนบ้านขี้เหล็กดอยดินแดง,AirGradient,TH,20.192107282287857,99.92237810267108,low-cost,hourly,too few days
+2025,2857820,9302670,โรงเรียนเตรียมทหาร รุ่นที่ 13 อนุสรณ์,AirGradient,TH,16.350857980092687,104.57883941275776,low-cost,hourly,pass
+2025,2858173,9305155,โรงเรียนบ้านคอกควาย(สันติภาพคุรุราษฎร์พัฒนา),AirGradient,TH,14.687464929074753,102.79859033217699,low-cost,hourly,pass
+2025,2861423,9329485,โรงเรียนพยัคฆภูมิวิทยาคาร,AirGradient,TH,15.512772846428138,103.1924975423704,low-cost,hourly,pass
+2025,2894142,9575060,โรงเรียนราชประชานุเคราะห์ 50,AirGradient,TH,16.25802367972713,102.77506342533592,low-cost,hourly,pass
+2025,2894237,9575745,โรงเรียนบ้านโนนคูณ,AirGradient,TH,14.920165439073962,104.71185584158256,low-cost,hourly,too few days
+2025,2894459,9577429,โรงเรียนลพบุรีปัญญานุกูล,AirGradient,TH,14.783014131133461,100.64741702329812,low-cost,hourly,pass
+2025,2908059,9677281,"Prem International School, The Pool",AirGradient,TH,18.962544060773414,98.91557422011076,low-cost,hourly,too few days
+2025,2909413,9686527,Soi Bumrungsin ,AirGradient,TH,13.4054598,100.9875579,low-cost,hourly,pass
+2025,2912858,9710020,โรงเรียนวัดเกาะ,AirGradient,TH,12.740953304194278,101.28107571423837,low-cost,hourly,too few days
+2025,2920397,9757595,โรงเรียนบ้านช่อผกา ,AirGradient,TH,14.829779036752795,102.83396922482842,low-cost,hourly,too few days
+2025,2926254,9793729,โรงเรียนบ้านวังลุง,AirGradient,TH,18.177309310650944,98.61097589156435,low-cost,hourly,pass
+2025,2926351,9794387,โรงเรียนวัดเทพนิมิตร,AirGradient,TH,7.860514922370785,98.36903463319537,low-cost,hourly,pass
+2025,2927633,9804570,โรงเรียนราชประชานุเคราะห์ 35,AirGradient,TH,8.776161659005904,98.26620212523758,low-cost,hourly,pass
+2025,2927999,9804569,โรงเรียนราชประชานุเคราะห์ 46,AirGradient,TH,15.184977141061985,100.12478444536801,low-cost,hourly,pass
+2025,2933397,9837769,โรงเรียนบ้านหนองยาง,AirGradient,TH,17.970503944113364,103.28741677000276,low-cost,hourly,too few days
+2025,2933523,9838441,โรงเรียนบ้านหัวเวียง (โกศัลย์วิทย์),AirGradient,TH,20.272634337603776,100.40377154901601,low-cost,hourly,too few days
+2025,2938625,9869822,โรงเรียนบ้านดอนแดงเจริญทอง,AirGradient,TH,17.2537152291695,104.69491626895613,low-cost,hourly,too few days
+2025,2953982,9959326,โรงเรียนบ้านเสียว,AirGradient,TH,15.257387898044886,104.03668778711167,low-cost,hourly,too few days
+2025,3019320,10283302,Rangsit - Nakhon Nayok 25,AirGradient,TH,13.990582062342105,100.63521933513957,low-cost,hourly,pass
+2025,3047340,10494485,"Maerim, Chiangmai",AirGradient,TH,18.932580910609936,98.94895059814411,low-cost,hourly,pass
+2025,3090636,10820628,Uno Solutions,AirGradient,TH,13.8498819,100.638635,low-cost,hourly,pass
+2025,3097120,10865435,Circle Living Prototype,AirGradient,TH,13.750578,100.556228,low-cost,hourly,pass
+2025,3133267,10958195,NASA GSFC Rutgers Calib. N17,Clarity,TH,13.8192,100.041,low-cost,hourly,fail: mean differs from neighbours
+2025,3203249,11128971,Supalai Lake Ville Phuket,AirGradient,TH,7.968184,98.378202,low-cost,hourly,pass
+2025,3276359,11357424,CMT8,AirGradient,VN,10.78533,106.67029,low-cost,hourly,isolated
+2025,3332045,11761946,Soi Ramintra 62,AirGradient,TH,13.8306134,100.6690372,low-cost,hourly,too few days
+2025,3343025,11845458,Suphan Buri Sri Prachan,AirGradient,TH,14.642824,100.149966,low-cost,hourly,pass
+2025,3349809,11897455,Green Life Samui,AirGradient,TH,9.539588,100.046542,low-cost,hourly,isolated
+2025,3350392,11901752,Mexico City Polanco,AirGradient,TH,19.434,99.1956,low-cost,hourly,fail: low r with neighbours
+2025,3354390,11929499,Soi Cowboy,AirGradient,TH,13.7370851,100.562983,low-cost,hourly,too few days
+2025,3400903,12178140,Soi Cowboy ,AirGradient,TH,13.7370851,100.562983,low-cost,hourly,pass
+2025,3400922,12178212,Wang Pring Teen Na บ้านวังปริง-ตีนนา ,AirGradient,TH,6.80172419898538,100.49337985674264,low-cost,hourly,pass
+2025,3400935,12178260,MI Home,AirGradient,TH,13.698573693307418,100.5959569057577,low-cost,hourly,pass
+2025,3400936,12178264,Thung Hua Sinn Group,AirGradient,TH,13.69892706888951,100.5967325993592,low-cost,hourly,pass
+2025,3400937,12178268,Khlong 3 - Lat Sawai,AirGradient,TH,13.944866,100.6670272,low-cost,hourly,pass
+2025,3400941,12178284,Neighbour Home,AirGradient,TH,13.9135033,100.6843258,low-cost,hourly,pass
+2025,3400942,12178288,Burnadelphia ,AirGradient,LA,17.938,102.632,low-cost,hourly,pass
+2025,3400954,12178328,"Bangramad, Talingchan",AirGradient,TH,13.769972,100.436219,low-cost,hourly,pass
+2025,3400955,12178332,Ban Lat Sombun,AirGradient,TH,17.0747487,103.9818061,low-cost,hourly,pass
+2025,3400956,12178336,The Lofts Asoke - sukhumvit 21,AirGradient,TH,13.74679776025865,100.56215036834317,low-cost,hourly,pass
+2025,3400979,12178408,"House 45, Arden Rama 3",AirGradient,TH,13.67941,100.54297,low-cost,hourly,pass
+2025,3400984,12742460,Kok Roka,AirGradient,KH,11.597015,104.8038,low-cost,hourly,too few days
+2025,3400985,12178424,Onnut 44,AirGradient,TH,13.699072722760107,100.63272004438734,low-cost,hourly,pass
+2025,3400986,12311507,"Chomphet Secondary School - Sisattanak, Vientiane Capital ມັດທະຍົມສົມບູນ ຈອມເພັດ",AirGradient,LA,17.910254,102.622708,low-cost,hourly,pass
+2025,3401031,12178031,Royce Private,N/A,TH,13.7408785546112,100.56617492969099,low-cost,hourly,too few days
+2025,3402586,12187660,TPN FlexPak,AirGradient,TH,13.5865189344302,100.95071089222978,low-cost,hourly,pass
+2025,3402593,12187645,TPN Packaging,AirGradient,TH,13.587370852277184,100.94784483015584,low-cost,hourly,pass
+2025,3402594,12187650,Thung Hua Sinn Printing Network,AirGradient,TH,13.579648742936051,100.94081408928972,low-cost,hourly,pass
+2025,3405765,12742762,"Civil Engineering, NPIC",AirGradient,KH,11.597738545600507,104.79998960598436,low-cost,hourly,too few days
+2025,3407228,12219564,Noble Remix - Bangkok,AirGradient,TH,13.725080260147958,100.57723279163291,low-cost,hourly,pass
+2025,3474952,12311482,"Salakham Secondary School - Hadxaifong District, Vientiane Capital",AirGradient,LA,17.880817,102.648658,low-cost,hourly,pass
+2025,3478630,12311487,"Santiphab Secondary School - Luangprabang, Luangprabang ມັດທະຍົມ ສັນຕິພາບ",AirGradient,LA,19.880332,102.139832,low-cost,hourly,too few days
+2025,3478631,12311497,"Thaphabath Secondary School - Thaphabath, Bolikhamxai",AirGradient,LA,18.356826,103.198076,low-cost,hourly,pass
+2025,3484329,12311492,"Chomphet Secondary School - Chomphet, Luangprabang ມັດທະຍົມສົມບູນ ຈອມເພັດ",AirGradient,LA,19.908009,102.129102,low-cost,hourly,pass
+2025,3487377,12305886,"Kiwkachum Secondary School - XiengNgeun, Luangprabang ມັດທະຍົມ ກິ່ວກະຈຳ",AirGradient,LA,19.555,102.234,low-cost,hourly,pass
+2025,3493785,12305881,"PakXeng Secondary School - PakXeng, Luangprabang ມັດທະຍົມສົມບູນ ປາກແຊງ",AirGradient,LA,20.174492,102.675657,low-cost,hourly,pass
+2025,3493786,12305891,Thakhek - Khammouan ,AirGradient,LA,17.392668,104.807495,low-cost,hourly,pass
+2025,3493787,12311502,"Xebangfay Secondary School - Xebangfay, Khammouane ມັດທະຍົມສົມບູນ ເຊບັ້ງໄຟ",AirGradient,LA,17.086149,104.981631,low-cost,hourly,too few days
+2025,3499026,12310829,"Phoukhoune Secondary School - Phoukhoune, Luangprabang ມັດທະຍົມ ພູຄູນ",AirGradient,LA,19.438824,102.428042,low-cost,hourly,pass
+2025,3501135,12312479,"Tonpheung Secondary School - Tonpheung, Bokeo  ມັດທະຍົມ ຕົ້ນເຜີ້ງ",AirGradient,LA,20.29241,100.09858,low-cost,hourly,not checked
+2025,3501136,12312484,Paktha - Bokeo,AirGradient,LA,20.105423,100.597269,low-cost,hourly,pass
+2025,3501137,12312489,"Phonxay Secpondary School - Phonxay, Luangprabang ມັດທະຍົມສົມບູນ ເມືອງໂພນໄຊ",AirGradient,LA,19.958916,102.572347,low-cost,hourly,pass
+2025,3503721,12314078,"Vientiane Secondary School - Chanthabuly, Vientiane Capital ມັດທະຍົມ ວຽງຈັນ",AirGradient,LA,17.970177,102.616937,low-cost,hourly,not checked
+2025,3503722,12314083,"Nampook Secondary School - Huoixai, Bokeo ມັດທະຍົມສົມບູນ ນ້ຳປຸກ",AirGradient,LA,20.217811,100.565439,low-cost,hourly,pass
+2025,3503723,12314088,Pakkading - Bolikhamxai ,AirGradient,LA,18.109902,104.281265,low-cost,hourly,pass
+2025,3503724,12314093,"Nakhonxay Secondary School - Khamkeuth, - Borikhamxai ມັດທະຍົມ ນະຄອນໄຊ",AirGradient,LA,18.185553,104.983958,low-cost,hourly,pass
+2025,3503725,12314098,Nhommalath - Khammouan ,AirGradient,LA,17.614203,105.170282,low-cost,hourly,pass
+2025,3510962,12860780,Viengthong - Bolikhamxai,AirGradient,LA,18.512354,104.442835,low-cost,hourly,too few days
+2025,3510963,12320592,Nongbok - Khammouan,AirGradient,LA,16.962416,104.81156,low-cost,hourly,pass
+2025,3510964,12320597,Lamarm - Sekong ,AirGradient,LA,15.352494,106.722444,low-cost,hourly,too few days
+2025,3510965,12331115,Pak Ou Secondary School - Luangprabang ມັດທະຍົມສົມບູນ ປາກອູ,AirGradient,LA,20.087592,102.256569,low-cost,hourly,pass
+2025,3511463,12320920,"Ngoi Secondary School - Ngoi, Luangprabang ມັດທະຍົມ ເມືອງງອຍ",AirGradient,LA,20.568968,102.609436,low-cost,hourly,not checked
+2025,3524548,12331753,"Natoon Secondary School - Khua, Phongsaly ມັດທະຍົມສົມບູນ ນາຕູ່ນ",AirGradient,LA,21.078865,102.505833,low-cost,hourly,pass
+2025,3524549,12331758,Pek - Xiengkhouang,AirGradient,LA,19.444636,103.205788,low-cost,hourly,too few days
+2025,3524550,12331763,"NamOn Secondary School - Xaychamphone, Borikhamxai ມັດທະຍົມ ນຳ້ອ້ອນ",AirGradient,LA,18.577559,104.981947,low-cost,hourly,pass
+2025,3524551,12331768,Mahaxay - Khammouan,AirGradient,LA,17.457352,105.160169,low-cost,hourly,pass
+2025,3524552,12331773,"Hinboon Secondary School - Hinboon, Khammouane ມັດທະຍົມສົມບູນ ຫີນບູນ",AirGradient,LA,17.721875,104.581724,low-cost,hourly,pass
+2025,3524553,12331778,Thateng -Sekong,AirGradient,LA,15.434018,106.382399,low-cost,hourly,pass
+2025,3527752,12334305,"Sanam Sai, Pong Ta Long, Pak Chong",AirGradient,TH,14.559764291719427,101.50069771390922,low-cost,hourly,pass
+2025,3539280,12391265,"Longsane Secondary School - Longsane , Xaysomboun ມັດທະຍົມສົມບຸນ ລ້ອງຊານ",AirGradient,LA,18.550145,103.003076,low-cost,hourly,pass
+2025,3553303,12401331,"Vangxieng Secondary School - Phonthong, Luangprabang ມັດທະຍົມ ວັງຊຽງ",AirGradient,LA,20.737745,103.073231,low-cost,hourly,pass
+2025,3553304,12370643,"Ekaphab Secondary School - Xayabury, Xayabury ມັດທະຍົມ ເອກະພາບ",AirGradient,LA,19.237566,101.714751,low-cost,hourly,pass
+2025,3560431,12391270,"Kenethao Secondary School - Kenethao, Xayabury ມັດທະຍົມສົມບຸນ ແກ່ນທ້າວ",AirGradient,LA,17.740569,101.403471,low-cost,hourly,pass
+2025,3560513,12860775,"Chomphet Seconbdary School - Khoune, Xiengkhuang ມັດທະຍົມ ຈອມເພັດ",AirGradient,LA,19.340999,103.371433,low-cost,hourly,too few days
+2025,3560515,12381004,"Nakang Secondary School - Khounkham, Khammouane ມັດທະຍົມສົມບູນ ນາກາງ",AirGradient,LA,18.02845,104.65357,low-cost,hourly,pass
+2025,3562555,12380999,"Nan Secondary School - Nan, Luangprabang ມັດທະຍົມ ເມືອງນານ",AirGradient,LA,19.498539,101.883867,low-cost,hourly,pass
+2025,3562556,12860760,"Viengxay Secondary School - Viengxay, Houaphan ມັດທະຍົມສົມບູນ ເມືອງວຽງໄຊ",AirGradient,LA,20.405402,104.221218,low-cost,hourly,not checked
+2025,3562557,12391275,"Lardkhai Secondary School - Phaxay, Xiengkhouang ມັດທະຍົມ ລາດຄ້າຍ",AirGradient,LA,19.29915,103.133374,low-cost,hourly,not checked
+2025,3567155,12365219,Mayparkngum - Vientiane Capital,AirGradient,LA,18.185205,103.05687,low-cost,hourly,pass
+2025,3567156,12365224,May - Phongsaly,AirGradient,LA,21.172583,102.722705,low-cost,hourly,pass
+2025,3567157,12365229,Nalae - Louangnamtha,AirGradient,LA,20.536617,101.447461,low-cost,hourly,too few days
+2025,3567158,12365234,Pha Oudom - Bokeo,AirGradient,LA,20.086216,100.831707,low-cost,hourly,pass
+2025,3567159,12365239,Phonhong - Vientiane,AirGradient,LA,18.350024,102.42424,low-cost,hourly,pass
+2025,3567160,12365244,Songkhone - Savannakhet,AirGradient,LA,16.237196,105.1965,low-cost,hourly,pass
+2025,3567161,12365249,"Saravane Secondary School -Saravane, Saravane ມັດທະຍົມສົມບູນ ສາລະວັນ",AirGradient,LA,15.707906,106.422189,low-cost,hourly,too few days
+2025,3572814,12860820,"Dakcheung Secondary School - Dakcheung, Sekongມັດທະຍົມສົມບູນ ດາກຈຶງ",AirGradient,LA,15.467532,107.271451,low-cost,hourly,too few days
+2025,3576032,12372614,Ban Nong Wa,AirGradient,TH,14.968124,102.9822904,low-cost,hourly,pass
+2025,3585656,12860765,"NamNgeun Secondary School - Ngeun, Xayabouly ມັດທະຍົມສົມບູນ ນ້ຳເງິນ",AirGradient,LA,19.619875,101.112439,low-cost,hourly,too few days
+2025,3591603,12385252,"La Secondary School - La, Oudomxai ມັດທະຍົມສົມບູນ ເມືອງຫລາ",AirGradient,LA,20.870865,102.110246,low-cost,hourly,pass
+2025,3591604,12385257,Meung - Bokeo,AirGradient,LA,20.565749,100.592003,low-cost,hourly,pass
+2025,3591605,12385262,"BouamNgam Secondary School - Huameuang, Houaphan  ມັດທະຍົມ ບວມງາມ",AirGradient,LA,20.199501,103.875166,low-cost,hourly,pass
+2025,3591606,12385267,Parklai - Xaignabouly,AirGradient,LA,18.220795,101.405717,low-cost,hourly,too few days
+2025,3591607,12385272,"Napa Secondary School - Kham, Xiengkhouang ມັດທະຍົມ ນາປາ",AirGradient,LA,19.590573,103.662369,low-cost,hourly,pass
+2025,3591608,12385277,Mork - Xiengkhouang,AirGradient,LA,18.929384,103.992683,low-cost,hourly,pass
+2025,3591609,12385282,Vangvieng - Vientiane,AirGradient,LA,18.855459,102.529697,low-cost,hourly,pass
+2025,3591610,12385287,"Toomlarn Secondary School - Toomlarn, Saravane ມັດທະຍົມສົມບູນ ຕຸ້ມລານ",AirGradient,LA,15.994499,106.192399,low-cost,hourly,pass
+2025,3591611,12385292,Lao Ngarm - Salavan,AirGradient,LA,15.461092,106.16172,low-cost,hourly,pass
+2025,3591612,12385247,Sanxay - Attapeu,AirGradient,LA,14.925784,107.052837,low-cost,hourly,pass
+2025,3597971,12390571,Xamneua - Houaphan,AirGradient,LA,20.413807,104.050733,low-cost,hourly,pass
+2025,3597972,12390576,Xamtay - Houaphan,AirGradient,LA,19.999194,104.64011,low-cost,hourly,pass
+2025,3597973,12390581,Xon - Houaphan,AirGradient,LA,20.466813,103.34797,low-cost,hourly,pass
+2025,3597974,12390586," Viengthong Secondary School - Hiem, Houaphan ມັດທະຍົມ ວຽງທອງ",AirGradient,LA,20.099855,103.380396,low-cost,hourly,too few days
+2025,3597975,12390591,"Kuan Secondary School - Kuan, Houaphan ມັດທະຍົມສົມບູນ ກັວນ",AirGradient,LA,19.835863,104.561303,low-cost,hourly,pass
+2025,3597976,12390596,"Hongsa Secondary School - Hongsa, Xaignabouly ມັດທະຍົມສົມບູນ ຫົງສາ",AirGradient,LA,19.70693,101.342893,low-cost,hourly,pass
+2025,3597977,12390601,"Hinherb Secondary School - Hinherb, Vientiane Province ມັດທະຍົມສົມບູນ ຫີນເຫີບ",AirGradient,LA,18.637318,102.323676,low-cost,hourly,too few days
+2025,3597978,12390606,"KeoKou Secondary School - KeoOudom, Vientiane Province ມັດທະຍົມສົມບູນ ແກ້ວກູ່",AirGradient,LA,18.554884,102.502844,low-cost,hourly,pass
+2025,3597979,12390611,Nakay - Khammouan,AirGradient,LA,17.698229,105.167389,low-cost,hourly,not checked
+2025,3597980,12390616,Outhoomphone - Savannakhet,AirGradient,LA,16.669923,104.956459,low-cost,hourly,too few days
+2025,3599598,12391930,"Add Secondary School - Add, Houaphan ມັດທະຍົມ ແອດ",AirGradient,LA,20.820542,104.004618,low-cost,hourly,pass
+2025,3599599,12391935,Xiengkhor - Houaphan,AirGradient,LA,20.813892,104.146676,low-cost,hourly,pass
+2025,3599600,12391940,"Kasy Secondary School - Kasy, Vientiane Province ມັດທະຍົມສົມບູນ ກາສີ",AirGradient,LA,19.225034,102.25219,low-cost,hourly,pass
+2025,3600181,12392601,Mad - Vientiane,AirGradient,LA,18.448868,101.76322,low-cost,hourly,pass
+2025,3600182,12392606,Xaybuly - Savannakhet,AirGradient,LA,17.075181,104.87732,low-cost,hourly,too few days
+2025,3600183,12392611,"Vapy Secondary School - Vapy, Saravane ມັດທະຍົມສົມບູນ ວາປີ",AirGradient,LA,15.697405,106.07474,low-cost,hourly,pass
+2025,3600715,12393263,"Lao-Viet Friendship Secondary School - Saysetha, Vientiane Capital ມັດທະຍົມ ມິດຕະພາບລາວ-ຫວຽດນາມ",AirGradient,LA,17.995877,102.64154,low-cost,hourly,pass
+2025,3600716,12393268,"Sopbao Secondary School - Sopbao, Houaphan ມັດທະຍົມ ສົບເບົາ",AirGradient,LA,20.710206,104.384946,low-cost,hourly,pass
+2025,3602358,12394262,Nga - Oudomxai,AirGradient,LA,20.282849,101.973769,low-cost,hourly,too few days
+2025,3602359,12394267,Nonghed - Xiengkhouang,AirGradient,LA,19.49661,103.986121,low-cost,hourly,pass
+2025,3602360,12394272,Meun - Vientiane,AirGradient,LA,18.28379,101.941138,low-cost,hourly,too few days
+2025,3612960,12402654,"Naxaithong Secondary School - Naxaithong, Vientiane Capital ມັດທະຍົມ ນາຊາຍທອງ",AirGradient,LA,18.068595,102.535866,low-cost,hourly,pass
+2025,3612961,12402659,"Long Secondary School - Long, LuangNamtha ມັດທະຍົມສົມບູນ ເມືອງລອງ",AirGradient,LA,20.962029,100.82109,low-cost,hourly,too few days
+2025,3612962,12402664,"Sing Secondary School - Sing, LuangNamtha ມັດທະຍົມສົມບູນ ເມືອງສິງ",AirGradient,LA,21.190223,101.144937,low-cost,hourly,pass
+2025,3612963,12402669,"Nongtang Secondary School - Phookood, Xiengkhuang ມັດທະຍົມ ໜອງຕັ່ງ",AirGradient,LA,19.520634,102.884798,low-cost,hourly,too few days
+2025,3612964,12402674,"Xanakharm Secondary School - Xanakharm, Vieniane Province ມັດທະຍົມສົບຸນ ຊະນະຄາມ",AirGradient,LA,17.910218,101.670662,low-cost,hourly,too few days
+2025,3612965,12402679,"Phonmi Secondary School - Viengkham, Vientiane Province ມັດທະຍົມສົມບຸນ ໂພນໝີ",AirGradient,LA,18.48451,102.485942,low-cost,hourly,pass
+2025,3612966,12402684,"Phoummachedy Secondary School - Xayphouthong, Savannakhet ມັດທະຍົມ ພູມມະເຈດີ",AirGradient,LA,16.367044,105.005653,low-cost,hourly,pass
+2025,3624137,12411287,"Kaleum Secondary School - Kaleum, Sekong ມັດທະຍົມ ກະລຶມ",AirGradient,LA,15.784384,106.906754,low-cost,hourly,too few days
+2025,3624655,12411606,"Sivilay Secondary School - Xaybouathong, Khammouane ມັດທະຍົມສົມບູນ ສີວິໄລ",AirGradient,LA,17.171532,105.4273,low-cost,hourly,pass
+2025,3652441,12433595,"Soi Sukhumvit 31, High floor",AirGradient,TH,13.73411,100.565955,low-cost,hourly,pass
+2025,3658671,12438784,"Chansavang Secondary School - Sikhottabong, Vientiane Capital ມັດທະຍົມ ຈັນສະຫວ່າງ",AirGradient,LA,18.024146,102.520739,low-cost,hourly,too few days
+2025,3663294,12442513,"Lakhonesy Secondary School - Lakhonepheng, Saravane ມັດທະຍົມສົມບູນ ລະຄອນສີ",AirGradient,LA,15.891245,105.567119,low-cost,hourly,pass
+2025,3683630,12459028,"TaOi Secondary School - TaOi, Saravane ມັດທະຍົມສົມບູນ ຕະໂອ້ຍ",AirGradient,LA,16.07679,106.621363,low-cost,hourly,too few days
+2025,3684608,12459635,"Sathit Secondary School - Xaythani, Vientiane Capital ມັດທະຍົມ ສາທິດ",AirGradient,LA,18.035248,102.63994,low-cost,hourly,pass
+2025,3684609,12459640,"Naxay Secondary School - Samphanh, Phongsaly ມັດທະຍົມສົມບູນ ນາໄຊ",AirGradient,LA,21.346014,102.349329,low-cost,hourly,pass
+2025,3684610,12459645,"Khob Secondary School - Khob, Xayabouli ມັດທະຍົມ ເມືອງຄອບ",AirGradient,LA,19.699713,100.5572,low-cost,hourly,pass
+2025,3684611,12459650,"Phin Secondary School - Phin, Savannakhet ມັດທະຍົມ ພີນ",AirGradient,LA,16.527879,106.021922,low-cost,hourly,too few days
+2025,3685146,12460285,"Namor Secondary School - Namor, Oudomxay ມັດທະຍົມ ເມືອງນາໝໍ້",AirGradient,LA,20.914061,101.764456,low-cost,hourly,pass
+2025,3685147,12460290,"Hoon Secondary School - Hoon, Oudomxay ມັດທະຍົມ ເມືອງຮຸນ",AirGradient,LA,20.146431,101.467765,low-cost,hourly,too few days
+2025,3685148,12460295,"Beungxang Secondary School - Xonbuly, Savannakhet ມັດທະຍົມ ບຶງຊ້າງ",AirGradient,LA,16.388527,105.375363,low-cost,hourly,pass
+2025,3685149,12460300,"Saphai Secondary School - Sanasomboun, Champasack ມັດທະຍົມ ສະຜ່າຍ",AirGradient,LA,15.202177,105.720683,low-cost,hourly,not checked
+2025,3685150,12460270,"Dorntalath Secondary School - Champasack, Champasack ມັດທະຍົມ ດອນຕະລາດ",AirGradient,LA,14.784126,105.819789,low-cost,hourly,pass
+2025,3685151,12460275,"Kaokerng Secondary School - Phonthong, Champasack ມັດທະຍົມ ເກົ່າເກີງ",AirGradient,LA,15.107035,105.772051,low-cost,hourly,pass
+2025,3685152,12460280,"Sukhuma Secondary School - Sukhuma, Champasack ມັດທະຍົມ ສຸຂຸມາ",AirGradient,LA,14.649459,105.804529,low-cost,hourly,pass
+2025,3699664,12472080,บริษัท ไอ.ที.โกลโบล จำกัด,AirGradient,TH,18.7316881,98.9514679,low-cost,hourly,not checked
+2025,3714636,12483888,Beng - Oudomxai,AirGradient,LA,20.296295,101.639666,low-cost,hourly,pass
+2025,3714637,12483893,Pakbeng - Oudomxai,AirGradient,LA,19.910426,101.155815,low-cost,hourly,too few days
+2025,3714638,12483898,Phiang - Xaignabouly,AirGradient,LA,19.094645,101.529558,low-cost,hourly,too few days
+2025,3714639,12483903,Xaysathan - Xaignabouly,AirGradient,LA,19.414884,101.325032,low-cost,hourly,pass
+2025,3714640,12483908,Botene - Xaignabouly,AirGradient,LA,17.827229,101.135079,low-cost,hourly,too few days
+2025,3714641,12483913,Thapangthong - Savannakhet,AirGradient,LA,15.994818,105.745889,low-cost,hourly,pass
+2025,3714642,12483918,Pakse - Champasack,AirGradient,LA,15.12006,105.80211,low-cost,hourly,pass
+2025,3714643,12483868,Paksxong - Champasack,AirGradient,LA,15.181714,106.217852,low-cost,hourly,pass
+2025,3714644,12483873,Pathoomphone - Champasack,AirGradient,LA,14.843454,105.946714,low-cost,hourly,too few days
+2025,3714645,12483878,Phouvong - Attapeu,AirGradient,LA,14.689272,106.841975,low-cost,hourly,pass
+2025,3714646,12483883,Samakkhixay - Attapeu,AirGradient,LA,14.812678,106.829211,low-cost,hourly,pass
+2025,3733063,12499583,Bachiangchaleunsook - Champasack,AirGradient,LA,15.060355,105.897898,low-cost,hourly,too few days
+2025,3733064,12499588,Moonlapamok - Champasack,AirGradient,LA,14.366831,105.850766,low-cost,hourly,not checked
+2025,3733065,12499593,Khong - Champasack,AirGradient,LA,14.048226,105.896012,low-cost,hourly,pass
+2025,3783738,12540519,"Artsaphone Secondary School - Artsaphone, Savannakhet ມັດທະຍົມສົມບູນ ອາດສະພອນ",AirGradient,LA,16.844674,105.33638,low-cost,hourly,pass
+2025,3792617,12547534,"Lianxay Secondary School - Artsaphangthong, Savannakhet ມັດທະຍົມ ຫລຽນໄຊ",AirGradient,LA,16.692124,105.409764,low-cost,hourly,pass
+2025,3854021,12598566,Kampong Cham Mekong View,AirGradient,KH,11.9811471,105.4597277,low-cost,hourly,isolated
+2025,3920973,12652980,RC-Film,AirGradient,TH,12.947857053547915,101.10873618266338,low-cost,hourly,not checked
+2025,3998818,12714979,UNICEF Lao PDR CO,AirGradient,LA,17.937650817948654,102.61723189596404,low-cost,hourly,too few days
+2025,4028033,12757729,Opposite Thammasat Chiang Rak 1 Gate - ชุมชนคุ้งผ้าพับ ธรรมศาสตร์ เชียงราก 1,AirGradient,TH,14.064706097742768,100.60502410138216,low-cost,hourly,too few days
+2025,4131363,12850568,KU faculty of environnment,AirGradient,TH,13.85574,100.570032,low-cost,hourly,not checked
+2025,4133388,12852162,Kasetsat University,AirGradient,TH,13.85574,100.570032,low-cost,hourly,not checked
+2025,4143000,12860110,d83bda1bc98c Phongsaly - Phongsaly,AirGradient,LA,21.695,102.085,low-cost,hourly,too few days
+2025,4143979,12860755,Boon Neua - Phongsaly,AirGradient,LA,21.656203,101.907985,low-cost,hourly,not checked
+2025,4143980,12860770,Xienghone - Xaignabouly ,AirGradient,LA,19.631763,100.814901,low-cost,hourly,too few days
+2025,4143981,12860785,Kaysone Phomvihane - Sav,AirGradient,LA,16.5702,104.75036,low-cost,hourly,too few days
+2025,4143982,12860790,Sepone - Savannakhet,AirGradient,LA,16.696651,106.209138,low-cost,hourly,too few days
+2025,4143983,12860795,Champhone - SAVA,AirGradient,LA,16.489147,105.031659,low-cost,hourly,too few days
+2025,4143984,12860800,Vilabuly - Savannakhet,AirGradient,LA,16.971649,105.944661,low-cost,hourly,too few days
+2025,4143985,12860805,Phalanxay - Savannakhet,AirGradient,LA,16.661353,105.58791,low-cost,hourly,too few days
+2025,4143986,12860810,Khongxedone - Salavan,AirGradient,LA,15.59088,105.804115,low-cost,hourly,too few days
+2025,4143987,12860815,Samuoi - Salavan,AirGradient,LA,16.293856,106.889224,low-cost,hourly,too few days
+2025,4143988,12860750,Xaysetha - Attapeu,AirGradient,LA,14.816824,106.930954,low-cost,hourly,too few days
+2026,135,5077838,Prabadang Rehabiltation Center,Air4Thai,TH,13.664087,100.543436,reference,24h_running_mean,pass
+2026,701,1304255,Sukhothai Thammathirat Open University,Air4Thai,TH,13.907861,100.535641,reference,24h_running_mean,pass
+2026,717,1304268,Pluakdaeng District Health Office,Air4Thai,TH,12.97378333,101.21285,reference,24h_running_mean,pass
+2026,906,1304207,Residence for Dept. of Mineral Resources,Air4Thai,TH,13.652141,100.531805,reference,24h_running_mean,pass
+2026,2167,1304205,Highway District,Air4Thai,TH,13.7054879,100.315622,reference,24h_running_mean,pass
+2026,2326,1304072,Thai Meteorological Department,Air4Thai,TH,13.666183,100.605742,reference,24h_running_mean,not checked
+2026,2328,1304242,"Natural Resources and Environment Office, Chiangrai",Air4Thai,TH,19.909217,99.823467,reference,24h_running_mean,pass
+2026,2352,5077771,Thonburi Power Sub-Station,Air4Thai,TH,13.727622,100.486568,reference,24h_running_mean,pass
+2026,2375,1304120,Bodindecha Sing Singhaseni School,Air4Thai,TH,13.769634,100.614567,reference,24h_running_mean,pass
+2026,2376,1304154,Samut Sakhon Wittayalai School,Air4Thai,TH,13.5502631,100.2647676,reference,24h_running_mean,pass
+2026,2407,1304052,Municipality Office Tungsadao,Air4Thai,TH,13.5885,101.2863333,reference,24h_running_mean,pass
+2026,2411,1304059,Health Promotion Hospital Banthasri,Air4Thai,TH,18.4267833,99.7576333,reference,24h_running_mean,not checked
+2026,5545,1304222,Chulalongkorn Hospital,Air4Thai,TH,13.729852,100.536501,reference,24h_running_mean,pass
+2026,7747,1304249,Hydrogeological Group Water Resources Regional Office4 khonkaen,Air4Thai,TH,16.44538333,102.83525,reference,24h_running_mean,pass
+2026,7840,1304350,Laem Chabang Municipal Stadium,Air4Thai,TH,13.11923333,100.91855,reference,24h_running_mean,pass
+2026,7846,1611423,"Field Crop Research Center, Rayong",Air4Thai,TH,12.73518333,101.13565,reference,24h_running_mean,pass
+2026,225567,1304055,Maesai Health Office,Air4Thai,TH,20.427325,99.883842,reference,24h_running_mean,pass
+2026,225568,1304254,"Bang Khen District Office, Bangkok",Air4Thai,TH,13.873603,100.595839,reference,24h_running_mean,pass
+2026,225569,1304408,Health Promotion Hospital Bankhaohin,Air4Thai,TH,13.054551,101.098128,reference,24h_running_mean,pass
+2026,225570,1304365,"Meteorological stations, Lampang",Air4Thai,TH,18.2783333,99.5064666,reference,24h_running_mean,not checked
+2026,225571,1304176,"Bang Khun Thian District Office, Bangkok",Air4Thai,TH,13.659908,100.435902,reference,24h_running_mean,pass
+2026,225572,1304409,Kasertsart University,Air4Thai,TH,13.839923,100.575632,reference,24h_running_mean,pass
+2026,225573,1304393,Hat Yai Municipality,Air4Thai,TH,7.020434,100.484088,reference,24h_running_mean,too few days
+2026,225574,1304286,"Phra Kanong District Office,  Bangkok",Air4Thai,TH,13.691511,100.61457,reference,24h_running_mean,pass
+2026,225575,1304403,Bangkok Noi Train Police Station,Air4Thai,TH,13.759619,100.481137,reference,24h_running_mean,pass
+2026,225576,1304250,Khai Surasinghanat,Air4Thai,TH,12.648576,101.32245,reference,24h_running_mean,pass
+2026,225577,1304381,"Bank of Ayuthaya Head Office Yan Nawa, Bangkok",Air4Thai,TH,13.679226,100.54687,reference,24h_running_mean,pass
+2026,225578,1304427,White Elephant Park,Air4Thai,TH,6.546205,101.283137,reference,24h_running_mean,not checked
+2026,225579,1304368,Yupparaj Wittayalai School,Air4Thai,TH,18.7909333,98.99,reference,24h_running_mean,pass
+2026,225580,1304524,National Housing Authority Klongchan,Air4Thai,TH,13.779873,100.646009,reference,24h_running_mean,pass
+2026,225581,1304415,Chalermprakiet Hospital,Air4Thai,LA,19.5759666,101.0815166,reference,24h_running_mean,pass
+2026,225582,1304071,"Khlong Toei District Office, Bangkok",Air4Thai,TH,13.708488,100.583747,reference,24h_running_mean,pass
+2026,225584,1304161,Samut Songkhram Health Office,Air4Thai,TH,13.428581,100.024664,reference,24h_running_mean,pass
+2026,225585,1304133,Chom Nan Chaloem Phrakiat Public Park,Air4Thai,TH,16.820833,100.258056,reference,24h_running_mean,pass
+2026,225586,1304337,Elderly Health Rehabilitation Center,Air4Thai,TH,8.426923,99.961469,reference,24h_running_mean,not checked
+2026,225587,1304143,Water reservoir,Air4Thai,TH,13.832076,100.057961,reference,24h_running_mean,pass
+2026,225589,1304352,Kanjanapisek Park,Air4Thai,TH,13.691047,102.510442,reference,24h_running_mean,pass
+2026,225590,1304153,"Sai Mai District Office, Bangkok",Air4Thai,TH,13.896035,100.660628,reference,24h_running_mean,pass
+2026,225591,1304377,"Ladphrao District Office, Bangkok",Air4Thai,TH,13.803587,100.607535,reference,24h_running_mean,pass
+2026,225593,1304057,Big C Supercenter Bang Na,Air4Thai,TH,13.667987,100.635313,reference,24h_running_mean,pass
+2026,225595,1304064,Bang Bon 5 Market,Air4Thai,TH,13.639165,100.372958,reference,24h_running_mean,pass
+2026,225596,1304091,"Sathon District Office, Bangkok",Air4Thai,TH,13.707763,100.526787,reference,24h_running_mean,pass
+2026,225598,1304370,Bu Yai Bai Hall Station,Air4Thai,TH,13.917563,101.590529,reference,24h_running_mean,pass
+2026,225599,1304306,Bangrak Lovely Plaza,Air4Thai,TH,13.726136,100.528055,reference,24h_running_mean,pass
+2026,225600,1304282,Trat Provincial Central Stadium,Air4Thai,TH,12.234862,102.523721,reference,24h_running_mean,pass
+2026,225602,1304112,Municipal Waste Water Pumping Station,Air4Thai,TH,14.979537,102.098335,reference,24h_running_mean,pass
+2026,225604,1304378,Seacon Square,Air4Thai,TH,13.695561,100.647615,reference,24h_running_mean,pass
+2026,225605,1304302,Municipal Health Center,Air4Thai,TH,7.884488,98.391283,reference,24h_running_mean,not checked
+2026,225606,1304310,Kanchanaburi Meteorological Station,Air4Thai,TH,14.022376,99.536195,reference,24h_running_mean,fail: low r with neighbours
+2026,225607,1304355,"Environment Agency Section 14, Surat Thani",Air4Thai,TH,9.126017,99.325145,reference,24h_running_mean,not checked
+2026,225609,1304122,Nakhonsawan Irrigation Project,Air4Thai,TH,15.68623,100.110556,reference,24h_running_mean,not checked
+2026,225610,1304211,"Bueng Kum District Office, Bangkok",Air4Thai,TH,13.785212,100.669183,reference,24h_running_mean,pass
+2026,225611,1305053,Health Promotion Hospital Maptaput,Air4Thai,TH,12.70865,101.1659833,reference,24h_running_mean,pass
+2026,225612,1304328,Bansomdejchaopraya Rajabhat University,Air4Thai,TH,13.732846,100.487662,reference,24h_running_mean,pass
+2026,225613,1304281,Lat Krabang Hospital,Air4Thai,TH,13.72205,100.784069,reference,24h_running_mean,pass
+2026,225614,1305020,Tha phra Intersection,Air4Thai,TH,13.729431,100.474373,reference,24h_running_mean,pass
+2026,225615,1304331,"Meteorological stations, Nakhon Phanom",Air4Thai,TH,17.412345,104.7786123,reference,24h_running_mean,pass
+2026,225617,1304343,"Suan Luang District Office, Bangkok",Air4Thai,TH,13.731051,100.651705,reference,24h_running_mean,pass
+2026,225619,1304237,"Don Mueng District Office, Bangkok",Air4Thai,TH,13.910986,100.594877,reference,24h_running_mean,pass
+2026,225620,1304135,Na Phralan Police Station,Air4Thai,TH,14.685833,100.871996,reference,24h_running_mean,pass
+2026,225621,1304323,Thon Buri Market Sanam Luang 2,Air4Thai,TH,13.746257,100.355099,reference,24h_running_mean,pass
+2026,225622,1304203,"Huai Khwang District Office, Bangkok",Air4Thai,TH,13.77682,100.579543,reference,24h_running_mean,pass
+2026,225623,1304360,Environmental Office 8 ratchaburi,Air4Thai,TH,13.52344,99.814082,reference,24h_running_mean,pass
+2026,225624,1304435,Odeon Circus,Air4Thai,TH,13.737136,100.512734,reference,24h_running_mean,pass
+2026,225625,1304232,"City Hall, Satun",Air4Thai,TH,6.624747,100.066159,reference,24h_running_mean,not checked
+2026,225626,1304278,"Non-Formal Education Centre, Mea Sot",Air4Thai,TH,16.734413,98.566961,reference,24h_running_mean,not checked
+2026,225628,1305269,"Government Complex, Rayong",Air4Thai,TH,12.7066,101.18055,reference,24h_running_mean,fail: low r with neighbours
+2026,225629,1304077,Department of Disease Control,Air4Thai,TH,13.852778,100.529444,reference,24h_running_mean,pass
+2026,225630,1304063,"Meteorology Center, Phrae",Air4Thai,TH,18.1283666,100.1624333,reference,24h_running_mean,pass
+2026,225631,1304293,National Economic and Social Development Council Office,Air4Thai,TH,13.756281,100.514267,reference,24h_running_mean,pass
+2026,225632,1304130,"Chomthong District Office, Bangkok",Air4Thai,TH,13.677757,100.483861,reference,24h_running_mean,pass
+2026,225633,1304192,Siam University,Air4Thai,TH,13.718689,100.45391,reference,24h_running_mean,pass
+2026,225634,1304054,"Rat Burana District Office,  Bangkok",Air4Thai,TH,13.6821364,100.5060513,reference,24h_running_mean,pass
+2026,225635,1304123,"Wang Thonglang District Office, Bangkok",Air4Thai,TH,13.778981,100.622294,reference,24h_running_mean,pass
+2026,225636,1304300,Khao Noi Fire Station,Air4Thai,TH,14.526343,100.926047,reference,24h_running_mean,pass
+2026,225637,1304404,South Bangkok Power Plant,Air4Thai,TH,13.618,100.5562,reference,24h_running_mean,pass
+2026,225638,1304216,Samyan Mitrtown,Air4Thai,TH,13.733136,100.52829,reference,24h_running_mean,pass
+2026,225639,1304162,"City Hall, Narathiwat",Air4Thai,TH,6.426853,101.823388,reference,24h_running_mean,not checked
+2026,225640,1304353,Library under King Taksin Bridge,Air4Thai,TH,13.719705,100.508782,reference,24h_running_mean,pass
+2026,225641,1304357,"Din Dang, Bangkok",Air4Thai,TH,13.7619223,100.558606,reference,24h_running_mean,pass
+2026,225642,1304146,"Bang Phlat District Office, Bangkok",Air4Thai,TH,13.793965,100.504956,reference,24h_running_mean,pass
+2026,225643,1304380,Bangkok University Rangsit Campus,Air4Thai,TH,14.03742,100.605216,reference,24h_running_mean,pass
+2026,225644,1304240,Suphan Buri Provincial Central Stadium,Air4Thai,TH,14.476214,100.086095,reference,24h_running_mean,pass
+2026,225645,1304420,National Housing Authority Bangplee,Air4Thai,TH,13.5705,100.7862867,reference,24h_running_mean,pass
+2026,225646,1304316,Provincial Waterworks Authority Mae Moh,Air4Thai,TH,18.2826333,99.6598166,reference,24h_running_mean,pass
+2026,225647,1304340,"Phra Nakhon District Office, Bangkok",Air4Thai,TH,13.76415,100.499077,reference,24h_running_mean,pass
+2026,225648,1304178,"Natural Resources and Environment Office, Mae Hongson",Air4Thai,TH,19.30455,97.97165,reference,24h_running_mean,pass
+2026,225649,1304375,"OTOP Center, Ubon Ratchathani",Air4Thai,TH,15.245413,104.846219,reference,24h_running_mean,pass
+2026,225650,1304152,The Government Public Relations Department,Air4Thai,TH,13.783185,100.540489,reference,24h_running_mean,pass
+2026,225651,1304179,"Saphan Sung District Office, Bangkok",Air4Thai,TH,13.768892,100.685743,reference,24h_running_mean,pass
+2026,225652,1304082,Public Park to commemorate the sixth anniversary of His Majesty the King,Air4Thai,TH,13.697252,100.497185,reference,24h_running_mean,pass
+2026,225653,1304128,Chokchai Police Station,Air4Thai,TH,13.7954248,100.5930298,reference,24h_running_mean,pass
+2026,225654,1304209,"Environment Agency Section 13, Chonburi",Air4Thai,TH,13.35461667,100.9792167,reference,24h_running_mean,pass
+2026,225655,1304245,"Meteorological Staions, Lamphun",Air4Thai,TH,18.567194,99.038639,reference,24h_running_mean,pass
+2026,225656,1304256,"Bang Sue District Office, Bangkok",Air4Thai,TH,13.809596,100.537883,reference,24h_running_mean,pass
+2026,225657,1304088,"child development centers, Betong",Air4Thai,TH,5.763873,101.067903,reference,24h_running_mean,isolated
+2026,225660,1304438,"Chaloem Phrakiat Rama 9 Park Min buri, Bangkok",Air4Thai,TH,13.813578,100.73208,reference,24h_running_mean,pass
+2026,225661,1304186,"Nong Thin Public Park, Nong Khai",Air4Thai,TH,17.87748,102.728925,reference,24h_running_mean,pass
+2026,225663,1304140,Buriram City Hall,Air4Thai,TH,14.945452,103.105896,reference,24h_running_mean,pass
+2026,225666,1304315,"Phayao Provincial, Phayao",Air4Thai,TH,19.200226,99.893048,reference,24h_running_mean,pass
+2026,225667,1304114,Mahaisawan Intersection,Air4Thai,TH,13.70515,100.48465,reference,24h_running_mean,pass
+2026,225668,1304426,"Bang Kapi District Office, Bangkok",Air4Thai,TH,13.766478,100.647785,reference,24h_running_mean,pass
+2026,225669,1304220,"City Hall, Chiangmai",Air4Thai,TH,18.840732,98.96978,reference,24h_running_mean,pass
+2026,225671,1304229,"Khlong Sam Wa District Office, Bangkok",Air4Thai,TH,13.859911,100.704002,reference,24h_running_mean,pass
+2026,225672,1304078,Suan Sayam-Ram Intra Intersection,Air4Thai,TH,13.813844,100.686594,reference,24h_running_mean,pass
+2026,225673,1304204,National Housing Authority Dindaeng,Air4Thai,TH,13.76251667,100.5502,reference,24h_running_mean,not checked
+2026,225674,1304191,"Municipality Office, Nan",Air4Thai,TH,18.7888833,100.7763166,reference,24h_running_mean,pass
+2026,225675,1304332,Meteorological Station Lopburi,Air4Thai,TH,14.800032,100.628548,reference,24h_running_mean,pass
+2026,225676,1304217,Ayutthaya Witthayalai School,Air4Thai,TH,14.35222,100.565325,reference,24h_running_mean,pass
+2026,225677,1304185,"Lak Si District Office, Bangkok",Air4Thai,TH,13.887395,100.579247,reference,24h_running_mean,pass
+2026,225678,1304073,"Bang Khae District Office, Bangkok",Air4Thai,TH,13.696314,100.409049,reference,24h_running_mean,pass
+2026,225679,1304309,"Dusit District Office, Bangkok",Air4Thai,TH,13.776664,100.520982,reference,24h_running_mean,pass
+2026,225681,1304248,"Soi Sukhumwit 63 Roadside Wattana, Bangkok",Air4Thai,TH,13.722096,100.584559,reference,24h_running_mean,pass
+2026,225682,1304111,King Mongkut's University of Technology Thonburi,Air4Thai,TH,13.651004,100.496673,reference,24h_running_mean,pass
+2026,225683,1304139,"Nong Chok District Office, Bangkok",Air4Thai,TH,13.855362,100.86267,reference,24h_running_mean,pass
+2026,225684,1304399,Army Apartment Sam Sen,Air4Thai,TH,13.783554,100.5344645,reference,24h_running_mean,pass
+2026,225686,1304349,Highway NO.3902 km.13 +600,Air4Thai,TH,13.636514,100.414262,reference,24h_running_mean,not checked
+2026,225688,1304305,"Ratchathewi District Office, Bangkok",Air4Thai,TH,13.7590851,100.5345788,reference,24h_running_mean,pass
+2026,225689,1304065,Phutthamonthon 1 - Borommaratchachonnani Intersection,Air4Thai,TH,13.780778,100.426727,reference,24h_running_mean,pass
+2026,225691,1304326,"Ma Charean Roadside, Petcha Kasem 8, Nong Khaem",Air4Thai,TH,13.705582,100.343164,reference,24h_running_mean,pass
+2026,225692,1304247,"Health Promotion Hospital Sob Pad, Lampang",Air4Thai,TH,18.2508166,99.76395,reference,24h_running_mean,not checked
+2026,225693,1304386,"Debaratana Vejjanukul Hospital, Mae Chaem",Air4Thai,TH,18.498333,98.379444,reference,24h_running_mean,pass
+2026,228541,1317087,"60th Anniversary Queen Sirikit Public Park, Loei",Air4Thai,TH,17.48462,101.732734,reference,24h_running_mean,pass
+2026,228542,1317103,"Nong Prajak Public Park, Udon Thani",Air4Thai,TH,17.414174,102.780926,reference,24h_running_mean,pass
+2026,228543,1317108,"72nd Anniversary King Bhumibol Public Park, Uttaradit",Air4Thai,TH,17.631352,100.09896,reference,24h_running_mean,pass
+2026,228544,1317093,"Meteorological stations, Sakon Nakhon",Air4Thai,TH,17.15662,104.133216,reference,24h_running_mean,pass
+2026,228627,1317584,"Polytechnic College, Trang",Air4Thai,TH,7.570238,99.588743,reference,24h_running_mean,pass
+2026,270250,1559904,Phetbura garden,Air4Thai,TH,16.418417,101.156556,reference,24h_running_mean,pass
+2026,270702,1561932,Bueng Planchai,Air4Thai,TH,16.057448,103.651056,reference,24h_running_mean,pass
+2026,351927,2000291,Le Thai Community Park,Air4Thai,TH,17.006059,99.81927,reference,24h_running_mean,pass
+2026,353740,2007834,Chanthaburi Meteorological Station,Air4Thai,TH,12.6095704,102.1040804,reference,24h_running_mean,pass
+2026,353741,2007819,"Phichit Provincial , Phichit",Air4Thai,TH,16.442554,100.322756,reference,24h_running_mean,pass
+2026,353742,2007836,Mukdahan Provincial Stadium,Air4Thai,TH,16.54257,104.7192,reference,24h_running_mean,pass
+2026,353743,2007829,Sirichit Thai Cultural Conservation Ground,Air4Thai,TH,16.475374,99.525425,reference,24h_running_mean,pass
+2026,354124,2009817,Hua Hin Weather Station Prachuap Khiri Khan Meteorological Station,Air4Thai,TH,12.577835,99.953663,reference,24h_running_mean,pass
+2026,368390,2076218,Thawee Wanarom Park,Air4Thai,TH,13.7435329,100.3526893,reference,24h_running_mean,pass
+2026,368391,2076229,Suan Luang Rama IX,Air4Thai,TH,13.6881393,100.6579657,reference,24h_running_mean,pass
+2026,368392,2076223,Ramintra Sports Park,Air4Thai,TH,13.8778763,100.6207085,reference,24h_running_mean,pass
+2026,368393,2076221,Rommani Thungsikan Park,Air4Thai,TH,13.9288678,100.5684666,reference,24h_running_mean,pass
+2026,368394,2076227,Lumpini park,Air4Thai,TH,13.732225,100.5448381,reference,24h_running_mean,pass
+2026,368395,2076215,Thonburirom Park,Air4Thai,TH,13.6502295,100.4909771,reference,24h_running_mean,pass
+2026,368396,2076225,Queen Sirikit Park,Air4Thai,TH,13.8055472,100.5488338,reference,24h_running_mean,pass
+2026,368397,2076216,Rama VIII Park,Air4Thai,TH,13.7693437,100.4945337,reference,24h_running_mean,pass
+2026,368399,2076232,Benjakitti Park,Air4Thai,TH,13.7328791,100.5600172,reference,24h_running_mean,pass
+2026,368401,2076217,Nong Chok Park,Air4Thai,TH,13.855656,100.8585539,reference,24h_running_mean,pass
+2026,368402,2076231,Serithai Park,Air4Thai,TH,13.7855673,100.6733359,reference,24h_running_mean,pass
+2026,368403,2076226,Chatuchak Park,Air4Thai,TH,13.802546,100.5509191,reference,24h_running_mean,pass
+2026,368404,2076214,"60th Anniversary of Queen Sirikit Park ,Kheha Romklao Road, Lat Krabang, Bangkok",Air4Thai,TH,13.7631141,100.7302101,reference,24h_running_mean,pass
+2026,368405,2076222,Bang Khae Phirom Park,Air4Thai,TH,13.6863478,100.3844036,reference,24h_running_mean,pass
+2026,368406,2076224,80th Anniversary Commemoration Park,Air4Thai,TH,13.7716446,100.4681128,reference,24h_running_mean,pass
+2026,368407,2076220,Wacchirabenchatat Park,Air4Thai,TH,13.8118516,100.5535825,reference,24h_running_mean,pass
+2026,368408,2076228,Phra Nakhon Park,Air4Thai,TH,13.7201042,100.7807077,reference,24h_running_mean,pass
+2026,368485,2076618,Benchasiri Park,Air4Thai,TH,13.7304916,100.5684634,reference,24h_running_mean,pass
+2026,385742,2158912,Chaloem Phra Kiat Water Park,Air4Thai,TH,14.606306,100.453589,reference,24h_running_mean,pass
+2026,387511,2166412,Wiang Subdistrict Disaster Prevention and Mitigation Center,Air4Thai,TH,20.2575,100.4025,reference,24h_running_mean,pass
+2026,387660,2167058,Mueang Na Subdistrict Municipality Office,Air4Thai,TH,19.593889,98.961667,reference,24h_running_mean,pass
+2026,388962,2172925,Li District Office,Air4Thai,TH,17.802222,98.949722,reference,24h_running_mean,pass
+2026,418809,2332866,National Housing Authority Klongchan,Air4Thai,TH,13.76121,100.517035,reference,24h_running_mean,too few days
+2026,500068,2806242,Pai Municipality,Air4Thai,TH,19.3591522,98.4364794,reference,24h_running_mean,pass
+2026,1290682,6574439,Ranong Municipal office,Air4Thai,TH,9.961849,98.639341,reference,24h_running_mean,pass
+2026,1299596,6589543,Phangnga Provincial Government Center,Air4Thai,TH,8.424964,98.528719,reference,24h_running_mean,pass
+2026,1650686,7093737,Mueang Chaiyaphum Municipality Stadium,Air4Thai,TH,15.81148,102.02281,reference,24h_running_mean,pass
+2026,1650687,7093739,Phaya Thaen Public Park,Air4Thai,TH,15.783861,104.154639,reference,24h_running_mean,pass
+2026,1650688,7093743,SINGBURI SCHOOL,Air4Thai,TH,14.8933874,100.4130773,reference,24h_running_mean,pass
+2026,1785688,7338554,Amnat Charoen Municipality,Air4Thai,TH,15.8758,104.6223,reference,24h_running_mean,pass
+2026,1785690,7338537,KAENG DON KLANG PARK,Air4Thai,TH,16.4436,103.513,reference,24h_running_mean,pass
+2026,1785691,7338558,Nakhon Nayok Municipality Public Health Service Center,Air4Thai,TH,14.20422,101.21509,reference,24h_running_mean,pass
+2026,1785692,7338540,Nong Bueng Kan Park,Air4Thai,TH,18.362008,103.65977,reference,24h_running_mean,pass
+2026,1785694,7338551,Surin Meteorological Center,Air4Thai,TH,14.8762222,103.4965833,reference,24h_running_mean,pass
+2026,1861095,7431257,Wiang Subdistrict Disaster Prevention and Mitigation Center,Air4Thai,TH,18.804894,98.900698,reference,24h_running_mean,pass
+2026,1864570,7434913,"Provincial Electricity Authority, Hot District Branch",Air4Thai,TH,18.172495,98.61069,reference,24h_running_mean,pass
+2026,1873401,7443668,Sisaket Meteorological Center,Air4Thai,TH,15.087087,104.326787,reference,24h_running_mean,pass
+2026,1896763,7468522,Pai Airport,Air4Thai,TH,19.369637,98.43596,reference,24h_running_mean,pass
+2026,1993935,7576283,Nong Bua Lamphu Provincial Administrative Organization,Air4Thai,TH,17.193824,102.4585009,reference,24h_running_mean,pass
+2026,2132593,7736413,Phetchaburi Municipality,Air4Thai,TH,13.11249031,99.9461325,reference,24h_running_mean,pass
+2026,2161292,7772032,"Số 46, phố Lưu Quang Vũ",Hanoi Air Quality Monitoring Network,VN,21.0152,105.7999,reference,hourly,too few days
+2026,2161306,7772087,Minh Khai - Bắc Từ Liêm,Hanoi Air Quality Monitoring Network,VN,21.05,105.74,reference,hourly,too few days
+2026,3008643,10203283,Chumchon Banpadang School,Air4Thai,TH,6.66638438023621,100.32726914385205,reference,24h_running_mean,pass
+2026,3047300,10494201,"Sports Stadium, Chumphon Province",Air4Thai,TH,10.495142389105824,99.18935409512319,reference,24h_running_mean,pass
+2026,3291325,11468827,Mae Sariang District Office,Air4Thai,TH,18.158912,97.93271,reference,24h_running_mean,pass
+2026,3345345,11863289,Rayong Provincial Stadium,Air4Thai,TH,12.678917,101.234664,reference,24h_running_mean,pass
+2026,3347581,11880411,Pramuan Suk Health Park,Air4Thai,TH,16.177283,103.299824,reference,24h_running_mean,pass
+2026,4946811,13502150,556 Nguyễn Văn Cừ,Hanoi Air Quality Monitoring Network,VN,21.0491,105.8831,reference,hourly,pass
+2026,4946812,13502151,Công viên Nhân Chính - Khuất Duy Tiến,Hanoi Air Quality Monitoring Network,VN,21.0031,105.7947,reference,hourly,pass
+2026,4946813,13502154,Số 1 đường Giải Phóng - phường Bạch Mai - ĐHBK ,Hanoi Air Quality Monitoring Network,VN,21.0052,105.8418,reference,hourly,pass
+2026,5554536,13952317,Chalermprakiat Rama IX Park,Air4Thai,TH,15.173475,100.132105,reference,24h_running_mean,pass
+2026,5554537,13952323,Chaloem Phrakiat Park Station 80th birthday celebration,Air4Thai,TH,15.384667,100.024992,reference,24h_running_mean,pass
+2026,5554538,13952328,Pattani Provincial Forestry Center,Air4Thai,TH,6.890637,101.250888,reference,24h_running_mean,pass
+2026,5554539,13952333,Phatthalung Provincial Stadium,Air4Thai,TH,7.6156514,100.0480234,reference,24h_running_mean,pass
+2026,6165738,14897793,Wat Thong Song Tham Child Development Center,Air4Thai,TH,14.420548,100.595312,reference,24h_running_mean,pass
+2026,6167893,14913690,Ruean Prathap Station,Air4Thai,TH,16.666299,98.657489,reference,24h_running_mean,not checked
+2026,6167895,14913694,Tree planting station,Air4Thai,TH,16.663994,98.664641,reference,24h_running_mean,not checked
+2026,6176026,14973464,"iyachart Pattana School, under the royal patronage of Her Royal Highness Princess Maha Chakri Sirindhorn.",Air4Thai,TH,14.278780850523706,101.16093815767054,reference,24h_running_mean,not checked
+2026,6191210,15087489,hung Thale Luang Station,Air4Thai,TH,17.051112,99.806396,reference,24h_running_mean,too few days
+2026,6204072,15182299,Srinakharinwirot University,Air4Thai,TH,14.105929779420226,100.9851175092921,reference,24h_running_mean,too few days
+2026,6206887,15210116,Dairy Promotion Organization of Thailand,Air4Thai,TH,14.634513215336314,101.19161207791055,reference,24h_running_mean,too few days
+2026,6222090,15313819,The Supreme Artist Hall,Air4Thai,TH,14.071361045244474,100.69966420057868,reference,24h_running_mean,too few days
+2026,6230463,15380176,Wat Thipsukontharam,Air4Thai,TH,14.322590288904477,99.70350372440087,reference,24h_running_mean,too few days
+2026,6246375,15492808,Thap Luang Subdistrict Administrative Organization,Air4Thai,TH,15.103107950461235,99.62226751002622,reference,24h_running_mean,pass
+2026,6251785,15533189,Guest House at King Naresuan the Great Camp,Air4Thai,TH,16.83715163121024,100.25910826690338,reference,24h_running_mean,not checked
+2026,6262229,15611068,Public Park to commemorate the sixth anniversary of His Majesty the King,Air4Thai,TH,13.685524189587932,100.51830028147444,reference,24h_running_mean,pass
+2026,6266258,15641438,"Doi Tung Royal Palace, Mae Fah Luang District, Chiang Rai Province",Air4Thai,TH,20.28755518332941,99.81050726698746,reference,24h_running_mean,too few days
+2026,6266641,15650108,"Phaya Ngam Muang Auditorium, University of Phayao",Air4Thai,TH,19.029919816067558,99.89736003675418,reference,24h_running_mean,not checked
+2026,6273349,15694264,Artillery Officers Club of the 31st Artillery Battalion,Air4Thai,TH,14.884886999744845,100.6373358670088,reference,24h_running_mean,not checked
+2026,6277032,15722750,Wat Phra Pathom Chedi Ratchaworamahavihara,Air4Thai,TH,13.817360990710023,100.05771179582489,reference,24h_running_mean,not checked
+2026,6325480,16083420,Erawan National Park,Air4Thai,TH,14.374830537949412,99.14523682440188,reference,24h_running_mean,too few days
+2026,6326620,16092003,At Nong Lu Subdistrict Administrative Organization,Air4Thai,TH,15.195980066907032,98.46131696674739,reference,24h_running_mean,not checked
+2026,1235990,6530181,"Kasetsart university laboratory school 1, Chatuchak, Bangkok",AirGradient,TH,13.850829210818615,100.56881779163187,low-cost,hourly,pass
+2026,1235996,6530178,"Vieng Nua, Pai",AirGradient,TH,19.374620435850545,98.44561078410078,low-cost,hourly,pass
+2026,1235999,6530173,NARIT ASTROPARK (Parking),AirGradient,TH,18.85345541310349,98.95760600870581,low-cost,hourly,pass
+2026,1236013,6530208,"Soemngamwitthayakhom School 2, Some-Ngam, Lampang",AirGradient,TH,18.279805533636747,99.48051196520771,low-cost,hourly,pass
+2026,1236022,6530236,แม่กวง,AirGradient,TH,18.8266136,99.0523185,low-cost,hourly,pass
+2026,1236024,6530233,สันโป่ง,AirGradient,TH,18.9375111,98.9566944,low-cost,hourly,pass
+2026,1236034,6530253,"Watkhemapirataram school 1, Mueang, Nonthaburi",AirGradient,TH,13.823306342907303,100.50341971861289,low-cost,hourly,pass
+2026,1236035,6530251,"Pathumthep witthayakarn school 1, Mueang, Nong Khai",AirGradient,TH,17.866408250878237,102.74806318240316,low-cost,hourly,pass
+2026,1236040,6530276,"Kaenoisuksa School 1, Chiang Dao, Chiang Mai",AirGradient,TH,19.394767432705724,98.92874614493202,low-cost,hourly,fail: mean differs from neighbours
+2026,1236050,6530303,Prem Tinsulanonda International School 1,AirGradient,TH,18.96255421231335,98.91562786546136,low-cost,hourly,pass
+2026,1236053,6530291,"Suwannaramwittayakom school 1, Bangkok Noi, Bangkok",AirGradient,TH,13.76312579330489,100.47612901861227,low-cost,hourly,pass
+2026,1236063,6530321,"intERLab, Pathumthani, Thailand",AirGradient,TH,14.077551603647665,100.61278750267229,low-cost,hourly,pass
+2026,1236069,6530310,Rajaphat Yala University,AirGradient,TH,6.549012748332888,101.2896306111374,low-cost,hourly,too few days
+2026,1405439,6716468,"Chomthong School 1, Chomthong, Chiang Mai",AirGradient,TH,18.435156957109033,98.67718182473789,low-cost,hourly,pass
+2026,1641552,7076714,วังหมุ้น,AirGradient,TH,18.945298569548378,98.97347979467268,low-cost,hourly,fail: mean differs from neighbours
+2026,1641558,7076722,Prem Tinsulanonda International School 2,AirGradient,TH,18.966512871928927,98.91508369562034,low-cost,hourly,pass
+2026,1646752,7086282,ดาดฟ้า,AirGradient,TH,18.932618966437307,98.96445032014383,low-cost,hourly,pass
+2026,1861445,7431742,"Fangchanupathum School 1, Fang, Chiang Mai",N/A,TH,19.863943477644817,99.17937755730453,low-cost,hourly,pass
+2026,1894642,7466395,Savvi Condominium Phahol-Ari,Clarity,TH,13.77865,100.54655,low-cost,hourly,pass
+2026,2041043,7628003,Mae Ann,AirGradient,TH,18.971315125096538,98.8784122467041,low-cost,hourly,too few days
+2026,2124016,7725494,Wiang Nuea Beverly Hills Goat Farm,AirGradient,TH,19.385584,98.459714,low-cost,hourly,pass
+2026,2136949,7741884,Pai: Wednesday Market,AirGradient,TH,19.351845,98.4411552,low-cost,hourly,pass
+2026,2142493,7749647,Wiang Nuea Beverly Hills Hua Chang Dam,AirGradient,TH,19.383934,98.464782,low-cost,hourly,pass
+2026,2142801,7749859,Wiang Nuea: Wat Phra Phutthabat,AirGradient,TH,19.3910772,98.4534912,low-cost,hourly,pass
+2026,2146217,7754671,Pai: Seng Tong Market,AirGradient,TH,19.3573394,98.4381079,low-cost,hourly,pass
+2026,2147304,7756030,Tin That,N/A,TH,19.3172193,98.439397,low-cost,hourly,pass
+2026,2151718,7761087,Wiang Nuea Moat,AirGradient,TH,19.3747778,98.4453889,low-cost,hourly,pass
+2026,2154067,7763352,Kung Kaeng: Pai Munchkins Club / PLearn Pai Bilingual Learning Center,AirGradient,TH,19.342108,98.435391,low-cost,hourly,pass
+2026,2155602,7765489,Mae Hi: Bueng Pai Farm,AirGradient,TH,19.344337,98.446422,low-cost,hourly,pass
+2026,2158149,7768319,Pai: Dr. Neung Clinic near PTT gas station,AirGradient,TH,19.355492,98.436671,low-cost,hourly,pass
+2026,2165656,7779239,Mae Yen: Ing Doi Guesthouse,AirGradient,TH,19.355916,98.448666,low-cost,hourly,pass
+2026,2174592,7788909,Chiang moi,AirGradient,TH,18.78987,98.99583,low-cost,hourly,pass
+2026,2181641,7790011,ทองหล่อ 8,AirGradient,TH,13.7316,100.5834,low-cost,hourly,pass
+2026,2297552,7796486,Tha Pai Hot Springs,AirGradient,TH,19.307811,98.473538,low-cost,hourly,pass
+2026,2315448,7796897,Muang Soi Health Center,AirGradient,TH,19.395894,98.404624,low-cost,hourly,pass
+2026,2327978,7797649,Mae Hi: Pittalew Art Gallery,AirGradient,TH,19.344769,98.453281,low-cost,hourly,pass
+2026,2340282,7798219,Paina Paita Home (near Coffee In Love),AirGradient,TH,19.336754,98.43217,low-cost,hourly,pass
+2026,2375197,7802105,Mae Khong Border Patrol,AirGradient,TH,19.385612,98.437128,low-cost,hourly,pass
+2026,2384279,7812174,Mae Na Toeng School,AirGradient,TH,19.393767,98.42108,low-cost,hourly,pass
+2026,2384280,7812177,Wiang Nuea Moo 8 Mayor,AirGradient,TH,19.379253,98.445529,low-cost,hourly,pass
+2026,2384585,7812301,Mae Khong Health Center,AirGradient,TH,19.385735,98.439518,low-cost,hourly,pass
+2026,2393909,7824196,Pai: NT/TOT office near Pai Hospital,AirGradient,TH,19.3621389,98.4375556,low-cost,hourly,pass
+2026,2402491,7834588," Wat Khlong Toey Nai School, Bangkok",Clarity,TH,13.71037,100.56115,low-cost,hourly,pass
+2026,2429963,7868945,Mae Ping Health Center,AirGradient,TH,19.28607,98.468214,low-cost,hourly,pass
+2026,2439091,7880296,Wiang Nuea: Mon Far Pai Cottages,AirGradient,TH,19.369755,98.449955,low-cost,hourly,pass
+2026,2439859,7881259,Wat Mo Paeng,AirGradient,TH,19.379659,98.396488,low-cost,hourly,pass
+2026,2457250,7901662,Muang Rae Police Box,AirGradient,TH,19.241398,98.44963,low-cost,hourly,pass
+2026,2461311,7905641,The Mud House by CMG,AirGradient,TH,18.70707013718418,98.91531793782238,low-cost,hourly,pass
+2026,2474515,7920113,Thung Yao South (near Two Huts),AirGradient,TH,19.317546,98.448532,low-cost,hourly,pass
+2026,2492986,7943848,The Hideaway Village (near Wat Sop Phaem),AirGradient,TH,19.299787,98.443144,low-cost,hourly,pass
+2026,2510432,7963855,Pa Yang School,AirGradient,TH,19.395591,98.387011,low-cost,hourly,pass
+2026,2523394,7974127,Pai Immigration ,AirGradient,TH,19.361656,98.438967,low-cost,hourly,pass
+2026,2575375,8429609,สันโป่ง,AirGradient,TH,18.941970789965023,98.94292144786002,low-cost,hourly,pass
+2026,2692433,8694745,Soi Rimthang Rotfai 3,AirGradient,TH,13.723917563386962,100.4896320971784,low-cost,hourly,pass
+2026,2692436,8694741,Soi Naradhiwas Rajanagarindra 17/1,AirGradient,TH,13.714227217771464,100.53463637224243,low-cost,hourly,pass
+2026,2692437,8694734,Nana Nue Pier,AirGradient,TH,13.74828616518107,100.55400303589226,low-cost,hourly,pass
+2026,2692439,8694736,Wanglang Rd.,AirGradient,TH,13.759764,100.474672,low-cost,hourly,not checked
+2026,2692642,8695097,Suriya Thep Alley,AirGradient,TH,13.749383457371344,100.47691024942468,low-cost,hourly,pass
+2026,2692643,8695100,Tang Trong Chit Alley,AirGradient,TH,13.768026699364972,100.46533225829832,low-cost,hourly,pass
+2026,2692644,8695095,Kiak Kai Intersection,AirGradient,TH,13.79695026631216,100.5222724774432,low-cost,hourly,pass
+2026,2692645,8695103,Vibhavadi Rangsit 11 Alley Lane 10,AirGradient,TH,13.824551234939227,100.55028307691722,low-cost,hourly,pass
+2026,2739142,8797306,MSK Talat,AirGradient,TH,16.1033,103.1733,low-cost,hourly,pass
+2026,2811479,8958977,โรงเรียนบ้านหนองโบสถ์ ,AirGradient,TH,14.631278247689572,102.71985109647431,low-cost,hourly,pass
+2026,2811482,9223356,โรงเรียนบ้านซำแฮด,AirGradient,TH,14.85172457209533,102.91012168884586,low-cost,hourly,pass
+2026,2811595,8959852,โรงเรียนบ้านสันดาบ,AirGradient,TH,13.538714910765675,100.34699792942607,low-cost,hourly,pass
+2026,2813651,9223352,โรงเรียนด่านใต้วิทยา,AirGradient,TH,16.24309780470331,103.72712951331772,low-cost,hourly,too few days
+2026,2813904,9758240,โรงเรียนวัดจันเสน,AirGradient,TH,15.117804417115428,100.45916405575342,low-cost,hourly,pass
+2026,2813975,8973908,โรงเรียนบ้านเกาะยวน,AirGradient,TH,6.87268456246548,99.80799344894625,low-cost,hourly,pass
+2026,2821337,9029943,โรงเรียนผ่านศึกสงเคราะห์ 2,AirGradient,TH,20.1738211256972,100.06373951389979,low-cost,hourly,pass
+2026,2821701,9223397,โรงเรียนราชประชานุเคราะห์ 45,AirGradient,TH,14.128972484746537,99.69294076763131,low-cost,hourly,pass
+2026,2822813,9041045,โรงเรียนบ้านหนองแวงมน,AirGradient,TH,15.738638477478045,102.4671765670442,low-cost,hourly,pass
+2026,2827389,9075411,"Saraphi, Chiang Mai",AirGradient,TH,18.69092576903741,99.04716043182036,low-cost,hourly,pass
+2026,2827392,9075436,มหาวิทยาลัยราชภัฎภูเก็ต 1,AirGradient,TH,7.909639025949969,98.38698699663972,low-cost,hourly,too few days
+2026,2827394,9075461,หอดูดาวสงขลา,AirGradient,TH,7.158502558743491,100.6113217561578,low-cost,hourly,pass
+2026,2827395,9075441,โรงเรียนแวงพิทยาคม,AirGradient,TH,17.42769650946683,103.61873634019608,low-cost,hourly,pass
+2026,2827396,9075458,โรงเรียนเสริมงามวิทยาคม,AirGradient,TH,18.050391606682883,99.23346803905622,low-cost,hourly,pass
+2026,2832266,9112194,โรงเรียนบีกริม,AirGradient,TH,13.638638923364107,102.39096382050207,low-cost,hourly,pass
+2026,2832600,9114724,โรงเรียนเสริมขวาวิทยา,AirGradient,TH,18.129044618992815,99.20212951372334,low-cost,hourly,pass
+2026,2843713,9197053,โรงเรียนโสตศึกษา สุรินทร์,AirGradient,TH,14.708486039648943,103.42312321153788,low-cost,hourly,pass
+2026,2843720,9197038,โรงเรียนราชประชานุเคราะห์ 56,AirGradient,TH,18.55614310402829,100.71911569413429,low-cost,hourly,pass
+2026,2843723,9563746,โรงเรียนชุมชนวัดเขาไม้แก้ว,AirGradient,TH,12.949917877088192,101.03639622869056,low-cost,hourly,pass
+2026,2843771,9197442,โรงเรียนบ้านน้อยห้วยรินวิทยา,AirGradient,TH,18.02707441554263,98.66349112279283,low-cost,hourly,pass
+2026,2845347,9209428,โรงเรียนบ้านโคกขามโนนสมบูรณ์,AirGradient,TH,14.817848930975666,102.88950559496688,low-cost,hourly,too few days
+2026,2847191,9223407,โรงเรียนบ้านกาศประชานุเคราะห์,AirGradient,TH,18.082763142301825,100.17276032284325,low-cost,hourly,fail: mean differs from neighbours
+2026,2847192,9223406,โรงเรียนวรดิตถ์วิทยาประสูทน์,AirGradient,TH,14.490412714080469,100.43669131922096,low-cost,hourly,pass
+2026,2847196,9223430,โรงเรียนวัดกระเฉท,AirGradient,TH,12.75573100747808,101.22385802114438,low-cost,hourly,pass
+2026,2847198,9223500,โรงเรียนบ้านหนองป่าก่อ,AirGradient,TH,20.172104137137712,100.11495065829588,low-cost,hourly,pass
+2026,2848810,9235367,International School Bangkok - Nonthaburi ,AirGradient,TH,13.8929,100.5258,low-cost,hourly,pass
+2026,2850409,9247865,โรงเรียนบ้านห้วยไม้หก,AirGradient,TH,17.426687368214814,98.46186558690347,low-cost,hourly,not checked
+2026,2894459,9577429,โรงเรียนลพบุรีปัญญานุกูล,AirGradient,TH,14.783014131133461,100.64741702329812,low-cost,hourly,pass
+2026,2909413,9686527,Soi Bumrungsin ,AirGradient,TH,13.4054598,100.9875579,low-cost,hourly,pass
+2026,2926254,9793729,โรงเรียนบ้านวังลุง,AirGradient,TH,18.177309310650944,98.61097589156435,low-cost,hourly,pass
+2026,2927633,9804570,โรงเรียนราชประชานุเคราะห์ 35,AirGradient,TH,8.776161659005904,98.26620212523758,low-cost,hourly,pass
+2026,2927999,9804569,โรงเรียนราชประชานุเคราะห์ 46,AirGradient,TH,15.184977141061985,100.12478444536801,low-cost,hourly,pass
+2026,3019320,10283302,Rangsit - Nakhon Nayok 25,AirGradient,TH,13.990582062342105,100.63521933513957,low-cost,hourly,pass
+2026,3047340,10494485,"Maerim, Chiangmai",AirGradient,TH,18.932580910609936,98.94895059814411,low-cost,hourly,pass
+2026,3090636,10820628,Uno Solutions,AirGradient,TH,13.8498819,100.638635,low-cost,hourly,pass
+2026,3097120,10865435,Circle Living Prototype,AirGradient,TH,13.750578,100.556228,low-cost,hourly,pass
+2026,3133267,10958195,NASA GSFC Rutgers Calib. N17,Clarity,TH,13.8192,100.041,low-cost,hourly,fail: mean differs from neighbours
+2026,3203249,11128971,Supalai Lake Ville Phuket,AirGradient,TH,7.968184,98.378202,low-cost,hourly,pass
+2026,3276359,11357424,CMT8,AirGradient,VN,10.78533,106.67029,low-cost,hourly,isolated
+2026,3332045,11761946,Soi Ramintra 62,AirGradient,TH,13.8306134,100.6690372,low-cost,hourly,pass
+2026,3343025,11845458,Suphan Buri Sri Prachan,AirGradient,TH,14.642824,100.149966,low-cost,hourly,pass
+2026,3400922,12178212,Wang Pring Teen Na บ้านวังปริง-ตีนนา ,AirGradient,TH,6.80172419898538,100.49337985674264,low-cost,hourly,pass
+2026,3400935,12178260,MI Home,AirGradient,TH,13.698573693307418,100.5959569057577,low-cost,hourly,pass
+2026,3400936,12178264,Thung Hua Sinn Group,AirGradient,TH,13.69892706888951,100.5967325993592,low-cost,hourly,pass
+2026,3400937,12178268,Khlong 3 - Lat Sawai,AirGradient,TH,13.944866,100.6670272,low-cost,hourly,pass
+2026,3400941,12178284,Neighbour Home,AirGradient,TH,13.9135033,100.6843258,low-cost,hourly,pass
+2026,3400942,12178288,Burnadelphia ,AirGradient,LA,17.938,102.632,low-cost,hourly,pass
+2026,3400955,12178332,Ban Lat Sombun,AirGradient,TH,17.0747487,103.9818061,low-cost,hourly,pass
+2026,3400956,12178336,The Lofts Asoke - sukhumvit 21,AirGradient,TH,13.74679776025865,100.56215036834317,low-cost,hourly,pass
+2026,3400979,12178408,"House 45, Arden Rama 3",AirGradient,TH,13.67941,100.54297,low-cost,hourly,pass
+2026,3400984,12742460,Kok Roka,AirGradient,KH,11.597015,104.8038,low-cost,hourly,pass
+2026,3400986,12311507,"Chomphet Secondary School - Sisattanak, Vientiane Capital ມັດທະຍົມສົມບູນ ຈອມເພັດ",AirGradient,LA,17.910254,102.622708,low-cost,hourly,pass
+2026,3401031,12178031,Royce Private,N/A,TH,13.7408785546112,100.56617492969099,low-cost,hourly,pass
+2026,3402586,12187660,TPN FlexPak,AirGradient,TH,13.5865189344302,100.95071089222978,low-cost,hourly,pass
+2026,3402593,12187645,TPN Packaging,AirGradient,TH,13.587370852277184,100.94784483015584,low-cost,hourly,pass
+2026,3402594,12187650,Thung Hua Sinn Printing Network,AirGradient,TH,13.579648742936051,100.94081408928972,low-cost,hourly,too few days
+2026,3405765,12742762,"Civil Engineering, NPIC",AirGradient,KH,11.597738545600507,104.79998960598436,low-cost,hourly,pass
+2026,3412669,14152385,"Don Wai, Nong Khai",AirGradient,TH,17.800084262001807,102.67435310442903,low-cost,hourly,pass
+2026,3474952,12311482,"Salakham Secondary School - Hadxaifong District, Vientiane Capital",AirGradient,LA,17.880817,102.648658,low-cost,hourly,pass
+2026,3478630,12311487,"Santiphab Secondary School - Luangprabang, Luangprabang ມັດທະຍົມ ສັນຕິພາບ",AirGradient,LA,19.880332,102.139832,low-cost,hourly,pass
+2026,3478631,12311497,"Thaphabath Secondary School - Thaphabath, Bolikhamxai",AirGradient,LA,18.356826,103.198076,low-cost,hourly,pass
+2026,3487377,12305886,"Kiwkachum Secondary School - XiengNgeun, Luangprabang ມັດທະຍົມ ກິ່ວກະຈຳ",AirGradient,LA,19.555,102.234,low-cost,hourly,pass
+2026,3493785,12305881,"PakXeng Secondary School - PakXeng, Luangprabang ມັດທະຍົມສົມບູນ ປາກແຊງ",AirGradient,LA,20.174492,102.675657,low-cost,hourly,pass
+2026,3493786,12305891,Thakhek - Khammouan ,AirGradient,LA,17.392668,104.807495,low-cost,hourly,pass
+2026,3493787,12311502,"Xebangfay Secondary School - Xebangfay, Khammouane ມັດທະຍົມສົມບູນ ເຊບັ້ງໄຟ",AirGradient,LA,17.086149,104.981631,low-cost,hourly,too few days
+2026,3499026,12310829,"Phoukhoune Secondary School - Phoukhoune, Luangprabang ມັດທະຍົມ ພູຄູນ",AirGradient,LA,19.438824,102.428042,low-cost,hourly,fail: mean differs from neighbours
+2026,3501135,12312479,"Tonpheung Secondary School - Tonpheung, Bokeo  ມັດທະຍົມ ຕົ້ນເຜີ້ງ",AirGradient,LA,20.29241,100.09858,low-cost,hourly,pass
+2026,3501136,12312484,Paktha - Bokeo,AirGradient,LA,20.105423,100.597269,low-cost,hourly,pass
+2026,3501137,12312489,"Phonxay Secpondary School - Phonxay, Luangprabang ມັດທະຍົມສົມບູນ ເມືອງໂພນໄຊ",AirGradient,LA,19.958916,102.572347,low-cost,hourly,pass
+2026,3503722,12314083,"Nampook Secondary School - Huoixai, Bokeo ມັດທະຍົມສົມບູນ ນ້ຳປຸກ",AirGradient,LA,20.217811,100.565439,low-cost,hourly,pass
+2026,3503723,12314088,Pakkading - Bolikhamxai ,AirGradient,LA,18.109902,104.281265,low-cost,hourly,pass
+2026,3503724,12314093,"Nakhonxay Secondary School - Khamkeuth, - Borikhamxai ມັດທະຍົມ ນະຄອນໄຊ",AirGradient,LA,18.185553,104.983958,low-cost,hourly,pass
+2026,3503725,12314098,Nhommalath - Khammouan ,AirGradient,LA,17.614203,105.170282,low-cost,hourly,pass
+2026,3510962,12860780,Viengthong - Bolikhamxai,AirGradient,LA,18.512354,104.442835,low-cost,hourly,pass
+2026,3510963,12320592,Nongbok - Khammouan,AirGradient,LA,16.962416,104.81156,low-cost,hourly,pass
+2026,3510964,12320597,Lamarm - Sekong ,AirGradient,LA,15.352494,106.722444,low-cost,hourly,pass
+2026,3510965,12331115,Pak Ou Secondary School - Luangprabang ມັດທະຍົມສົມບູນ ປາກອູ,AirGradient,LA,20.087592,102.256569,low-cost,hourly,pass
+2026,3511463,12320920,"Ngoi Secondary School - Ngoi, Luangprabang ມັດທະຍົມ ເມືອງງອຍ",AirGradient,LA,20.568968,102.609436,low-cost,hourly,pass
+2026,3513587,14153971,"Namthuam Secondary School - Nambark, Luangprabang ມັດທະຍົມສົມບູນ ນ້ຳຖ້ວມ",AirGradient,LA,20.496386,102.357481,low-cost,hourly,pass
+2026,3524548,12331753,"Natoon Secondary School - Khua, Phongsaly ມັດທະຍົມສົມບູນ ນາຕູ່ນ",AirGradient,LA,21.078865,102.505833,low-cost,hourly,pass
+2026,3524549,12331758,Pek - Xiengkhouang,AirGradient,LA,19.444636,103.205788,low-cost,hourly,pass
+2026,3524550,12331763,"NamOn Secondary School - Xaychamphone, Borikhamxai ມັດທະຍົມ ນຳ້ອ້ອນ",AirGradient,LA,18.577559,104.981947,low-cost,hourly,pass
+2026,3524551,12331768,Mahaxay - Khammouan,AirGradient,LA,17.457352,105.160169,low-cost,hourly,pass
+2026,3524552,12331773,"Hinboon Secondary School - Hinboon, Khammouane ມັດທະຍົມສົມບູນ ຫີນບູນ",AirGradient,LA,17.721875,104.581724,low-cost,hourly,pass
+2026,3524553,12331778,Thateng -Sekong,AirGradient,LA,15.434018,106.382399,low-cost,hourly,pass
+2026,3527752,12334305,"Sanam Sai, Pong Ta Long, Pak Chong",AirGradient,TH,14.559764291719427,101.50069771390922,low-cost,hourly,pass
+2026,3539279,14153976,"Viengkham Secondary School - Viengkham, Luangprabang ມັດທະຍົມສົມບູນ ວຽງຄຳ",AirGradient,LA,20.465668,102.881428,low-cost,hourly,not checked
+2026,3539280,12391265,"Longsane Secondary School - Longsane , Xaysomboun ມັດທະຍົມສົມບຸນ ລ້ອງຊານ",AirGradient,LA,18.550145,103.003076,low-cost,hourly,pass
+2026,3539838,14153981,"Phasang Secondary School - Fueng, Vientiane Province ມັດທະຍົມ ຜາສັງ",AirGradient,LA,18.47336,101.97909,low-cost,hourly,pass
+2026,3553302,14153961,"Municipality Secondary School - Namtha, Luangnamtha ມັດທະຍົມສົມບູນ ເທດສະບານ",AirGradient,LA,21.001687,101.402989,low-cost,hourly,pass
+2026,3553303,12401331,"Vangxieng Secondary School - Phonthong, Luangprabang ມັດທະຍົມ ວັງຊຽງ",AirGradient,LA,20.737745,103.073231,low-cost,hourly,pass
+2026,3553304,12370643,"Ekaphab Secondary School - Xayabury, Xayabury ມັດທະຍົມ ເອກະພາບ",AirGradient,LA,19.237566,101.714751,low-cost,hourly,pass
+2026,3553305,14152445,"Xaysomboun Secondary School - Anouvong, Xaysomboun ມັດທະຍົມສົມບູນ ໄຊສົມບູນ",AirGradient,LA,18.904741,103.09426,low-cost,hourly,pass
+2026,3560430,14153946,"Parkton Secondary School - Sangthong, Vientiane Capital ມັດທະຍົມ ປາກຕອນ",AirGradient,LA,18.094799,102.278904,low-cost,hourly,pass
+2026,3560431,12391270,"Kenethao Secondary School - Kenethao, Xayabury ມັດທະຍົມສົມບຸນ ແກ່ນທ້າວ",AirGradient,LA,17.740569,101.403471,low-cost,hourly,pass
+2026,3560513,12860775,"Chomphet Seconbdary School - Khoune, Xiengkhuang ມັດທະຍົມ ຈອມເພັດ",AirGradient,LA,19.340999,103.371433,low-cost,hourly,pass
+2026,3560514,14153991,"Phameuang Secondary School - Bolikhanh, Borikhamxay ມັດທະຍົມ ຜາເມືອງ",AirGradient,LA,18.746772,103.688187,low-cost,hourly,pass
+2026,3560515,12381004,"Nakang Secondary School - Khounkham, Khammouane ມັດທະຍົມສົມບູນ ນາກາງ",AirGradient,LA,18.02845,104.65357,low-cost,hourly,pass
+2026,3561013,14153986,"Sithanaxay Secondary School - Parkxane, Borikhamxay ມັດທະຍົມສົົມບູນ ສີທ່ານາໄຊ",AirGradient,LA,18.403727,103.689146,low-cost,hourly,pass
+2026,3562555,12380999,"Nan Secondary School - Nan, Luangprabang ມັດທະຍົມ ເມືອງນານ",AirGradient,LA,19.498539,101.883867,low-cost,hourly,pass
+2026,3562556,12860760,"Viengxay Secondary School - Viengxay, Houaphan ມັດທະຍົມສົມບູນ ເມືອງວຽງໄຊ",AirGradient,LA,20.405402,104.221218,low-cost,hourly,pass
+2026,3562557,12391275,"Lardkhai Secondary School - Phaxay, Xiengkhouang ມັດທະຍົມ ລາດຄ້າຍ",AirGradient,LA,19.29915,103.133374,low-cost,hourly,pass
+2026,3567155,12365219,Mayparkngum - Vientiane Capital,AirGradient,LA,18.185205,103.05687,low-cost,hourly,pass
+2026,3567156,12365224,May - Phongsaly,AirGradient,LA,21.172583,102.722705,low-cost,hourly,pass
+2026,3567157,12365229,Nalae - Louangnamtha,AirGradient,LA,20.536617,101.447461,low-cost,hourly,pass
+2026,3567158,12365234,Pha Oudom - Bokeo,AirGradient,LA,20.086216,100.831707,low-cost,hourly,pass
+2026,3567159,12365239,Phonhong - Vientiane,AirGradient,LA,18.350024,102.42424,low-cost,hourly,pass
+2026,3567160,12365244,Songkhone - Savannakhet,AirGradient,LA,16.237196,105.1965,low-cost,hourly,pass
+2026,3567161,12365249,"Saravane Secondary School -Saravane, Saravane ມັດທະຍົມສົມບູນ ສາລະວັນ",AirGradient,LA,15.707906,106.422189,low-cost,hourly,too few days
+2026,3572812,14153956,"Bountay Secondary School - Bountay, Phongsaly ມັດທະຍົມ ບຸນໄຕ້",AirGradient,LA,21.387451,101.97925,low-cost,hourly,pass
+2026,3572813,14153966,"Xay Secondary School - Xay, Oudomxay ມັດທະຍົມ ເທດສະບານແຂວງ",AirGradient,LA,20.700342,101.991856,low-cost,hourly,pass
+2026,3572814,12860820,"Dakcheung Secondary School - Dakcheung, Sekongມັດທະຍົມສົມບູນ ດາກຈຶງ",AirGradient,LA,15.467532,107.271451,low-cost,hourly,pass
+2026,3576032,12372614,Ban Nong Wa,AirGradient,TH,14.968124,102.9822904,low-cost,hourly,pass
+2026,3585655,14267490,"Thongmixay Secondary School - Thongmixay, Xayabouly ມັດທະຍົມສົມບູນ ທົ່ງມີໄຊ",AirGradient,LA,18.398246,101.173584,low-cost,hourly,pass
+2026,3585656,12860765,"NamNgeun Secondary School - Ngeun, Xayabouly ມັດທະຍົມສົມບູນ ນ້ຳເງິນ",AirGradient,LA,19.619875,101.112439,low-cost,hourly,too few days
+2026,3585657,14157099,"Parkthang Secondary School - Thoulakhom, Vientiane Province ມັດທະຍົມສົມບູນ ປາກທາງ",AirGradient,LA,18.339214,102.660862,low-cost,hourly,pass
+2026,3587757,14153951,"OuTai Secondary School - NhotOu, Phongsaly ມັດທະຍົມສົມບູນ ອູໄຕ້",AirGradient,LA,22.132114,101.801674,low-cost,hourly,too few days
+2026,3591603,12385252,"La Secondary School - La, Oudomxai ມັດທະຍົມສົມບູນ ເມືອງຫລາ",AirGradient,LA,20.870865,102.110246,low-cost,hourly,pass
+2026,3591604,12385257,Meung - Bokeo,AirGradient,LA,20.565749,100.592003,low-cost,hourly,pass
+2026,3591605,12385262,"BouamNgam Secondary School - Huameuang, Houaphan  ມັດທະຍົມ ບວມງາມ",AirGradient,LA,20.199501,103.875166,low-cost,hourly,pass
+2026,3591606,12385267,Parklai - Xaignabouly,AirGradient,LA,18.220795,101.405717,low-cost,hourly,pass
+2026,3591607,12385272,"Napa Secondary School - Kham, Xiengkhouang ມັດທະຍົມ ນາປາ",AirGradient,LA,19.590573,103.662369,low-cost,hourly,pass
+2026,3591608,12385277,Mork - Xiengkhouang,AirGradient,LA,18.929384,103.992683,low-cost,hourly,pass
+2026,3591609,12385282,Vangvieng - Vientiane,AirGradient,LA,18.855459,102.529697,low-cost,hourly,fail: mean differs from neighbours
+2026,3591610,12385287,"Toomlarn Secondary School - Toomlarn, Saravane ມັດທະຍົມສົມບູນ ຕຸ້ມລານ",AirGradient,LA,15.994499,106.192399,low-cost,hourly,pass
+2026,3591611,12385292,Lao Ngarm - Salavan,AirGradient,LA,15.461092,106.16172,low-cost,hourly,pass
+2026,3591612,12385247,Sanxay - Attapeu,AirGradient,LA,14.925784,107.052837,low-cost,hourly,pass
+2026,3597971,12390571,Xamneua - Houaphan,AirGradient,LA,20.413807,104.050733,low-cost,hourly,pass
+2026,3597972,12390576,Xamtay - Houaphan,AirGradient,LA,19.999194,104.64011,low-cost,hourly,pass
+2026,3597973,12390581,Xon - Houaphan,AirGradient,LA,20.466813,103.34797,low-cost,hourly,pass
+2026,3597974,12390586," Viengthong Secondary School - Hiem, Houaphan ມັດທະຍົມ ວຽງທອງ",AirGradient,LA,20.099855,103.380396,low-cost,hourly,pass
+2026,3597975,12390591,"Kuan Secondary School - Kuan, Houaphan ມັດທະຍົມສົມບູນ ກັວນ",AirGradient,LA,19.835863,104.561303,low-cost,hourly,pass
+2026,3597976,12390596,"Hongsa Secondary School - Hongsa, Xaignabouly ມັດທະຍົມສົມບູນ ຫົງສາ",AirGradient,LA,19.70693,101.342893,low-cost,hourly,pass
+2026,3597977,12390601,"Hinherb Secondary School - Hinherb, Vientiane Province ມັດທະຍົມສົມບູນ ຫີນເຫີບ",AirGradient,LA,18.637318,102.323676,low-cost,hourly,not checked
+2026,3597978,12390606,"KeoKou Secondary School - KeoOudom, Vientiane Province ມັດທະຍົມສົມບູນ ແກ້ວກູ່",AirGradient,LA,18.554884,102.502844,low-cost,hourly,pass
+2026,3597980,12390616,Outhoomphone - Savannakhet,AirGradient,LA,16.669923,104.956459,low-cost,hourly,too few days
+2026,3599598,12391930,"Add Secondary School - Add, Houaphan ມັດທະຍົມ ແອດ",AirGradient,LA,20.820542,104.004618,low-cost,hourly,pass
+2026,3599599,12391935,Xiengkhor - Houaphan,AirGradient,LA,20.813892,104.146676,low-cost,hourly,pass
+2026,3599600,12391940,"Kasy Secondary School - Kasy, Vientiane Province ມັດທະຍົມສົມບູນ ກາສີ",AirGradient,LA,19.225034,102.25219,low-cost,hourly,pass
+2026,3600181,12392601,Mad - Vientiane,AirGradient,LA,18.448868,101.76322,low-cost,hourly,pass
+2026,3600182,12392606,Xaybuly - Savannakhet,AirGradient,LA,17.075181,104.87732,low-cost,hourly,pass
+2026,3600183,12392611,"Vapy Secondary School - Vapy, Saravane ມັດທະຍົມສົມບູນ ວາປີ",AirGradient,LA,15.697405,106.07474,low-cost,hourly,pass
+2026,3600716,12393268,"Sopbao Secondary School - Sopbao, Houaphan ມັດທະຍົມ ສົບເບົາ",AirGradient,LA,20.710206,104.384946,low-cost,hourly,pass
+2026,3602359,12394267,Nonghed - Xiengkhouang,AirGradient,LA,19.49661,103.986121,low-cost,hourly,pass
+2026,3612960,12402654,"Naxaithong Secondary School - Naxaithong, Vientiane Capital ມັດທະຍົມ ນາຊາຍທອງ",AirGradient,LA,18.068595,102.535866,low-cost,hourly,pass
+2026,3612961,12402659,"Long Secondary School - Long, LuangNamtha ມັດທະຍົມສົມບູນ ເມືອງລອງ",AirGradient,LA,20.962029,100.82109,low-cost,hourly,too few days
+2026,3612962,12402664,"Sing Secondary School - Sing, LuangNamtha ມັດທະຍົມສົມບູນ ເມືອງສິງ",AirGradient,LA,21.190223,101.144937,low-cost,hourly,pass
+2026,3612963,12402669,"Nongtang Secondary School - Phookood, Xiengkhuang ມັດທະຍົມ ໜອງຕັ່ງ",AirGradient,LA,19.520634,102.884798,low-cost,hourly,pass
+2026,3612964,12402674,"Xanakharm Secondary School - Xanakharm, Vieniane Province ມັດທະຍົມສົບຸນ ຊະນະຄາມ",AirGradient,LA,17.910218,101.670662,low-cost,hourly,pass
+2026,3612965,12402679,"Phonmi Secondary School - Viengkham, Vientiane Province ມັດທະຍົມສົມບຸນ ໂພນໝີ",AirGradient,LA,18.48451,102.485942,low-cost,hourly,pass
+2026,3612966,12402684,"Phoummachedy Secondary School - Xayphouthong, Savannakhet ມັດທະຍົມ ພູມມະເຈດີ",AirGradient,LA,16.367044,105.005653,low-cost,hourly,pass
+2026,3624137,12411287,"Kaleum Secondary School - Kaleum, Sekong ມັດທະຍົມ ກະລຶມ",AirGradient,LA,15.784384,106.906754,low-cost,hourly,pass
+2026,3652441,12433595,"Soi Sukhumvit 31, High floor",AirGradient,TH,13.73411,100.565955,low-cost,hourly,pass
+2026,3658671,12438784,"Chansavang Secondary School - Sikhottabong, Vientiane Capital ມັດທະຍົມ ຈັນສະຫວ່າງ",AirGradient,LA,18.024146,102.520739,low-cost,hourly,too few days
+2026,3663294,12442513,"Lakhonesy Secondary School - Lakhonepheng, Saravane ມັດທະຍົມສົມບູນ ລະຄອນສີ",AirGradient,LA,15.891245,105.567119,low-cost,hourly,pass
+2026,3683630,12459028,"TaOi Secondary School - TaOi, Saravane ມັດທະຍົມສົມບູນ ຕະໂອ້ຍ",AirGradient,LA,16.07679,106.621363,low-cost,hourly,pass
+2026,3684608,12459635,"Sathit Secondary School - Xaythani, Vientiane Capital ມັດທະຍົມ ສາທິດ",AirGradient,LA,18.035248,102.63994,low-cost,hourly,pass
+2026,3684609,12459640,"Naxay Secondary School - Samphanh, Phongsaly ມັດທະຍົມສົມບູນ ນາໄຊ",AirGradient,LA,21.346014,102.349329,low-cost,hourly,pass
+2026,3684610,12459645,"Khob Secondary School - Khob, Xayabouli ມັດທະຍົມ ເມືອງຄອບ",AirGradient,LA,19.699713,100.5572,low-cost,hourly,pass
+2026,3684611,12459650,"Phin Secondary School - Phin, Savannakhet ມັດທະຍົມ ພີນ",AirGradient,LA,16.527879,106.021922,low-cost,hourly,pass
+2026,3685146,12460285,"Namor Secondary School - Namor, Oudomxay ມັດທະຍົມ ເມືອງນາໝໍ້",AirGradient,LA,20.914061,101.764456,low-cost,hourly,pass
+2026,3685147,12460290,"Hoon Secondary School - Hoon, Oudomxay ມັດທະຍົມ ເມືອງຮຸນ",AirGradient,LA,20.146431,101.467765,low-cost,hourly,pass
+2026,3685148,12460295,"Beungxang Secondary School - Xonbuly, Savannakhet ມັດທະຍົມ ບຶງຊ້າງ",AirGradient,LA,16.388527,105.375363,low-cost,hourly,pass
+2026,3685149,12460300,"Saphai Secondary School - Sanasomboun, Champasack ມັດທະຍົມ ສະຜ່າຍ",AirGradient,LA,15.202177,105.720683,low-cost,hourly,pass
+2026,3685150,12460270,"Dorntalath Secondary School - Champasack, Champasack ມັດທະຍົມ ດອນຕະລາດ",AirGradient,LA,14.784126,105.819789,low-cost,hourly,pass
+2026,3685151,12460275,"Kaokerng Secondary School - Phonthong, Champasack ມັດທະຍົມ ເກົ່າເກີງ",AirGradient,LA,15.107035,105.772051,low-cost,hourly,pass
+2026,3685152,12460280,"Sukhuma Secondary School - Sukhuma, Champasack ມັດທະຍົມ ສຸຂຸມາ",AirGradient,LA,14.649459,105.804529,low-cost,hourly,pass
+2026,3699664,12472080,บริษัท ไอ.ที.โกลโบล จำกัด,AirGradient,TH,18.7316881,98.9514679,low-cost,hourly,not checked
+2026,3714636,12483888,Beng - Oudomxai,AirGradient,LA,20.296295,101.639666,low-cost,hourly,pass
+2026,3714637,12483893,Pakbeng - Oudomxai,AirGradient,LA,19.910426,101.155815,low-cost,hourly,pass
+2026,3714638,12483898,Phiang - Xaignabouly,AirGradient,LA,19.094645,101.529558,low-cost,hourly,pass
+2026,3714639,12483903,Xaysathan - Xaignabouly,AirGradient,LA,19.414884,101.325032,low-cost,hourly,pass
+2026,3714640,12483908,Botene - Xaignabouly,AirGradient,LA,17.827229,101.135079,low-cost,hourly,fail: mean differs from neighbours
+2026,3714641,12483913,Thapangthong - Savannakhet,AirGradient,LA,15.994818,105.745889,low-cost,hourly,pass
+2026,3714642,12483918,Pakse - Champasack,AirGradient,LA,15.12006,105.80211,low-cost,hourly,pass
+2026,3714643,12483868,Paksxong - Champasack,AirGradient,LA,15.181714,106.217852,low-cost,hourly,pass
+2026,3714644,12483873,Pathoomphone - Champasack,AirGradient,LA,14.843454,105.946714,low-cost,hourly,pass
+2026,3714646,12483883,Samakkhixay - Attapeu,AirGradient,LA,14.812678,106.829211,low-cost,hourly,pass
+2026,3733063,12499583,Bachiangchaleunsook - Champasack,AirGradient,LA,15.060355,105.897898,low-cost,hourly,pass
+2026,3733065,12499593,Khong - Champasack,AirGradient,LA,14.048226,105.896012,low-cost,hourly,pass
+2026,3783738,12540519,"Artsaphone Secondary School - Artsaphone, Savannakhet ມັດທະຍົມສົມບູນ ອາດສະພອນ",AirGradient,LA,16.844674,105.33638,low-cost,hourly,pass
+2026,3792617,12547534,"Lianxay Secondary School - Artsaphangthong, Savannakhet ມັດທະຍົມ ຫລຽນໄຊ",AirGradient,LA,16.692124,105.409764,low-cost,hourly,pass
+2026,3891934,14152590,หมู่บ้านแก้วสา,AirGradient,TH,18.928286035684813,98.94445179435797,low-cost,hourly,pass
+2026,3892436,14152595,วัดดวงดี,AirGradient,TH,18.91977780483509,98.95279736395602,low-cost,hourly,pass
+2026,3892437,14152600,บ้านร้องเกิด,AirGradient,TH,18.92786395211318,98.96541049234524,low-cost,hourly,pass
+2026,3998818,12714979,UNICEF Lao PDR CO,AirGradient,LA,17.937650817948654,102.61723189596404,low-cost,hourly,pass
+2026,4028033,12757729,Opposite Thammasat Chiang Rak 1 Gate - ชุมชนคุ้งผ้าพับ ธรรมศาสตร์ เชียงราก 1,AirGradient,TH,14.064706097742768,100.60502410138216,low-cost,hourly,pass
+2026,4131363,12850568,KU faculty of environnment,AirGradient,TH,13.85574,100.570032,low-cost,hourly,fail: low r with neighbours
+2026,4133388,12852162,Kasetsat University,AirGradient,TH,13.85574,100.570032,low-cost,hourly,fail: low r with neighbours
+2026,4143000,12860110,d83bda1bc98c Phongsaly - Phongsaly,AirGradient,LA,21.695,102.085,low-cost,hourly,too few days
+2026,4143979,12860755,Boon Neua - Phongsaly,AirGradient,LA,21.656203,101.907985,low-cost,hourly,too few days
+2026,4143980,12860770,Xienghone - Xaignabouly ,AirGradient,LA,19.631763,100.814901,low-cost,hourly,pass
+2026,4143981,12860785,Kaysone Phomvihane - Sav,AirGradient,LA,16.5702,104.75036,low-cost,hourly,pass
+2026,4143982,12860790,Sepone - Savannakhet,AirGradient,LA,16.696651,106.209138,low-cost,hourly,pass
+2026,4143983,12860795,Champhone - SAVA,AirGradient,LA,16.489147,105.031659,low-cost,hourly,pass
+2026,4143984,12860800,Vilabuly - Savannakhet,AirGradient,LA,16.971649,105.944661,low-cost,hourly,pass
+2026,4143985,12860805,Phalanxay - Savannakhet,AirGradient,LA,16.661353,105.58791,low-cost,hourly,pass
+2026,4143986,12860810,Khongxedone - Salavan,AirGradient,LA,15.59088,105.804115,low-cost,hourly,pass
+2026,4143987,12860815,Samuoi - Salavan,AirGradient,LA,16.293856,106.889224,low-cost,hourly,pass
+2026,4143988,12860750,Xaysetha - Attapeu,AirGradient,LA,14.816824,106.930954,low-cost,hourly,pass
+2026,4165629,14152690,Trat ,AirGradient,TH,12.250418275215738,102.51627866749956,low-cost,hourly,pass
+2026,4213488,14215533,KU Faculty of environnment,AirGradient,TH,13.85574,100.570032,low-cost,hourly,fail: low r with neighbours
+2026,4321722,12981003,Nong - Savannakhet,AirGradient,LA,16.373875,106.495685,low-cost,hourly,pass
+2026,4322233,12981932,បន្ទប់កិច្ចការសង្គម,AirGradient,KH,11.598675,104.8013326,low-cost,hourly,fail: low r with neighbours
+2026,4588536,14152805,บ้านดอยน้อย,AirGradient,TH,18.9335,99.0098,low-cost,hourly,pass
+2026,4765764,13347703,THABO HOSPITAL - โรงพยาบาลสมเด็จพระยุพราชท่าบ่อ,AirGradient,TH,17.846889,102.576403,low-cost,hourly,pass
+2026,4837111,13406409,Palm Estate,AirGradient,TH,13.710874395049988,100.54139120223834,low-cost,hourly,not checked
+2026,4894523,13459180,Nantawan Pinklao-Ratchaphruek,AirGradient,TH,13.770583060432282,100.43630207777919,low-cost,hourly,pass
+2026,4932270,14153786,AirGradient Demo Dashboard,AirGradient,TH,18.900572,98.6950831,low-cost,hourly,pass
+2026,4985405,13533354,SM SAINS TUANKU SYED PUTRA,AirGradient,MY,6.427598,100.216451,low-cost,hourly,pass
+2026,4993065,14153090,DPSW Production,AirGradient,TH,13.843354,100.725719,low-cost,hourly,too few days
+2026,5024214,14153135,Sukontasawat19 ,AirGradient,TH,13.833484,100.622189,low-cost,hourly,pass
+2026,5092509,14215528,KU faculty of environnment,AirGradient,TH,13.85574,100.570032,low-cost,hourly,fail: low r with neighbours
+2026,5092510,14214463,Kasetsart University,AirGradient,TH,13.85574,100.570032,low-cost,hourly,fail: low r with neighbours
+2026,5103390,13621709,ໂຮງໝໍມະໂຫສົດ Mahosot Hospital,AirGradient,LA,17.95944785330261,102.61366511686585,low-cost,hourly,pass
+2026,5108494,14153208,Magi HQ,AirGradient,TH,13.730769164153706,100.6934361114503,low-cost,hourly,pass
+2026,5436004,13863816,AUPP Liger Leadership Academy,AirGradient,KH,11.539546698345733,104.89346511801455,low-cost,hourly,not checked
+2026,5482624,13898161,BTT APW,AirGradient,TH,13.430072,99.955553,low-cost,hourly,pass
+2026,5497794,13909800,MoNRE - Ministry of Natural Resources and Environment,AirGradient,LA,17.998179200703355,102.58220083962827,low-cost,hourly,not checked
+2026,5497795,13909805,MoNRE - Ministry of Natural Resources and Environment,AirGradient,LA,17.998144871444236,102.5821626429113,low-cost,hourly,pass
+2026,5551122,14153130,7-eleven,AirGradient,TH,18.944416458815923,98.94308592870685,low-cost,hourly,pass
+2026,5555519,13952896,AUPP Liger Leadership Academy,AirGradient,KH,11.483428740578637,104.96750882545467,low-cost,hourly,pass
+2026,5721661,14073149,CamKids' CCC School & Clinic,AirGradient,KH,11.615783566598228,104.53875547645015,low-cost,hourly,too few days
+2026,5732958,14080912,CamKids' CCC School & Clinic,AirGradient,KH,11.615783566598228,104.53875547645015,low-cost,hourly,too few days
+2026,5755932,14129436,AUPP Liger Leadership Academy,AirGradient,KH,11.483397198368342,104.96744445244279,low-cost,hourly,too few days
+2026,5804514,14129441,AUPP Liger Leadership Academy,AirGradient,KH,11.482124992946565,104.96864608199819,low-cost,hourly,too few days
+2026,5840009,14157126,Prey Lvea,AirGradient,KH,11.162349,104.958345,low-cost,hourly,too few days
+2026,5851170,14165350,Baan Kut Ngong,AirGradient,TH,14.680844804221923,101.60590778699802,low-cost,hourly,pass
+2026,5951902,14241408,Air Quality Nexus Center_GIC ,AirGradient,TH,14.08211,100.6129,low-cost,hourly,pass
+2026,5955903,14245223,Air Quality Nexus Center,AirGradient,TH,14.082600300738342,100.61297245208486,low-cost,hourly,pass
+2026,6048285,14311432,Klin Mai Ram village,AirGradient,TH,13.6882883,100.6288872,low-cost,hourly,not checked
+2026,6085704,14337557,AUPP Liger Leadership Academy,AirGradient,KH,11.481676029818129,104.96869913943368,low-cost,hourly,too few days
+2026,6094818,14372852,Banpho,AirGradient,TH,14.4919901,100.0750989,low-cost,hourly,pass
+2026,6099600,14407773,Hakuna Matata Villas Phrae,AirGradient,TH,18.306047430369297,100.28064817700623,low-cost,hourly,pass
+2026,6101817,14424352,Hana,AirGradient,TH,12.33466,99.979912,low-cost,hourly,pass
+2026,6115454,14523698,' ',AirGradient,TH,18.923649,98.975744,low-cost,hourly,pass
+2026,6118093,14543238,Ban Lad Sombun,AirGradient,TH,17.074733,103.981793,low-cost,hourly,pass
+2026,6123215,14581375,OceanPark,AirGradient,VN,20.9933,105.9441,low-cost,hourly,pass
+2026,6125288,14597242,Souphanouvong University - ມະຫາວິທະຍາໄລສຸພານຸວົງ LBP,AirGradient,LA,19.92212,102.18736,low-cost,hourly,pass
+2026,6130741,14637531,Sukhumvit101/1,AirGradient,TH,13.682404,100.613816,low-cost,hourly,pass
+2026,6144367,14736735,Duang Prateep Foundation HQ,AirGradient,TH,13.710670173250579,100.57499367487921,low-cost,hourly,pass
+2026,6144405,14737538,Baan Makong,AirGradient,TH,13.70559,100.584,low-cost,hourly,pass
+2026,6144666,14738908,"Lock 1-2-3 (13.7121923, 100.5740800)",AirGradient,TH,13.712219,100.57408,low-cost,hourly,pass
+2026,6149445,14775253,PHOTHARAM,AirGradient,TH,13.6337,99.83283,low-cost,hourly,pass
+2026,6151749,14792684,ໂຮງໝໍແຂວງວຽງຈັນ Vientiane Provincial Hospital,AirGradient,LA,18.4737631116375,102.484980242299,low-cost,hourly,pass
+2026,6152097,14795553,NongHoi,AirGradient,TH,18.747511275645873,99.0158037871921,low-cost,hourly,pass
+2026,6154187,14810951,Britania KhuKhot,AirGradient,TH,13.95102,100.648903,low-cost,hourly,pass
+2026,6157903,14839059,ໂຮງໝໍແຂວງຊຽງຂວາງ Xieng Khuang Provincial Hospital,AirGradient,LA,19.4459594091436,103.201835579611,low-cost,hourly,pass
+2026,6160493,14858324,ໂຮງໝໍແຂວງສະຫວັນນະເຂດ Savannakhet Provincial Hospital,AirGradient,TH,16.5504623530255,104.746607785021,low-cost,hourly,pass
+2026,6160761,14860308,Suthep,AirGradient,TH,18.785159,98.960696,low-cost,hourly,pass
+2026,6166036,14900010,ໂຮງໝໍແຂວງສາລະວັນ Salavan Provincial Hospital,AirGradient,LA,15.7211674428591,106.423783352312,low-cost,hourly,pass
+2026,6182459,15021811,ໂຮງໝໍແຂວງຫຼວງນ້ຳທາ Luang Namtha Provincial Hospital,AirGradient,LA,20.9970996718406,101.411686089614,low-cost,hourly,pass
+2026,6188057,15063658,Mondul 2,AirGradient,KH,13.360586571930954,103.85757849281713,low-cost,hourly,pass
+2026,6192014,15093564,Opposite TU Chiang Rak 1 - ชุมชนคุ้งผ้าพับ มธ. เชียงราก 1 - เครื่อง Test,AirGradient,TH,14.064828,100.605157,low-cost,hourly,too few days
+2026,6195103,15116788,"Mityothin, Chatuchak, Bangkok",AirGradient,TH,13.8237744,100.5667347,low-cost,hourly,pass
+2026,6200540,15156298,โรงเรียนนิคมสร้างตนเองสงเคราะห์ขาวเขา,AirGradient,TH,20.18158879881544,99.7706405269282,low-cost,hourly,not checked
+2026,6202299,15176738,PhasinHQ,AirGradient,TH,14.149093,100.613889,low-cost,hourly,pass
+2026,6204360,15184506,Ban Fah Piyarom phase 2 (Kiengsuan),AirGradient,TH,13.94169,100.737271,low-cost,hourly,pass
+2026,6204666,15186783,Snoozer Labs (Tantip Village),AirGradient,TH,13.76183725246212,100.65373440109288,low-cost,hourly,pass
+2026,6204667,15186788,Life Bangkok Boulevard,AirGradient,TH,13.8158217,100.6953185,low-cost,hourly,pass
+2026,6205698,15194968,AGRO🏠,AirGradient,TH,13.908673,100.435375,low-cost,hourly,pass
+2026,6205699,15194517,SM HQ,AirGradient,TH,13.7745623,100.7076196,low-cost,hourly,pass
+2026,6205700,15194973,GappyZ HQ,AirGradient,TH,13.638242,100.482148,low-cost,hourly,pass
+2026,6205764,15194983,SM HQ,AirGradient,TH,13.7655832,100.7004831,low-cost,hourly,pass
+2026,6205924,15196163,Manthana 2 Bangna KM.7,AirGradient,TH,13.64403537761468,100.66741440750471,low-cost,hourly,pass
+2026,6206920,15203550,ໂຮງໝໍເມືອງສະໝ້ວຍ Samoui District Hospital,AirGradient,LA,16.29863243676354,106.88828045127252,low-cost,hourly,pass
+2026,6207256,15206007,"Darunee Farm, Doi Lo",AirGradient,TH,18.559169677653216,98.79386831199298,low-cost,hourly,pass
+2026,6207952,15210350,Siem Reap,AirGradient,KH,13.338391,103.854613,low-cost,hourly,pass
+2026,6209697,15222725,หับ โห้ หิ้น (ハップ・ホー・ヒン),AirGradient,TH,7.1982809,100.5884935,low-cost,hourly,pass
+2026,6209698,15222730,OatState Home - Baan Klang Muang Phaholyothin 50,AirGradient,TH,13.887808364752395,100.61798243052827,low-cost,hourly,pass
+2026,6210633,15229664,Wongsakorn NaMueang,AirGradient,TH,13.68636,101.060703,low-cost,hourly,pass
+2026,6210702,15230624,Mind Tiwanon Village,AirGradient,TH,13.848333,100.505547,low-cost,hourly,pass
+2026,6216172,15270507,585 Prachasongkhro 2 Yak 11 DinDaeng Bangkok,AirGradient,TH,13.762562,100.559812,low-cost,hourly,pass
+2026,6217058,15277170,"Research Institute for Health Sciences (RIHES),. Chiang Mai University",AirGradient,TH,18.7948519,98.9563673,low-cost,hourly,not checked
+2026,6218293,15286453,Pa-Yang Wang Kaphi,AirGradient,TH,17.575023,100.124236,low-cost,hourly,pass
+2026,6218918,15290940,"สี่แยกน้ำโมง - Nam Mong, Thabo Intersection",AirGradient,TH,17.85811604548048,102.57049911130102,low-cost,hourly,pass
+2026,6220117,15299805,Soi Pattanasin,AirGradient,TH,13.78119,100.53811,low-cost,hourly,pass
+2026,6221185,15307793,Mae  Rim,AirGradient,TH,18.93214606104985,98.93228799565617,low-cost,hourly,too few days
+2026,6222557,15315235,Granada Pinklao Village,AirGradient,TH,13.793313574500337,100.36264082195247,low-cost,hourly,pass
+2026,6223085,15319253,Tor Kasetpattana,AirGradient,TH,13.802151,99.970952,low-cost,hourly,pass
+2026,6224050,15326975,"Meow-nitoring Station, Thoet Rachan, Don mueang, Bangkok",AirGradient,TH,13.94765038109582,100.59536746994597,low-cost,hourly,pass
+2026,6225366,15336571,Sriphum,AirGradient,TH,18.7909333,98.9881964,low-cost,hourly,too few days
+2026,6226542,15345489,MaeWannee Gold 11,AirGradient,TH,13.164647,100.931404,low-cost,hourly,pass
+2026,6226788,15347334,SuanMongkol,AirGradient,TH,12.9329552,101.9119605,low-cost,hourly,pass
+2026,6229487,15367455,All Weather Farm,AirGradient,TH,13.623311,100.434948,low-cost,hourly,pass
+2026,6229488,15367460,Baan Kin,AirGradient,TH,13.626585,100.419946,low-cost,hourly,pass
+2026,6230362,15374161,บ้านหัวหาด-คุ้งตะเภา,AirGradient,TH,17.659754,100.167478,low-cost,hourly,pass
+2026,6230395,15374156,ถนนตัดใหม่-แยกวัดอรัญฯ,AirGradient,TH,17.63678,100.081672,low-cost,hourly,pass
+2026,6230638,15376386,Miracle Theparak,AirGradient,TH,13.601138,100.681314,low-cost,hourly,too few days
+2026,6230737,15376637,Test bed,AirGradient,TH,13.849607,100.504991,low-cost,hourly,too few days
+2026,6235850,15414758,THE LINE Phahonyothin Park,AirGradient,TH,13.817607270599972,100.566363356019,low-cost,hourly,pass
+2026,6236444,15419065,Rangsit - Nakhon Nayok 50,AirGradient,TH,13.983343863176646,100.64824474352226,low-cost,hourly,pass
+2026,6237068,15423688,ໂຮງໝໍແຂວງອັດຕະປື Attapeu Provincial Hospital,AirGradient,LA,14.819082115520345,106.8122199490303,low-cost,hourly,pass
+2026,6238788,15436548,Jilawan Thai Local Treats,AirGradient,TH,13.537611,101.009417,low-cost,hourly,pass
+2026,6240774,15451671,147/23 Maneerin Park Rangsit,AirGradient,TH,13.994154165223069,100.56624675916261,low-cost,hourly,pass
+2026,6242472,15463918,The Miracle Thepharak,AirGradient,TH,13.60110559801693,100.68135071743959,low-cost,hourly,pass
+2026,6244503,15479058,Thairoj Pharmacy,AirGradient,TH,20.25670103274936,100.40604193534264,low-cost,hourly,pass
+2026,6245573,15486873,Passorn 5,AirGradient,TH,13.7061133,100.4519157,low-cost,hourly,pass
+2026,6248478,15508522,ThaReang,AirGradient,TH,13.8644075,100.6580904,low-cost,hourly,fail: mean differs from neighbours
+2026,6254869,15556230,Car Clinic Wat Thanon Khae,AirGradient,TH,14.826475283457356,100.63362680360751,low-cost,hourly,too few days
+2026,6256182,15565999,Ban Non Muang,AirGradient,TH,15.700208339806426,101.84339557617676,low-cost,hourly,pass
+2026,6262040,15609661,Sadao Khanchai School  สะเดาขรรค์ชัย,AirGradient,TH,6.6288089,100.4227884,low-cost,hourly,pass
+2026,6262415,15612463,Opposite TU Chiang Rak 1 - ชุมชนคุ้งผ้าพับ มธ. เชียงราก 1 - เครื่อง Test,AirGradient,TH,14.065220541194403,100.6049662454904,low-cost,hourly,pass
+2026,6265526,15636030,Air data collection at Un conference,AirGradient,TH,13.7101,100.4543,low-cost,hourly,not checked
+2026,6265527,15636321,Allin-Wayra,AirGradient,TH,13.754,100.5014,low-cost,hourly,not checked
+2026,6265528,15636035,Aurgradient BAQ Monitor,AirGradient,TH,13.76402528587127,100.50871186467644,low-cost,hourly,not checked
+2026,6265530,15636602,หนองผา,AirGradient,TH,17.624569,100.079678,low-cost,hourly,pass
+2026,6266678,15644632,ถนนพาดวารี-บขส,AirGradient,TH,17.61106,100.092195,low-cost,hourly,too few days
+2026,6266905,15646327,"CACAAS Co., Ltd. - Keystone TU Office",AirGradient,TH,14.06392,100.59814,low-cost,hourly,pass
+2026,6267732,15652531,ບ້ານສະພານທອງໃຕ້ Saphanthong Village,AirGradient,LA,17.948879100315352,102.62943163558216,low-cost,hourly,pass
+2026,6273386,15694534,VNUHCMUS CAMPUS 1,AirGradient,VN,10.761968,106.682582,low-cost,hourly,too few days
+2026,6278274,15730600,SEACAI LA,AirGradient,LA,17.971741795605784,102.61789998653029,low-cost,hourly,too few days
+2026,6280774,15748810,Ornsirin 5,AirGradient,TH,18.71595715584073,99.04038033815908,low-cost,hourly,pass
+2026,6284173,15773658,BAN HUAI THONG,AirGradient,TH,18.694757669804677,98.80986005428556,low-cost,hourly,pass
+2026,6284174,15773663,Ban ThaGu School,AirGradient,TH,18.56113105313322,99.25621417429879,low-cost,hourly,pass
+2026,6285048,15780192,Ban ThaPaPao School,AirGradient,TH,18.47725369479227,99.19033271945464,low-cost,hourly,pass
+2026,6287521,15798843,"BANTHI, LAMPHUN",AirGradient,TH,18.65725,99.1126667,low-cost,hourly,too few days
+2026,6288760,15808233,Palm,AirGradient,TH,13.710894,100.541399,low-cost,hourly,too few days
+2026,6289784,15816011,TimBee,AirGradient,TH,14.968039282206153,102.98158857056164,low-cost,hourly,too few days
+2026,6291444,15828360,AQ Guard (Ref),AirGradient,TH,18.943736,98.94288,low-cost,hourly,too few days
+2026,6291584,15829415,electronic lab San Tan Lueang,AirGradient,TH,19.945561,99.835221,low-cost,hourly,too few days
+2026,6291933,15831736,Mae Suai Hospital - MORU,AirGradient,TH,19.642300490267758,99.52573286824058,low-cost,hourly,too few days
+2026,6294442,15850174,The Elements Sauna & Ice Bath,AirGradient,TH,19.3759,98.9847,low-cost,hourly,too few days
+2026,6300553,15897064,TANYA Baan Bon Doi,AirGradient,TH,19.878066,99.817408,low-cost,hourly,too few days
+2026,6301503,15904304,Baan Doi Chang Health Promoting Hospital - MORU Network,AirGradient,TH,19.81932760680476,99.55978054677793,low-cost,hourly,too few days
+2026,6306141,15939778,98 Navy House 31,AirGradient,TH,12.716056910327243,100.89216755891879,low-cost,hourly,not checked
+2026,6309947,15967884,Clinic Rot Yon Wat Thanon Khae,AirGradient,TH,14.82646368935957,100.63362793718295,low-cost,hourly,too few days
+2026,6318469,16032464,The Nest School Chiang Mai,AirGradient,TH,18.697738285002185,98.93636359429838,low-cost,hourly,too few days
+2026,6328962,16109477,"Don Tako, Ratchaburi",AirGradient,TH,13.51406,99.804503,low-cost,hourly,not checked

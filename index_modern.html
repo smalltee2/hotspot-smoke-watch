@@ -1299,6 +1299,10 @@ main.side-hidden .sidetoggle svg{transform:rotate(180deg)}
 @media (min-width:861px){   /* wide layout only: on phones the lowered sheet shows nothing but this block, so it must stay */
   aside:has(#hereBox:not([hidden])) .sheet-peek .ask,aside:has(#hereBox:not([hidden])) .sheet-peek .sheet-cta{display:none}
   aside:has(#hereBox:not([hidden])) .sheet-peek:not(:has(#clickCard:not([hidden]))){display:none}
+  /* your place's readout is taller than the panel on most screens: the whole panel scrolls then (readout, then the tabs),
+     instead of only the tab pane, which the readout squeezed to nothing */
+  main>aside:has(#hereBox:not([hidden])){overflow-y:auto;overscroll-behavior:contain}
+  aside:has(#hereBox:not([hidden])) .pane{flex:none;overflow:visible}
 }
 @media (max-width:860px){
   :root{--hdrH:52px;--tabH:calc(58px + env(safe-area-inset-bottom,0px));--peekH:84px}

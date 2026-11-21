@@ -28,6 +28,11 @@ See `README.md` for the method and data sources.
    weights, until the fit has been run on enough radar history (`rainfc-*.csv` / `rainobs-*.csv` on the `history` branch).
    Only paste in weights that the fit script produced; don't hand-tune them.
 
+5. **Keep the climatology-blend weights at zero until `scripts/fit_clim_blend.mjs` has been run.** `CFG.climBlend` in
+   `scripts/update.mjs` (`cams`, `silam`: pull of long-lead PM2.5 forecasts toward the station climatology) stays all zero until
+   the fit has been run on about 2 weeks of `climfc-*.csv` logs (`data/history` for CAMS, `data/history/silam` for SILAM). Only
+   paste in weights the fit printed; it keeps a weight only where high hours caught and false alarms are no worse.
+
 ## Working notes
 
 - `data/latest.json`, `data/met.json`, `data/state.json` are not committed: they are published to Pages and carried between

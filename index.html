@@ -440,12 +440,14 @@ td.num{text-align:right;font-family:var(--font-data);font-variant-numeric:tabula
 :root[data-theme="dark"] .brand .mark .i{stroke:#C9D3DC}:root[data-theme="dark"] .brand .mark .e{stroke:#FF7A33}:root[data-theme="dark"] .brand .mark .d{fill:#FF7A33}:root[data-theme="dark"] .brand h1 .dash{color:#FF7A33}
 :root[data-theme="dark"] .aboutlogo.lt{display:none}:root[data-theme="dark"] .aboutlogo.dk{display:block}
 @media (max-width:860px){.brand .mark{width:22px;height:22px}}
-.maplogo{pointer-events:none;padding:4px 7px 3px;border-radius:8px;background:color-mix(in srgb,var(--panel) 72%,transparent);line-height:0}
-.maplogo img{display:block;width:118px;height:auto}
+.maplogo{pointer-events:none;padding:6px 10px 5px;border-radius:8px;background:color-mix(in srgb,var(--panel) 72%,transparent);line-height:0}
+.maplogo img{display:block;width:180px;height:auto}
 .maplogo img.dk{display:none}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .maplogo img.lt{display:none}:root:not([data-theme="light"]) .maplogo img.dk{display:block}}
 :root[data-theme="dark"] .maplogo img.lt{display:none}:root[data-theme="dark"] .maplogo img.dk{display:block}
-@media (max-width:860px){.maplogo img{width:96px}}
+@media (max-width:860px){.maplogo img{width:132px}}
+/* original layout: the time bar spans the bottom of the map, so the logo sits just above it (--scrubH: its measured height) */
+.leaflet-bottom.leaflet-left .maplogo{margin-bottom:calc(var(--scrubH,58px) + 20px)}
 </style>
 </head>
 <body>
@@ -1686,8 +1688,11 @@ const simIdx=t=>S.sim?idxIn(S.sim.hours,t):-1;
 const gIdx=t=>P.data?idxIn(P.data.hours,t):-1;
 function setTimeline(){
   const keep=curT();
-  S.times=S.sim?S.sim.hours:(P.data?P.data.hours:[]);
-  if(S.sim&&P.data&&P.data.hours.length) S.times=S.times.filter(t=>t>=P.data.hours[0]);   // emission may start at local midnight, before the map data
+  // SILAM (about 5 days) runs past the smoke run of the page (about 3 days): its time bar follows the SILAM hours; past the smoke
+  // run's end the fire-smoke part reads as none (simIdx −1), the SILAM total itself is there to its last hour
+  const silLong=!!(P.data?.isSilam&&S.sim&&P.data.hours.length&&P.data.hours.at(-1)>S.sim.hours.at(-1));
+  S.times=S.sim&&!silLong?S.sim.hours:(P.data?P.data.hours:[]);
+  if(S.sim&&!silLong&&P.data&&P.data.hours.length) S.times=S.times.filter(t=>t>=P.data.hours[0]);   // emission may start at local midnight, before the map data
   { const d0=todayStart(); const f=S.times.filter(t=>t>=d0); if(f.length) S.times=f; }   // forecast view: the time bar starts today
   const sl=$('slider'); sl.max=Math.max(0,S.times.length-1);
   // the hour shown as "now"; a manual refresh, or a view that was on "now", moves to the current hour; a chosen past/forecast hour is kept
@@ -2582,25 +2587,13 @@ const LocateCtl=L.Control.extend({options:{position:'topleft'},onAdd(){
       {enableHighAccuracy:true,timeout:15000,maximumAge:60000});};
   return b;}});
 new LocateCtl().addTo(map);
-// the SEA-HAF logo on the map (assets/), so it stays on screenshots and shares: top-right on every screen size, just left of
-// whatever already sits in that corner (the redesign's legend button, the original layout's legend panel), moved again when
-// those change size; light or dark file with the theme; never takes clicks
+// the SEA-HAF logo on the map (assets/), so it stays on screenshots and shares: bottom-left on wide screens, top-left under the
+// locate button on phones (the time bar fills the bottom there); light or dark file with the theme; never takes clicks
 const LogoCtl=L.Control.extend({onAdd(){ const d=L.DomUtil.create('div','maplogo');
   d.innerHTML='<img class="lt" src="assets/sea-haf-logo-light.svg" alt="SEA-HAF" width="242" height="64"><img class="dk" src="assets/sea-haf-logo-dark.svg" alt="" width="242" height="64">'; return d; }});
-{ const el=new LogoCtl({position:'topright'}).addTo(map).getContainer();
-  // too narrow to fit beside them without covering the base-map menu (original layout on phones): below them instead
-  const fit=()=>{ const m=map.getContainer().getBoundingClientRect(); let right=10, top=10, below=0;
-    for(const id of ['btnLegToggle','legend']){ const e=document.getElementById(id); if(!e) continue; const r=e.getBoundingClientRect();
-      if(!r.width||!r.height||r.top-m.top>60||r.left<m.left) continue;          // hidden, or not in the top-right corner
-      right=Math.max(right,Math.round(m.right-r.left+8)); below=Math.max(below,Math.round((e.querySelector('summary')||e).getBoundingClientRect().bottom-m.top+6));   // its title row only
-      if(id==='btnLegToggle') top=Math.max(0,Math.round(r.top-m.top+(r.height-el.offsetHeight)/2)); }
-    const bm=document.querySelector('.basemap-switch')?.getBoundingClientRect();
-    const under=!!(bm&&bm.width&&bm.top-m.top<60&&m.right-right-el.offsetWidth<bm.right+8); if(under){ right=10; top=below; }
-    el.style.marginRight=right+'px'; el.style.marginTop=top+'px';
-    el.style.visibility=under&&document.querySelector('#legend details[open]')?'hidden':'';   // out of the way of an opened legend
-  };
-  fit(); addEventListener('resize',fit); map.whenReady(fit); setTimeout(fit,500);
-  const lg=document.getElementById('legend'); if(lg&&window.ResizeObserver) new ResizeObserver(fit).observe(lg); }
+{ const mq=matchMedia('(max-width:860px)'); let ctl=null;
+  const place=()=>{ if(ctl) ctl.remove(); ctl=new LogoCtl({position:mq.matches?'topleft':'bottomleft'}).addTo(map); };
+  place(); mq.addEventListener?.('change',place); }
 // ---- pop-up when the page opens: every parameter now and its forecast at the viewer's location
 // (PM2.5 as on the map; 2-m temperature and rain at 0.025° as in the warnings; wind and humidity from ECMWF).
 // The location is read once per visit, only if the browser allows it; it is not sent anywhere. "Show this when the page opens"

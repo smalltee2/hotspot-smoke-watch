@@ -3265,7 +3265,7 @@ function accWhere(){ if(ACC_AT) return {...ACC_AT,mine:false,st:true}; if(hereLL
 function renderAcc(){
   const box=$('accBox'); if(!box) return; box.hidden=!ACCD; if(!ACCD) return;
   const th=accGroup('th'), y1=th?.y1?T(` (daily mean ${accPct(th.y1.band)})`,` (ค่าเฉลี่ยรายวัน ${accPct(th.y1.band)})`):'';
-  $('accHead').textContent=th?.l?T(`Thailand, next day: colour band right ${accPct(th.l.band)}`,`ไทย พยากรณ์วันพรุ่งนี้ บอกระดับความเข้มข้นถูก ${accPct(th.l.band)}`)+y1:'';
+  $('accHead').textContent=th?.l?T(`Thailand, next day: hourly colour band right ${accPct(th.l.band)}`,`ไทย พยากรณ์วันพรุ่งนี้ บอกระดับความเข้มข้นรายชั่วโมงถูก ${accPct(th.l.band)}`)+y1:'';
   for(const b of box.querySelectorAll('[data-acc]')) b.setAttribute('aria-pressed',String(b.dataset.acc===ACC_LEVEL));
   let g, extra='';
   if(ACC_LEVEL==='here'){ const w=accWhere(); g=accGroup('here',w.lat,w.lon);

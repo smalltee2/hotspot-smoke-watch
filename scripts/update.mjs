@@ -17,7 +17,7 @@ import { updateRadar, scoreRadar, mergeRadarIntoMet, nowcast as radarNowcast, we
 import { updateGsmap, mergeIntoMet, webRain, GSCFG } from './gsmap.mjs';
 import { fetchGauges, scoreGauges, gsmapAt, rainFactor } from './thaiwater.mjs';
 import { updatePardig, obsRain } from './pardig.mjs';
-import { ENG2, ML2, NAMES2, loadObsHourly, rows2From, predict2, pmHighCheck, setClimatology } from './ml2.mjs';
+import { ENG2, ML2, NAMES2, loadObsHourly, rows2From, predict2, pmHighCheck, setClimatology, climFeatures } from './ml2.mjs';
 import { loadSilam, seriesAt } from './silam.mjs';
 import { WXML, T2_NAMES, PR_NAMES, T2ENG, PRENG, t2Features, prFeatures, loadWxDataset, storeWxDay, loadWxSeason } from './mlwx.mjs';
 import { downscaleT2, packDEM, T2CFG, t2SeaLevel, t2Bin, t2Down } from './t2down.mjs';
@@ -58,6 +58,12 @@ const CFG = {
   rk: { residStep: 0.025, coarseStep: 0.1, demStep: 0.05, minStations: 15, K: 16, declusterDeg: 0.25, lowcost: LOWCOST },
   mlField: 0.1,                  // deg; grid of the learned map correction (kriged station corrections, every 3 h to 48 h)   // cell declustering of the regression (0.25° ≈ 28 km cells)  // regression kriging; residual grid and DEM resolution
   logLeads: [1, 3, 6, 12, 24, 48],
+  // Pull of long-lead forecasts toward the station climatology (data/static/pm-clim.json): ln(B+1) = (1−w)·ln(F+1) + w·ln(C+1),
+  // w by lead, separately for CAMS and SILAM. Zero (no effect) until scripts/fit_clim_blend.mjs has been run on the climfc-*.csv
+  // logs below (about 2 weeks; data/history for CAMS, data/history/silam for SILAM) and its weights pasted here unchanged. The
+  // fit keeps a weight only where it catches at least as many hours >= 37.5 µg/m³ with no larger false-alarm share; don't hand-tune.
+  climBlend: { cams: [[24, 0], [48, 0], [72, 0], [96, 0]], silam: [[24, 0], [48, 0], [72, 0], [96, 0], [120, 0]] },
+  climLogLeads: [24, 36, 48, 60, 72, 84, 96, 108, 120],   // h; logged every 3 h at the hourly reference monitors (climfc-*.csv)
   // Air4Thai stations on OpenAQ report PM2.5 as a 24-h running mean, not hourly values (verified on Jan–Apr 2026: flat daily cycle,
   // mean hour-to-hour change 0.4 µg/m3); their correction and kriging therefore compare like with like (24-h means)
   avg24Providers: ['Air4Thai', 'Air4Thai · Bangkok (BMA)'],
@@ -1128,6 +1134,16 @@ async function main() {
   const fcstFile = path.join(hdir, `fcst-${stamp}.csv`);   // one file per issue hour: a second run in the same hour must not double-count it
   if (await fs.access(fcstFile).then(() => false, () => true)) await appendCSV(fcstFile, 'issued_utc,valid_utc,station_id,lead_h,cams_raw,corrected,cams24,corr24,blend24,obs_basis,correctedA,blend24A,correctedML,blend24ML,' + FEAT_COLS.join(',') + ',monitor,correctedML1,correctedML2', fRows);
   else log(`forecast log for ${stamp} already written this hour`);
+  // long-lead forecasts beside the station climatology, to fit CFG.climBlend (scripts/fit_clim_blend.mjs): the published hourly
+  // forecast F and the climatological mean and 90th percentile of the station for the valid month and hour; every 3 h
+  if (newRun && new Date(now).getUTCHours() % 3 === 0) {
+    const cRows = [];
+    for (const s of outStations) { if (!s.monitor || s.avg24) continue;
+      for (const L of CFG.climLogLeads) { const j = jNow + L; if (j >= hours.length) continue; const F = s.corrM?.[j] ?? s.corrA?.[j] ?? s.corr?.[j]; if (F == null) continue;
+        const [lc, lp] = climFeatures(String(s.id), hours[j]); if (!Number.isFinite(lc)) continue;
+        cRows.push([new Date(now).toISOString().slice(0, 13) + ':00Z', new Date(hours[j]).toISOString().slice(0, 13) + ':00Z', s.id, L, F, s.raw?.[j] ?? '', r1(Math.exp(lc) - 1), Number.isFinite(lp) ? r1(Math.exp(lp) - 1) : '']); } }
+    await appendCSV(path.join(hdir, `climfc-${stamp}.csv`), 'issued_utc,valid_utc,station_id,lead_h,forecast,raw,clim_mean,clim_p90', cRows);
+  }
   await writeJSON(path.join(DATA, 'state.json'), state);
   log(`done: ${outStations.length} stations, ${hot.length} hotspots, grid ${nx}×${ny}×${hours.length}`);
 }

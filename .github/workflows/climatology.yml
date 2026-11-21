@@ -2,10 +2,9 @@ name: Station climatology
 
 # Multi-year PM2.5 background of the monitors (scripts/climatology.mjs → data/static/pm-clim.json): the usual value and the
 # 90th percentile of each station by month and hour, from the last 3 years of Air4Thai and OpenAQ measurements. The correction
-# v2 reads it as two of its inputs. Rebuilt monthly; "Run workflow" rebuilds it at once.
+# v2 reads it as two of its inputs. Built once, as prior knowledge: the daily-learning experts adapt to what happens after it,
+# so it is not rebuilt on a schedule. "Run workflow" rebuilds it by hand if ever needed (e.g. many new stations).
 on:
-  schedule:
-    - cron: '43 2 3 * *'   # 3rd of each month, 09:43 Bangkok
   workflow_dispatch: {}
 
 permissions:

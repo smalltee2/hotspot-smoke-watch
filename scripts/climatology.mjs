@@ -5,7 +5,7 @@
 //   Air4Thai history service (PCD; the same one the hourly run reads), hourly PM2.5, by month and 40 stations a request
 //   OpenAQ archive (s3://openaq-data-archive, records/csv.gz/locationid=<id>/year=<y>/month=<m>/*.csv.gz), reference monitors
 // Station list: the hourly run's (data/state.json, restored from the Actions cache by the workflow).
-// Output: data/static/pm-clim.json (committed by .github/workflows/climatology.yml, monthly):
+// Output: data/static/pm-clim.json (committed by .github/workflows/climatology.yml; built once, as prior knowledge):
 //   { version, built, from, to, minN, cell: 'month×hour (Thai time, hour-ending stamp)', stations: { id: { n, mean: [288], p90: [288] } } }
 //   mean/p90 are µg/m³ × 10 as integers, index (month−1)·24 + hour, −1 where fewer than minN values.
 // Run: node scripts/climatology.mjs   (NODE_EXTRA_CA_CERTS=scripts/certs/air4thai-chain.pem for Air4Thai)

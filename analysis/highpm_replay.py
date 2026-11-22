@@ -14,7 +14,8 @@ Writes highpm_report.md, highpm_by_lead.csv, highpm_replay.csv, highpm_replay_by
 import sys, os, glob, numpy as np, pandas as pd
 src = sys.argv[1] if len(sys.argv) > 1 else '.'; out = sys.argv[2] if len(sys.argv) > 2 else '.'; os.makedirs(out, exist_ok=True)
 THR, LEADS = 37.5, [1, 3, 6, 12, 24]
-find = lambda pat: sorted(set(glob.glob(os.path.join(src, '**', pat), recursive=True)))
+# the SILAM chain's logs (a silam/ folder beside the YYYY-MM/ ones, same file names) are another forecast: left out unless that folder itself is given
+find = lambda pat: sorted(f for f in set(glob.glob(os.path.join(src, '**', pat), recursive=True)) if 'silam' not in os.path.relpath(f, src).split(os.sep))
 def read(files, cols):
     fr = []
     for f in files:
@@ -102,13 +103,15 @@ try:
         e.loc[te, 'gb_base_value'] = np.clip(mk().fit(tr[BASE], tr.obs).predict(e.loc[te, BASE]), 0, None); e.loc[te, 'gb_new_value'] = np.clip(mk().fit(tr[NEW], tr.obs).predict(e.loc[te, NEW]), 0, None)
         print(f'replay {day:%Y-%m-%d} ({i + 1}/{len(days)})', file=sys.stderr)
     t = e.dropna(subset=['gb_base', 'gb_new', 'gb_new_value', 'obs_last']); M = [('persistence', 'obs_last'), ('CAMS raw', 'cams_raw'), ('before ML', 'preML'), ('page', 'page'), ('replay: page inputs, log scale', 'gb_base'), ('replay: page inputs, value scale', 'gb_base_value'), ('replay: + station history, log scale', 'gb_new'), ('replay: + station history, value scale', 'gb_new_value')]
-    rows = [dict(lead=L, method=n, **s) for L in LEADS for n, c in M if (s := sc(t[t.lead_h == L][c], t[t.lead_h == L].obs))]
-    pd.DataFrame(rows).to_csv(os.path.join(out, 'highpm_replay.csv'), index=False)
-    P(f'## 3. Replay (walk-forward, trained on the 35 days before each test day)\n\nTest rows {len(t)}, test days {t.day.nunique()} ({t.day.min():%Y-%m-%d} to {t.day.max():%Y-%m-%d}), hours >= {THR}: {int((t.obs >= THR).sum())}; measured mean on them {t.obs[t.obs >= THR].mean():.1f}.\n\n' + table(rows) + '\n')
-    rows = [dict(month=mo, lead=L, method=n, **s) for mo, tm in t.groupby('month') for L in [1, 24] for n, c in M if (s := sc(tm[tm.lead_h == L][c], tm[tm.lead_h == L].obs))]
-    pd.DataFrame(rows).to_csv(os.path.join(out, 'highpm_replay_by_month.csv'), index=False); P('By month, leads 1 and 24:\n\n' + table(rows) + '\n')
-    # each test day: does the best replay catch at least as many high hours as the page, with no more false alarms? (the gate that would switch the page)
-    g = t[t.lead_h == 24].groupby('day').apply(lambda x: pd.Series({'high': int((x.obs >= THR).sum()), 'page_hit': int(((x.page >= THR) & (x.obs >= THR)).sum()), 'new_hit': int(((x.gb_new_value >= THR) & (x.obs >= THR)).sum()), 'page_fa': int(((x.page >= THR) & (x.obs < THR)).sum()), 'new_fa': int(((x.gb_new_value >= THR) & (x.obs < THR)).sum()), 'page_rmse': float(np.sqrt(((x.page - x.obs) ** 2).mean())), 'new_rmse': float(np.sqrt(((x.gb_new_value - x.obs) ** 2).mean()))}))
-    P(f'Per test day (lead 24): replay (+history, value scale) has lower RMSE than the page on {int((g.new_rmse < g.page_rmse).sum())} of {len(g)} days; catches at least as many high hours on {int((g.new_hit >= g.page_hit).sum())}; total caught {int(g.new_hit.sum())} vs {int(g.page_hit.sum())}, false alarms {int(g.new_fa.sum())} vs {int(g.page_fa.sum())}.\n')
+    if not len(t): P('## 3. Replay: no test day (it needs more than 10 days of logs and 5000 verified rows before a test day)\n')
+    else:
+        rows = [dict(lead=L, method=n, **s) for L in LEADS for n, c in M if (s := sc(t[t.lead_h == L][c], t[t.lead_h == L].obs))]
+        pd.DataFrame(rows).to_csv(os.path.join(out, 'highpm_replay.csv'), index=False)
+        P(f'## 3. Replay (walk-forward, trained on the 35 days before each test day)\n\nTest rows {len(t)}, test days {t.day.nunique()} ({t.day.min():%Y-%m-%d} to {t.day.max():%Y-%m-%d}), hours >= {THR}: {int((t.obs >= THR).sum())}; measured mean on them {t.obs[t.obs >= THR].mean():.1f}.\n\n' + table(rows) + '\n')
+        rows = [dict(month=mo, lead=L, method=n, **s) for mo, tm in t.groupby('month') for L in [1, 24] for n, c in M if (s := sc(tm[tm.lead_h == L][c], tm[tm.lead_h == L].obs))]
+        pd.DataFrame(rows).to_csv(os.path.join(out, 'highpm_replay_by_month.csv'), index=False); P('By month, leads 1 and 24:\n\n' + table(rows) + '\n')
+        # each test day: does the best replay catch at least as many high hours as the page, with no more false alarms? (the gate that would switch the page)
+        g = t[t.lead_h == 24].groupby('day').apply(lambda x: pd.Series({'high': int((x.obs >= THR).sum()), 'page_hit': int(((x.page >= THR) & (x.obs >= THR)).sum()), 'new_hit': int(((x.gb_new_value >= THR) & (x.obs >= THR)).sum()), 'page_fa': int(((x.page >= THR) & (x.obs < THR)).sum()), 'new_fa': int(((x.gb_new_value >= THR) & (x.obs < THR)).sum()), 'page_rmse': float(np.sqrt(((x.page - x.obs) ** 2).mean())), 'new_rmse': float(np.sqrt(((x.gb_new_value - x.obs) ** 2).mean()))}))
+        P(f'Per test day (lead 24): replay (+history, value scale) has lower RMSE than the page on {int((g.new_rmse < g.page_rmse).sum())} of {len(g)} days; catches at least as many high hours on {int((g.new_hit >= g.page_hit).sum())}; total caught {int(g.new_hit.sum())} vs {int(g.page_hit.sum())}, false alarms {int(g.new_fa.sum())} vs {int(g.page_fa.sum())}.\n')
 except ImportError: P('## 3. Replay skipped: scikit-learn is not installed (pip install scikit-learn)\n')
 open(os.path.join(out, 'highpm_report.md'), 'w').write('\n'.join(R)); print('\n'.join(R))

@@ -430,6 +430,7 @@ td.num{text-align:right;font-family:var(--font-data);font-variant-numeric:tabula
 /* IQAir comparison badges: top IQAir, bottom SEA-HAF, each on its US AQI colour */
 .iqbadge{display:grid;grid-template-rows:1fr 1fr;width:30px;border-radius:4px;overflow:hidden;border:1px solid var(--fg);font:700 10px/13px var(--font-data);text-align:center;box-shadow:0 1px 3px rgba(0,0,0,.3)}
 .iqbadge b{display:block}
+.iqbadge.pct{width:48px;font-size:9.5px}
 /* cards with more than two periods (SILAM, about 5 days): the periods go on their own row under the name */
 .alert.c2.many{grid-template-columns:8px minmax(0,1fr)}
 .alert.c2.many .fc2{grid-column:2/-1}
@@ -2071,6 +2072,9 @@ const accLayer=L.layerGroup(), iqLayer=L.layerGroup();
 // Air4Thai monitor's hourly measurement. A comparison of values now, not of forecast skill.
 const usAqiColour=a=>US_BANDS[a<=50?0:a<=100?1:a<=150?2:a<=200?3:a<=300?4:5].color, usAqiInk=a=>a<=100?'#1d2321':'#fff';
 function setDual(el,en,th){ if(!el) return; el.dataset.en=en; el.dataset.th=th; el.innerHTML=T(en,th); }
+// 7-day accuracy of both at the nearest hourly monitor (accuracy.json iqair, from scripts/accuracy.mjs): same hours, same Thai bands
+const iqAcc=id=>ACCD?.iqair?.find(c=>c.id===id)||null, IQ_MIN_H=12;
+function iqAccTotals(){ const a=[0,0,0,0,0,0,0,0], b=[0,0,0,0,0,0,0,0]; let n=0; for(const c of ACCD?.iqair||[]){ if(!c.iq?.[0]) continue; n++; c.iq.forEach((v,i)=>a[i]+=v); c.sea.forEach((v,i)=>b[i]+=v); } return n?{n,iq:accSc(a,1),sea:accSc(b,1)}:null; }
 function drawIq(){ iqLayer.clearLayers(); const list=P.data?.iqair||[], sum=$('iqSum');
   if(!list.length){ setDual(sum,'No IQAir reading in the last 6 h yet.','ยังไม่มีค่าจาก IQAir ใน 6 ชม. ล่าสุด'); return; }
   let dS=0,dN=0;
@@ -2078,15 +2082,24 @@ function drawIq(){ iqLayer.clearLayers(); const list=P.data?.iqair||[], sum=$('i
     let st=null,dB=15; for(const s of P.data.stations||[]){ if(!s.monitor||s.avg24||!s.obs) continue; const d=haversineKm(c.lat,c.lon,s.lat,s.lon); if(d<dB){dB=d;st=s;} }
     const ob=st&&Math.abs(st.obs.t-tH)<=1.5*HR?st.obs.v:null;
     if(our!=null){ dS+=Math.abs(our-c.aqius); dN++; }
+    // the badge: the % of hours each got the concentration band right over the last 7 days (now values against the monitor);
+    // until a city has IQ_MIN_H scored hours, the current US AQI of each instead
+    const k=iqAcc(c.id), ka=k&&accSc(k.iq,IQ_MIN_H), kb=k&&accSc(k.sea,IQ_MIN_H);
     const cell=a=>a==null?'<b style="background:var(--panel);color:var(--muted)">–</b>':`<b style="background:${usAqiColour(a)};color:${usAqiInk(a)}">${a}</b>`;
-    const icon=L.divIcon({className:'',html:`<div class="iqbadge">${cell(c.aqius)}${cell(our)}</div>`,iconSize:[32,28],iconAnchor:[16,34]});
+    const pc=(lab,x,win)=>`<b style="background:${win?'color-mix(in srgb,var(--aq2) 28%,var(--panel))':'var(--panel)'};color:var(--fg)">${lab} ${accPct(x.band)}</b>`;
+    const html=ka&&kb?`<div class="iqbadge pct">${pc('IQ',ka,ka.band>kb.band)}${pc('SH',kb,kb.band>ka.band)}</div>`:`<div class="iqbadge">${cell(c.aqius)}${cell(our)}</div>`;
+    const icon=L.divIcon({className:'',html,iconSize:ka&&kb?[50,28]:[32,28],iconAnchor:ka&&kb?[25,34]:[16,34]});
     L.marker([c.lat,c.lon],{icon,keyboard:false,zIndexOffset:450}).bindTooltip(()=>`<b>${esc(c.name)}</b> · ${hm(c.t)}<br>`+
       `IQAir: ${T('US AQI','AQI สหรัฐฯ')} <b>${c.aqius}</b><br>SEA-HAF: ${our!=null?`${T('US AQI','AQI สหรัฐฯ')} <b>${our}</b> (${fmtN(v)} µg/m³, ${T('hourly','รายชั่วโมง')})`:'–'}`+
       (our!=null?`<br>${T('Difference','ต่างกัน')} ${our-c.aqius>0?'+':''}${our-c.aqius} AQI`:'')+
       (ob!=null?`<br>Air4Thai ${esc(stName(st))} (${dB.toFixed(0)} ${T('km','กม.')}): ${T('measured','วัดได้')} ${fmtN(ob)} µg/m³ = ${T('US AQI','AQI สหรัฐฯ')} ${aqiUS(ob)}`:'')+
+      (()=>{ const k=iqAcc(c.id), a=k&&accSc(k.iq,1), b=k&&accSc(k.sea,1); return a&&b?`<br><b>${T(`Last 7 days (${a.n} h)`,`7 วันที่ผ่านมา (${a.n} ชม.)`)}</b>: ${T('concentration band right','บอกระดับความเข้มข้นถูก')} IQAir <b>${accPct(a.band)}</b> (±${fmtN(a.mae)}) · SEA-HAF <b>${accPct(b.band)}</b> (±${fmtN(b.mae)} µg/m³)`:''; })()+
       `<br><span class="note">${T('Data: IQAir (iqair.com)','ข้อมูล: IQAir (iqair.com)')}</span>`).addTo(iqLayer); }
-  setDual(sum, dN?`Top = IQAir, bottom = SEA-HAF (US AQI) · typical difference ±${Math.round(dS/dN)} AQI in ${dN} cities`:'Top = IQAir, bottom = SEA-HAF (US AQI)',
-    dN?`บน = IQAir ล่าง = SEA-HAF (AQI สหรัฐฯ) · ต่างกันโดยเฉลี่ย ±${Math.round(dS/dN)} AQI ใน ${dN} เมือง`:'บน = IQAir ล่าง = SEA-HAF (AQI สหรัฐฯ)');
+  const tot=iqAccTotals();
+  setDual(sum, tot?`Concentration band right, last 7 days (${tot.iq.n} h): IQAir ${accPct(tot.iq.band)} · SEA-HAF ${accPct(tot.sea.band)} · label: IQ = IQAir, SH = SEA-HAF`
+      :`Collecting hours for the accuracy %; until then the labels show the US AQI now (top IQAir, bottom SEA-HAF)`,
+    tot?`บอกระดับความเข้มข้นถูก 7 วันที่ผ่านมา (${tot.iq.n} ชม.): IQAir ${accPct(tot.iq.band)} · SEA-HAF ${accPct(tot.sea.band)} · ป้าย: IQ = IQAir, SH = SEA-HAF`
+      :`กำลังสะสมข้อมูลเพื่อคำนวณ % ความแม่น ระหว่างนี้ป้ายแสดง AQI สหรัฐฯ ขณะนี้ (บน IQAir ล่าง SEA-HAF)`);
 }
 const ACC_MIN=200, ACC_MIN_ST=100, ACC_NEAR_KM=25, ACC_HIGH_MIN=10;   // pairs for an area, pairs for one monitor, "near" radius, high hours to score
 const PROV_REG=(()=>{const m={}; for(const [k,a] of Object.entries(REGION_PROV)) for(const n of a) m[n]=k; return m;})();
@@ -2098,7 +2111,7 @@ async function loadAccuracy(){
     if(d.version!==1||!Array.isArray(d.stations)) return;
     // Thailand only: outside it there are too few hourly reference monitors (one in Nov 2026) to say how right the forecast is
     d.stations=d.stations.filter(s=>s.cc==='TH'); for(const s of d.stations) s.reg=regionAt(s.lat,s.lon); ACCD=d;}catch(e){return;}
-  renderAcc(); drawAcc(); if(hereLL&&!$('hereBox').hidden) renderHereBox();
+  renderAcc(); drawAcc(); drawIq(); if(hereLL&&!$('hereBox').hidden) renderHereBox();
 }
 function accSum(list,k){const a=[0,0,0,0,0,0,0,0]; let n=0; for(const s of list){ if(!s[k]?.[0]) continue; n++; s[k].forEach((v,i)=>a[i]+=v);} return {a,n};}
 function accSc(a,minN){ if(!a||a[0]<minN) return null; const n=a[0]; return {n,band:a[4]/n,mae:a[1]/n,bias:a[2]/n,obs:a[3]/n,high:a[5],caught:a[7],warned:a[6],fa:a[6]-a[7]}; }

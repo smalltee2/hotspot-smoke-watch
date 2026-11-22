@@ -1125,6 +1125,9 @@ async function main() {
   const hdir = path.join(DATA, 'history', ym);
   const newRun = await fs.access(path.join(hdir, `obs-${stamp}.csv`)).then(() => false, () => true);   // a second run in the same hour (backup cron, manual run) must not append the rows again
   if (newRun) await appendCSV(path.join(hdir, `obs-${stamp}.csv`), 'time_utc,station_id,obs_pm25,cams_raw,cams_plus_inc', obsRows);
+  // IQAir readings of this run (scripts/iqair.mjs), for the 7-day comparison in accuracy.mjs
+  if (newRun && !SIL) { const iqRows = Object.entries(state.iqair || {}).filter(([, v]) => v.asked === now && v.t).map(([id, v]) => [new Date(v.t).toISOString(), id, String(v.label || v.name).replace(/[,"]/g, ' '), v.lat, v.lon, v.aqius]);
+    if (iqRows.length) await appendCSV(path.join(hdir, `iqair-${stamp}.csv`), 'time_utc,city_id,name,lat,lon,aqius', iqRows); }
   // map: leave-one-out value of the 0.025° analysis at every input site (24-h means at the analysis hour), for the daily evaluation (map vs CAMS)
   const mapRows = [];
   for (const [ver, r] of [['map', rk], ['mapA', rkA]]) if (r && r.cvRows) for (const row of r.cvRows) mapRows.push([iso.slice(0, 13) + ':00Z', new Date(r.t).toISOString().slice(0, 13) + ':00Z', ver, ...row]);

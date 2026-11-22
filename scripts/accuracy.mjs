@@ -121,7 +121,7 @@ async function main() {
   // 'pass' / 'isolated'; files without qc: all). All countries: they are most useful where reference monitors are few.
   const lcOk = m => !m.qc || m.qc === 'pass' || m.qc === 'isolated', lowcost = [];
   for (const [id, s] of outLc) { const m = meta.get(id); if (!m || m.lat == null || m.monitor || !lcOk(m)) continue;
-    lowcost.push({ id, lat: m.lat, lon: m.lon, cc: m.cc || '', s: r1(s.s), l: r1(s.l), d2: r1(s.d2), y1: r1(s.y1), y2: r1(s.y2) }); }
+    lowcost.push({ id, name: m.name || id, lat: m.lat, lon: m.lon, cc: m.cc || '', s: r1(s.s), l: r1(s.l), d2: r1(s.d2), y1: r1(s.y1), y2: r1(s.y2) }); }
   const r1i = a => a.map((v, i) => (i === 1 || i === 2 || i === 3 ? +v.toFixed(1) : v));
   const doc = { version: 1, generated: Date.now(), tEnd, days: ACC.days, horizons: ACC.horizons, daily: ACC.daily, bands: ACC.bands, thr: ACC.thr,
     iqair: iqCities.map(c => ({ ...c, sea: r1i(c.sea) })), lowcost,

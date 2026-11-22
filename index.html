@@ -458,6 +458,18 @@ td.num{text-align:right;font-family:var(--font-data);font-variant-numeric:tabula
 .maplogo{pointer-events:none;padding:6px 10px 5px;border-radius:8px;background:color-mix(in srgb,var(--panel) 72%,transparent);line-height:0}
 .maplogo img{display:block;width:180px;height:auto}
 .maplogo img.dk{display:none}
+/* faint "SEA-HAF · forecast time" across the map (so screenshots carry the source and the hour); never takes clicks */
+.mapmark{position:absolute;inset:0;display:grid;place-items:center;pointer-events:none;z-index:450;overflow:hidden}
+.mapmark span{transform:rotate(-16deg);font-weight:700;font-size:clamp(15px,2.2vw,30px);line-height:1.2;color:var(--fg);opacity:.12;white-space:nowrap;letter-spacing:.04em;user-select:none;-webkit-user-select:none}
+/* developer page: save the map as an image (logo, title, time, legend) */
+.savectl a{display:grid;place-items:center;width:30px;height:30px;color:var(--fg);background:var(--panel);cursor:pointer}
+.savepop{position:absolute;left:40px;top:0;z-index:1000;width:250px;padding:10px 12px;border-radius:8px;background:var(--panel);color:var(--fg);border:1px solid var(--line);box-shadow:0 4px 14px rgba(0,0,0,.25);font-size:.8rem;line-height:1.4}
+.savepop label{display:flex;gap:6px;align-items:flex-start;margin:4px 0;cursor:pointer}
+.savepop button{margin-top:8px;width:100%;padding:6px;border-radius:6px;border:1px solid var(--fg);background:var(--fg);color:var(--panel);font:inherit;font-weight:600;cursor:pointer}
+.savepop button:disabled{opacity:.6;cursor:progress}
+/* public pages: the map is left out of printouts and "save as PDF" */
+@media print{html[data-mode="public"] #map{visibility:hidden}html[data-mode="public"] #map::after{content:"SEA-HAF · map not printable here";visibility:visible;display:block;padding:20px}}
+
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .maplogo img.lt{display:none}:root:not([data-theme="light"]) .maplogo img.dk{display:block}}
 :root[data-theme="dark"] .maplogo img.lt{display:none}:root[data-theme="dark"] .maplogo img.dk{display:block}
 @media (max-width:860px){.maplogo img{width:132px}}
@@ -2745,6 +2757,99 @@ const LogoCtl=L.Control.extend({onAdd(){ const d=L.DomUtil.create('div','maplogo
 { const mq=matchMedia('(max-width:860px)'); let ctl=null;
   const place=()=>{ if(ctl) ctl.remove(); ctl=new LogoCtl({position:mq.matches?'topleft':'bottomleft'}).addTo(map); };
   place(); mq.addEventListener?.('change',place); }
+// faint "SEA-HAF · forecast <time>" across the map, kept to the hour on the time bar (updateTimeLabel), so a screenshot carries the
+// source and the forecast hour. Public pages also turn off the browser's own "save image" (right-click, dragging the map out) and
+// leave the map out of printouts (CSS); a screenshot cannot be blocked by a web page, so the mark and the logo are what travel with it
+{ const d=document.createElement('div'); d.className='mapmark'; d.setAttribute('aria-hidden','true'); d.innerHTML='<span></span>'; map.getContainer().appendChild(d); }
+function setMapMark(){ const el=document.querySelector('#map .mapmark span'); if(!el) return; const t=curT(); el.textContent=t==null?'SEA-HAF':`SEA-HAF · ${T('forecast','พยากรณ์')} ${fmtT(t)}`; }
+if(PUBLIC){ const mc=map.getContainer(); mc.addEventListener('contextmenu',e=>e.preventDefault()); mc.addEventListener('dragstart',e=>e.preventDefault()); }
+// developer page only: save the map as a PNG with the logo, a title (SEA-HAF, what is shown, the forecast time) and the legend.
+// Hourly = the hour on the time bar; 24-h mean = the 24 h ending then; weekly / monthly = the past 7 / 30 complete days of the
+// hourly analysis (data/pm-mean.json from scripts/pmmean.mjs). Drawn from the data on a canvas (not a screen grab): the PM2.5 field
+// over the area on screen, countries and provinces on top, the Thai PM2.5 colours.
+async function saveMapImage(kind,btn){
+  const G=P.data?.grid; if(!G){ alert(T('No forecast loaded yet.','ยังไม่มีข้อมูลพยากรณ์')); return; }
+  const b0=btn.textContent; btn.disabled=true; btn.textContent=T('Making the image…','กำลังสร้างภาพ…'); await new Promise(r=>setTimeout(r,30));
+  try{
+    const vb=map.getBounds(), Gx=G.lon0+(G.nx-1)*G.step, Gy=G.lat0+(G.ny-1)*G.step;
+    let w=Math.max(vb.getWest(),G.lon0), e=Math.min(vb.getEast(),Gx), so=Math.max(vb.getSouth(),G.lat0), n=Math.min(vb.getNorth(),Gy);
+    if(!(e-w>0.2&&n-so>0.2)){ w=G.lon0; e=Gx; so=G.lat0; n=Gy; }
+    const t=curT(), i=gIdx(t), dl=x=>new Date(x).toLocaleString(LOC(),{weekday:'long',day:'numeric',month:'long',year:'numeric',hour:'2-digit',minute:'2-digit',timeZone:'Asia/Bangkok'});
+    const dd=s=>new Date(s+'T12:00:00+07:00').toLocaleDateString(LOC(),{day:'numeric',month:'short',year:'numeric',timeZone:'Asia/Bangkok'});
+    let F,fx,fy,cell,title,sub,meta=null;
+    if(kind==='h'||kind==='d'){
+      if(i<0) throw new Error(T('no data at this hour','ไม่มีข้อมูลที่เวลานี้'));
+      cell=(e-w)*(n-so)>40?0.05:0.025; fx=Math.ceil((e-w)/cell); fy=Math.ceil((n-so)/cell);
+      if(kind==='h'){ F=hourField(i,so,w,fx,fy,cell,false); title=T('PM2.5, hourly','PM2.5 รายชั่วโมง');
+        sub=(t>Date.now()?T('Forecast for ','พยากรณ์ ณ '):T('Map for ','แผนที่ ณ '))+dl(t)+T(' (Thai time)',' น. (เวลาไทย)'); }
+      else { const idx=[]; for(let k=Math.max(0,i-23);k<=i;k++) idx.push(k); if(idx.length<18) throw new Error(T('the 24-h mean needs 18 hours of data before this time','ค่าเฉลี่ย 24 ชม. ต้องมีข้อมูล 18 ชั่วโมงก่อนเวลานี้'));
+        F=new Float32Array(fx*fy); const cnt=new Uint8Array(fx*fy);
+        for(const k of idx){ const Fk=hourField(k,so,w,fx,fy,cell,false); for(let q=0;q<F.length;q++){ const v=Fk[q]; if(v===v){F[q]+=v;cnt[q]++;} } }
+        for(let q=0;q<F.length;q++) F[q]=cnt[q]>=18?F[q]/cnt[q]:NaN;
+        title=T('PM2.5, 24-hour mean','PM2.5 ค่าเฉลี่ย 24 ชั่วโมง'); sub=T('24 h ending ','24 ชม. สิ้นสุด ')+dl(t)+T(' (Thai time)',' น. (เวลาไทย)'); }
+    } else {
+      const r=await fetch('data/pm-mean.json?ts='+Date.now(),{cache:'no-store'}); const M=r.ok?await r.json():null, D=M?.[kind==='w'?'week':'month'];
+      if(!D) throw new Error(T('the weekly / monthly means are not ready yet (the store needs complete days)','ค่าเฉลี่ยรายสัปดาห์ / รายเดือนยังไม่พร้อม (ต้องเก็บข้อมูลให้ครบวันก่อน)'));
+      cell=D.step; const x0=Math.max(0,Math.floor((w-D.lon0)/cell)), x1=Math.min(D.nx-1,Math.ceil((e-D.lon0)/cell)), y0=Math.max(0,Math.floor((so-D.lat0)/cell)), y1=Math.min(D.ny-1,Math.ceil((n-D.lat0)/cell));
+      w=D.lon0+x0*cell; e=D.lon0+x1*cell; so=D.lat0+y0*cell; n=D.lat0+y1*cell; fx=x1-x0+1; fy=y1-y0+1; F=new Float32Array(fx*fy);
+      for(let y=0;y<fy;y++) for(let x=0;x<fx;x++){ const v=D.values[(y0+y)*D.nx+x0+x]; F[y*fx+x]=v<0?NaN:v/D.scale; }
+      const want=kind==='w'?7:30;
+      title=kind==='w'?T('PM2.5, weekly mean','PM2.5 ค่าเฉลี่ยรายสัปดาห์'):T('PM2.5, monthly mean','PM2.5 ค่าเฉลี่ยรายเดือน');
+      sub=`${dd(D.from)} – ${dd(D.to)} (${D.days} ${T(D.days>1?'days':'day','วัน')}${D.days<want?T(`, of ${want}: the store is still filling`,` จาก ${want} วัน: ยังเก็บข้อมูลไม่ครบ`):''})`;
+      meta=T('mean of the hourly analysis (model + monitors)','ค่าเฉลี่ยของค่าวิเคราะห์รายชั่วโมง (แบบจำลอง + ค่าตรวจวัด)')+` · SEA-HAF · ${T('made','สร้างภาพ')} ${dl(Date.now())}`; }
+    // layout: header (logo, title, time), map, legend and credits; size from the area (equirectangular, x shrunk by cos lat)
+    const W=1600, pad=36, mapW=W-2*pad, asp=(n-so)/((e-w)*Math.cos((so+n)/2*Math.PI/180)), mapH=Math.round(Math.min(2000,mapW*asp)), head=150, foot=130, Hh=head+mapH+foot;
+    const cv=document.createElement('canvas'); cv.width=W; cv.height=Hh; const g=cv.getContext('2d');
+    g.fillStyle='#ffffff'; g.fillRect(0,0,W,Hh);
+    const logo=await new Promise(res=>{ const im=new Image(); im.onload=()=>res(im); im.onerror=()=>res(null); im.src='assets/sea-haf-logo-light.svg'; });
+    if(logo) g.drawImage(logo,pad,28,302,80);
+    const font=(wt,px)=>`${wt} ${px}px "Noto Sans Thai","Sarabun",system-ui,sans-serif`, tx=logo?pad+330:pad;
+    g.fillStyle='#1d2321'; g.font=font(700,40); g.fillText(title,tx,66);
+    g.font=font(500,24); g.fillStyle='#38423e'; g.fillText(sub,tx,104,W-tx-pad);
+    g.font=font(400,18); g.fillStyle='#5d6763'; g.fillText(meta||`SEA-HAF · Southeast Asia Hybrid Air Quality Forecast · ${T('issued','ออกพยากรณ์')} ${dl(P.data.generated)}`,tx,134,W-tx-pad);
+    const X=lon=>pad+(lon-w)/(e-w)*mapW, Y=lat=>head+(n-lat)/(n-so)*mapH;
+    g.save(); g.beginPath(); g.rect(pad,head,mapW,mapH); g.clip();
+    g.fillStyle='#dfe9f1'; g.fillRect(pad,head,mapW,mapH);
+    const path=(geo,fill,stroke,lw)=>{ for(const f of geo.features){ const polys=f.geometry.type==='Polygon'?[f.geometry.coordinates]:f.geometry.coordinates;
+      g.beginPath(); for(const poly of polys) for(const ring of poly){ ring.forEach(([lo,la],k)=>k?g.lineTo(X(lo),Y(la)):g.moveTo(X(lo),Y(la))); g.closePath(); }
+      if(fill){ g.fillStyle=fill; g.fill('evenodd'); } if(stroke){ g.strokeStyle=stroke; g.lineWidth=lw; g.stroke(); } } };
+    path(GEO_C,'#f5f5f2',null,0);
+    // the field: one pixel per cell, scaled up with smoothing (row 0 of F is the south edge)
+    const fc=document.createElement('canvas'); fc.width=fx; fc.height=fy; const fg=fc.getContext('2d'), im=fg.createImageData(fx,fy);
+    for(let y=0;y<fy;y++) for(let x=0;x<fx;x++){ const v=F[y*fx+x], c=v===v?rampColor(v,THAI_STOPS):null, o=((fy-1-y)*fx+x)*4;
+      if(c){ im.data[o]=c[0]; im.data[o+1]=c[1]; im.data[o+2]=c[2]; im.data[o+3]=Math.round(Math.min(1,c[3]/EPA_ALPHA*0.82)*255); } }
+    fg.putImageData(im,0,0); g.imageSmoothingEnabled=true; g.imageSmoothingQuality='high'; g.drawImage(fc,X(w-cell/2),Y(n+cell/2),mapW+mapW/fx,mapH+mapH/fy);
+    path(GEO_P,null,'rgba(60,70,66,.45)',0.8); path(GEO_C,null,'#3c4642',1.6);
+    g.restore(); g.strokeStyle='#9aa5a0'; g.lineWidth=1; g.strokeRect(pad,head,mapW,mapH);
+    // legend: the continuous Thai PM2.5 colours with the PCD band edges
+    const ly=head+mapH+34, lw=Math.min(760,mapW*0.55), ticks=[0,15,25,37.5,75,150], pos=v=>{ for(let k=1;k<ticks.length;k++) if(v<=ticks[k]) return (k-1+(v-ticks[k-1])/(ticks[k]-ticks[k-1]))/(ticks.length-1); return 1; };
+    for(let px=0;px<lw;px++){ const fr=px/lw, k=Math.min(ticks.length-2,Math.floor(fr*(ticks.length-1))), v=ticks[k]+(fr*(ticks.length-1)-k)*(ticks[k+1]-ticks[k]), c=rampColor(Math.max(1,v),THAI_STOPS);
+      g.fillStyle=c?`rgb(${c[0]},${c[1]},${c[2]})`:'#eee'; g.fillRect(pad+px,ly,1,22); }
+    g.strokeStyle='#5d6763'; g.strokeRect(pad,ly,lw,22); g.fillStyle='#1d2321'; g.font=font(500,18);
+    for(const v of ticks){ const x=pad+pos(v)*lw; g.fillRect(x,ly+22,1,6); g.fillText(String(v),x-(v>=100?14:v>=10?9:5),ly+48); }
+    g.fillText(T('PM2.5 (µg/m³) · Thai PCD bands','PM2.5 (µg/m³) · ระดับตามเกณฑ์กรมควบคุมมลพิษ'),pad+lw+24,ly+18);
+    g.font=font(400,16); g.fillStyle='#5d6763';
+    g.fillText(T('Data: CAMS (Copernicus Atmosphere Monitoring Service), Air4Thai (PCD), OpenAQ, ECMWF, NASA FIRMS · Borders: World Bank','ข้อมูล: CAMS (Copernicus Atmosphere Monitoring Service), Air4Thai (กรมควบคุมมลพิษ), OpenAQ, ECMWF, NASA FIRMS · เส้นขอบ: World Bank'),pad,Hh-24);
+    const stamp=kind==='w'||kind==='m'?'':new Date(t+7*HR).toISOString().slice(0,13).replace(/[-T:]/g,'');
+    const name=`SEA-HAF_PM25_${{h:'hourly',d:'24h',w:'weekly',m:'monthly'}[kind]}${stamp?'_'+stamp:''}.png`;
+    await new Promise(res=>cv.toBlob(bl=>{ const a=document.createElement('a'); a.href=URL.createObjectURL(bl); a.download=name; document.body.appendChild(a); a.click(); setTimeout(()=>{URL.revokeObjectURL(a.href); a.remove();},1000); res(); },'image/png'));
+  }catch(err){ alert(T('Could not make the image: ','สร้างภาพไม่ได้: ')+err.message); }
+  finally{ btn.disabled=false; btn.textContent=b0; }
+}
+if(!PUBLIC){
+  const SaveCtl=L.Control.extend({onAdd(){ const d=L.DomUtil.create('div','leaflet-bar savectl'); d.style.position='relative';
+    d.innerHTML=`<a role="button" href="#" title="${T('Save the map as an image','บันทึกแผนที่เป็นรูปภาพ')}" aria-label="${T('Save the map as an image','บันทึกแผนที่เป็นรูปภาพ')}"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg></a>`+
+      `<div class="savepop" hidden><b>${T('Save the map as an image','บันทึกแผนที่เป็นรูปภาพ')}</b>`+
+      [['h',T('Hourly (the hour on the time bar)','รายชั่วโมง (เวลาบนแถบเวลา)')],['d',T('24-hour mean (ending then)','เฉลี่ย 24 ชั่วโมง (สิ้นสุดเวลานั้น)')],['w',T('Weekly mean (past 7 days)','เฉลี่ยรายสัปดาห์ (7 วันที่ผ่านมา)')],['m',T('Monthly mean (past 30 days)','เฉลี่ยรายเดือน (30 วันที่ผ่านมา)')]]
+        .map(([k,l],j)=>`<label><input type="radio" name="saveKind" value="${k}"${j?'':' checked'}> ${l}</label>`).join('')+
+      `<div class="note" style="font-size:.7rem">${T('Area: as on screen. Logo, title, time and legend are added.','พื้นที่: ตามที่เห็นบนจอ มีโลโก้ ชื่อ วันเวลา และคำอธิบายสีในภาพ')}</div><button type="button">${T('Save PNG','บันทึก PNG')}</button></div>`;
+    L.DomEvent.disableClickPropagation(d); L.DomEvent.disableScrollPropagation(d);
+    const pop=d.querySelector('.savepop');
+    d.querySelector('a').addEventListener('click',ev=>{ ev.preventDefault(); pop.hidden=!pop.hidden; });
+    d.querySelector('.savepop button').addEventListener('click',ev=>saveMapImage(d.querySelector('input[name=saveKind]:checked').value,ev.currentTarget));
+    return d; }});
+  new SaveCtl({position:'topleft'}).addTo(map);
+}
 // ---- pop-up when the page opens: every parameter now and its forecast at the viewer's location
 // (PM2.5 as on the map; 2-m temperature and rain at 0.025° as in the warnings; wind and humidity from ECMWF).
 // The location is read once per visit, only if the browser allows it; it is not sent anywhere. "Show this when the page opens"
@@ -3551,7 +3656,7 @@ function renderDayBar(){
     if(best>=0){ setSl(best); S.hour=best; redrawTime(); } });
 }
 function updateTimeLabel(){
-  renderDayBar();
+  renderDayBar(); setMapMark();
   if(!S.times.length){$('tlabel').innerHTML='–<small>&nbsp;</small>';return;}
   const t=curT(), dh=Math.round((t-Date.now())/36e5);
   $('tlabel').innerHTML=`${fmtT(t)}<small>${dh===0?T('now','ขณะนี้'):dh>0?T(`+${dh} h forecast`,`พยากรณ์ +${dh} ชม.`):T(`${dh} h (past)`,`${dh} ชม. (ย้อนหลัง)`)}${typeof avg24==='function'&&avg24()&&gridMode()?T(' · 24-h mean',' · เฉลี่ย 24 ชม.'):''}</small>`;

@@ -27,6 +27,7 @@ import { assimilateFires, assimSummary } from './assim.mjs';
 import { LOWCOST, scaleLowcost, updateDaily, lowcostQC } from './lowcost.mjs';
 import { loadDataset, dailyLearn, mlCorrection, mlActive, FEAT_COLS, storeDay, loadSeasonRows, MLCFG, setHindcastModel } from './ml.mjs';
 import { updateIqair, forPage as iqairForPage } from './iqair.mjs';
+import { updatePmMean } from './pmmean.mjs';
 import zlib from 'node:zlib';
 import crypto from 'node:crypto';
 
@@ -1092,6 +1093,19 @@ async function main() {
     rkFineFiles.push([path.join(DATA, `rk-bias${suffix}.json`), { ...rk.biasFine, enc: 'int-dx', scale: 1000, values: enc }]);
     rk.guards = { nPred: out.nPred, clampedCells: nClamp, boundedCells: nBound, cells: R.nx * R.ny };
     rk.model = M.name; Object.defineProperty(rk, 'Bf', { value: { lon0: R.lon0, lat0: R.lat0, step: R.step, nx: R.nx, ny: R.ny, values: B }, enumerable: false });   // the 0.025° field, for the station log
+    // hourly analysis at the analysis hour on a 0.05° grid (every 2nd node): hourly CAMS × the bias field, as the page shows it at
+    // that hour; stored per Thai day for the weekly / monthly mean maps (scripts/pmmean.mjs). CAMS run only, without the increment
+    if (!withInc && !SIL) {
+      const k2 = 2, nx2 = Math.floor((R.nx - 1) / k2) + 1, ny2 = Math.floor((R.ny - 1) / k2) + 1, A = new Array(nx2 * ny2);
+      const camsAtT = (lat, lon) => { const fx = (lon - GD.lon0) / GD.step, fy = (lat - GD.lat0) / GD.step; if (fx < 0 || fy < 0 || fx > gnx - 1 || fy > gny - 1) return null;
+        const x0 = Math.min(Math.floor(fx), gnx - 2), y0 = Math.min(Math.floor(fy), gny - 2), ax = fx - x0, ay = fy - y0; let v = 0;
+        for (const [p, w] of [[y0 * gnx + x0, (1 - ax) * (1 - ay)], [y0 * gnx + x0 + 1, ax * (1 - ay)], [(y0 + 1) * gnx + x0, (1 - ax) * ay], [(y0 + 1) * gnx + x0 + 1, ax * ay]]) {
+          const q = interpT(M.times, cg[p], rk.t); if (q == null) return null; v += w * q; }
+        return v; };
+      for (let iy = 0; iy < ny2; iy++) for (let ix = 0; ix < nx2; ix++) { const q = iy * k2 * R.nx + ix * k2, c = camsAtT(R.lat0 + iy * k2 * R.step, R.lon0 + ix * k2 * R.step);
+        A[iy * nx2 + ix] = c == null ? null : Math.round(Math.max(0, (c + 1) * Math.exp(B[q]) - 1) * 10) / 10; }
+      Object.defineProperty(rk, 'ana', { value: { t: rk.t, lon0: R.lon0, lat0: R.lat0, step: +(R.step * k2).toFixed(4), nx: nx2, ny: ny2, values: A }, enumerable: false });
+    }
     rk.decluster = { cellDeg: out.declusterDeg, weightRange: out.weightRange };
     log(`${label} guards: ${out.nPred} of ${1 + (dem ? 1 : 0) + (met ? 2 : 0)} predictors, aux predictors clamped to the monitors' range in ${nClamp} of ${R.nx * R.ny} cells, correction bounded to ±${out.maxLogCorr.toFixed(2)} in ${nBound}`);
     log(`${label}: ${rk.n} inputs (${rk.nLowcost} low-cost sensors; declustered, ${out.declusterDeg}° cells, weights ${out.weightRange.join('–')}), beta=[${rk.beta.join(', ')}], range ${rk.vario.a_km} km, LOO RMSE model ${rk.cv.cams.rmse} → RK ${rk.cv.rk.rmse} µg/m³ (declustered ${rk.cv.declustered.cams.rmse} → ${rk.cv.declustered.rk.rmse}), ±1σ coverage ${rk.cv.cover1s}`);
@@ -1100,6 +1114,7 @@ async function main() {
   }
   const rkFineFiles = [];
   const rk = runRK(false), rkA = anyInc ? runRK(true) : null;   // without an increment rkA would equal rk
+  if (!SIL) log(await updatePmMean(path.join(DATA, 'history'), path.join(DATA, 'pm-mean.json'), rk?.ana || null, now));   // weekly / monthly mean maps
   for (const [f, obj] of rkFineFiles) { await writeJSON(f, obj); log(`map correction ${path.basename(f)}: ${obj.nx}×${obj.ny} at ${obj.step}°, ${(JSON.stringify(obj).length / 1048576).toFixed(1)} MB`); }
   const gridRaw = hours.map((t, j) => gridPts.map((_, p) => { const v = C.grid[p][i0 + j]; return v == null ? -1 : r1(v); }));
 

@@ -1561,6 +1561,9 @@ header .status>.btn{--water-fill:.72}
 .accbadge{position:relative;display:grid;place-items:center;width:32px;height:17px;border-radius:4px;background:var(--panel);color:var(--fg);border:1px solid var(--fg);font:600 10px/1 var(--font-data);overflow:hidden;box-shadow:0 1px 2px rgba(0,0,0,.3)}
 .accbadge b{position:relative}
 .accbadge i{position:absolute;left:0;bottom:0;height:3px;background:var(--focus)}
+/* IQAir comparison badges: top IQAir, bottom SEA-HAF, each on its US AQI colour */
+.iqbadge{display:grid;grid-template-rows:1fr 1fr;width:30px;border-radius:4px;overflow:hidden;border:1px solid var(--fg);font:700 10px/13px var(--font-data);text-align:center;box-shadow:0 1px 3px rgba(0,0,0,.3)}
+.iqbadge b{display:block}
 /* cards with more than two periods (SILAM, about 5 days): the periods go on their own row under the name */
 .alert.c2.many{grid-template-columns:8px minmax(0,1fr)}
 .alert.c2.many .fc2{grid-column:2/-1}
@@ -1978,6 +1981,8 @@ header .status>.btn{--water-fill:.72}
         <div id="a4tStat" class="note" style="font-size:var(--fs-xs);margin:-2px 0 4px 22px"></div>
         <label><input type="checkbox" id="shAcc"> <i class="sp-sym" aria-hidden="true"><i style="display:block;width:14px;height:9px;border:1px solid var(--fg);border-radius:2px;box-shadow:inset 0 -2px 0 var(--focus)"></i></i><span class="sp-t"><span class="sp-h"><span data-th="ความแม่นยำที่สถานี (7 วันล่าสุด)">Forecast accuracy at monitors (last 7 days)</span> <button type="button" class="lyinfo" data-info="accMapInfo" aria-expanded="false"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v5.5M12 7.6v.2"/></svg><span class="vh" data-th="คำอธิบายชั้นข้อมูลนี้">About this layer</span></button></span><small class="sp-d" data-th="ป้าย = % ของชั่วโมงที่บอกระดับความเข้มข้นถูก (พยากรณ์วันพรุ่งนี้)">Label = share of hours in the right colour band (next-day forecast)</small></span></label>
         <div id="accMapInfo" hidden><div class="note" data-th="&lt;b&gt;เทียบกับอะไร&lt;/b&gt;: ค่าพยากรณ์ PM₂.₅ รายชั่วโมงที่หน้านี้แสดง เทียบกับค่าที่สถานีตรวจวัดมาตรฐานวัดได้จริงทุกชั่วโมง ย้อนหลัง 7 วัน คำนวณใหม่ทุกชั่วโมง&lt;br&gt;&lt;b&gt;สถานีที่ใช้&lt;/b&gt;: สถานีของกรมควบคุมมลพิษ (Air4Thai) ราว 100 สถานี และสถานีมาตรฐานในไทยจาก OpenAQ อีกไม่กี่แห่ง (นอกประเทศไทยมีสถานีน้อยเกินไปจึงไม่แสดง) ไม่นับเซนเซอร์ราคาประหยัด และสถานีของ กทม. ที่ส่งค่าเป็นค่าเฉลี่ย 24 ชม. (เทียบรายชั่วโมงไม่ได้)&lt;br&gt;&lt;b&gt;ป้าย&lt;/b&gt;: % ของชั่วโมงที่พยากรณ์วันพรุ่งนี้ (ล่วงหน้า 12–24 ชม.) อยู่ในระดับความเข้มข้นเดียวกับค่าที่วัดได้ ตามเกณฑ์ของกรมควบคุมมลพิษ แถบใต้ตัวเลขยิ่งยาวยิ่งแม่น ที่ที่อากาศสะอาดเกือบตลอดได้ % สูงได้ง่าย&lt;br&gt;ป้ายที่ซ้อนกันจะแสดงเฉพาะสถานีที่มีข้อมูลมากกว่า ซูมเข้าเพื่อดูครบ แตะป้ายเพื่อดูตัวเลขทั้งหมดในแท็บคำเตือน"><b>Compared with what</b>: the hourly PM₂.₅ forecast this page shows, against what the reference monitors measured, hour by hour, over the last 7 days; recomputed every hour.<br><b>Monitors used</b>: about 100 Thai Pollution Control Department stations (Air4Thai) and a few reference monitors in Thailand from OpenAQ (outside Thailand there are too few, so none is shown). Low-cost sensors are not counted, nor the Bangkok (BMA) stations that report only 24-h means (they cannot be compared hour by hour).<br><b>Label</b>: the share of hours whose next-day forecast (12–24 h ahead) fell in the same Thai PCD colour band as the measurement; a longer bar under the number is better. Where the air is clean almost all the time the share is easily high.<br>Where labels would overlap, the monitor with more data keeps its label; zoom in to see all. Tap a label for all its numbers in the Warnings tab.</div></div>
+        <label><input type="checkbox" id="shIq"> <i class="sp-sym" aria-hidden="true"><i style="display:block;width:14px;height:10px;border:1px solid var(--fg);border-radius:2px;background:linear-gradient(#ffff00 50%,#ff7e00 50%)"></i></i><span class="sp-t"><span class="sp-h"><span data-th="เทียบ AQI กับ IQAir (ขณะนี้)">AQI compared with IQAir (now)</span> <button type="button" class="lyinfo" data-info="iqInfo" aria-expanded="false"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v5.5M12 7.6v.2"/></svg><span class="vh" data-th="คำอธิบายชั้นข้อมูลนี้">About this layer</span></button></span><small class="sp-d" id="iqSum" data-th="ป้าย: บน = IQAir ล่าง = SEA-HAF (AQI สหรัฐฯ)">Label: top = IQAir, bottom = SEA-HAF (US AQI)</small></span></label>
+        <div id="iqInfo" hidden><div class="note" data-th="&lt;b&gt;เทียบกับอะไร&lt;/b&gt;: AQI สหรัฐฯ ขณะนี้ที่ IQAir แสดงสำหรับเมืองในไทยราว 17 เมือง เทียบกับค่าบนแผนที่ของเรา ณ ชั่วโมงเดียวกัน (แปลงเป็น AQI สหรัฐฯ จากค่ารายชั่วโมง) และค่าที่สถานี Air4Thai ใกล้ที่สุดวัดได้ (ถ้ามีในรัศมี 15 กม.)&lt;br&gt;&lt;b&gt;ป้าย&lt;/b&gt;: ตัวเลขบน = IQAir ตัวเลขล่าง = SEA-HAF สีตามเกณฑ์สหรัฐฯ ชี้หรือแตะเพื่อดูรายละเอียด&lt;br&gt;&lt;b&gt;ข้อควรรู้&lt;/b&gt;: เป็นการเทียบค่าขณะนี้ ไม่ใช่ความแม่นของพยากรณ์ (แผนฟรีของ IQAir ไม่มีพยากรณ์) และ IQAir ใช้ค่าจาก Air4Thai ด้วย ค่าของเขาจึงใกล้ค่าวัด แต่ละเมืองอัปเดตทุก 3–4 ชม. ค่าที่เก่ากว่า 6 ชม. ไม่แสดง&lt;br&gt;ข้อมูล: IQAir (iqair.com)"><b>Compared with what</b>: the US AQI that IQAir shows now for about 17 Thai cities, against our map at the same hour (turned into US AQI from the hourly value) and the nearest Air4Thai monitor (within 15 km, if any).<br><b>Label</b>: top = IQAir, bottom = SEA-HAF, coloured on the US scale; hover or tap for details.<br><b>Good to know</b>: this compares values now, not forecast skill (IQAir's free plan has no forecast), and IQAir uses the Air4Thai measurements too, so its values sit close to them. Each city is refreshed every 3–4 h; readings older than 6 h are not shown.<br>Data: IQAir (iqair.com)</div></div>
         <label><input type="checkbox" id="shSt" checked> <i class="sp-sym" aria-hidden="true"><i class="dot" style="border-radius:2px;border:1.5px solid var(--fg);background:var(--aq2)"></i></i><span class="sp-t"><span data-th="สถานี OpenAQ">OpenAQ stations</span><small class="sp-d" data-th="สถานีตรวจวัด ค่าปัจจุบัน">monitor, measured now</small></span></label>
         <label><input type="checkbox" id="shHot" checked> <i class="sp-sym" aria-hidden="true"><i class="dot" style="background:var(--ember);box-shadow:0 0 0 1px var(--fire-ring)"></i></i><span class="sp-t"><span class="sp-h"><span data-th="จุดความร้อน">Hotspots</span> <button type="button" class="lyinfo" data-info="hotInfo" aria-expanded="false"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v5.5M12 7.6v.2"/></svg><span class="vh" data-th="คำอธิบายชั้นข้อมูลนี้">About this layer</span></button></span><small class="sp-d" data-th="สะสมราว 1–2 วัน · ใหญ่ = ไฟแรง">added up over 1–2 days · larger = stronger fire</small></span></label>
         <div id="hotInfo" hidden><div class="note" data-th="&lt;b&gt;จุดความร้อนสะสม&lt;/b&gt; ไม่ใช่ไฟ ณ ชั่วโมงที่เลือก: แสดงทุกจุดที่ดาวเทียม VIIRS ตรวจพบ (NASA FIRMS) ตั้งแต่ 07:00 น. ของเมื่อวานจนถึงตอนนี้ คือราว 24–48 ชม. แล้วแต่เวลาของวัน ดาวเทียมผ่านแต่ละพื้นที่วันละไม่กี่ครั้ง ราวบ่ายโมงถึงบ่ายสองโมง และตีหนึ่งถึงตีสอง จึงเห็นไฟเป็นช่วง ๆ ไม่ต่อเนื่อง&lt;br&gt;&lt;b&gt;จุดสีเข้ม&lt;/b&gt; = ตรวจพบใน 12 ชม. ล่าสุด &lt;b&gt;จุดสีจาง&lt;/b&gt; = เก่ากว่านั้น ไฟอาจดับไปแล้ว&lt;br&gt;&lt;b&gt;ขนาดจุด&lt;/b&gt; = ความแรงของไฟ (FRP เมกะวัตต์) ชี้หรือแตะที่จุดเพื่อดูเวลาที่ตรวจพบ&lt;br&gt;จุดความร้อนจำนวนมากไม่ได้แปลว่าค่าฝุ่นตรงนั้นสูงทันที ควันอาจถูกลมพัดไปที่อื่น ส่วนค่าฝุ่นบนแผนที่เป็นค่ารายชั่วโมง ณ เวลาที่เลือก"><b>Hotspots add up over time</b>, they are not the fires at the chosen hour: every VIIRS detection (NASA FIRMS) from 07:00 Thai time yesterday until now, so about 24–48 h depending on the time of day. The satellites pass over each area only a few times a day, around 13:00–14:00 and 01:00–02:00, so fires are seen in snapshots, not continuously.<br><b>Solid dots</b> = detected in the last 12 h; <b>faded dots</b> = older, the fire may be out.<br><b>Dot size</b> = fire strength (FRP, MW). Point at or tap a dot for the time it was detected.<br>Many hotspots do not mean high PM2.5 at that spot right away: the wind can carry the smoke elsewhere. The PM2.5 on the map is the hourly value at the chosen time.</div></div>
@@ -2917,7 +2922,7 @@ async function runAuto(quiet){ try{ return await runAuto_(quiet); }catch(e){ bus
 async function runAuto_(quiet){
   if(!quiet) busy(T('Loading the latest hourly data…','กำลังโหลดข้อมูลรายชั่วโมงล่าสุด…'));
   const d=await loadPipeline();
-  if(d){P.data=d; busy(T('Loading meteorology…','กำลังโหลดข้อมูลอุตุนิยมวิทยา…')); await Promise.all([loadDEM(),loadMet(),loadMlField(),loadRkFine(),loadWxml()]); await runModel(pipelineHotspots(d),'live',null,quiet); showFreshness(); loadVerify(); loadAccuracy(); renderRK(); renderAssim(); renderML();}
+  if(d){P.data=d; busy(T('Loading meteorology…','กำลังโหลดข้อมูลอุตุนิยมวิทยา…')); await Promise.all([loadDEM(),loadMet(),loadMlField(),loadRkFine(),loadWxml()]); await runModel(pipelineHotspots(d),'live',null,quiet); showFreshness(); loadVerify(); loadAccuracy(); drawIq(); renderRK(); renderAssim(); renderML();}
   else if(!quiet){ if(PUBLIC&&P.data){ busy(null); toast(T('The latest data could not be loaded; the page keeps the data it had.','โหลดข้อมูลล่าสุดไม่สำเร็จ หน้าเว็บยังแสดงข้อมูลเดิมอยู่')); return false; }
     if(PUBLIC){ busy(null); loadFail(true); return false; }   // public: reading FIRMS from the browser needs a key and a proxy the public page does not have
     P.data=null; await runLive(); }
@@ -3217,7 +3222,29 @@ async function loadVerify(){
 // ---- how right the forecast has been lately (data/accuracy.json from scripts/accuracy.mjs, rebuilt every run: the last 7 days
 // of hourly values at the hourly reference monitors, per station; summed here for the chosen area)
 let ACCD=null, ACC_AT=null, ACC_LEVEL=({here:1,region:1,th:1}[store.get('hsw.accLevel')]&&store.get('hsw.accLevel'))||'here', ACC_REG=store.get('hsw.accReg')||'';
-const accLayer=L.layerGroup();
+const accLayer=L.layerGroup(), iqLayer=L.layerGroup();
+// IQAir comparison (layer "AQI compared with IQAir, now"): IQAir's real-time US AQI at Thai cities (latest.json iqair, from the
+// pipeline; free plan, a few cities an hour) beside our map at the same hour in US AQI from the hourly value, and the nearest
+// Air4Thai monitor's hourly measurement. A comparison of values now, not of forecast skill.
+const usAqiColour=a=>US_BANDS[a<=50?0:a<=100?1:a<=150?2:a<=200?3:a<=300?4:5].color, usAqiInk=a=>a<=100?'#1d2321':'#fff';
+function setDual(el,en,th){ if(!el) return; el.dataset.en=en; el.dataset.th=th; el.innerHTML=T(en,th); }
+function drawIq(){ iqLayer.clearLayers(); const list=P.data?.iqair||[], sum=$('iqSum');
+  if(!list.length){ setDual(sum,'No IQAir reading in the last 6 h yet.','ยังไม่มีค่าจาก IQAir ใน 6 ชม. ล่าสุด'); return; }
+  let dS=0,dN=0;
+  for(const c of list){ const tH=Math.round(c.t/HR)*HR, v=P.data.grid?totalAt(c.lat,c.lon,tH):null, our=v!=null?aqiUS(v):null;
+    let st=null,dB=15; for(const s of P.data.stations||[]){ if(!s.monitor||s.avg24||!s.obs) continue; const d=haversineKm(c.lat,c.lon,s.lat,s.lon); if(d<dB){dB=d;st=s;} }
+    const ob=st&&Math.abs(st.obs.t-tH)<=1.5*HR?st.obs.v:null;
+    if(our!=null){ dS+=Math.abs(our-c.aqius); dN++; }
+    const cell=a=>a==null?'<b style="background:var(--panel);color:var(--muted)">–</b>':`<b style="background:${usAqiColour(a)};color:${usAqiInk(a)}">${a}</b>`;
+    const icon=L.divIcon({className:'',html:`<div class="iqbadge">${cell(c.aqius)}${cell(our)}</div>`,iconSize:[32,28],iconAnchor:[16,34]});
+    L.marker([c.lat,c.lon],{icon,keyboard:false,zIndexOffset:450}).bindTooltip(()=>`<b>${esc(c.name)}</b> · ${hm(c.t)}<br>`+
+      `IQAir: ${T('US AQI','AQI สหรัฐฯ')} <b>${c.aqius}</b><br>SEA-HAF: ${our!=null?`${T('US AQI','AQI สหรัฐฯ')} <b>${our}</b> (${fmtN(v)} µg/m³, ${T('hourly','รายชั่วโมง')})`:'–'}`+
+      (our!=null?`<br>${T('Difference','ต่างกัน')} ${our-c.aqius>0?'+':''}${our-c.aqius} AQI`:'')+
+      (ob!=null?`<br>Air4Thai ${esc(stName(st))} (${dB.toFixed(0)} ${T('km','กม.')}): ${T('measured','วัดได้')} ${fmtN(ob)} µg/m³ = ${T('US AQI','AQI สหรัฐฯ')} ${aqiUS(ob)}`:'')+
+      `<br><span class="note">${T('Data: IQAir (iqair.com)','ข้อมูล: IQAir (iqair.com)')}</span>`).addTo(iqLayer); }
+  setDual(sum, dN?`Top = IQAir, bottom = SEA-HAF (US AQI) · typical difference ±${Math.round(dS/dN)} AQI in ${dN} cities`:'Top = IQAir, bottom = SEA-HAF (US AQI)',
+    dN?`บน = IQAir ล่าง = SEA-HAF (AQI สหรัฐฯ) · ต่างกันโดยเฉลี่ย ±${Math.round(dS/dN)} AQI ใน ${dN} เมือง`:'บน = IQAir ล่าง = SEA-HAF (AQI สหรัฐฯ)');
+}
 const ACC_MIN=200, ACC_MIN_ST=100, ACC_NEAR_KM=25, ACC_HIGH_MIN=10;   // pairs for an area, pairs for one monitor, "near" radius, high hours to score
 const PROV_REG=(()=>{const m={}; for(const [k,a] of Object.entries(REGION_PROV)) for(const n of a) m[n]=k; return m;})();
 const REG_N={north:['Northern Thailand','ภาคเหนือ'],northeast:['Northeastern Thailand','ภาคตะวันออกเฉียงเหนือ'],central:['Central Thailand','ภาคกลาง'],east:['Eastern Thailand','ภาคตะวันออก'],south:['Southern Thailand','ภาคใต้']};
@@ -3608,12 +3635,12 @@ function drawContours(){
   contourLayer.addTo(map);
 }
 function applyVisibility(){
-  for(const [id,layers] of [['shHot',[hotLayer,trajLayer]],['shTown',[townLayer]],['shSt',[stationLayer]],['shA4t',[a4tLayer]],['shAcc',[accLayer]]])
+  for(const [id,layers] of [['shHot',[hotLayer,trajLayer]],['shTown',[townLayer]],['shSt',[stationLayer]],['shA4t',[a4tLayer]],['shAcc',[accLayer]],['shIq',[iqLayer]]])
     for(const l of layers){ if(shown(id)) map.addLayer(l); else map.removeLayer(l); }
   drawContours(); drawWind();
 }
 document.getElementById('shProv').addEventListener('change',e=>{store.set('hsw.shProv',e.target.checked?'1':'0');styleBase();});
-for(const id of ['shContour','shSt','shA4t','shAcc','shHot','shTown','shWind','shWindArr']){
+for(const id of ['shContour','shSt','shA4t','shAcc','shIq','shHot','shTown','shWind','shWindArr']){
   const v=store.get('hsw.'+id); if(v!=null) $(id).checked=v==='1';
   $(id).addEventListener('change',()=>{store.set('hsw.'+id,$(id).checked?'1':'0');applyVisibility();});
 }

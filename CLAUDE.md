@@ -6,7 +6,7 @@ See `README.md` for the method and data sources.
 
 ## Rules
 
-1. **Keys stay only in GitHub Secrets.** `OPENAQ_API_KEY`, `FIRMS_MAP_KEY`, `GSMAP_USER`, `GSMAP_PASS`, `DEV_USER`, `DEV_PASS`
+1. **Keys stay only in GitHub Secrets.** `OPENAQ_API_KEY`, `FIRMS_MAP_KEY`, `GSMAP_USER`, `GSMAP_PASS`, `IQAIR_API_KEY`, `DEV_USER`, `DEV_PASS`
    are read from `process.env` in the workflow. Never write a key, token or password into any file in the repository (code,
    data, workflow YAML, comments, commit messages) or into `data/*.json`.
 

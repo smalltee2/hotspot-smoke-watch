@@ -26,6 +26,7 @@ import { loadModel } from './model.mjs';
 import { assimilateFires, assimSummary } from './assim.mjs';
 import { LOWCOST, scaleLowcost, updateDaily, lowcostQC } from './lowcost.mjs';
 import { loadDataset, dailyLearn, mlCorrection, mlActive, FEAT_COLS, storeDay, loadSeasonRows, MLCFG, setHindcastModel } from './ml.mjs';
+import { updateIqair, forPage as iqairForPage } from './iqair.mjs';
 import zlib from 'node:zlib';
 import crypto from 'node:crypto';
 
@@ -459,6 +460,8 @@ async function main() {
       log(`Air4Thai measured weather: ${nWx} stations with a value in the last 6 h`);
     } catch (e) { log(`Air4Thai hourly unavailable: ${e.message}`); }
   }
+  // IQAir real-time AQI at Thai cities (page layer "compared with IQAir, now"): CAMS run only, a few cities each hour (free plan)
+  if (!SIL && process.env.IQAIR_API_KEY) await updateIqair(state, now, process.env.IQAIR_API_KEY, log);
   stations.forEach(s => {
     const o = obs.get(s.id); if (!o || now - o.t > CFG.obsMaxAgeH * HOUR || o.v < 0 || o.v > 1500) return;
     s.obs = o;
@@ -1113,6 +1116,7 @@ async function main() {
     hours, stations: outStations,
     // latest measured weather at the Air4Thai stations (hour-ending means; ≤ 6 h old): the page's "now" values at the viewer's location
     obsWx: a4tSt.filter(s => state.obsWx?.[s.id]).map(s => { const o = state.obsWx[s.id]; return { id: s.id, lat: s.lat, lon: s.lon, t: o.t, t2: o.t2 ?? null, rh: o.rh ?? null, ws: o.ws ?? null, wd: o.wd ?? null }; }),
+    iqair: iqairForPage(state, now),   // IQAir real-time US AQI at Thai cities (≤ 6 h old), for the comparison layer
     grid: { lon0: g[0], lat0: g[1], step, nx, ny, values: gridRaw },  // raw CAMS; the page applies rk
     hotspots: { cols: ['lat', 'lon', 'frp', 't', 'conf', 'sat', 'igbp'], igbpYear: LC?.year ?? null, rows: hot, fetched: hotFetched ?? (await readJSON(path.join(DATA, 'latest.json'), null))?.hotspots?.fetched ?? null },
   });

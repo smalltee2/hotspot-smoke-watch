@@ -98,6 +98,7 @@ jobs:
           FIRMS_MAP_KEY: ${{ secrets.FIRMS_MAP_KEY }}
           GSMAP_USER: ${{ secrets.GSMAP_USER }}
           GSMAP_PASS: ${{ secrets.GSMAP_PASS }}
+          IQAIR_API_KEY: ${{ secrets.IQAIR_API_KEY }}   # IQAir real-time city AQI for the comparison layer (free plan)
           NODE_EXTRA_CA_CERTS: scripts/certs/air4thai-chain.pem   # Let's Encrypt intermediates the Air4Thai server fails to send
           HSW_HTTP_CACHE: ${{ runner.temp }}/http   # replies kept for the SILAM run below (same measurements, sources asked once)
         run: node scripts/update.mjs && node scripts/verify.mjs

@@ -470,7 +470,7 @@ td.num{text-align:right;font-family:var(--font-data);font-variant-numeric:tabula
   <div class="brand">
     <svg class="mark" viewBox="0 0 64 64" aria-hidden="true" focusable="false"><path class="i" d="M44 20 A12 12 0 1 0 32 32" fill="none" stroke-width="9" stroke-linecap="round"/><path class="e" d="M32 32 A12 12 0 1 1 20 44" fill="none" stroke-width="9" stroke-linecap="round"/><circle class="d" cx="50.5" cy="10.5" r="4.5"/></svg>
     <h1>SEA<span class="dash">-</span>HAF</h1>
-    <small class="tagline" data-th="พยากรณ์ฝุ่น PM&lt;sub&gt;2.5&lt;/sub&gt; ควันไฟ และอากาศความละเอียดสูง (0.025°) รายชั่วโมง 3 - 5 วัน">Hour-by-hour high-resolution (0.025°) forecast of PM<sub>2.5</sub>, smoke and weather, 3–5 days ahead</small>
+    <small class="tagline" id="tagline" data-th="พยากรณ์ฝุ่น PM&lt;sub&gt;2.5&lt;/sub&gt; ควันไฟ และอากาศความละเอียดสูง (0.025°) รายชั่วโมง 3 - 5 วัน">Hour-by-hour high-resolution (0.025°) forecast of PM<sub>2.5</sub>, smoke and weather, 3–5 days ahead</small>
   </div>
   <div class="status">
     <span id="modeChip" class="chip">No data</span>
@@ -1736,6 +1736,12 @@ function setTimeline(){
 function redrawTime(){if(hereLL&&!$('hereBox').hidden) renderHereBox(); setGibs();
   updateTimeLabel();drawPlume();drawGrid();drawContours();drawTowns();drawStations();drawWind(); if(typeof refreshClickInfo==='function') refreshClickInfo();}
 
+// the tagline names how many days ahead the CAMS forecast runs (hours from now to its last hour, rounded to days), so it always
+// matches the time bar; set from the CAMS data only (a SILAM view on the admin page keeps the CAMS count)
+function setTagline(){ const el=$('tagline'), H=P.data?.hours; if(!el||P.data?.isSilam||!H?.length) return;
+  const n=Math.max(1,Math.round((H.at(-1)-Date.now())/864e5));
+  setDual(el,`Hour-by-hour high-resolution (0.025°) forecast of PM<sub>2.5</sub>, smoke and weather, ${n} day${n>1?'s':''} ahead`,
+    `พยากรณ์ฝุ่น PM<sub>2.5</sub> ควันไฟ และอากาศความละเอียดสูง (0.025°) รายชั่วโมง ${n} วัน`); }
 // ---- hourly data written by the GitHub Actions pipeline (same site)
 // data/latest.json is the CAMS chain; when the SILAM layer is chosen and the pipeline published the SILAM chain this hour
 // (latest.json `silam`), the page takes data/silam/latest.json instead: the same file layout, made by the same program from SILAM
@@ -1776,7 +1782,7 @@ async function runAuto(quiet){ try{ return await runAuto_(quiet); }catch(e){ bus
 async function runAuto_(quiet){
   if(!quiet) busy(T('Loading the latest hourly data…','กำลังโหลดข้อมูลรายชั่วโมงล่าสุด…'));
   const d=await loadPipeline();
-  if(d){P.data=d; busy(T('Loading meteorology…','กำลังโหลดข้อมูลอุตุนิยมวิทยา…')); await Promise.all([loadDEM(),loadMet(),loadMlField(),loadRkFine(),loadWxml()]); await runModel(pipelineHotspots(d),'live',null,quiet); showFreshness(); loadVerify(); loadAccuracy(); drawIq(); renderRK(); renderAssim(); renderML();}
+  if(d){P.data=d; setTagline(); busy(T('Loading meteorology…','กำลังโหลดข้อมูลอุตุนิยมวิทยา…')); await Promise.all([loadDEM(),loadMet(),loadMlField(),loadRkFine(),loadWxml()]); await runModel(pipelineHotspots(d),'live',null,quiet); showFreshness(); loadVerify(); loadAccuracy(); drawIq(); renderRK(); renderAssim(); renderML();}
   else if(!quiet){ if(PUBLIC&&P.data){ busy(null); toast(T('The latest data could not be loaded; the page keeps the data it had.','โหลดข้อมูลล่าสุดไม่สำเร็จ หน้าเว็บยังแสดงข้อมูลเดิมอยู่')); return false; }
     if(PUBLIC){ busy(null); loadFail(true); return false; }   // public: reading FIRMS from the browser needs a key and a proxy the public page does not have
     P.data=null; await runLive(); }

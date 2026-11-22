@@ -42,12 +42,13 @@ export function scores(a, minN = 1) {
 
 /** Scores the forecast log rows against the measurements. rows: fcst CSV rows; obs: Map "id|YYYY-MM-DDTHH" -> µg/m³;
  *  isMonitor(id): fallback for rows logged before the monitor column; tEnd: newest valid hour counted (ms).
+ *  want: true = reference monitors (the headline score), false = low-cost sensors (scored apart: see main).
  *  Returns Map id -> { s: next hours, l: next day, d2: two days ahead, y1 / y2: daily mean 24 h / 48 h ahead } (sums) over the last ACC.days days. */
-export function scoreRows(rows, obs, tEnd, isMonitor = () => true, out = new Map()) {
+export function scoreRows(rows, obs, tEnd, isMonitor = () => true, out = new Map(), want = true) {
   const t0 = tEnd - ACC.days * 24 * H, seen = new Set();
   for (const r of rows) {
     const L = +r.lead_h, hz = HZ[L], dz = DAILY[L]; if ((!hz && !dz) || r.obs_basis !== 'h') continue;
-    const mon = r.monitor === '0' ? false : r.monitor === '1' ? true : isMonitor(r.station_id); if (!mon) continue;
+    const mon = r.monitor === '0' ? false : r.monitor === '1' ? true : isMonitor(r.station_id); if (mon !== want) continue;
     const tv = Date.parse(r.valid_utc); if (!(tv > t0 && tv <= tEnd)) continue;
     const key = `${r.station_id}|${L}|${r.valid_utc.slice(0, 13)}`; if (seen.has(key)) continue; seen.add(key);
     const get = () => { let s = out.get(r.station_id); if (!s) out.set(r.station_id, s = { s: NEW(), l: NEW(), d2: NEW(), y1: NEW(), y2: NEW() }); return s; };
@@ -104,9 +105,9 @@ async function main() {
     const k = `${r.station_id}|${k13(Math.round(t / H) * H)}`; if (!obs.has(k)) obs.set(k, v); }
   for (const k of obs.keys()) { const t = Date.parse(k.split('|')[1] + ':00Z'); if (t > tEnd) tEnd = t; }
   if (!tEnd) { console.log('accuracy: no measurements in the logs'); return; }
-  const isMon = id => meta.get(id)?.monitor !== false, out = new Map(), fc1 = new Map();
+  const isMon = id => meta.get(id)?.monitor !== false, out = new Map(), fc1 = new Map(), outLc = new Map();
   for (const f of files.filter(f => /fcst-\d{8}T\d{2}\.csv$/.test(f) && fileT(f) >= tEnd - (ACC.days * 24 + 49) * H)) {
-    const rows = parse(await fs.readFile(f, 'utf8')); scoreRows(rows, obs, tEnd, isMon, out);
+    const rows = parse(await fs.readFile(f, 'utf8')); scoreRows(rows, obs, tEnd, isMon, out); scoreRows(rows, obs, tEnd, isMon, outLc, false);
     for (const r of rows) if (r.lead_h === '1') { const v = first(r.correctedML, r.correctedA, r.corrected); if (v != null) fc1.set(`${r.station_id}|${r.valid_utc.slice(0, 13)}`, v); } }
   const iqRows = []; for (const f of files.filter(f => /iqair-\d{8}T\d{2}\.csv$/.test(f))) iqRows.push(...parse(await fs.readFile(f, 'utf8')));
   const points = (latest.stations || []).filter(s => s.lat != null).map(s => ({ id: String(s.id), lat: s.lat, lon: s.lon }));
@@ -114,14 +115,22 @@ async function main() {
   const r1 = a => a.map((v, i) => (i === 1 || i === 2 || i === 3 ? +v.toFixed(1) : v)), stations = [];
   for (const [id, s] of out) { const m = meta.get(id); if (!m || m.lat == null) continue;
     stations.push({ id, name: m.name || id, ...(m.nameTH ? { nameTH: m.nameTH } : {}), lat: m.lat, lon: m.lon, cc: m.cc || '', s: r1(s.s), l: r1(s.l), d2: r1(s.d2), y1: r1(s.y1), y2: r1(s.y2) }); }
+  // low-cost sensors (OpenAQ: AirGradient, PurpleAir, …), scored apart and never mixed into the headline score: they read high in
+  // humid air, and the station correction learns from each sensor's own readings, so this says how close the forecast is to the
+  // sensors, not to the true value. Only sensors that pass the pipeline's 30-day check against their neighbours (latest.json qc
+  // 'pass' / 'isolated'; files without qc: all). All countries: they are most useful where reference monitors are few.
+  const lcOk = m => !m.qc || m.qc === 'pass' || m.qc === 'isolated', lowcost = [];
+  for (const [id, s] of outLc) { const m = meta.get(id); if (!m || m.lat == null || m.monitor || !lcOk(m)) continue;
+    lowcost.push({ id, lat: m.lat, lon: m.lon, cc: m.cc || '', s: r1(s.s), l: r1(s.l), d2: r1(s.d2), y1: r1(s.y1), y2: r1(s.y2) }); }
   const r1i = a => a.map((v, i) => (i === 1 || i === 2 || i === 3 ? +v.toFixed(1) : v));
   const doc = { version: 1, generated: Date.now(), tEnd, days: ACC.days, horizons: ACC.horizons, daily: ACC.daily, bands: ACC.bands, thr: ACC.thr,
-    iqair: iqCities.map(c => ({ ...c, sea: r1i(c.sea) })),
+    iqair: iqCities.map(c => ({ ...c, sea: r1i(c.sea) })), lowcost,
     cols: ['n', 'sumAbsErr', 'sumErr', 'sumObs', 'sameBand', 'obsHigh', 'fcHigh', 'caught'], stations };
   await fs.writeFile(path.join(DATA, 'accuracy.json'), JSON.stringify(doc));
-  const part = k => { const a = NEW(); for (const s of stations) s[k].forEach((v, i) => a[i] += v); const S = scores(a);
+  const part = (k, list = stations) => { const a = NEW(); for (const s of list) s[k].forEach((v, i) => a[i] += v); const S = scores(a);
     return S ? `${{ s: 'next hours', l: 'next day', d2: 'two days ahead', y1: 'daily mean 24 h ahead', y2: 'daily mean 48 h ahead' }[k]} ${S.n} pairs, colour band right ${(S.bandRight * 100).toFixed(0)} %, typical error ${S.mae.toFixed(1)} µg/m³, bias ${S.bias.toFixed(1)}, hours >= ${ACC.thr} caught ${S.caught} of ${S.high}, false alarms ${S.falseAlarms} of ${S.warned}` : `${k}: none`; };
   const msg = `${stations.length} monitors, ${ACC.days} days to ${k13(tEnd)}Z; ${part('s')}; ${part('l')}; ${part('d2')}; ${part('y1')}; ${part('y2')} (${((Date.now() - t00) / 1e3).toFixed(1)} s)`;
   console.log('accuracy: ' + msg);
+  console.log(`accuracy, low-cost sensors (apart): ${lowcost.length} sensors; ${part('s', lowcost)}; ${part('l', lowcost)}; ${part('y1', lowcost)}`);
 }
 if (import.meta.url === `file://${process.argv[1]}`) main().catch(e => { console.error('accuracy failed:', e.stack || e.message); if (process.env.GITHUB_ACTIONS) console.log(`::warning title=accuracy::accuracy.mjs failed: ${e.message}`); process.exitCode = 0; });

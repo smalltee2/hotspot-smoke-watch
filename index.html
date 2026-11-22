@@ -836,6 +836,7 @@ td.num{text-align:right;font-family:var(--font-data);font-variant-numeric:tabula
         <label><input type="checkbox" id="shA4t" checked> <span data-th="Air4Thai: ค่าตรวจวัดเทียบแบบจำลอง">Air4Thai: measured vs model</span></label>
         <div id="a4tStat" class="note dev-only" style="font-size:.68rem;margin:-2px 0 4px 22px"></div>
         <label><input type="checkbox" id="shAcc"> <span data-th="ความแม่นยำที่สถานี (7 วันล่าสุด)">Forecast accuracy at monitors (last 7 days)</span></label>
+        <div id="accLcSum" class="note" style="font-size:.68rem;margin:-2px 0 4px 22px" title="Compared with what: the same hourly next-day forecast (12–24 h ahead), against the low-cost sensors on OpenAQ (AirGradient and others) in the area shown, neighbouring countries included, over the last 7 days. Only sensors that agreed with their neighbours over the last 30 days are counted. Kept apart: low-cost sensors read high in humid air, and the forecast at each sensor is corrected with that sensor&#x27;s own readings, so this number says how close the forecast is to the sensors, not to the true value. It is not mixed into the score at the reference monitors."></div>
         <label title=" Compared with what : IQAir&#x27;s real-time US AQI as the reference, for 17 Thai cities and 10 in neighbouring countries (shown with &quot;Area shown&quot; = the whole map), against our forecast made 1 h before at our forecast point nearest the city (within 15 km). Label : the share of hours over the last 7 days in which SEA-HAF fell in the same Thai concentration band as IQAir (IQAir&#x27;s AQI turned back into µg/m³); a longer bar means closer. Until a city has 12 hours, the US AQI now (top IQAir, bottom SEA-HAF). Hover or tap for the values now, the typical difference and whether we are higher or lower than IQAir. Good to know : IQAir is not a measurement but its own blend of stations and model, so agreement says how close we are to IQAir, not which is more accurate. Each city is refreshed about every 3 h; readings older than 6 h are not shown. Data: IQAir (iqair.com)"><input type="checkbox" id="shIq"> <span data-th="เทียบ AQI กับ IQAir (ขณะนี้)">AQI compared with IQAir (now)</span> <small class="note" id="iqSum"></small></label>
         <label><input type="checkbox" id="shSt" checked> <span data-th="สถานี OpenAQ">OpenAQ stations</span></label>
         <label><input type="checkbox" id="shHot" checked> <span data-th="จุดความร้อน">Hotspots</span></label>
@@ -2108,6 +2109,21 @@ async function loadAccuracy(){
     d.stations=d.stations.filter(s=>s.cc==='TH'); for(const s of d.stations) s.reg=regionAt(s.lat,s.lon); ACCD=d;}catch(e){return;}
   renderAcc(); drawAcc(); drawIq(); if(hereLL&&!$('hereBox').hidden) renderHereBox();
 }
+// low-cost sensors (accuracy.json lowcost: OpenAQ sensors that pass the 30-day neighbour check), scored apart for the area shown
+// (all countries) and never mixed into the score at the reference monitors: they read high in humid air and the forecast at each
+// sensor is corrected with its own readings, so this is closeness to the sensors, not to the true value
+function accLc(){ const list=(ACCD?.lowcost||[]).filter(s=>inRegion(s.lat,s.lon)), g={list};
+  for(const k of ['s','l','d2','y1','y2']){ const S_=accSum(list,k); g[k]=accSc(S_.a,k==='s'||k==='l'?ACC_MIN:Math.round(ACC_MIN/2)); if(k==='l') g.nSt=S_.n; } return g; }
+function renderLcSum(){ const el=$('accLcSum'); if(!el) return; const g=ACCD?.lowcost?accLc():null;
+  if(!g){ setDual(el,'',''); return; }
+  if(!g.l){ setDual(el,'Compared with low-cost sensors (OpenAQ): not enough hours in this area yet','เทียบเซนเซอร์ราคาประหยัด (OpenAQ): ข้อมูลในพื้นที่นี้ยังไม่พอ'); return; }
+  const y=g.y1?[` · daily mean ${accPct(g.y1.band)}`,` · ค่าเฉลี่ยรายวัน ${accPct(g.y1.band)}`]:['',''];
+  setDual(el,`Compared with low-cost sensors (OpenAQ, ${g.nSt}): next day ${accPct(g.l.band)} right${y[0]}`,`เทียบเซนเซอร์ราคาประหยัด (OpenAQ ${g.nSt} จุด): พรุ่งนี้บอกระดับความเข้มข้นถูก ${accPct(g.l.band)}${y[1]}`); }
+// developer page: every horizon of the low-cost score, under the card's table
+function accLcNote(){ if(PUBLIC||!ACCD?.lowcost) return ''; const g=accLc(); if(!g.nSt) return '';
+  const f=(sc,en,th)=>sc?T(`${en} <b>${accPct(sc.band)}</b> (±${fmtN(sc.mae)}, bias ${fmtN(sc.bias)})`,`${th} <b>${accPct(sc.band)}</b> (±${fmtN(sc.mae)}, เอนเอียง ${fmtN(sc.bias)})`):'';
+  return `<p class="note accd2"><b>${T(`Low-cost sensors (OpenAQ), area shown, ${g.nSt} sensors`,`เซนเซอร์ราคาประหยัด (OpenAQ) ในพื้นที่ที่แสดง ${g.nSt} จุด`)}</b> ${T('(scored apart, not in the numbers above)','(แยกคำนวณ ไม่รวมในตัวเลขด้านบน)')}: `+
+    [f(g.s,'next hours','ชั่วโมงข้างหน้า'),f(g.l,'next day','พรุ่งนี้'),f(g.d2,'two days','2 วัน'),f(g.y1,'daily mean next day','ค่าเฉลี่ยรายวันพรุ่งนี้'),f(g.y2,'daily mean two days','ค่าเฉลี่ยรายวัน 2 วัน')].filter(Boolean).join(' · ')+'</p>'; }
 function accSum(list,k){const a=[0,0,0,0,0,0,0,0]; let n=0; for(const s of list){ if(!s[k]?.[0]) continue; n++; s[k].forEach((v,i)=>a[i]+=v);} return {a,n};}
 function accSc(a,minN){ if(!a||a[0]<minN) return null; const n=a[0]; return {n,band:a[4]/n,mae:a[1]/n,bias:a[2]/n,obs:a[3]/n,high:a[5],caught:a[7],warned:a[6],fa:a[6]-a[7]}; }
 // the monitors of a level and their scores; 'here': the nearest monitor within ACC_NEAR_KM, else the Thai region (outside Thailand: none)
@@ -2148,7 +2164,7 @@ function accTable(g){ if(g?.out) return `<p class="note">${T('The forecast is ch
     `<p class="note accd2">${g.d2?T(`<b>Two days ahead</b> (48 h): colour band right <b>${accPct(g.d2.band)}</b> · typical error ±${fmtN(g.d2.mae)} µg/m³ · ${accTend(g.d2)}.`,`<b>ล่วงหน้า 2 วัน</b> (48 ชม.): บอกระดับความเข้มข้นถูก <b>${accPct(g.d2.band)}</b> · คลาดเคลื่อน ±${fmtN(g.d2.mae)} µg/m³ · ${accTend(g.d2)}`)+'<br>':''}${T('Further ahead (days 3–4) is not scored yet: use it for the trend.','ไกลกว่านี้ (วันที่ 3–4) ยังไม่มีผลตรวจ ใช้ดูแนวโน้ม')}</p>`; }
 function accWhere(){ if(ACC_AT) return {...ACC_AT,mine:false,st:true}; if(hereLL) return {lat:hereLL.lat,lon:hereLL.lon,mine:true}; const c=map.getCenter(); return {lat:c.lat,lon:c.lng,mine:false}; }
 function renderAcc(){
-  const box=$('accBox'); if(!box) return; box.hidden=!ACCD; if(!ACCD) return;
+  renderLcSum(); const box=$('accBox'); if(!box) return; box.hidden=!ACCD; if(!ACCD) return;
   const th=accGroup('th'), y1=th?.y1?T(` (daily mean ${accPct(th.y1.band)})`,` (ค่าเฉลี่ยรายวัน ${accPct(th.y1.band)})`):'';
   $('accHead').textContent=th?.l?T(`Thailand, next day: hourly colour band right ${accPct(th.l.band)}`,`ไทย พยากรณ์วันพรุ่งนี้ บอกระดับความเข้มข้นรายชั่วโมงถูก ${accPct(th.l.band)}`)+y1:'';
   for(const b of box.querySelectorAll('[data-acc]')) b.setAttribute('aria-pressed',String(b.dataset.acc===ACC_LEVEL));
@@ -2159,7 +2175,7 @@ function renderAcc(){
     extra=`<div class="field accreg"><label for="accReg">${T('Region','ภาค')}</label><select id="accReg">${Object.keys(REG_N).map(k=>`<option value="${k}"${k===rg?' selected':''}>${regName(k)}</option>`).join('')}</select></div>`; }
   else g=accGroup('th');
   if(P.data?.isSilam) extra=`<p class="note"><b>${T('These numbers are for the CAMS-based forecast.','ตัวเลขนี้เป็นของพยากรณ์ชุด CAMS')}</b> ${T('The SILAM-based forecast is not scored yet.','พยากรณ์ชุด SILAM ยังไม่มีผลตรวจ')}</p>`+extra;
-  $('accBody').innerHTML=extra+(g&&g.nSt?`<p class="note acccap">${ACC_LEVEL==='here'?'':esc(g.label.charAt(0).toUpperCase()+g.label.slice(1))+' · '}${T(`${g.nSt} monitor${g.nSt>1?'s':''}`,`${g.nSt} สถานี`)} · ${T('last 7 days to','7 วันล่าสุด ถึง')} ${fmtT(ACCD.tEnd)}</p>`:'')+accTable(g);
+  $('accBody').innerHTML=extra+(g&&g.nSt?`<p class="note acccap">${ACC_LEVEL==='here'?'':esc(g.label.charAt(0).toUpperCase()+g.label.slice(1))+' · '}${T(`${g.nSt} monitor${g.nSt>1?'s':''}`,`${g.nSt} สถานี`)} · ${T('last 7 days to','7 วันล่าสุด ถึง')} ${fmtT(ACCD.tEnd)}</p>`:'')+accTable(g)+accLcNote();
   const sel=$('accReg'); if(sel) sel.onchange=()=>{ACC_REG=sel.value; store.set('hsw.accReg',ACC_REG); renderAcc();};
 }
 function openAcc(level){ if(level){ACC_LEVEL=level; store.set('hsw.accLevel',level);}

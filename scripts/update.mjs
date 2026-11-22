@@ -893,6 +893,7 @@ async function main() {
       for (const key of ['h', 'm']) for (const t of Object.keys(F_[key])) if (+t < now - 50 * HOUR) delete F_[key][t];
       hours.forEach((t, j) => { if (j > jNow && j <= jNow + 12) { F_.h[t] = anyInc ? r1(incAt(s, t, s.hourly ? 'hm' : 'h')) : 0; F_.m[t] = anyInc ? r1(incAt(s, t, '24')) : 0; } }); }
     return { id: s.id, name: s.name, lat: s.lat, lon: s.lon, monitor: s.monitor, provider: s.provider, cc: s.country, avg24: isAvg24(s), hourly: !!s.hourly, ...(s.nameTH ? { nameTH: s.nameTH } : {}),
+      ...(!s.monitor && LCc.use ? { qc: lcQC.get(s.id) || 'none' } : {}),   // low-cost sensor check (accuracy.mjs scores only 'pass' / 'isolated')
       obs: s.obs ? { t: s.obs.t, v: r1(s.obs.v) } : null, obs24: obs24(s.id, s), bias: k ? +F.b.toFixed(3) : null, nUpd: k?.n || 0, raw, corr: F.corr, fc24: F.fc24,
       corrA: A.corr, fc24A: A.fc24, ...(incS && incS.some(v => Math.abs(v) >= 0.1) ? { inc: incS } : {}),
       // measured values on the page's hour axis up to now (hourly values, or the reported 24-h means for 24-h stations), for the map comparison layer

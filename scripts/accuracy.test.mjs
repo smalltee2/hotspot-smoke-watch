@@ -66,3 +66,10 @@ test('IQAir comparison: US AQI back to µg/m³; our 1-h forecast at the nearest 
   assert.equal(c.station, 'p1'); assert.equal(c.sea[0], 1); assert.equal(c.sea[4], 1);
   assert.equal(scoreIqair(iq, new Map(), pts, t - 7 * 864e5, t).length, 0);   // no forecast of ours near the city that hour
 });
+test('low-cost sensors are scored apart (want = false), never in the monitors\' sums', () => {
+  const tEnd = Date.parse('2026-11-18T05:00Z'), obs = new Map([['m|2026-11-18T05', 40], ['lc|2026-11-18T05', 40]]);
+  const row = (id, mon) => ({ station_id: id, lead_h: '24', valid_utc: '2026-11-18T05:00Z', obs_basis: 'h', monitor: mon, correctedML: '41' });
+  const rows = [row('m', '1'), row('lc', '0')];
+  assert.deepEqual([...scoreRows(rows, obs, tEnd).keys()], ['m']);
+  assert.deepEqual([...scoreRows(rows, obs, tEnd, () => true, new Map(), false).keys()], ['lc']);
+});

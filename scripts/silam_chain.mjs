@@ -34,7 +34,7 @@ export function pageDoc(sil, cams) {
   const d = { ...sil }, fix = f => (typeof f === 'string' ? f.replace(/^data\/(rk-bias(-A)?\.json|ml-field\.json)$/, 'data/silam/$1') : f);
   for (const k of ['rk', 'rkA']) if (d[k]?.biasFine) d[k] = { ...d[k], biasFine: { ...d[k].biasFine, file: fix(d[k].biasFine.file) } };
   if (d.ml?.field?.file) d.ml = { ...d.ml, field: { ...d.ml.field, file: fix(d.ml.field.file) } };
-  for (const k of ['t2down', 'rainObs', 'met', 'metTraj', 'dem', 'obsWx']) if (cams && cams[k] != null) d[k] = cams[k];
+  for (const k of ['t2down', 'rainObs', 'met', 'metTraj', 'dem', 'obsWx', 'iqair']) if (cams && cams[k] != null) d[k] = cams[k];
   delete d.runlog;
   return d;
 }

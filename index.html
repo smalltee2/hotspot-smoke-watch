@@ -769,7 +769,9 @@ td.num{text-align:right;font-family:var(--font-data);font-variant-numeric:tabula
           <option value="ug" data-th="PM₂.₅ รายชั่วโมง (µg/m³)">PM₂.₅ hourly, µg/m³</option>
           <option value="ug24" data-th="PM₂.₅ เฉลี่ย 24 ชม. (µg/m³)">PM₂.₅ 24-h mean, µg/m³</option>
           <option value="th" data-th="AQI ไทย (เฉลี่ย 24 ชม.)">Thai AQI (24-h mean)</option>
+          <option value="thH" data-th="AQI ไทย (รายชั่วโมง)">Thai AQI (hourly)</option>
           <option value="us" data-th="AQI สหรัฐฯ (เฉลี่ย 24 ชม.)">US AQI (24-h mean)</option>
+          <option value="usH" data-th="AQI สหรัฐฯ (รายชั่วโมง)">US AQI (hourly)</option>
         </select></div>
       <div id="legTotal">
         <div class="pcdbar" id="legBar"></div>
@@ -2157,9 +2159,11 @@ const wantSilam=()=>!PUBLIC&&!!$('lySilam')?.checked;
 const layerMode=()=>$('lyNasa').checked?'nasa':$('lyUnc').checked?'unc':$('lyFire').checked?'fire':$('lyFine').checked?'fine':$('lyRain').checked?'rain':$('lyTemp').checked?'temp':$('lyVent').checked?'vent':'total';
 const wxMode=()=>layerMode()==='rain'||layerMode()==='temp'||layerMode()==='vent';
 const gridMode=()=>layerMode()==='total'||layerMode()==='fine';
-const unitMode=()=>$('unitSel').value;   // 'ug' | 'ug24' | 'th' | 'us'
-const avg24=()=>unitMode()!=='ug';
-function bandFor(v){ if(unitMode()==='us'){const b=US_BANDS.find(b=>v<=b.max); return {color:b.color,en:T(b.en,b.th),ink:(b.max<=35.4)?'#1d2321':'#fff'};}
+const unitMode=()=>$('unitSel').value;   // 'ug' | 'ug24' | 'th' | 'thH' | 'us' | 'usH' (…H: AQI from the hourly value)
+const avg24=()=>!['ug','thH','usH'].includes(unitMode());
+const aqiKind=()=>{const u=unitMode(); return u.startsWith('th')?'th':u.startsWith('us')?'us':null;};
+const usScale=()=>aqiKind()==='us';
+function bandFor(v){ if(usScale()){const b=US_BANDS.find(b=>v<=b.max); return {color:b.color,en:T(b.en,b.th),ink:(b.max<=35.4)?'#1d2321':'#fff'};}
   const b=pcdBand(v); return {color:cssVar('--'+b.key),en:T(b.en,b.th),ink:'#fff'}; }
 // map colours in µg/m³ (hourly and 24-h mean): MAP_BANDS (uneven bands, Thai PCD thresholds, black above 300), shared by the total and
 // fire-smoke layers; Thai AQI keeps the official PCD colours, US AQI the EPA colours.
@@ -2172,15 +2176,22 @@ const msScale=()=>unitMode()==='ug'||unitMode()==='ug24';
 // PCD 24-h categories (15 / 25 / 37.5 / 75) and the WHO 24-h guideline (15): warm colours start at the Thai standard of 37.5
 const MAP_BANDS=[{max:10,color:'#d6f0fb'},{max:15,color:'#94d6f4'},{max:25,color:'#3fb3e6'},{max:37.5,color:'#45bf8f'},{max:50,color:'#b5dc45'},
   {max:75,color:'#f5e33b'},{max:100,color:'#f9a92c'},{max:150,color:'#f0672a'},{max:200,color:'#d22d1f'},{max:300,color:'#8a1913'},{max:Infinity,color:'#111111'}];
-function rampCss(v){return MAP_BANDS.find(b=>v<=b.max).color;}
+// continuous map colours (like IQAir), in µg/m³: the Thai PCD colours for µg/m³ and Thai AQI views (each colour at the middle of
+// its band, so a band's centre has its own colour and its edges blend into the next; darker reds above 75), the EPA colours for the
+// US AQI views. Category words, pills and warnings still follow the official stepped bands.
+const THAI_STOPS=[[0,'#cdeefb'],[8,'#2fa8e0'],[20,'#3cb371'],[31,'#f4d03f'],[50,'#f39c12'],[90,'#e53935'],[160,'#a31515'],[300,'#3d0b0b']];
+const US_STOPS=[[0,'#00e400'],[22,'#ffff00'],[45,'#ff7e00'],[90,'#ff0000'],[175,'#8f3f97'],[300,'#7e0023']];
+function stopRGB(S_,v){ if(!(v>S_[0][0])) return hexRGB(S_[0][1]); for(let i=1;i<S_.length;i++) if(v<=S_[i][0]){ const a=hexRGB(S_[i-1][1]),b=hexRGB(S_[i][1]),f=(v-S_[i-1][0])/(S_[i][0]-S_[i-1][0]); return a.map((x,k)=>Math.round(x+(b[k]-x)*f)); } return hexRGB(S_[S_.length-1][1]); }
+const mapStops=()=>usScale()?US_STOPS:THAI_STOPS;
+function rampCss(v,S_=mapStops()){ const c=stopRGB(S_,v); return `rgb(${c[0]},${c[1]},${c[2]})`; }
 function mapColor(v){ return msScale()?rampCss(v):bandFor(v).color; }
 function pcdColor(v){return mapColor(v);}
-function fmtVal(v){ if(v==null) return '–'; const u=unitMode(); return u==='th'?`AQI ${aqiTH(v)}`:u==='us'?`${T('US AQI','AQI สหรัฐฯ')} ${aqiUS(v)}`:`${fmtN(v)} µg/m³`; }
-const unitShort=()=>({ug:'µg/m³',ug24:'µg/m³',th:T('Thai AQI','AQI ไทย'),us:T('US AQI','AQI สหรัฐฯ')})[unitMode()];
-const valNum=v=>{const u=unitMode(); return u==='th'?String(aqiTH(v)):u==='us'?String(aqiUS(v)):fmtN(v);};
+function fmtVal(v){ if(v==null) return '–'; const u=aqiKind(); return u==='th'?`AQI ${aqiTH(v)}`:u==='us'?`${T('US AQI','AQI สหรัฐฯ')} ${aqiUS(v)}`:`${fmtN(v)} µg/m³`; }
+const unitShort=()=>({ug:'µg/m³',ug24:'µg/m³',th:T('Thai AQI','AQI ไทย'),us:T('US AQI','AQI สหรัฐฯ')})[aqiKind()||'ug'];
+const valNum=v=>{const u=aqiKind(); return u==='th'?String(aqiTH(v)):u==='us'?String(aqiUS(v)):fmtN(v);};
 function pill(v){const b=bandFor(v); return `<span class="pill" style="background:${b.color};color:${b.ink}">${b.en}</span>`;}
 function contourScheme(){ if(msScale()) return [37.5,75,150,300].map(lv=>({lv,color:rampCss(lv+0.01)}));
-  return unitMode()==='us'
+  return usScale()
   ? US_BANDS.slice(0,5).map((b,i)=>({lv:b.max,color:US_BANDS[i+1].color}))
   : [15,25,37.5,75].map((lv,j)=>({lv,color:cssVar('--'+PCD[j+1].key)})); }
 function hexRGB(h){h=h.replace('#','');if(h.length===3)h=h.split('').map(c=>c+c).join('');const n=parseInt(h,16);return [(n>>16)&255,(n>>8)&255,n&255];}
@@ -2237,7 +2248,6 @@ function drawGrid(){
   if(wxMode()) return drawWx();
   if(!P.data||!gridMode()) return; const G=P.data.grid, i=gIdx(curT()); if(i<0) return;
   const R=regionShape();
-  const scheme=msScale()?MS_BANDS.map(b=>({max:b.max,rgb:hexRGB(b.color)})):unitMode()==='us'?US_BANDS.map(b=>({max:b.max,rgb:hexRGB(b.color)})):PCD.map(b=>({max:b.max,rgb:hexRGB(cssVar('--'+b.key))}));
   let so=G.lat0, w=G.lon0, n=G.lat0+(G.ny-1)*G.step, e=G.lon0+(G.nx-1)*G.step;
   if(R){so=Math.max(so,R.bbox[1]-.2); w=Math.max(w,R.bbox[0]-.2); n=Math.min(n,R.bbox[3]+.2); e=Math.min(e,R.bbox[2]+.2);}
   const fine=layerMode()==='fine', avg=avg24(), ms=msScale();
@@ -2256,8 +2266,7 @@ function drawGrid(){
     S.fieldInfo=T(`24-h mean ending ${fmtT(P.data.hours[i])}`,`ค่าเฉลี่ย 24 ชม. สิ้นสุด ${fmtT(P.data.hours[i])}`);
   }
   S.fine={F,w,so,nx:fx,ny:fy,cell};
-  const colour=v=>{ if(ms){const c=rampColor(v); return c?[c[0],c[1],c[2],c[3]*255]:null;}   // µg/m³: EPA colours, same as the fire-smoke layer
-    const rgb=scheme.find(b=>v<=b.max).rgb; return [rgb[0],rgb[1],rgb[2],v<15?40+v*2:Math.min(160,70+v*1.2)];};
+  const colour=v=>{ const c=rampColor(v,mapStops()); return c?[c[0],c[1],c[2],c[3]*255]:null; };   // continuous: Thai colours, or EPA for US AQI
   const parts=[]; if(!R) parts.push(L.rectangle([[so,w],[n,e]],{color:cssVar('--muted'),weight:1,dashArray:'4 4',fill:false,interactive:false}));
   gridLayer=L.layerGroup(parts).addTo(map); showField(colour,[so,w,n,e]);
 }
@@ -3354,7 +3363,7 @@ function clearPlume(){if(plume){map.removeLayer(plume);plume=null;}}
 // µg/m³ colours of both PM2.5 layers (total and fire smoke): MAP_BANDS; fire smoke below 1 µg/m³ is not drawn
 const RAMP=[[1]];
 const EPA_ALPHA=.68;
-function rampColor(c){ if(!(c>=1)) return null; const rgb=hexRGB(rampCss(c)); return [rgb[0],rgb[1],rgb[2],c>=15?EPA_ALPHA:EPA_ALPHA*(0.25+0.75*(c-1)/14)]; }   // fades in up to 15 µg/m³: clean air stays faint (on dark maps it read as fog)
+function rampColor(c,S_=THAI_STOPS){ if(!(c>=1)) return null; const rgb=stopRGB(S_,c); return [rgb[0],rgb[1],rgb[2],c>=15?EPA_ALPHA:EPA_ALPHA*(0.25+0.75*(c-1)/14)]; }   // fades in up to 15 µg/m³: clean air stays faint (on dark maps it read as fog)
 function puffField(s,w,so,nx,ny,cell){
   const F=new Float32Array(nx*ny);
   for(let i=0;i<s.n;i++){const sy=s.sy[i], s2=2*sy*sy, amp=s.m[i]/(Math.PI*s2)*s.fz[i];
@@ -3774,29 +3783,34 @@ $('region').addEventListener('change',()=>{fitRegion(); drawRegionMask(); comput
 drawRegionMask(); fitRegion();
 
 // map scale as eleven equal blocks, labelled at the band boundaries (µg/m³)
-function epaBar(bar,ticks,first){ bar.style.gridTemplateColumns='repeat(11,1fr)';
-  bar.innerHTML=MAP_BANDS.map((b,k)=>`<i style="background:${b.color}" title="${k?MAP_BANDS[k-1].max:0}${b.max<Infinity?'–'+b.max:'+'} µg/m³"></i>`).join('');
+// a continuous colour bar: axis = [[µg/m³, position 0–1], …] (piecewise linear, uneven like the bands), colours from the stops
+function gradBar(bar,axis,S_){ const pts=[]; for(let q=0;q<=48;q++){ const x=q/48; let v=axis[axis.length-1][0];
+    for(let k=1;k<axis.length;k++) if(x<=axis[k][1]){ const [v0,x0]=axis[k-1],[v1,x1]=axis[k]; v=v0+(v1-v0)*(x-x0)/Math.max(1e-9,x1-x0); break; }
+    pts.push(`${rampCss(v,S_)} ${(x*100).toFixed(1)}%`); }
+  bar.style.gridTemplateColumns='1fr'; bar.innerHTML=`<i style="background:linear-gradient(to right,${pts.join(',')})"></i>`; }
+const MS_AXIS=[0,10,15,25,37.5,50,75,100,150,200,300].map((v,k)=>[v,k/11]).concat([[400,1]]);
+function epaBar(bar,ticks,first){ gradBar(bar,MS_AXIS,THAI_STOPS);
   ticks.innerHTML='<span style="position:relative;display:block;width:100%;height:1.1em">'+[[0,first],[2,'15'],[4,'37.5'],[6,'75'],[8,'150'],[10,'300']].map(([k,t])=>`<span style="position:absolute;left:${k/11*100}%;transform:translateX(${k?'-50%':'0'})">${t}</span>`).join('')+'</span>'; }
 // what the colours mean: one row per official band, its swatch made of exactly the map colours it spans (µg/m³ maps), or the
 // band's own colour (AQI views); names follow the PCD (or EPA) bands. Only where the page has the slot (#legKey, #fireKey).
 function bandKey(el,u){ if(!el) return; let rows;
-  if(u==='us'){ const lo=['0','51','101','151','201','301']; rows=US_BANDS.map((b,k)=>({cols:[b.color],name:T(b.en,b.th),range:lo[k]+(k<5?'–'+(+lo[k+1]-1):'+')})); }
-  else if(u==='th'){ const r=['0–25','26–50','51–100','101–200','201+']; rows=PCD.map((b,k)=>({cols:[cssVar('--'+b.key)],name:T(b.en,b.th),range:r[k]})); }
-  else{ let lo=0; rows=PCD.map(b=>{const cols=MAP_BANDS.filter(m=>m.max>lo&&m.max<=b.max||(b.max===Infinity&&m.max>lo)).map(m=>m.color), row={cols,name:T(b.en,b.th),range:b.max<Infinity?`${lo}–${b.max}`:`>${lo}`}; lo=b.max; return row;}); }
-  el.innerHTML=rows.map(w=>`<div><i style="background:${w.cols.length>1?`linear-gradient(to right,${w.cols.map((c,k)=>`${c} ${k/w.cols.length*100}%,${c} ${(k+1)/w.cols.length*100}%`).join(',')})`:w.cols[0]}"></i><span>${esc(w.name)}</span><b>${w.range}</b></div>`).join(''); }
+  // each swatch: the continuous map colours across the band (µg/m³ range of the band)
+  const span=(S_,lo,hi)=>[0,.25,.5,.75,1].map(f=>rampCss(lo+(Math.min(hi,lo+150)-lo)*f,S_));
+  if(u.startsWith('us')){ const lo=['0','51','101','151','201','301']; let a=0; rows=US_BANDS.map((b,k)=>{const r={cols:span(US_STOPS,a,b.max),name:T(b.en,b.th),range:lo[k]+(k<5?'–'+(+lo[k+1]-1):'+')}; a=b.max; return r;}); }
+  else if(u.startsWith('th')){ const r=['0–25','26–50','51–100','101–200','201+']; let a=0; rows=PCD.map((b,k)=>{const w={cols:span(THAI_STOPS,a,b.max),name:T(b.en,b.th),range:r[k]}; a=b.max; return w;}); }
+  else{ let lo=0; rows=PCD.map(b=>{const row={cols:span(THAI_STOPS,lo,b.max),name:T(b.en,b.th),range:b.max<Infinity?`${lo}–${b.max}`:`>${lo}`}; lo=b.max; return row;}); }
+  el.innerHTML=rows.map(w=>`<div><i style="background:linear-gradient(to right,${w.cols.join(',')})"></i><span>${esc(w.name)}</span><b>${w.range}</b></div>`).join(''); }
 function renderLegend(){
   const u=unitMode(), bar=$('legBar'), ticks=$('legTicks'); epaBar($('fireBar'),$('fireTicks'),'1'); bandKey($('legKey'),u); bandKey($('fireKey'),'ug');
-  if(u==='us'){ const w=[9,26.4,20,70,100,60]; bar.style.gridTemplateColumns=w.map(x=>x+'fr').join(' ');
-    bar.innerHTML=US_BANDS.map(b=>`<i style="background:${b.color}"></i>`).join('');
+  if(u.startsWith('us')){ gradBar(bar,[[0,0],[9,9/285.4],[35.4,35.4/285.4],[55.4,55.4/285.4],[125.4,125.4/285.4],[225.4,225.4/285.4],[325.4,1]],US_STOPS);
     ticks.innerHTML=['0','50','100','150','200','300','500'].map(t=>`<span>${t}</span>`).join(''); }
   else if(u==='ug'||u==='ug24') epaBar(bar,ticks,'0');   // same colour bar and scale as the fire-smoke layer
-  else { bar.style.gridTemplateColumns='15fr 10fr 12.5fr 37.5fr 25fr';
-    bar.innerHTML=PCD.map(b=>`<i style="background:var(--${b.key})"></i>`).join('');
-    ticks.innerHTML=(u==='th'?['0','25','50','100','200','']:['0','15','25','37.5','75','']).map(t=>`<span>${t}</span>`).join(''); }
+  else { gradBar(bar,[[0,0],[15,.15],[25,.25],[37.5,.375],[75,.75],[100,1]],THAI_STOPS);
+    ticks.innerHTML=(u.startsWith('th')?['0','25','50','100','200','']:['0','15','25','37.5','75','']).map(t=>`<span>${t}</span>`).join(''); }
   $('legNote').textContent=LANG==='th'
-    ? ({ug:'PM₂.₅ รายชั่วโมง (µg/m³)',ug24:'PM₂.₅ เฉลี่ย 24 ชม. (µg/m³)',th:'AQI ไทยจากค่าเฉลี่ย 24 ชม. (คพ. 2566)',us:'AQI สหรัฐฯ จากค่าเฉลี่ย 24 ชม. (EPA 2024)'})[u]+
+    ? ({ug:'PM₂.₅ รายชั่วโมง (µg/m³)',ug24:'PM₂.₅ เฉลี่ย 24 ชม. (µg/m³)',th:'AQI ไทยจากค่าเฉลี่ย 24 ชม. (คพ. 2566)',thH:'AQI ไทยจากค่ารายชั่วโมง (เกณฑ์ คพ. กำหนดไว้สำหรับค่าเฉลี่ย 24 ชม.)',us:'AQI สหรัฐฯ จากค่าเฉลี่ย 24 ชม. (EPA 2024)',usH:'AQI สหรัฐฯ จากค่ารายชั่วโมง (แบบแอปเรียลไทม์; เกณฑ์ EPA กำหนดไว้สำหรับค่าเฉลี่ย 24 ชม.)'})[u]+
       ($('legKey')?'':' · ขอบระดับความเข้มข้นตามเกณฑ์ คพ. (15 / 25 / 37.5 / 75) สีอุ่นเริ่มที่ค่ามาตรฐาน 37.5 สีดำ = มากกว่า 300')+(PUBLIC?' · ':' · CAMS + สถานีตรวจวัด + ภูมิประเทศ ')+'ค่า 24 ชม. คือค่าเฉลี่ย 24 ชั่วโมงที่สิ้นสุด ณ เวลาที่เลือก กรอบเส้นประคือพื้นที่พยากรณ์'
-    : ({ug:'PM₂.₅ hourly, µg/m³',ug24:'PM₂.₅ 24-h mean, µg/m³',th:'Thai AQI from the 24-h mean (PCD 2023)',us:'US AQI from the 24-h mean (EPA 2024)'})[u]+
+    : ({ug:'PM₂.₅ hourly, µg/m³',ug24:'PM₂.₅ 24-h mean, µg/m³',th:'Thai AQI from the 24-h mean (PCD 2023)',thH:'Thai AQI from the hourly value (the PCD scale is set for 24-h means)',us:'US AQI from the 24-h mean (EPA 2024)',usH:'US AQI from the hourly value (as real-time apps show it; the EPA scale is set for 24-h means)'})[u]+
     ($('legKey')?'':' · bands follow the Thai PCD thresholds (15 / 25 / 37.5 / 75); warm colours from the 37.5 standard; black above 300')+(PUBLIC?' · ':' · CAMS + monitors + low-cost sensors + terrain, 0.025°. ')+'24-h values are the mean of the 24 hours ending at the slider time. Dashed box: forecast area.';
 }
 applyStaticLang(); if(!S.mode) $('modeChip').textContent=T('No data','ไม่มีข้อมูล');

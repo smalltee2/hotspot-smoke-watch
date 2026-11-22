@@ -2136,13 +2136,12 @@ function drawAcc(){
   accLayer.clearLayers(); if(!ACCD) return;
   // the badges are thinned on screen: where two would touch, the monitor with more scored hours keeps its badge (zoom in for all)
   const placed=[], list=ACCD.stations.filter(s=>inRegion(s.lat,s.lon)).sort((a,b)=>(b.l[0]+b.s[0])-(a.l[0]+a.s[0]));
-  // the badge: the daily mean (24-h, the Thai AQI basis) forecast 24 h ahead; the hourly next-day score where the daily one is short
-  for(const s of list){ const y=accSc(s.y1,ACC_MIN_ST), l=accSc(s.l,ACC_MIN_ST), sh=accSc(s.s,ACC_MIN_ST), sc=y||l||sh; if(!sc) continue;
+  for(const s of list){ const l=accSc(s.l,ACC_MIN_ST), sh=accSc(s.s,ACC_MIN_ST), sc=l||sh; if(!sc) continue;
     const pt=map.latLngToLayerPoint([s.lat,s.lon]); if(placed.some(q=>Math.abs(q.x-pt.x)<36&&Math.abs(q.y-pt.y)<20)) continue; placed.push(pt);   // each badge sits just above its monitor, clear of the town names beside the dots
     const icon=L.divIcon({className:'',html:`<div class="accbadge"><b>${accPct(sc.band)}</b><i style="width:${Math.round(sc.band*100)}%"></i></div>`,iconSize:[32,17],iconAnchor:[16,22]});
     const line=(x,t)=>x?`${t}: ${T('colour band right','บอกระดับความเข้มข้นถูก')} <b>${accPct(x.band)}</b> · ±${fmtN(x.mae)} µg/m³ · ${accTend(x)}`:'';
-    L.marker([s.lat,s.lon],{icon,keyboard:false,zIndexOffset:500}).bindTooltip(()=>`<b>${esc(stName(s))}</b><br>${T('Last 7 days','7 วันล่าสุด')}<br>`+
-      [line(y,T('Daily mean, next day','ค่าเฉลี่ยรายวัน พรุ่งนี้')),line(l,T('Hourly, next day','รายชั่วโมง พรุ่งนี้')),line(sh,T('Hourly, next hours','รายชั่วโมง ชั่วโมงข้างหน้า'))].filter(Boolean).join('<br>')).on('click',()=>{ACC_AT={lat:s.lat,lon:s.lon}; openAcc('here');}).addTo(accLayer); }
+    L.marker([s.lat,s.lon],{icon,keyboard:false,zIndexOffset:500}).bindTooltip(()=>`<b>${esc(stName(s))}</b><br>${T('Last 7 days, hourly values','7 วันล่าสุด ค่ารายชั่วโมง')}<br>`+
+      [line(sh,T('Next hours','ชั่วโมงข้างหน้า')),line(l,T('Next day','วันพรุ่งนี้'))].filter(Boolean).join('<br>')).on('click',()=>{ACC_AT={lat:s.lat,lon:s.lon}; openAcc('here');}).addTo(accLayer); }
   if(shown('shAcc')) map.addLayer(accLayer); else map.removeLayer(accLayer);
 }
 map.on('zoomend',()=>{ if(ACCD&&shown('shAcc')) drawAcc(); });

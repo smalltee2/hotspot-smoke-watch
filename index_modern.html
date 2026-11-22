@@ -3231,9 +3231,9 @@ const usAqiColour=a=>US_BANDS[a<=50?0:a<=100?1:a<=150?2:a<=200?3:a<=300?4:5].col
 function setDual(el,en,th){ if(!el) return; el.dataset.en=en; el.dataset.th=th; el.innerHTML=T(en,th); }
 // 7-day accuracy of both at the nearest hourly monitor (accuracy.json iqair, from scripts/accuracy.mjs): same hours, same Thai bands
 const iqAcc=id=>ACCD?.iqair?.find(c=>c.id===id)||null, IQ_MIN_H=12;
-function iqAccTotals(){ const a=[0,0,0,0,0,0,0,0], b=[0,0,0,0,0,0,0,0]; let n=0; for(const c of ACCD?.iqair||[]){ if(!c.iq?.[0]) continue; n++; c.iq.forEach((v,i)=>a[i]+=v); c.sea.forEach((v,i)=>b[i]+=v); } return n?{n,iq:accSc(a,1),sea:accSc(b,1)}:null; }
-function drawIq(){ iqLayer.clearLayers(); const list=P.data?.iqair||[], sum=$('iqSum');
-  if(!list.length){ setDual(sum,'No IQAir reading in the last 6 h yet.','ยังไม่มีค่าจาก IQAir ใน 6 ชม. ล่าสุด'); return; }
+function iqAccTotals(){ const a=[0,0,0,0,0,0,0,0], b=[0,0,0,0,0,0,0,0]; let n=0; for(const c of ACCD?.iqair||[]){ if(!c.iq?.[0]||!inRegion(c.lat,c.lon)) continue; n++; c.iq.forEach((v,i)=>a[i]+=v); c.sea.forEach((v,i)=>b[i]+=v); } return n?{n,iq:accSc(a,1),sea:accSc(b,1)}:null; }
+function drawIq(){ iqLayer.clearLayers(); const list=(P.data?.iqair||[]).filter(c=>inRegion(c.lat,c.lon)), sum=$('iqSum');   // only the chosen area, as the other layers
+  if(!list.length){ setDual(sum,'No IQAir reading in this area in the last 6 h.','ยังไม่มีค่าจาก IQAir ในพื้นที่นี้ใน 6 ชม. ล่าสุด'); return; }
   let dS=0,dN=0;
   for(const c of list){ const tH=Math.round(c.t/HR)*HR, v=P.data.grid?totalAt(c.lat,c.lon,tH):null, our=v!=null?aqiUS(v):null;
     let st=null,dB=15; for(const s of P.data.stations||[]){ if(!s.monitor||s.avg24||!s.obs) continue; const d=haversineKm(c.lat,c.lon,s.lat,s.lon); if(d<dB){dB=d;st=s;} }
@@ -4440,7 +4440,7 @@ function computeReceptors(){
 // ---- rendering
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 function nearestTown(lat,lon){let best=null,d=1e9;for(const t of TOWNS){const k=haversineKm(lat,lon,t.lat,t.lon);if(k<d){d=k;best=t;}}return {t:best,d};}
-function renderAll(){renderSummary();renderAreaTrend();renderWarnings();renderStations();renderSources();drawTowns();updateTimeLabel();renderAcc();drawAcc();}
+function renderAll(){renderSummary();renderAreaTrend();renderWarnings();renderStations();renderSources();drawTowns();updateTimeLabel();renderAcc();drawAcc();drawIq();}
 function renderSummary(){
   const hr=S.hots.filter(h=>inRegion(h.lat,h.lon)), sr=S.sources.filter(c=>inRegion(c.lat,c.lon));
   // groups are per 0.1° cell and local day; count each cell once and take its strongest day

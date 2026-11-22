@@ -1594,9 +1594,6 @@ header .status>.btn{--water-fill:.72}
 .maplogo{pointer-events:none;padding:6px 10px 5px;border-radius:8px;background:color-mix(in srgb,var(--panel) 72%,transparent);line-height:0}
 .maplogo img{display:block;width:180px;height:auto}
 .maplogo img.dk{display:none}
-/* faint "SEA-HAF · forecast time" across the map (so screenshots carry the source and the hour); never takes clicks */
-.mapmark{position:absolute;inset:0;display:grid;place-items:center;pointer-events:none;z-index:450;overflow:hidden}
-.mapmark span{transform:rotate(-16deg);font-weight:700;font-size:clamp(15px,2.2vw,30px);line-height:1.2;color:var(--fg);opacity:.12;white-space:nowrap;letter-spacing:.04em;user-select:none;-webkit-user-select:none}
 /* developer page: save the map as an image (logo, title, time, legend) */
 .savectl a{display:grid;place-items:center;width:30px;height:30px;color:var(--fg);background:var(--panel);cursor:pointer}
 .savepop{position:absolute;left:40px;top:0;z-index:1000;width:250px;padding:10px 12px;border-radius:8px;background:var(--panel);color:var(--fg);border:1px solid var(--line);box-shadow:0 4px 14px rgba(0,0,0,.25);font-size:.8rem;line-height:1.4}
@@ -3918,13 +3915,10 @@ const LogoCtl=L.Control.extend({onAdd(){ const d=L.DomUtil.create('div','maplogo
 { const mq=matchMedia('(max-width:860px)'); let ctl=null;
   const place=()=>{ if(ctl) ctl.remove(); ctl=new LogoCtl({position:mq.matches?'topleft':'bottomleft'}).addTo(map); };
   place(); mq.addEventListener?.('change',place); }
-// faint "SEA-HAF · forecast <time>" across the map, kept to the hour on the time bar (updateTimeLabel), so a screenshot carries the
-// source and the forecast hour. Public pages also turn off the browser's own "save image" (right-click, dragging the map out) and
-// leave the map out of printouts (CSS); a screenshot cannot be blocked by a web page, so the mark and the logo are what travel with it
-{ const d=document.createElement('div'); d.className='mapmark'; d.setAttribute('aria-hidden','true'); d.innerHTML='<span></span>'; map.getContainer().appendChild(d); }
-function setMapMark(){ const el=document.querySelector('#map .mapmark span'); if(!el) return; const t=curT(); el.textContent=t==null?'SEA-HAF':`SEA-HAF · ${T('forecast','พยากรณ์')} ${fmtT(t)}`; }
+// public pages turn off the browser's own "save image" on the map (right-click, dragging it out) and leave the map out of printouts
+// (CSS); a screenshot cannot be blocked by a web page. Saved images (below) carry the logo and a faint "SEA-HAF · <time>" mark
 if(PUBLIC){ const mc=map.getContainer(); mc.addEventListener('contextmenu',e=>e.preventDefault()); mc.addEventListener('dragstart',e=>e.preventDefault()); }
-// developer page only: save the map as a PNG with the logo, a title (SEA-HAF, what is shown, the forecast time) and the legend.
+// every page: save the map as a PNG with the logo, a title (SEA-HAF, what is shown, the forecast time) and the legend.
 // Hourly = the hour on the time bar; 24-h mean = the 24 h ending then; weekly / monthly = the past 7 / 30 complete days of the
 // hourly analysis (data/pm-mean.json from scripts/pmmean.mjs). Drawn from the data on a canvas (not a screen grab): the PM2.5 field
 // over the area on screen, countries and provinces on top, the Thai PM2.5 colours.
@@ -3981,6 +3975,9 @@ async function saveMapImage(kind,btn){
       if(c){ im.data[o]=c[0]; im.data[o+1]=c[1]; im.data[o+2]=c[2]; im.data[o+3]=Math.round(Math.min(1,c[3]/EPA_ALPHA*0.82)*255); } }
     fg.putImageData(im,0,0); g.imageSmoothingEnabled=true; g.imageSmoothingQuality='high'; g.drawImage(fc,X(w-cell/2),Y(n+cell/2),mapW+mapW/fx,mapH+mapH/fy);
     path(GEO_P,null,'rgba(60,70,66,.45)',0.8); path(GEO_C,null,'#3c4642',1.6);
+    // faint mark across the map: the source and the time shown (stays on crops and re-shares)
+    { const mk=`SEA-HAF · ${kind==='w'||kind==='m'?sub.split(' (')[0]:fmtT(t)}`; g.save(); g.translate(pad+mapW/2,head+mapH/2); g.rotate(-16*Math.PI/180);
+      g.font=font(700,Math.round(Math.min(mapW,mapH)/14)); g.textAlign='center'; g.textBaseline='middle'; g.fillStyle='rgba(29,35,33,.13)'; g.fillText(mk,0,0); g.restore(); }
     g.restore(); g.strokeStyle='#9aa5a0'; g.lineWidth=1; g.strokeRect(pad,head,mapW,mapH);
     // legend: the continuous Thai PM2.5 colours with the PCD band edges
     const ly=head+mapH+34, lw=Math.min(760,mapW*0.55), ticks=[0,15,25,37.5,75,150], pos=v=>{ for(let k=1;k<ticks.length;k++) if(v<=ticks[k]) return (k-1+(v-ticks[k-1])/(ticks[k]-ticks[k-1]))/(ticks.length-1); return 1; };
@@ -3997,7 +3994,7 @@ async function saveMapImage(kind,btn){
   }catch(err){ alert(T('Could not make the image: ','สร้างภาพไม่ได้: ')+err.message); }
   finally{ btn.disabled=false; btn.textContent=b0; }
 }
-if(!PUBLIC){
+{
   const SaveCtl=L.Control.extend({onAdd(){ const d=L.DomUtil.create('div','leaflet-bar savectl'); d.style.position='relative';
     d.innerHTML=`<a role="button" href="#" title="${T('Save the map as an image','บันทึกแผนที่เป็นรูปภาพ')}" aria-label="${T('Save the map as an image','บันทึกแผนที่เป็นรูปภาพ')}"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg></a>`+
       `<div class="savepop" hidden><b>${T('Save the map as an image','บันทึกแผนที่เป็นรูปภาพ')}</b>`+
@@ -4817,7 +4814,7 @@ function renderDayBar(){
     if(best>=0){ setSl(best); S.hour=best; redrawTime(); } });
 }
 function updateTimeLabel(){
-  renderDayBar(); setMapMark();
+  renderDayBar();
   if(!S.times.length){$('tlabel').innerHTML='–<small>&nbsp;</small>';return;}
   const t=curT(), dh=Math.round((t-Date.now())/36e5);
   $('tlabel').innerHTML=`${fmtT(t)}<small>${dh===0?T('now','ขณะนี้'):dh>0?T(`+${dh} h forecast`,`พยากรณ์ +${dh} ชม.`):T(`${dh} h (past)`,`${dh} ชม. (ย้อนหลัง)`)}${typeof avg24==='function'&&avg24()&&gridMode()?T(' · 24-h mean',' · เฉลี่ย 24 ชม.'):''}</small>`;

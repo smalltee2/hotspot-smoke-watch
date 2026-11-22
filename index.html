@@ -836,7 +836,7 @@ td.num{text-align:right;font-family:var(--font-data);font-variant-numeric:tabula
         <label><input type="checkbox" id="shA4t" checked> <span data-th="Air4Thai: ค่าตรวจวัดเทียบแบบจำลอง">Air4Thai: measured vs model</span></label>
         <div id="a4tStat" class="note dev-only" style="font-size:.68rem;margin:-2px 0 4px 22px"></div>
         <label><input type="checkbox" id="shAcc"> <span data-th="ความแม่นยำที่สถานี (7 วันล่าสุด)">Forecast accuracy at monitors (last 7 days)</span></label>
-        <label title="Compared with what: the US AQI that IQAir shows now for 17 Thai cities and 10 in neighbouring countries (those shown with &quot;Area shown&quot; = the whole map), against our map at the same hour (turned into US AQI from the hourly value) and the nearest Air4Thai monitor (within 15 km, if any). Label: top = IQAir, bottom = SEA-HAF, coloured on the US scale; hover or tap for details. Good to know: this compares values now, not forecast skill (IQAir&#x27;s free plan has no forecast), and IQAir uses the Air4Thai measurements too, so its values sit close to them. Each city is refreshed about every 3 h; readings older than 6 h are not shown. Data: IQAir (iqair.com)"><input type="checkbox" id="shIq"> <span data-th="เทียบ AQI กับ IQAir (ขณะนี้)">AQI compared with IQAir (now)</span> <small class="note" id="iqSum"></small></label>
+        <label title=" Compared with what : IQAir&#x27;s real-time US AQI as the reference, for 17 Thai cities and 10 in neighbouring countries (shown with &quot;Area shown&quot; = the whole map), against our forecast made 1 h before at our forecast point nearest the city (within 15 km). Label : the share of hours over the last 7 days in which SEA-HAF fell in the same Thai concentration band as IQAir (IQAir&#x27;s AQI turned back into µg/m³); a longer bar means closer. Until a city has 12 hours, the US AQI now (top IQAir, bottom SEA-HAF). Hover or tap for the values now, the typical difference and whether we are higher or lower than IQAir. Good to know : IQAir is not a measurement but its own blend of stations and model, so agreement says how close we are to IQAir, not which is more accurate. Each city is refreshed about every 3 h; readings older than 6 h are not shown. Data: IQAir (iqair.com)"><input type="checkbox" id="shIq"> <span data-th="เทียบ AQI กับ IQAir (ขณะนี้)">AQI compared with IQAir (now)</span> <small class="note" id="iqSum"></small></label>
         <label><input type="checkbox" id="shSt" checked> <span data-th="สถานี OpenAQ">OpenAQ stations</span></label>
         <label><input type="checkbox" id="shHot" checked> <span data-th="จุดความร้อน">Hotspots</span></label>
         <label class="dev-only"><input type="checkbox" id="shTown" checked> <span data-th="เมือง">Towns</span></label>
@@ -2067,39 +2067,34 @@ async function loadVerify(){
 // of hourly values at the hourly reference monitors, per station; summed here for the chosen area)
 let ACCD=null, ACC_AT=null, ACC_LEVEL=({here:1,region:1,th:1}[store.get('hsw.accLevel')]&&store.get('hsw.accLevel'))||'here', ACC_REG=store.get('hsw.accReg')||'';
 const accLayer=L.layerGroup(), iqLayer=L.layerGroup();
-// IQAir comparison (layer "AQI compared with IQAir, now"): IQAir's real-time US AQI at Thai cities (latest.json iqair, from the
-// pipeline; free plan, a few cities an hour) beside our map at the same hour in US AQI from the hourly value, and the nearest
-// Air4Thai monitor's hourly measurement. A comparison of values now, not of forecast skill.
+// IQAir comparison (layer "AQI compared with IQAir"): IQAir's real-time US AQI at Thai and neighbouring cities (latest.json iqair, from
+// the pipeline; free plan, a few cities an hour) beside our map at the same hour (US AQI from the hourly value); and over the last 7 days
+// (accuracy.json iqair, scripts/accuracy.mjs) how often our 1-h forecast near the city fell in the same Thai concentration band as IQAir.
+// IQAir is the reference here.
 const usAqiColour=a=>US_BANDS[a<=50?0:a<=100?1:a<=150?2:a<=200?3:a<=300?4:5].color, usAqiInk=a=>a<=100?'#1d2321':'#fff';
 function setDual(el,en,th){ if(!el) return; el.dataset.en=en; el.dataset.th=th; el.innerHTML=T(en,th); }
-// 7-day accuracy of both at the nearest hourly monitor (accuracy.json iqair, from scripts/accuracy.mjs): same hours, same Thai bands
 const iqAcc=id=>ACCD?.iqair?.find(c=>c.id===id)||null, IQ_MIN_H=12;
-function iqAccTotals(){ const a=[0,0,0,0,0,0,0,0], b=[0,0,0,0,0,0,0,0]; let n=0; for(const c of ACCD?.iqair||[]){ if(!c.iq?.[0]||!inRegion(c.lat,c.lon)) continue; n++; c.iq.forEach((v,i)=>a[i]+=v); c.sea.forEach((v,i)=>b[i]+=v); } return n?{n,iq:accSc(a,1),sea:accSc(b,1)}:null; }
+function iqAccTotals(){ const b=[0,0,0,0,0,0,0,0]; let n=0; for(const c of ACCD?.iqair||[]){ if(!c.sea?.[0]||!inRegion(c.lat,c.lon)) continue; n++; c.sea.forEach((v,i)=>b[i]+=v); } return n?{n,sea:accSc(b,1)}:null; }
 function drawIq(){ iqLayer.clearLayers(); const list=(P.data?.iqair||[]).filter(c=>inRegion(c.lat,c.lon)), sum=$('iqSum');   // only the chosen area, as the other layers
   if(!list.length){ setDual(sum,'No IQAir reading in this area in the last 6 h.','ยังไม่มีค่าจาก IQAir ในพื้นที่นี้ใน 6 ชม. ล่าสุด'); return; }
-  let dS=0,dN=0;
   for(const c of list){ const tH=Math.round(c.t/HR)*HR, v=P.data.grid?totalAt(c.lat,c.lon,tH):null, our=v!=null?aqiUS(v):null;
-    let st=null,dB=15; for(const s of P.data.stations||[]){ if(!s.monitor||s.avg24||!s.obs) continue; const d=haversineKm(c.lat,c.lon,s.lat,s.lon); if(d<dB){dB=d;st=s;} }
-    const ob=st&&Math.abs(st.obs.t-tH)<=1.5*HR?st.obs.v:null;
-    if(our!=null){ dS+=Math.abs(our-c.aqius); dN++; }
-    // the badge: the % of hours each got the concentration band right over the last 7 days (now values against the monitor);
-    // until a city has IQ_MIN_H scored hours, the current US AQI of each instead
-    const k=iqAcc(c.id), ka=k&&accSc(k.iq,IQ_MIN_H), kb=k&&accSc(k.sea,IQ_MIN_H);
+    // the badge: how often SEA-HAF fell in IQAir's band over the last 7 days; until a city has IQ_MIN_H hours, the US AQI now of both
+    const k=iqAcc(c.id), kb=k&&accSc(k.sea,IQ_MIN_H);
     const cell=a=>a==null?'<b style="background:var(--panel);color:var(--muted)">–</b>':`<b style="background:${usAqiColour(a)};color:${usAqiInk(a)}">${a}</b>`;
-    const pc=(lab,x,win)=>`<b style="background:${win?'color-mix(in srgb,var(--aq2) 28%,var(--panel))':'var(--panel)'};color:var(--fg)">${lab} ${accPct(x.band)}</b>`;
-    const html=ka&&kb?`<div class="iqbadge pct">${pc('IQ',ka,ka.band>kb.band)}${pc('SH',kb,kb.band>ka.band)}</div>`:`<div class="iqbadge">${cell(c.aqius)}${cell(our)}</div>`;
-    const icon=L.divIcon({className:'',html,iconSize:ka&&kb?[50,28]:[32,28],iconAnchor:ka&&kb?[25,34]:[16,34]});
+    const html=kb?`<div class="accbadge"><b>${accPct(kb.band)}</b><i style="width:${Math.round(kb.band*100)}%"></i></div>`:`<div class="iqbadge">${cell(c.aqius)}${cell(our)}</div>`;
+    const icon=L.divIcon({className:'',html,iconSize:kb?[32,17]:[32,28],iconAnchor:kb?[16,22]:[16,34]});
     L.marker([c.lat,c.lon],{icon,keyboard:false,zIndexOffset:450}).bindTooltip(()=>`<b>${esc(c.name)}</b> · ${hm(c.t)}<br>`+
       `IQAir: ${T('US AQI','AQI สหรัฐฯ')} <b>${c.aqius}</b><br>SEA-HAF: ${our!=null?`${T('US AQI','AQI สหรัฐฯ')} <b>${our}</b> (${fmtN(v)} µg/m³, ${T('hourly','รายชั่วโมง')})`:'–'}`+
       (our!=null?`<br>${T('Difference','ต่างกัน')} ${our-c.aqius>0?'+':''}${our-c.aqius} AQI`:'')+
-      (ob!=null?`<br>Air4Thai ${esc(stName(st))} (${dB.toFixed(0)} ${T('km','กม.')}): ${T('measured','วัดได้')} ${fmtN(ob)} µg/m³ = ${T('US AQI','AQI สหรัฐฯ')} ${aqiUS(ob)}`:'')+
-      (()=>{ const k=iqAcc(c.id), a=k&&accSc(k.iq,1), b=k&&accSc(k.sea,1); return a&&b?`<br><b>${T(`Last 7 days (${a.n} h)`,`7 วันที่ผ่านมา (${a.n} ชม.)`)}</b>: ${T('concentration band right','บอกระดับความเข้มข้นถูก')} IQAir <b>${accPct(a.band)}</b> (±${fmtN(a.mae)}) · SEA-HAF <b>${accPct(b.band)}</b> (±${fmtN(b.mae)} µg/m³)`:''; })()+
+      (()=>{ const b=k&&accSc(k.sea,1); if(!b) return '';
+        const few=b.n<24?` <span class="note">(${T('few hours yet','ข้อมูลยังน้อย')})</span>`:'';
+        return `<br><b>${T(`Last 7 days (${b.n} h)`,`7 วันที่ผ่านมา (${b.n} ชม.)`)}</b>: ${T('SEA-HAF in the same concentration band as IQAir','SEA-HAF อยู่ในระดับความเข้มข้นเดียวกับ IQAir')} <b>${accPct(b.band)}</b> · ${T('typically','ต่างกันเฉลี่ย')} ±${fmtN(b.mae)} µg/m³ · ${b.bias>=0?T(`higher than IQAir by ${fmtN(b.bias)}`,`สูงกว่า IQAir ${fmtN(b.bias)}`):T(`lower than IQAir by ${fmtN(-b.bias)}`,`ต่ำกว่า IQAir ${fmtN(-b.bias)}`)}${few}`; })()+
       `<br><span class="note">${T('Data: IQAir (iqair.com)','ข้อมูล: IQAir (iqair.com)')}</span>`).addTo(iqLayer); }
   const tot=iqAccTotals();
-  setDual(sum, tot?`Concentration band right, last 7 days (${tot.iq.n} h): IQAir ${accPct(tot.iq.band)} · SEA-HAF ${accPct(tot.sea.band)} · label: IQ = IQAir, SH = SEA-HAF`
-      :`Collecting hours for the accuracy %; until then the labels show the US AQI now (top IQAir, bottom SEA-HAF)`,
-    tot?`บอกระดับความเข้มข้นถูก 7 วันที่ผ่านมา (${tot.iq.n} ชม.): IQAir ${accPct(tot.iq.band)} · SEA-HAF ${accPct(tot.sea.band)} · ป้าย: IQ = IQAir, SH = SEA-HAF`
-      :`กำลังสะสมข้อมูลเพื่อคำนวณ % ความแม่น ระหว่างนี้ป้ายแสดง AQI สหรัฐฯ ขณะนี้ (บน IQAir ล่าง SEA-HAF)`);
+  setDual(sum, tot?`Label = % of hours SEA-HAF fell in IQAir's concentration band, last 7 days · all cities here: ${accPct(tot.sea.band)} (${tot.sea.n} h)`
+      :`Collecting hours for the %; until then the labels show the US AQI now (top IQAir, bottom SEA-HAF)`,
+    tot?`ป้าย = % ของชั่วโมงที่ SEA-HAF อยู่ในระดับความเข้มข้นเดียวกับ IQAir ใน 7 วันที่ผ่านมา · รวมทุกเมืองในพื้นที่: ${accPct(tot.sea.band)} (${tot.sea.n} ชม.)`
+      :`กำลังสะสมข้อมูลเพื่อคำนวณ % ระหว่างนี้ป้ายแสดง AQI สหรัฐฯ ขณะนี้ (บน IQAir ล่าง SEA-HAF)`);
 }
 const ACC_MIN=200, ACC_MIN_ST=100, ACC_NEAR_KM=25, ACC_HIGH_MIN=10;   // pairs for an area, pairs for one monitor, "near" radius, high hours to score
 const PROV_REG=(()=>{const m={}; for(const [k,a] of Object.entries(REGION_PROV)) for(const n of a) m[n]=k; return m;})();

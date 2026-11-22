@@ -20,10 +20,15 @@ test('pick: never asked first, then the oldest', () => {
 test('update: keeps replies, stops on the call limit, never puts the key in the log', async () => {
   const state = {}, logs = []; let n = 0;
   const fake = async url => { n++; assert.ok(url.includes('key=SECRET')); return { status: 200, json: async () => n === 3 ? { status: 'fail', data: { message: 'call_limit_reached' } } : reply(50 + n) }; };
-  const ok = await updateIqair(state, Date.parse('2026-11-22T07:10:00Z'), 'SECRET', m => logs.push(m), fake);
-  assert.equal(ok, 2); assert.equal(n, 3);   // stopped at the limit
+  const waits = []; const ok = await updateIqair(state, Date.parse('2026-11-22T07:10:00Z'), 'SECRET', m => logs.push(m), fake, async ms => waits.push(ms));
+  assert.equal(ok, 2); assert.equal(n, 3); assert.equal(waits.length, 0);   // stopped at the limit, before any pause
   assert.ok(!logs.join(' ').includes('SECRET')); assert.match(logs[0], /call_limit_reached/);
   const page = forPage(state, Date.parse('2026-11-22T08:00:00Z')); assert.equal(page.length, 2); assert.ok(page.every(c => c.aqius > 50));
   assert.equal(forPage(state, Date.parse('2026-11-23T08:00:00Z')).length, 0);       // too old
   assert.equal(await updateIqair({}, Date.now(), '', () => {}, fake), 0);            // no key: nothing asked
+});
+test('update: at most 5 calls a minute (the free plan), the rest after a pause', async () => {
+  const state = {}, waits = []; let n = 0;
+  const ok = await updateIqair(state, Date.now(), 'K', () => {}, async () => { n++; return { status: 200, json: async () => reply(40) }; }, async ms => waits.push(ms));
+  assert.equal(n, IQAIR.perRun); assert.equal(ok, IQAIR.perRun); assert.equal(waits.length, Math.ceil(IQAIR.perRun / IQAIR.perMinute) - 1); assert.ok(waits[0] > 55e3);
 });

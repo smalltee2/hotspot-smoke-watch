@@ -60,29 +60,28 @@ export function scoreRows(rows, obs, tEnd, isMonitor = () => true, out = new Map
   return out;
 }
 
-// IQAir comparison (page layer "AQI compared with IQAir, now"): IQAir's real-time city AQI (iqair-*.csv, from scripts/iqair.mjs) and our
-// forecast for the same hour (issued 1 h before, correctedML) at the nearest hourly reference monitor within IQ_KM, both scored
-// against that monitor's measurement with the same sums as above (Thai PCD bands, µg/m³; IQAir's US AQI turned back into µg/m³).
-// Both are "now" values close to the measurements (IQAir also uses Air4Thai), so this says how close each is now, not forecast skill.
+// IQAir comparison (page layer "AQI compared with IQAir"): our forecast for the hour of each IQAir reading (issued 1 h before,
+// correctedML / correctedA) at the nearest of our forecast points within IQ_KM (any station: reference monitor or low-cost sensor),
+// scored against IQAir's real-time city AQI turned back into µg/m³, with the same sums as above (Thai concentration bands): how often
+// SEA-HAF falls in the same band as IQAir and how far apart they are. IQAir is the reference here, not the measurements.
 export const IQ_KM = 15;
 const AQI_US = [[0, 9, 0, 50], [9.1, 35.4, 51, 100], [35.5, 55.4, 101, 150], [55.5, 125.4, 151, 200], [125.5, 225.4, 201, 300], [225.5, 325.4, 301, 500]];
 /** US AQI (EPA 2024) -> PM2.5 µg/m³, the middle of the concentrations that give it */
 export function usAqiToPm(a) { if (!(a >= 0)) return null; for (const [cl, ch, il, ih] of AQI_US) if (a <= ih) return +(cl + (ch - cl) * (a - il) / (ih - il)).toFixed(1); return 325.4; }
 const kmBetween = (a, b, c, d) => { const p = Math.PI / 180, x = (d - b) * p * Math.cos((a + c) / 2 * p), y = (c - a) * p; return 6371 * Math.hypot(x, y); };
-/** iq: iqair log rows; obs: Map id|hour -> µg; fc1: Map id|hour -> our 1-h forecast; monitors: [{id, lat, lon}]; t0..tEnd: window */
-export function scoreIqair(iq, obs, fc1, monitors, t0, tEnd) {
+/** iq: iqair log rows; fc1: Map id|hour -> our 1-h forecast; points: [{id, lat, lon}] (our stations); t0..tEnd: window
+ *  -> [{id, name, lat, lon, station, km, sea: sums of SEA-HAF against IQAir}] */
+export function scoreIqair(iq, fc1, points, t0, tEnd) {
   const out = new Map(), seen = new Set();
   for (const r of iq) {
     const t = Math.round(Date.parse(r.time_utc) / H) * H, a = num(r.aqius), lat = num(r.lat), lon = num(r.lon); if (!(t > t0 && t <= tEnd) || a == null || lat == null) continue;
     const key = `${r.city_id}|${t}`; if (seen.has(key)) continue; seen.add(key);
-    let best = null, dB = IQ_KM; for (const m of monitors) { if (!obs.has(`${m.id}|${k13(t)}`)) continue; const d = kmBetween(lat, lon, m.lat, m.lon); if (d < dB) { dB = d; best = m; } }
+    let best = null, dB = IQ_KM; for (const m of points) { if (!fc1.has(`${m.id}|${k13(t)}`)) continue; const d = kmBetween(lat, lon, m.lat, m.lon); if (d < dB) { dB = d; best = m; } }
     if (!best) continue;
-    const o = obs.get(`${best.id}|${k13(t)}`), f = fc1.get(`${best.id}|${k13(t)}`);
-    let c = out.get(r.city_id); if (!c) out.set(r.city_id, c = { id: r.city_id, name: r.name, lat, lon, station: best.id, km: +dB.toFixed(1), iq: NEW(), sea: NEW() });
-    if (f == null) continue;   // scored only where both exist, so the two shares are over the same hours
-    addPair(c.iq, usAqiToPm(a), o); addPair(c.sea, f, o);
+    let c = out.get(r.city_id); if (!c) out.set(r.city_id, c = { id: r.city_id, name: r.name, lat, lon, station: best.id, km: +dB.toFixed(1), sea: NEW() });
+    addPair(c.sea, fc1.get(`${best.id}|${k13(t)}`), usAqiToPm(a));
   }
-  return [...out.values()].filter(c => c.iq[0] > 0);
+  return [...out.values()].filter(c => c.sea[0] > 0);
 }
 
 async function list(dir) { const out = [];
@@ -108,16 +107,16 @@ async function main() {
   const isMon = id => meta.get(id)?.monitor !== false, out = new Map(), fc1 = new Map();
   for (const f of files.filter(f => /fcst-\d{8}T\d{2}\.csv$/.test(f) && fileT(f) >= tEnd - (ACC.days * 24 + 49) * H)) {
     const rows = parse(await fs.readFile(f, 'utf8')); scoreRows(rows, obs, tEnd, isMon, out);
-    for (const r of rows) if (r.lead_h === '1' && r.obs_basis === 'h') { const v = first(r.correctedML, r.correctedA, r.corrected); if (v != null) fc1.set(`${r.station_id}|${r.valid_utc.slice(0, 13)}`, v); } }
+    for (const r of rows) if (r.lead_h === '1') { const v = first(r.correctedML, r.correctedA, r.corrected); if (v != null) fc1.set(`${r.station_id}|${r.valid_utc.slice(0, 13)}`, v); } }
   const iqRows = []; for (const f of files.filter(f => /iqair-\d{8}T\d{2}\.csv$/.test(f))) iqRows.push(...parse(await fs.readFile(f, 'utf8')));
-  const monitors = (latest.stations || []).filter(s => s.monitor !== false && s.hourly !== false && !s.avg24 && s.lat != null).map(s => ({ id: String(s.id), lat: s.lat, lon: s.lon }));
-  const iqCities = scoreIqair(iqRows, obs, fc1, monitors, tEnd - ACC.days * 24 * H, tEnd);
+  const points = (latest.stations || []).filter(s => s.lat != null).map(s => ({ id: String(s.id), lat: s.lat, lon: s.lon }));
+  const iqCities = scoreIqair(iqRows, fc1, points, tEnd - ACC.days * 24 * H, tEnd);
   const r1 = a => a.map((v, i) => (i === 1 || i === 2 || i === 3 ? +v.toFixed(1) : v)), stations = [];
   for (const [id, s] of out) { const m = meta.get(id); if (!m || m.lat == null) continue;
     stations.push({ id, name: m.name || id, ...(m.nameTH ? { nameTH: m.nameTH } : {}), lat: m.lat, lon: m.lon, cc: m.cc || '', s: r1(s.s), l: r1(s.l), d2: r1(s.d2), y1: r1(s.y1), y2: r1(s.y2) }); }
   const r1i = a => a.map((v, i) => (i === 1 || i === 2 || i === 3 ? +v.toFixed(1) : v));
   const doc = { version: 1, generated: Date.now(), tEnd, days: ACC.days, horizons: ACC.horizons, daily: ACC.daily, bands: ACC.bands, thr: ACC.thr,
-    iqair: iqCities.map(c => ({ ...c, iq: r1i(c.iq), sea: r1i(c.sea) })),
+    iqair: iqCities.map(c => ({ ...c, sea: r1i(c.sea) })),
     cols: ['n', 'sumAbsErr', 'sumErr', 'sumObs', 'sameBand', 'obsHigh', 'fcHigh', 'caught'], stations };
   await fs.writeFile(path.join(DATA, 'accuracy.json'), JSON.stringify(doc));
   const part = k => { const a = NEW(); for (const s of stations) s[k].forEach((v, i) => a[i] += v); const S = scores(a);

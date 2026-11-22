@@ -55,22 +55,41 @@ export function fitVariogram(pts, res, { binKm = 15, maxKm = 400, w = null } = {
 const gam = (v, h) => h <= 0 ? 0 : v.c0 + v.c1 * (1 - Math.exp(-h / v.a));
 
 // ordinary kriging of residuals at (lat,lon) from the K nearest points within maxKm; skip = index to leave out (cross-validation)
+// Residual kriging without seams. Ordinary kriging with a hard "at least 3 monitors within maxKm" rule made the residual jump at
+// circles maxKm around sparse monitors (seen on the map as rings in southern Thailand and southern China, Nov 2026). Now, with the
+// Wendland taper T(h) = (1 − h/θ)⁴(1 + 4h/θ) for h < θ = maxKm (0 beyond), everything varies smoothly with position:
+//   L(x)  = Σ T(dᵢ) rᵢ / (Σ T(dᵢ) + KAPPA)      a local mean of the residuals, shrunk toward 0 where few monitors are near
+//   est   = L(x) + simple kriging of (rᵢ − L(xᵢ)) with the tapered covariance C(h) = c1·e^(−h/a)·T(h) (Furrer et al. 2006)
+// A monitor's weight goes to 0 as it nears maxKm, and far from all monitors est goes to 0 (the regression alone).
+// σ² = sill − Σ λᵢ C(xᵢ, x₀) (the simple-kriging variance of the second part).
+export const KRIGE = { kappa: 1 };
+const taper = (h, th) => h >= th ? 0 : (1 - h / th) ** 4 * (1 + 4 * h / th);
+const covT = (v, h, th) => v.c1 * Math.exp(-h / v.a) * taper(h, th);
+const LCACHE = new WeakMap();
+function localMean(pts, res, lat, lon, th, skip) { let s = 0, w = 0;
+  for (let i = 0; i < pts.length; i++) { if (i === skip) continue; const d = kmFast(lat, lon, pts[i][0], pts[i][1]); if (d < th) { const t = taper(d, th); s += t * res[i]; w += t; } }
+  return s / (w + KRIGE.kappa); }
+function stationLocal(pts, res, th, skip) {   // L at every monitor (without the skipped one), cached per residual set
+  let m = LCACHE.get(res); if (!m) LCACHE.set(res, m = new Map()); const key = `${th}|${skip}`;
+  if (!m.has(key)) m.set(key, pts.map(p => localMean(pts, res, p[0], p[1], th, skip)));
+  return m.get(key); }
 export function krige(pts, res, v, lat, lon, { K = 16, maxKm = 400, skip = -1 } = {}) {
   const near = [];
-  for (let i = 0; i < pts.length; i++) { if (i === skip) continue; const d = kmFast(lat, lon, pts[i][0], pts[i][1]); if (d <= maxKm) near.push([d, i]); }
-  if (near.length < 3) return { est: 0, dmin: Infinity, varOK: v.c0 + v.c1 };
+  for (let i = 0; i < pts.length; i++) { if (i === skip) continue; const d = kmFast(lat, lon, pts[i][0], pts[i][1]); if (d < maxKm) near.push([d, i]); }
+  const sill = v.c0 + v.c1;
+  if (!near.length) return { est: 0, dmin: Infinity, varOK: sill };
+  const Ls = stationLocal(pts, res, maxKm, skip); let sw = 0, sl = 0;
+  for (const [d, i] of near) { const t = taper(d, maxKm); sw += t; sl += t * res[i]; }
+  const L0 = sl / (sw + KRIGE.kappa);
   near.sort((a, b) => a[0] - b[0]); const nn = near.slice(0, K), n = nn.length;
-  const A = Array.from({ length: n + 1 }, () => new Array(n + 1).fill(1)), b = new Array(n + 1).fill(1);
-  A[n][n] = 0;
+  const A = Array.from({ length: n }, () => new Array(n).fill(0)), b = new Array(n);
   for (let i = 0; i < n; i++) {
-    // two different monitors at the same spot: use the nugget, not 0, or the kriging matrix becomes singular
-    for (let j = 0; j < n; j++) A[i][j] = i === j ? 0 : Math.max(gam(v, kmFast(pts[nn[i][1]][0], pts[nn[i][1]][1], pts[nn[j][1]][0], pts[nn[j][1]][1])), v.c0 > 0 ? 0 : 1e-6, v.c0);
-    b[i] = gam(v, nn[i][0]);
+    for (let j = 0; j < n; j++) A[i][j] = i === j ? sill * (1 + 1e-6) : covT(v, kmFast(pts[nn[i][1]][0], pts[nn[i][1]][1], pts[nn[j][1]][0], pts[nn[j][1]][1]), maxKm);   // tiny ridge: two monitors at one spot stay solvable
+    b[i] = covT(v, nn[i][0], maxKm);
   }
-  const g0 = b.slice(), w = solve(A, b); if (!w) return { est: 0, dmin: nn[0][0], varOK: v.c0 + v.c1 };
-  let est = 0, varOK = w[n]; for (let i = 0; i < n; i++) { est += w[i] * res[nn[i][1]]; varOK += w[i] * g0[i]; }
-  // ordinary-kriging variance σ² = Σ λᵢ γ(xᵢ, x₀) + μ (μ = Lagrange multiplier), bounded by the sill
-  return { est, dmin: nn[0][0], varOK: Math.min(Math.max(varOK, 0), v.c0 + v.c1) };
+  const c0 = b.slice(), w = solve(A, b); if (!w) return { est: L0, dmin: nn[0][0], varOK: sill };
+  let est = L0, explained = 0; for (let i = 0; i < n; i++) { est += w[i] * (res[nn[i][1]] - Ls[nn[i][1]]); explained += w[i] * c0[i]; }
+  return { est, dmin: nn[0][0], varOK: Math.min(Math.max(sill - explained, 0), sill) };
 }
 
 // Cell declustering (Deutsch 1989, DECLUS; Isaaks & Srivastava 1989): each monitor gets weight 1/(number of monitors in its
@@ -159,7 +178,7 @@ export function krigeField(obs, gridSpec, { K = 16, declusterDeg = 0 } = {}) {
   const { lon0, lat0, step, nx, ny } = gridSpec, values = new Array(nx * ny);
   for (let iy = 0; iy < ny; iy++) for (let ix = 0; ix < nx; ix++) {
     const la = lat0 + iy * step, lo = lon0 + ix * step, k = krige(pts, res, vario, la, lo, { K, maxKm });
-    if (!isFinite(k.dmin)) {   // fewer than 3 monitors within range (isolated monitor): nearest monitor's value, faded with distance
+    if (!isFinite(k.dmin)) {   // no monitor within range: nearest monitor's value, faded with distance (fade is 0 there, so 0)
       let best = -1, dmin = Infinity; for (let i = 0; i < pts.length; i++) { const d = kmFast(la, lo, pts[i][0], pts[i][1]); if (d < dmin) { dmin = d; best = i; } }
       k.est = best >= 0 ? res[best] : 0; k.dmin = dmin; }
     const f = fade(k.dmin);

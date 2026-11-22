@@ -841,12 +841,13 @@ td.num{text-align:right;font-family:var(--font-data);font-variant-numeric:tabula
           <div class="note" id="radarNote" style="font-size:.66rem" data-th="เรดาร์ตรวจอากาศผ่าน RainViewer (ไทย: กรมอุตุนิยมวิทยา) ทุก 10 นาที ย้อนหลัง 2 ชม. (ไม่ใช่เวลาบนแถบเวลาพยากรณ์) รวมเรดาร์ของหลายประเทศที่ RainViewer ได้รับ (ไทย เวียดนาม มาเลเซีย ฯลฯ ไม่มีในลาว กัมพูชา และส่วนใหญ่ของเมียนมา) บางสถานีอาจปิดอยู่ ประมาณฝน: 20 dBZ ≈ 0.6, 30 ≈ 3, 40 ≈ 12, 50 ≈ 50 มม./ชม. (Marshall–Palmer)">Weather radar via RainViewer (Thailand: Thai Meteorological Department), every 10 min for the last 2 h (not the forecast hour on the time bar). Composite of the national radar networks RainViewer receives (Thailand, Viet Nam, Malaysia and others; none over Laos, Cambodia or most of Myanmar); some radars may be offline. Rain rate roughly: 20 dBZ ≈ 0.6, 30 ≈ 3, 40 ≈ 12, 50 ≈ 50 mm/h (Marshall–Palmer).</div></div>
         <label class="dev-only"><input type="checkbox" id="shWindArr"> <span data-th="ลูกศรลมพร้อมค่า (ชี้ดู)">Wind arrows with values (hover)</span></label>
         <label class="dev-only"><input type="checkbox" id="shProv"> <span data-th="เขตและชื่อจังหวัด">Province borders and names</span></label>
-        <label><input type="checkbox" id="shA4t" checked> <span data-th="Air4Thai: ค่าตรวจวัดเทียบแบบจำลอง">Air4Thai: measured vs model</span></label>
+        <label><input type="checkbox" id="shObs" checked> <span data-th="ค่าตรวจวัดที่สถานี">Measured at stations</span></label>
+        <div class="accsrc obssrc" role="group" aria-label="Show"><span data-th="แสดง">Show</span><button type="button" data-obssrc="both" aria-pressed="true" data-th="ทั้งสอง">Both</button><button type="button" data-obssrc="a4t" aria-pressed="false" title="Air4Thai (Pollution Control Department): inside = measured, ring = our map at the same hour">Air4Thai</button><button type="button" data-obssrc="oaq" aria-pressed="false" title="OpenAQ: other monitors and low-cost sensors, measured now (paler = low-cost sensor)">OpenAQ</button></div>
+        <div id="obsDesc" class="note" style="font-size:.68rem;margin:-2px 0 4px 22px"></div>
         <div id="a4tStat" class="note dev-only" style="font-size:.68rem;margin:-2px 0 4px 22px"></div>
         <label><input type="checkbox" id="shAcc"> <span data-th="ความแม่นยำของพยากรณ์ (7 วัน)">Forecast accuracy (7 days)</span></label>
         <div class="accsrc" role="group" aria-label="Compared with"><span data-th="เทียบกับ">Compared with</span><button type="button" data-accsrc="ref" aria-pressed="true" data-th="สถานีมาตรฐาน" title="Compared with what: the hourly PM₂.₅ forecast this page shows, against what the reference monitors measured, hour by hour, over the last 7 days; recomputed every hour. Monitors used: about 100 Thai Pollution Control Department stations (Air4Thai) and a few reference monitors in Thailand from OpenAQ (outside Thailand there are too few, so none is shown). Low-cost sensors are not counted, nor the Bangkok (BMA) stations that report only 24-h means (they cannot be compared hour by hour). Label: the share of hours whose next-day forecast (12–24 h ahead) fell in the same Thai PCD colour band as the measurement; a longer bar under the number is better. Where the air is clean almost all the time the share is easily high. Where labels would overlap, the monitor with more data keeps its label; zoom in to see all. Tap a label for all its numbers in the Warnings tab.">Reference monitors</button><button type="button" data-accsrc="lc" aria-pressed="false" data-th="เซนเซอร์ OpenAQ" title="Compared with what: the same hourly next-day forecast (12–24 h ahead), against the low-cost sensors on OpenAQ (AirGradient and others) in the area shown, neighbouring countries included, over the last 7 days. Only sensors that agreed with their neighbours over the last 30 days are counted. Label: the share of hours whose next-day forecast fell in the same Thai concentration band as the sensor&#x27;s reading; dashed rounded frame and grey bar, so they are not taken for the reference monitors. Tap or hover for the next hours and the typical error. Kept apart: low-cost sensors read high in humid air, and the forecast at each sensor is corrected with that sensor&#x27;s own readings, so this number says how close the forecast is to the sensors, not to the true value. It is not mixed into the score at the reference monitors.">OpenAQ sensors</button><button type="button" data-accsrc="iq" aria-pressed="false" title="Compared with what: IQAir&#x27;s real-time US AQI as the reference, for 17 Thai cities and 10 in neighbouring countries (shown with &quot;Area shown&quot; = the whole map), against our forecast made 1 h before at our forecast point nearest the city (within 15 km). Label: the share of hours over the last 7 days in which SEA-HAF fell in the same Thai concentration band as IQAir (IQAir&#x27;s AQI turned back into µg/m³); a longer bar means closer. Until a city has 12 hours, the US AQI now (top IQAir, bottom SEA-HAF). Hover or tap for the values now, the typical difference and whether we are higher or lower than IQAir. Good to know: IQAir is not a measurement but its own blend of stations and model, so agreement says how close we are to IQAir, not which is more accurate. Each city is refreshed about every 3 h; readings older than 6 h are not shown. Data: IQAir (iqair.com)">IQAir</button></div>
         <div id="accSum" class="note" style="font-size:.68rem;margin:-2px 0 4px 22px"></div>
-        <label><input type="checkbox" id="shSt" checked> <span data-th="สถานี OpenAQ">OpenAQ stations</span></label>
         <label><input type="checkbox" id="shHot" checked> <span data-th="จุดความร้อน">Hotspots</span></label>
         <label class="dev-only"><input type="checkbox" id="shTown" checked> <span data-th="เมือง">Towns</span></label>
       </div></details>
@@ -2243,6 +2244,20 @@ $('accBox')?.addEventListener('toggle',()=>{ if($('accBox').open) renderAcc(); }
 
 // ---- total PM2.5 grid layer and station markers
 let gridLayer=null; const stationLayer=L.layerGroup().addTo(map), a4tLayer=L.layerGroup().addTo(map);
+// one map item "Measured at stations": Air4Thai (inside = measured, ring = our map) and/or the other OpenAQ stations (measured now);
+// both by default (different stations, they do not overlap). Earlier pages had two checkboxes (hsw.shA4t / hsw.shSt): carried over once
+let OBS_SRC=store.get('hsw.obsSrc');
+if(!{both:1,a4t:1,oaq:1}[OBS_SRC]){ const a=store.get('hsw.shA4t')!=='0', o=store.get('hsw.shSt')!=='0';
+  OBS_SRC=a&&!o?'a4t':o&&!a?'oaq':'both'; if(!a&&!o&&store.get('hsw.shObs')==null) store.set('hsw.shObs','0'); }
+const obsOn=k=>$('shObs').checked&&(OBS_SRC==='both'||OBS_SRC===k);
+function syncObsSrc(){ document.querySelectorAll('[data-obssrc]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.obssrc===OBS_SRC)));
+  const d={a4t:['Air4Thai: inside = measured, ring = our map','Air4Thai: ด้านใน = ค่าตรวจวัด, วงนอก = แบบจำลอง'],
+    oaq:['OpenAQ: monitors and sensors, measured now (paler = low-cost sensor)','OpenAQ: สถานีและเซนเซอร์ ค่าปัจจุบัน (สีจาง = เซนเซอร์ราคาประหยัด)']};
+  const L_=OBS_SRC==='both'?['a4t','oaq']:[OBS_SRC]; setDual($('obsDesc'),L_.map(k=>d[k][0]).join(' · '),L_.map(k=>d[k][1]).join(' · '));
+  const st=$('a4tStat'); if(st) st.hidden=!obsOn('a4t'); }
+document.querySelectorAll('[data-obssrc]').forEach(b=>b.addEventListener('click',()=>{ OBS_SRC=b.dataset.obssrc; store.set('hsw.obsSrc',OBS_SRC);
+  if(!$('shObs').checked){ $('shObs').checked=true; store.set('hsw.shObs','1'); }
+  syncObsSrc(); applyVisibility(); }));
 // the SILAM item is the same total-PM2.5 layer, drawn from the SILAM chain's data (wantSilam: which data set the page holds)
 const wantSilam=()=>!PUBLIC&&!!$('lySilam')?.checked;
 const layerMode=()=>$('lyNasa').checked?'nasa':$('lyUnc').checked?'unc':$('lyFire').checked?'fire':$('lyFine').checked?'fine':$('lyRain').checked?'rain':$('lyTemp').checked?'temp':$('lyVent').checked?'vent':'total';
@@ -2541,17 +2556,18 @@ function drawContours(){
   contourLayer.addTo(map);
 }
 function applyVisibility(){
-  for(const [id,layers] of [['shHot',[hotLayer,trajLayer]],['shTown',[townLayer]],['shSt',[stationLayer]],['shA4t',[a4tLayer]],])
+  for(const [id,layers] of [['shHot',[hotLayer,trajLayer]],['shTown',[townLayer]],])
     for(const l of layers){ if(shown(id)) map.addLayer(l); else map.removeLayer(l); }
   for(const [k,l] of [['ref',accLayer],['lc',accLcLayer],['iq',iqLayer]]){ if(accOn(k)) map.addLayer(l); else map.removeLayer(l); }
+  for(const [k,l] of [['a4t',a4tLayer],['oaq',stationLayer]]){ if(obsOn(k)) map.addLayer(l); else map.removeLayer(l); }
   drawContours(); drawWind();
 }
 document.getElementById('shProv').addEventListener('change',e=>{store.set('hsw.shProv',e.target.checked?'1':'0');styleBase();});
-for(const id of ['shContour','shSt','shA4t','shAcc','shHot','shTown','shWind','shWindArr']){
+for(const id of ['shContour','shObs','shAcc','shHot','shTown','shWind','shWindArr']){
   const v=store.get('hsw.'+id); if(v!=null) $(id).checked=v==='1';
   $(id).addEventListener('change',()=>{store.set('hsw.'+id,$(id).checked?'1':'0');applyVisibility();});
 }
-syncAccSrc();
+syncAccSrc(); syncObsSrc();
 // public pages, kept simple: the ventilation layer is admin-only (its control is .dev-only)
 if(PUBLIC&&$('lyVent').checked){ $('lyVent').checked=false; $('lyTotal').checked=true; }
 $('windBar').innerHTML=WIND_BFT.map(([,c])=>`<i style="background:${c};box-shadow:inset 0 0 0 1px rgba(0,0,0,.25)"></i>`).join('');

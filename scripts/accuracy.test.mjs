@@ -55,3 +55,15 @@ test('daily means: published 24-h mean 24 h and 48 h ahead against the measured 
   assert.equal(a.l[0], 2);                                                           // the hourly scores are unchanged
   assert.equal(m.get('b')?.y1?.[0] ?? 0, 0);                                         // too few measured hours
 });
+test('IQAir comparison: US AQI back to µg/m³; IQAir and our 1-h forecast scored at the nearest hourly monitor on the same hours', async () => {
+  const { scoreIqair, usAqiToPm } = await import('./accuracy.mjs');
+  assert.equal(usAqiToPm(50), 9); assert.equal(usAqiToPm(100), 35.4); assert.equal(usAqiToPm(0), 0); assert.ok(Math.abs(usAqiToPm(75) - 22.2) < 0.2);
+  const t = Date.parse('2026-11-22T07:00Z'), hr = new Date(t).toISOString().slice(0, 13);
+  const obs = new Map([[`m1|${hr}`, 30], [`far|${hr}`, 30]]), fc1 = new Map([[`m1|${hr}`, 28]]);
+  const mons = [{ id: 'm1', lat: 18.80, lon: 98.99 }, { id: 'far', lat: 19.5, lon: 99.5 }];
+  const iq = [{ time_utc: '2026-11-22T07:02:00Z', city_id: 'cnx', name: 'Chiang Mai', lat: '18.79', lon: '98.98', aqius: '150' },   // 55.4 µg: other band than 30
+              { time_utc: '2026-11-22T07:02:00Z', city_id: 'cnx', name: 'Chiang Mai', lat: '18.79', lon: '98.98', aqius: '150' }];  // repeat ignored
+  const [c] = scoreIqair(iq, obs, fc1, mons, t - 7 * 864e5, t);
+  assert.equal(c.station, 'm1'); assert.equal(c.iq[0], 1); assert.equal(c.iq[4], 0); assert.equal(c.sea[0], 1); assert.equal(c.sea[4], 1);
+  assert.equal(scoreIqair(iq, obs, new Map(), mons, t - 7 * 864e5, t).length, 0);   // no forecast of ours that hour: not scored
+});

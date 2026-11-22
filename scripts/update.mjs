@@ -460,8 +460,9 @@ async function main() {
       log(`Air4Thai measured weather: ${nWx} stations with a value in the last 6 h`);
     } catch (e) { log(`Air4Thai hourly unavailable: ${e.message}`); }
   }
-  // IQAir real-time AQI at Thai cities (page layer "compared with IQAir, now"): CAMS run only, a few cities each hour (free plan)
-  if (!SIL && process.env.IQAIR_API_KEY) await updateIqair(state, now, process.env.IQAIR_API_KEY, log);
+  // IQAir real-time AQI at Thai and neighbouring cities (page layer "compared with IQAir"): CAMS run only, 9 cities each hour in
+  // groups of 5 a minute apart (free plan), so it runs beside the next steps and is awaited before the outputs
+  const iqairP = !SIL && process.env.IQAIR_API_KEY ? updateIqair(state, now, process.env.IQAIR_API_KEY, log).catch(() => 0) : Promise.resolve(0);
   stations.forEach(s => {
     const o = obs.get(s.id); if (!o || now - o.t > CFG.obsMaxAgeH * HOUR || o.v < 0 || o.v > 1500) return;
     s.obs = o;
@@ -1101,6 +1102,7 @@ async function main() {
   for (const [f, obj] of rkFineFiles) { await writeJSON(f, obj); log(`map correction ${path.basename(f)}: ${obj.nx}×${obj.ny} at ${obj.step}°, ${(JSON.stringify(obj).length / 1048576).toFixed(1)} MB`); }
   const gridRaw = hours.map((t, j) => gridPts.map((_, p) => { const v = C.grid[p][i0 + j]; return v == null ? -1 : r1(v); }));
 
+  await iqairP;
   globalThis.TIMER('outputs');
   // 7. outputs
   await writeJSON(path.join(DATA, 'latest.json'), {

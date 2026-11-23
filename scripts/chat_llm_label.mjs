@@ -95,14 +95,16 @@ function readHidden(question) {   // the key typed without echo
   return new Promise(res => { const { stdin, stdout } = process; stdout.write(question); let s = '';
     if (!stdin.isTTY) { stdin.once('data', d => res(String(d).trim())); return; }
     stdin.setRawMode(true); stdin.resume(); stdin.setEncoding('utf8');
-    const on = c => { if (c === '\r' || c === '\n' || c === '\u0004') { stdin.setRawMode(false); stdin.pause(); stdin.off('data', on); stdout.write('\n'); res(s); }
-      else if (c === '\u0003') process.exit(1); else if (c === '\u007f') s = s.slice(0, -1); else s += c; };
+    // a paste arrives as one chunk (maybe with the newline, maybe wrapped in bracketed-paste marks): read it letter by letter
+    const on = d => { for (const c of String(d).replace(/\x1b\[20[01]~/g, '')) {
+      if (c === '\r' || c === '\n' || c === '\u0004') { stdin.setRawMode(false); stdin.pause(); stdin.off('data', on); stdout.write('\n'); res(s.trim()); return; }
+      if (c === '\u0003') process.exit(1); else if (c === '\u007f' || c === '\b') s = s.slice(0, -1); else if (c >= ' ') s += c; } };
     stdin.on('data', on); });
 }
 if (import.meta.url === `file://${process.argv[1]}` || process.argv[1]?.endsWith('chat_llm_label.mjs')) {
   const a = process.argv.slice(2), opt = k => { const i = a.indexOf('--' + k); return i >= 0 ? a[i + 1] : undefined; };
   (async () => {
-    const token = process.env.CHAT_EXPORT_TOKEN || await readHidden('SEA-HAF key (CHAT_EXPORT_TOKEN, not shown): ');
+    const token = (process.env.CHAT_EXPORT_TOKEN || '').trim() || await readHidden('SEA-HAF key (CHAT_EXPORT_TOKEN, not shown): ');
     if (!token) { console.log('no key; stopped'); process.exit(1); }
     await run({ token, site: opt('site'), n: +(opt('n') || 100), redo: a.includes('--redo'), dry: a.includes('--dry'), api: opt('api') || 'ollama', url: opt('url'), model: opt('model') || 'qwen2.5:7b' });
   })().catch(e => { console.log('stopped: ' + e.message + (/ECONNREFUSED|fetch failed/.test(e.message) ? ' (is Ollama / LM Studio running?)' : '')); process.exit(1); });

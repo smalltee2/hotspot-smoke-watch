@@ -24,6 +24,7 @@
 //                      ~/Library/Application Support/SEA-HAF/, writes ~/Library/LaunchAgents/th.seahaf.chat-llm.plist, logs to
 //                      ~/Library/Logs/sea-haf-chat-llm.log. A day the Mac was asleep at that time runs when it wakes.
 //                      Run it again after downloading a newer script; --uninstall-daily removes the job.
+//                      The daily job updates itself from the repository's main branch each day (--no-update: never).
 //   --save-key         (macOS) store the key in the login Keychain (asked without echo), for the daily job
 //   --test-notify      (macOS) show a test notification (the daily job notifies when the site's chat model changes kind:
 //                      linear -> small neural network "deep learning", or back)
@@ -106,10 +107,18 @@ export async function run({ site = 'https://sea-haf.pages.dev', token, n = 100, 
 }
 const STYLES = ['casual spoken Thai (มั้ย, ป่ะ, อ่ะ, จ้า)', 'polite Thai (ครับ/ค่ะ)', 'formal Thai (กรุณา, ขอทราบ)', 'very short keyword style',
   'a long question with personal context', 'Northern Thai (คำเมือง: ก่อ, เจ้า, บ่)', 'Isan (บ่, เด้อ, หลาย)', 'Thai mixed with English words', 'Thai with common typos', 'English'];
+// "other" is everyday questions with nothing of the bot's subjects in them; asked with places and times, the model drifts to
+// weather and haze, so it gets its own request, and its questions are dropped when they still name those subjects
+const OURS = /ฝุ่น|ควัน|หมอก|ไฟ|เผา|ฝน|อากาศ|อุณหภูมิ|ร้อน|หนาว|ลม|aqi|pm ?2|dust|smoke|smog|haze|fog|mist|fire|burn|rain|weather|temperature|pollut|air/i;
+export const offTopic = q => !OURS.test(q);
 export function genPrompt(y, n, style) {
-  return [{ role: 'system', content: 'You write realistic questions that people in Thailand type into "Ask SEA-HAF", a chatbot of a PM2.5 and fire-smoke forecast. '
-    + 'Reply with JSON only: {"questions": ["...", "..."]}' },
-  { role: 'user', content: `Write ${n} different questions about this topic only: ${TOPICS[y]}.\nStyle: ${style}. Use many different places in Thailand, days and times. `
+  const sys = { role: 'system', content: 'You write realistic questions that people in Thailand type into "Ask SEA-HAF", a chatbot of a PM2.5 and fire-smoke forecast. '
+    + 'Reply with JSON only: {"questions": ["...", "..."]}' };
+  if (y === 'other') return [sys, { role: 'user', content: `Write ${n} different everyday questions that people type into a chatbot but that have NOTHING to do with `
+    + 'air quality, dust, smoke, haze, fire, burning, fog, mist, rain, temperature or the weather: for example prices, gold, lottery, sport, news, politics, '
+    + 'cooking, homework, maths, shopping, phones, travel tickets, jobs, love, films, music, jokes, general health. '
+    + `Style: ${style}. No phone numbers, e-mails or links. No numbering.` }];
+  return [sys, { role: 'user', content: `Write ${n} different questions about this topic only: ${TOPICS[y]}.\nStyle: ${style}. Use many different places in Thailand, days and times. `
     + 'Each question must clearly belong to this topic and to no other. No phone numbers, e-mails or links. No numbering.' }];
 }
 /** questions written by the model for a topic, kept only when it classifies them back to that topic */
@@ -122,6 +131,7 @@ export async function generate(y, n, { api = 'ollama', url, model = 'qwen2.5:7b'
     let qs = []; try { qs = JSON.parse(String(text).match(/\{[\s\S]*\}/)?.[0] || '{}').questions || []; } catch (e) { qs = []; }
     for (const q0 of qs) { const q = String(q0).replace(/^\s*\d+[.)]\s*/, '').replace(/\s+/g, ' ').trim();
       if (q.length < 2 || q.length > 200 || /\d{7,}|@|https?:|www\./i.test(q) || out.has(q.toLowerCase())) continue;
+      if (y === 'other' && !offTopic(q)) { log(`    dropped (names a subject of the bot): ${q}`); continue; }
       const back = await askLLM(q, { api, url, model, fetchFn });   // round trip: the model must read it as the same topic
       if (back?.y === y) out.set(q.toLowerCase(), q); else log(`    dropped (${back?.y || '?'}): ${q}`);
       if (out.size >= n) break; }
@@ -172,6 +182,26 @@ async function checkModel(site = 'https://sea-haf.pages.dev', fetchFn = fetch) {
   fs.mkdirSync(path.dirname(f), { recursive: true }); fs.writeFileSync(f, JSON.stringify(c.state));
 }
 
+// ---- the daily job keeps itself up to date: the installed copy (in ~/Library/Application Support/SEA-HAF) is replaced by this
+// script from the main branch of the SEA-HAF repository when that differs and passes a syntax check, then the new version runs.
+// It runs whatever is on that branch: --no-update (given to --install-daily as well) turns it off.
+export const UPDATE_URL = 'https://raw.githubusercontent.com/smalltee2/hotspot-smoke-watch/main/scripts/chat_llm_label.mjs';
+export const looksLikeThisScript = t => typeof t === 'string' && t.length > 5000 && t.includes('export const TOPICS') && t.includes('th.seahaf.chat-llm');
+async function selfUpdate(argv, fetchFn = fetch) {
+  if (process.env.SEAHAF_UPDATED) return;
+  const fs = await import('node:fs'), cp = await import('node:child_process'), { fileURLToPath } = await import('node:url'), me = fileURLToPath(import.meta.url);
+  if (!me.includes('/Application Support/SEA-HAF/')) return;   // only the installed copy updates itself
+  let txt; try { const r = await fetchFn(UPDATE_URL, { cache: 'no-store' }); if (!r.ok) throw new Error('HTTP ' + r.status); txt = await r.text(); }
+  catch (e) { console.log('update check failed (' + e.message + '); running this version'); return; }
+  if (txt === fs.readFileSync(me, 'utf8')) { console.log('script up to date'); return; }
+  if (!looksLikeThisScript(txt)) { console.log('update skipped: the downloaded file does not look like this script'); return; }
+  const tmp = me.replace(/\.mjs$/, '') + '.new.mjs'; fs.writeFileSync(tmp, txt);   // .mjs, so the check reads it as a module
+  try { cp.execFileSync(process.execPath, ['--check', tmp], { stdio: 'ignore' }); } catch (e) { fs.rmSync(tmp, { force: true }); console.log('update skipped: the new version does not pass a syntax check'); return; }
+  fs.renameSync(tmp, me); console.log('script updated from the repository; running the new version');
+  const r = cp.spawnSync(process.execPath, [me, ...argv], { stdio: 'inherit', env: { ...process.env, SEAHAF_UPDATED: '1' } });
+  process.exit(r.status ?? 1);
+}
+
 // ---- macOS: the key in the login Keychain, and the daily job (launchd)
 const KC = ['-s', 'sea-haf-chat', '-a', 'CHAT_EXPORT_TOKEN'], LABEL = 'th.seahaf.chat-llm';
 async function keychainKey() {
@@ -209,7 +239,7 @@ async function installDaily(at, extra) {
   const home = os.homedir(), dir = path.join(home, 'Library/Application Support/SEA-HAF'), script = path.join(dir, 'chat_llm_label.mjs');
   const agent = path.join(home, 'Library/LaunchAgents', LABEL + '.plist'), log = path.join(home, 'Library/Logs/sea-haf-chat-llm.log');
   fs.mkdirSync(dir, { recursive: true }); fs.mkdirSync(path.dirname(agent), { recursive: true });
-  fs.copyFileSync(new URL(import.meta.url).pathname, script);
+  fs.copyFileSync((await import('node:url')).fileURLToPath(import.meta.url), script);
   fs.writeFileSync(agent, plist({ node: process.execPath, script, hour: +m[1], minute: +m[2], log, args: extra }));
   // an earlier copy of the job may still be loaded (or running): unload it and wait until launchd has let it go, else
   // "bootstrap" fails with "5: Input/output error"
@@ -245,6 +275,7 @@ if (import.meta.url === `file://${process.argv[1]}` || process.argv[1]?.endsWith
     if (a.includes('--uninstall-daily')) return uninstallDaily();
     if (a.includes('--install-daily')) {   // pass the model / server options on to the daily job
       const extra = []; for (const k of ['model', 'api', 'url', 'site', 'generate']) if (opt(k)) extra.push('--' + k, opt(k));
+      if (a.includes('--no-update')) extra.push('--no-update');
       return installDaily(opt('install-daily'), extra); }
     const genDry = a.includes('--dry') && a.includes('--generate');
     const token = genDry ? '' : (process.env.CHAT_EXPORT_TOKEN || '').trim() || await keychainKey() || (process.stdin.isTTY ? await readHidden('SEA-HAF key (CHAT_EXPORT_TOKEN, not shown): ') : '');
@@ -252,6 +283,7 @@ if (import.meta.url === `file://${process.argv[1]}` || process.argv[1]?.endsWith
     const llm = { api: opt('api') || 'ollama', url: opt('url'), model: opt('model') || 'qwen2.5:7b' };
     if (a.includes('--daily')) {
       console.log(`--- ${new Date().toISOString()} daily job`);
+      if (!a.includes('--no-update')) await selfUpdate(a);
       try { await checkModel(opt('site')); } catch (e) { console.log('chat model check failed: ' + e.message); }   // first: a notice even if the LLM is off
       await run({ token, site: opt('site'), n: 200, ...llm });
       await runGenerate({ token, site: opt('site'), per: +(opt('generate') || 10), ...llm });

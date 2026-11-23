@@ -33,7 +33,7 @@ export function merge(learned, sheetRows) {
   const by = new Map(learned.map(r => [r.q.toLowerCase(), { ...r, votes: { ...(r.votes || { [r.y]: r.n || 1 }) } }]));
   const before = new Set(by.keys()); let skipped = 0;
   const tally = new Map();
-  for (const r of sheetRows) { const q = cleanQ(r[1]), y = String(r[2] || '').trim(); if (String(r[3] || '').trim() === 'admin') continue;   // the admin's labels: mergeAdmin
+  for (const r of sheetRows) { const q = cleanQ(r[1]), y = String(r[2] || '').trim(); if (['admin', 'llmgen'].includes(String(r[3] || '').trim())) continue;   // the admin's labels: mergeAdmin; the LLM's questions: mergeGen
     if (!ok(q) || !INTENTS.includes(y)) { skipped++; continue; }
     const k = q.toLowerCase(); const v = tally.get(k) || { q, votes: {} }; v.votes[y] = (v.votes[y] || 0) + 1; tally.set(k, v); }
   let added = 0;
@@ -60,6 +60,18 @@ export function mergeAdmin(learned, testReal, sheetRows) {
   for (const k of test.keys()) train.delete(k);   // a test question is never trained on, whoever labelled it
   return { learned: [...train.values()], testReal: [...test.values()], toTest, toTrain };
 }
+export const MAX_GEN = 4000;
+/** questions written by the admin's local LLM (CSV rows of kind llmgen) -> training rows only (gen: 1), the newest MAX_GEN;
+ *  never a test question, and a question people labelled keeps their label */
+export function mergeGen(learned, testReal, sheetRows) {
+  const test = new Set(testReal.map(r => norm(r.q))), have = new Set(learned.map(r => norm(r.q))), out = [...learned.filter(r => !r.gen)], seen = new Set();
+  const gen = sheetRows.filter(r => String(r[3] || '').trim() === 'llmgen').reverse();
+  let added = 0;
+  for (const r of gen) { const q = cleanQ(r[1]), y = String(r[2] || '').trim(), k = norm(q);
+    if (added >= MAX_GEN || !ok(q) || !INTENTS.includes(y) || test.has(k) || have.has(k) || seen.has(k)) continue;
+    seen.add(k); out.push({ q, y, n: 1, gen: 1 }); added++; }
+  return { learned: out, added };
+}
 async function main() {
   const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..'), CHAT = path.join(ROOT, 'chat');
   const cfg = JSON.parse(fs.readFileSync(path.join(CHAT, 'config.json'), 'utf8'));
@@ -71,11 +83,11 @@ async function main() {
   if (!r.ok) { console.log(`chat learn: feedback source HTTP ${r.status}; nothing added`); return; }
   const rows = parseCSV(await r.text()).slice(1);   // header row first
   const f = path.join(CHAT, 'learned.json'), old = JSON.parse(fs.readFileSync(f, 'utf8'));
-  const m = merge(old.filter(r => !r.admin), rows);
+  const m = merge(old.filter(r => !r.admin && !r.gen), rows);   // the admin's and the LLM's rows are rebuilt from the export every run
   const tf = path.join(CHAT, 'test_real.json'), tr = fs.existsSync(tf) ? JSON.parse(fs.readFileSync(tf, 'utf8')) : [];
-  const a = mergeAdmin(m.learned, tr, rows);
+  const a = mergeAdmin(m.learned, tr, rows), g = mergeGen(a.learned, a.testReal, rows); a.learned = g.learned;
   const dump = x => JSON.stringify(x, null, 0).replace(/},{/g, '},\n{') + '\n';
   fs.writeFileSync(f, dump(a.learned)); fs.writeFileSync(tf, dump(a.testReal));
-  console.log(`chat learn: ${rows.length} rows; viewers: ${m.added} new questions, ${m.skipped} skipped (empty, unknown topic, contact details or links); admin: ${a.toTrain} to training, ${a.toTest} to the test questions; ${a.learned.length} learned, ${a.testReal.length} real test questions in all`);
+  console.log(`chat learn: ${rows.length} rows; viewers: ${m.added} new questions, ${m.skipped} skipped (empty, unknown topic, contact details or links); admin: ${a.toTrain} to training, ${a.toTest} to the test questions; local LLM: ${g.added} written questions; ${a.learned.length} learned, ${a.testReal.length} real test questions in all`);
 }
 if (import.meta.url === `file://${process.argv[1]}`) main().catch(e => { console.log(`chat learn failed: ${e.message}`); process.exitCode = 0; });

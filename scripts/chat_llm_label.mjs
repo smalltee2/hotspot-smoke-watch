@@ -15,6 +15,10 @@
 //   --n N              questions per run (default 100)
 //   --redo             ask again for questions that already have a suggestion
 //   --dry              print the suggestions only, send nothing
+//   --generate N       instead: write about N new questions per topic (varied Thai styles, Northern Thai, Isan, English), keep
+//                      only those the model then classifies back to the same topic, and send them as training rows (never test
+//                      questions; api/generated.js). With --dry they are only printed.
+//   --topics a,b       with --generate: only these topics
 // The key is read from the environment variable CHAT_EXPORT_TOKEN, or typed when asked; it is never written to a file.
 // The questions go only to the LLM on this computer and back to the SEA-HAF site.
 
@@ -91,6 +95,45 @@ export async function run({ site = 'https://sea-haf.pages.dev', token, n = 100, 
   log(`done: ${sent} suggestions sent, ${failed} without an answer${sent ? '; confirm them on the dev page (method tab, "Chat questions to label")' : ''}`);
   return { asked: todo.length, sent, failed };
 }
+const STYLES = ['casual spoken Thai (มั้ย, ป่ะ, อ่ะ, จ้า)', 'polite Thai (ครับ/ค่ะ)', 'formal Thai (กรุณา, ขอทราบ)', 'very short keyword style',
+  'a long question with personal context', 'Northern Thai (คำเมือง: ก่อ, เจ้า, บ่)', 'Isan (บ่, เด้อ, หลาย)', 'Thai mixed with English words', 'Thai with common typos', 'English'];
+export function genPrompt(y, n, style) {
+  return [{ role: 'system', content: 'You write realistic questions that people in Thailand type into "Ask SEA-HAF", a chatbot of a PM2.5 and fire-smoke forecast. '
+    + 'Reply with JSON only: {"questions": ["...", "..."]}' },
+  { role: 'user', content: `Write ${n} different questions about this topic only: ${TOPICS[y]}.\nStyle: ${style}. Use many different places in Thailand, days and times. `
+    + 'Each question must clearly belong to this topic and to no other. No phone numbers, e-mails or links. No numbering.' }];
+}
+/** questions written by the model for a topic, kept only when it classifies them back to that topic */
+export async function generate(y, n, { api = 'ollama', url, model = 'qwen2.5:7b', fetchFn = fetch, seed = 1, log = () => {} } = {}) {
+  const out = new Map(), per = Math.min(10, n);
+  for (let k = 0; out.size < n && k < Math.ceil(n / per) * 2; k++) {
+    const style = STYLES[(k + seed) % STYLES.length], messages = genPrompt(y, per, style); let text;
+    if (api === 'openai') { const r = await fetchFn((url || 'http://localhost:1234') + '/v1/chat/completions', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ model, messages, temperature: 0.9, max_tokens: 900 }) }); if (!r.ok) throw new Error(`LLM server HTTP ${r.status}`); text = (await r.json()).choices?.[0]?.message?.content; }
+    else { const r = await fetchFn((url || 'http://localhost:11434') + '/api/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ model, messages, stream: false, format: 'json', options: { temperature: 0.9, num_predict: 900, seed: seed * 100 + k } }) }); if (!r.ok) throw new Error(`LLM server HTTP ${r.status}`); text = (await r.json()).message?.content; }
+    let qs = []; try { qs = JSON.parse(String(text).match(/\{[\s\S]*\}/)?.[0] || '{}').questions || []; } catch (e) { qs = []; }
+    for (const q0 of qs) { const q = String(q0).replace(/^\s*\d+[.)]\s*/, '').replace(/\s+/g, ' ').trim();
+      if (q.length < 2 || q.length > 200 || /\d{7,}|@|https?:|www\./i.test(q) || out.has(q.toLowerCase())) continue;
+      const back = await askLLM(q, { api, url, model, fetchFn });   // round trip: the model must read it as the same topic
+      if (back?.y === y) out.set(q.toLowerCase(), q); else log(`    dropped (${back?.y || '?'}): ${q}`);
+      if (out.size >= n) break; }
+  }
+  return [...out.values()];
+}
+export async function runGenerate({ site = 'https://sea-haf.pages.dev', token, per = 30, topics = Object.keys(TOPICS), dry = false, log = console.log, fetchFn = fetch, ...llm }) {
+  let total = 0;
+  for (const y of topics) {
+    if (!(y in TOPICS)) throw new Error('unknown topic ' + y);
+    const qs = await generate(y, per, { ...llm, fetchFn, log, seed: Math.floor(Date.now() / 864e5) });
+    log(`${y}: ${qs.length} questions`); qs.slice(0, 5).forEach(q => log('  ' + q)); if (qs.length > 5) log('  …');
+    if (dry || !qs.length) { total += qs.length; continue; }
+    const r = await fetchFn(`${site}/api/generated`, { method: 'POST', headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ model: llm.model || 'qwen2.5:7b', items: qs.map(q => ({ q, y })) }) });
+    if (r.status === 401) throw new Error('the key was not accepted (it is the CHAT_EXPORT_TOKEN value)');
+    if (!r.ok) throw new Error(`SEA-HAF site HTTP ${r.status}`); total += qs.length;
+  }
+  log(`done: ${total} questions ${dry ? 'written (dry run: nothing sent)' : 'sent as training rows; the weekly training (or a run of "Chat bot training") uses them'}`);
+  return total;
+}
 function readHidden(question) {   // the key typed without echo
   return new Promise(res => { const { stdin, stdout } = process; stdout.write(question); let s = '';
     if (!stdin.isTTY) { stdin.once('data', d => res(String(d).trim())); return; }
@@ -104,8 +147,10 @@ function readHidden(question) {   // the key typed without echo
 if (import.meta.url === `file://${process.argv[1]}` || process.argv[1]?.endsWith('chat_llm_label.mjs')) {
   const a = process.argv.slice(2), opt = k => { const i = a.indexOf('--' + k); return i >= 0 ? a[i + 1] : undefined; };
   (async () => {
-    const token = (process.env.CHAT_EXPORT_TOKEN || '').trim() || await readHidden('SEA-HAF key (CHAT_EXPORT_TOKEN, not shown): ');
-    if (!token) { console.log('no key; stopped'); process.exit(1); }
-    await run({ token, site: opt('site'), n: +(opt('n') || 100), redo: a.includes('--redo'), dry: a.includes('--dry'), api: opt('api') || 'ollama', url: opt('url'), model: opt('model') || 'qwen2.5:7b' });
+    const token = a.includes('--dry') && a.includes('--generate') ? '' : (process.env.CHAT_EXPORT_TOKEN || '').trim() || await readHidden('SEA-HAF key (CHAT_EXPORT_TOKEN, not shown): ');
+    if (!token && !(a.includes('--dry') && a.includes('--generate'))) { console.log('no key; stopped'); process.exit(1); }
+    const llm = { api: opt('api') || 'ollama', url: opt('url'), model: opt('model') || 'qwen2.5:7b' };
+    if (a.includes('--generate')) await runGenerate({ token, site: opt('site'), per: +(opt('generate') || 30), topics: opt('topics') ? opt('topics').split(',') : undefined, dry: a.includes('--dry'), ...llm });
+    else await run({ token, site: opt('site'), n: +(opt('n') || 100), redo: a.includes('--redo'), dry: a.includes('--dry'), ...llm });
   })().catch(e => { console.log('stopped: ' + e.message + (/ECONNREFUSED|fetch failed/.test(e.message) ? ' (is Ollama / LM Studio running?)' : '')); process.exit(1); });
 }

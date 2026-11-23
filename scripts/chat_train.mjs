@@ -37,7 +37,8 @@ export function buildData({ seed = 3 } = {}) {
   const learned = read('learned.json', []).filter(valid).filter(notTest);
   const tpl = templateRows().filter(notTest);
   // viewers' and the admin's labels count more than a generated row (they are real questions): up to 3 copies
-  const learnedRows = learned.flatMap(r => Array(Math.min(3, 1 + (r.n || 1))).fill({ q: r.q, y: r.y }));
+  // (questions written by the admin's local LLM, gen: 1, count once)
+  const learnedRows = learned.flatMap(r => Array(r.gen ? 1 : Math.min(3, 1 + (r.n || 1))).fill({ q: r.q, y: r.y }));
   let rows = [...tpl, ...augment(paraTrain, { copies: 3, seed }), ...augment(massive, { copies: 1, seed: seed + 1 }), ...augment(learnedRows, { copies: 2, seed: seed + 2 })].filter(notTest);   // a variant may happen to equal a test question
   // balance: no topic more than twice the median topic (MASSIVE alone would make "other" and "wx" several times larger)
   const by = new Map(INTENTS.map(k => [k, []])); for (const r of rows) by.get(r.y).push(r);

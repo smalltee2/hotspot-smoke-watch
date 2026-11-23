@@ -25,6 +25,8 @@
 //                      ~/Library/Logs/sea-haf-chat-llm.log. A day the Mac was asleep at that time runs when it wakes.
 //                      Run it again after downloading a newer script; --uninstall-daily removes the job.
 //   --save-key         (macOS) store the key in the login Keychain (asked without echo), for the daily job
+//   --test-notify      (macOS) show a test notification (the daily job notifies when the site's chat model changes kind:
+//                      linear -> small neural network "deep learning", or back)
 // The key is read from the environment variable CHAT_EXPORT_TOKEN, else from the macOS login Keychain (item "sea-haf-chat",
 // saved by --save-key), else typed when asked. It is never written to a file.
 // The questions go only to the LLM on this computer and back to the SEA-HAF site.
@@ -141,6 +143,35 @@ export async function runGenerate({ site = 'https://sea-haf.pages.dev', token, p
   log(`done: ${total} questions ${dry ? 'written (dry run: nothing sent)' : 'sent as training rows; the weekly training (or a run of "Chat bot training") uses them'}`);
   return total;
 }
+// ---- the site's chat model: notify when the weekly training switches its kind (linear <-> small neural network)
+export const kindOf = m => (m && m.kind === 'mlp' ? 'mlp' : 'linear');
+/** compare the published model with the last one seen; returns {change, note} (change: null, or [from, to]) and the state to keep */
+export function modelChange(prev, m) {
+  const kind = kindOf(m), now = { kind, hidden: m?.hidden || null, trained: m?.trained || null, testAcc: m?.testAcc ?? null };
+  if (!prev?.kind || prev.kind === kind) return { change: null, state: now };
+  const pct = v => (v == null ? '?' : (v * 100).toFixed(1) + ' %');
+  const note = kind === 'mlp'
+    ? `Ask SEA-HAF now uses deep learning: a neural network with ${now.hidden} hidden units (test ${pct(now.testAcc)}). / บอตเปลี่ยนเป็น deep learning แล้ว (neural network ${now.hidden} หน่วย, ชุดทดสอบ ${pct(now.testAcc)})`
+    : `Ask SEA-HAF went back to the linear model (test ${pct(now.testAcc)}). / บอตกลับไปใช้โมเดลเชิงเส้น (ชุดทดสอบ ${pct(now.testAcc)})`;
+  return { change: [prev.kind, kind], note, state: now };
+}
+export const appleString = s => '"' + String(s).replace(/\\/g, '\\\\').replace(/"/g, '\\"') + '"';
+async function notifyMac(text) {
+  if (process.platform !== 'darwin') { console.log('notice: ' + text); return; }
+  const { execFileSync } = await import('node:child_process');
+  try { execFileSync('/usr/bin/osascript', ['-e', `display notification ${appleString(text)} with title "SEA-HAF" sound name "Glass"`], { stdio: 'ignore' }); } catch (e) { console.log('could not show a notification: ' + e.message); }
+}
+async function checkModel(site = 'https://sea-haf.pages.dev', fetchFn = fetch) {
+  const fs = await import('node:fs'), path = await import('node:path'), os = await import('node:os');
+  const f = path.join(os.homedir(), 'Library/Application Support/SEA-HAF/model-seen.json');
+  const r = await fetchFn(`${site}/chat/model.json`, { cache: 'no-store' }); if (!r.ok) { console.log(`chat model: site HTTP ${r.status}`); return; }
+  const m = await r.json(); let prev = null; try { prev = JSON.parse(fs.readFileSync(f, 'utf8')); } catch (e) {}
+  const c = modelChange(prev, m);
+  console.log(`chat model on the site: ${c.state.kind}${c.state.hidden ? ' ' + c.state.hidden : ''}, trained ${c.state.trained || '?'}, test ${c.state.testAcc ?? '?'}${c.change ? ` (changed from ${c.change[0]})` : ''}`);
+  if (c.change) await notifyMac(c.note);
+  fs.mkdirSync(path.dirname(f), { recursive: true }); fs.writeFileSync(f, JSON.stringify(c.state));
+}
+
 // ---- macOS: the key in the login Keychain, and the daily job (launchd)
 const KC = ['-s', 'sea-haf-chat', '-a', 'CHAT_EXPORT_TOKEN'], LABEL = 'th.seahaf.chat-llm';
 async function keychainKey() {
@@ -203,6 +234,7 @@ if (import.meta.url === `file://${process.argv[1]}` || process.argv[1]?.endsWith
   const a = process.argv.slice(2), opt = k => { const i = a.indexOf('--' + k); return i >= 0 && a[i + 1] && !a[i + 1].startsWith('--') ? a[i + 1] : undefined; };
   (async () => {
     if (a.includes('--save-key')) return saveKey();
+    if (a.includes('--test-notify')) return notifyMac('Test: notifications from the SEA-HAF daily job work. / ทดสอบการแจ้งเตือนจาก SEA-HAF');
     if (a.includes('--uninstall-daily')) return uninstallDaily();
     if (a.includes('--install-daily')) {   // pass the model / server options on to the daily job
       const extra = []; for (const k of ['model', 'api', 'url', 'site', 'generate']) if (opt(k)) extra.push('--' + k, opt(k));
@@ -213,6 +245,7 @@ if (import.meta.url === `file://${process.argv[1]}` || process.argv[1]?.endsWith
     const llm = { api: opt('api') || 'ollama', url: opt('url'), model: opt('model') || 'qwen2.5:7b' };
     if (a.includes('--daily')) {
       console.log(`--- ${new Date().toISOString()} daily job`);
+      try { await checkModel(opt('site')); } catch (e) { console.log('chat model check failed: ' + e.message); }   // first: a notice even if the LLM is off
       await run({ token, site: opt('site'), n: 200, ...llm });
       await runGenerate({ token, site: opt('site'), per: +(opt('generate') || 10), ...llm });
       return; }

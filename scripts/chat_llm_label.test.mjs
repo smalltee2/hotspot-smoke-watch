@@ -1,7 +1,7 @@
 // Unit tests of the local-LLM labelling helper (scripts/chat_llm_label.mjs), with a fake LLM server and site: node --test scripts/chat_llm_label.test.mjs
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { TOPICS, prompt, parseReply, askLLM, run, generate, runGenerate, plist } from './chat_llm_label.mjs';
+import { TOPICS, prompt, parseReply, askLLM, run, generate, runGenerate, plist, modelChange, appleString } from './chat_llm_label.mjs';
 import { INTENTS } from './chatml.mjs';
 
 test('the helper knows the same topics as the classifier, and its examples use them', () => {
@@ -56,4 +56,12 @@ test('the macOS daily job: launchd runs --daily at the given time with this Node
   assert.match(p, /<key>Hour<\/key><integer>7<\/integer><key>Minute<\/key><integer>41<\/integer>/);
   assert.match(p, /<string>\/opt\/homebrew\/bin\/node<\/string><string>\/Users\/x\/Library\/Application Support\/SEA-HAF\/chat_llm_label.mjs<\/string><string>--daily<\/string><string>--model<\/string>/);
   assert.ok(!/TOKEN|Bearer|EnvironmentVariables/.test(p));
+});
+test('notification when the model on the site changes kind (first look only remembers; linear -> mlp -> linear)', () => {
+  const lin = { trained: '2026-11-23', testAcc: 0.959 }, mlp = { kind: 'mlp', hidden: 32, trained: '2026-11-30', testAcc: 0.97 };
+  let c = modelChange(null, lin); assert.equal(c.change, null); assert.equal(c.state.kind, 'linear');
+  c = modelChange(c.state, lin); assert.equal(c.change, null);
+  c = modelChange(c.state, mlp); assert.deepEqual(c.change, ['linear', 'mlp']); assert.match(c.note, /deep learning.*32 hidden units.*97\.0 %/);
+  c = modelChange(c.state, lin); assert.deepEqual(c.change, ['mlp', 'linear']); assert.match(c.note, /linear/);
+  assert.equal(appleString('a "b" \\c'), '"a \\"b\\" \\\\c"');
 });

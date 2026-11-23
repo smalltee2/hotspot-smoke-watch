@@ -2770,6 +2770,11 @@ async function saveMapImage(kind,btn){
     const Gx=G.lon0+(G.nx-1)*G.step, Gy=G.lat0+(G.ny-1)*G.step, RS=regionShape(), regName_=RS?($('region').selectedOptions[0]?.textContent||'').trim():'';
     let w=G.lon0, e=Gx, so=G.lat0, n=Gy;
     if(RS){ const pb=0.2; w=Math.max(G.lon0,RS.bbox[0]-pb); e=Math.min(Gx,RS.bbox[2]+pb); so=Math.max(G.lat0,RS.bbox[1]-pb); n=Math.min(Gy,RS.bbox[3]+pb); }
+    // a tall area (Thailand, the North) would pass the image's height limit: widen it east and west, around its centre, so the map
+    // keeps its true shape and fills the width (the region in the middle, its neighbours as context) instead of being stretched
+    { const W0=1600-2*36, maxAsp=2000/W0, cs=Math.cos((so+n)/2*Math.PI/180);
+      if((n-so)/((e-w)*cs)>maxAsp){ const span=Math.min(Gx-G.lon0,(n-so)/(maxAsp*cs)), c=(w+e)/2;
+        w=c-span/2; e=c+span/2; if(w<G.lon0){ e+=G.lon0-w; w=G.lon0; } if(e>Gx){ w-=e-Gx; e=Gx; } } }
     const t=curT(), i=gIdx(t), dl=x=>new Date(x).toLocaleString(LOC(),{weekday:'long',day:'numeric',month:'long',year:'numeric',hour:'2-digit',minute:'2-digit',timeZone:'Asia/Bangkok'});
     const dd=s=>new Date(s+'T12:00:00+07:00').toLocaleDateString(LOC(),{day:'numeric',month:'short',year:'numeric',timeZone:'Asia/Bangkok'});
     let F,fx,fy,cell,title,sub,meta=null;
@@ -2797,7 +2802,7 @@ async function saveMapImage(kind,btn){
       else { title=T('PM2.5, monthly mean','PM2.5 ค่าเฉลี่ยรายเดือน'); sub=new Date(D.month+'-15T12:00:00+07:00').toLocaleDateString(LOC(),{month:'long',year:'numeric',timeZone:'Asia/Bangkok'})+cover; stamp=D.month.replace('-',''); }
       meta=T('mean of the hourly analysis (model + monitors)','ค่าเฉลี่ยของค่าวิเคราะห์รายชั่วโมง (แบบจำลอง + ค่าตรวจวัด)')+` · SEA-HAF · ${T('made','สร้างภาพ')} ${dl(Date.now())}`; }
     // layout: header (logo, title, time), map, legend and credits; size from the area (equirectangular, x shrunk by cos lat)
-    const W=1600, pad=36, mapW=W-2*pad, asp=(n-so)/((e-w)*Math.cos((so+n)/2*Math.PI/180)), mapH=Math.round(Math.min(2000,mapW*asp)), head=150, foot=130, Hh=head+mapH+foot;
+    const W=1600, pad=36, asp=(n-so)/((e-w)*Math.cos((so+n)/2*Math.PI/180)), mapH=Math.round(Math.min(2000,(W-2*pad)*asp)), mapW=Math.round(Math.min(W-2*pad,mapH/asp)), mx=Math.round((W-mapW)/2), head=150, foot=130, Hh=head+mapH+foot;
     const cv=document.createElement('canvas'); cv.width=W; cv.height=Hh; const g=cv.getContext('2d');
     g.fillStyle='#ffffff'; g.fillRect(0,0,W,Hh);
     const logo=await new Promise(res=>{ const im=new Image(); im.onload=()=>res(im); im.onerror=()=>res(null); im.src='assets/sea-haf-logo-light.svg'; });
@@ -2806,9 +2811,9 @@ async function saveMapImage(kind,btn){
     g.fillStyle='#1d2321'; g.font=font(700,40); g.fillText(title+(regName_?' · '+regName_:''),tx,66,W-tx-pad);
     g.font=font(500,24); g.fillStyle='#38423e'; g.fillText(sub,tx,104,W-tx-pad);
     g.font=font(400,18); g.fillStyle='#5d6763'; g.fillText(meta||`SEA-HAF · Southeast Asia Hybrid Air Quality Forecast · ${T('issued','ออกพยากรณ์')} ${dl(P.data.generated)}`,tx,134,W-tx-pad);
-    const X=lon=>pad+(lon-w)/(e-w)*mapW, Y=lat=>head+(n-lat)/(n-so)*mapH;
-    g.save(); g.beginPath(); g.rect(pad,head,mapW,mapH); g.clip();
-    g.fillStyle='#dfe9f1'; g.fillRect(pad,head,mapW,mapH);
+    const X=lon=>mx+(lon-w)/(e-w)*mapW, Y=lat=>head+(n-lat)/(n-so)*mapH;
+    g.save(); g.beginPath(); g.rect(mx,head,mapW,mapH); g.clip();
+    g.fillStyle='#dfe9f1'; g.fillRect(mx,head,mapW,mapH);
     const path=(geo,fill,stroke,lw)=>{ for(const f of geo.features){ const polys=f.geometry.type==='Polygon'?[f.geometry.coordinates]:f.geometry.coordinates;
       g.beginPath(); for(const poly of polys) for(const ring of poly){ ring.forEach(([lo,la],k)=>k?g.lineTo(X(lo),Y(la)):g.moveTo(X(lo),Y(la))); g.closePath(); }
       if(fill){ g.fillStyle=fill; g.fill('evenodd'); } if(stroke){ g.strokeStyle=stroke; g.lineWidth=lw; g.stroke(); } } };
@@ -2825,11 +2830,11 @@ async function saveMapImage(kind,btn){
     path(GEO_P,null,'rgba(60,70,66,.45)',0.8); path(GEO_C,null,'#3c4642',1.6);
     if(RS){ regionPath(); g.strokeStyle='#1d2321'; g.lineWidth=2.2; g.stroke(); }
     // faint mark across the map: the source and the time shown (stays on crops and re-shares)
-    { const mk=`SEA-HAF · ${kind==='h'?fmtT(t):sub.split(' (')[0]}`; g.save(); g.translate(pad+mapW/2,head+mapH/2); g.rotate(-16*Math.PI/180);
+    { const mk=`SEA-HAF · ${kind==='h'?fmtT(t):sub.split(' (')[0]}`; g.save(); g.translate(mx+mapW/2,head+mapH/2); g.rotate(-16*Math.PI/180);
       let fpx=Math.round(Math.min(mapW,mapH)/14); g.font=font(700,fpx); const tw=g.measureText(mk).width, lim=0.85*Math.min(mapW,mapH*1.6);
       if(tw>lim){ fpx=Math.max(14,Math.floor(fpx*lim/tw)); g.font=font(700,fpx); }   // the whole mark stays inside the map
       g.textAlign='center'; g.textBaseline='middle'; g.fillStyle='rgba(29,35,33,.13)'; g.fillText(mk,0,0); g.restore(); }
-    g.restore(); g.strokeStyle='#9aa5a0'; g.lineWidth=1; g.strokeRect(pad,head,mapW,mapH);
+    g.restore(); g.strokeStyle='#9aa5a0'; g.lineWidth=1; g.strokeRect(mx,head,mapW,mapH);
     // legend: the continuous Thai PM2.5 colours with the PCD band edges
     const ly=head+mapH+34, lw=Math.min(760,mapW*0.55), ticks=[0,15,25,37.5,75,150], pos=v=>{ for(let k=1;k<ticks.length;k++) if(v<=ticks[k]) return (k-1+(v-ticks[k-1])/(ticks[k]-ticks[k-1]))/(ticks.length-1); return 1; };
     for(let px=0;px<lw;px++){ const fr=px/lw, k=Math.min(ticks.length-2,Math.floor(fr*(ticks.length-1))), v=ticks[k]+(fr*(ticks.length-1)-k)*(ticks[k+1]-ticks[k]), c=rampColor(Math.max(1,v),THAI_STOPS);

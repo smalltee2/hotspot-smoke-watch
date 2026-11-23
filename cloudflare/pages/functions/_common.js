@@ -18,5 +18,6 @@ export function ensure(env) {
   return ready || (ready = env.DB.batch([
     env.DB.prepare('CREATE TABLE IF NOT EXISTS chat_feedback (id INTEGER PRIMARY KEY AUTOINCREMENT, t TEXT NOT NULL, q TEXT NOT NULL, y TEXT NOT NULL, kind TEXT NOT NULL)'),
     env.DB.prepare('CREATE TABLE IF NOT EXISTS chat_label (qk TEXT PRIMARY KEY, q TEXT NOT NULL, y TEXT NOT NULL, t TEXT NOT NULL)'),
+    env.DB.prepare('CREATE TABLE IF NOT EXISTS chat_suggest (qk TEXT PRIMARY KEY, y TEXT NOT NULL, conf REAL, model TEXT, t TEXT NOT NULL)'),
   ]).catch(e => { ready = null; throw e; }));
 }

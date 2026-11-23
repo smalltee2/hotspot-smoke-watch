@@ -1,7 +1,7 @@
 // Unit tests of the local-LLM labelling helper (scripts/chat_llm_label.mjs), with a fake LLM server and site: node --test scripts/chat_llm_label.test.mjs
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { TOPICS, prompt, parseReply, askLLM, run, generate, runGenerate } from './chat_llm_label.mjs';
+import { TOPICS, prompt, parseReply, askLLM, run, generate, runGenerate, plist } from './chat_llm_label.mjs';
 import { INTENTS } from './chatml.mjs';
 
 test('the helper knows the same topics as the classifier, and its examples use them', () => {
@@ -50,4 +50,10 @@ test('--generate: questions kept only when classified back to their topic; sent 
   assert.equal(await runGenerate({ token: 'k', per: 2, topics: ['fog'], fetchFn: fake, log: () => {} }), 2);
   assert.deepEqual(posted[0].items, [{ q: 'หมอกลงดอยอินทนนท์ไหม', y: 'fog' }, { q: 'หมอกหนาไหมเช้านี้', y: 'fog' }]);
   posted.length = 0; await runGenerate({ per: 2, topics: ['fog'], dry: true, fetchFn: fake, log: () => {} }); assert.equal(posted.length, 0);
+});
+test('the macOS daily job: launchd runs --daily at the given time with this Node and the copied script; no key in it', () => {
+  const p = plist({ node: '/opt/homebrew/bin/node', script: '/Users/x/Library/Application Support/SEA-HAF/chat_llm_label.mjs', hour: 7, minute: 41, log: '/Users/x/Library/Logs/sea-haf-chat-llm.log', args: ['--model', 'qwen2.5:7b'] });
+  assert.match(p, /<key>Hour<\/key><integer>7<\/integer><key>Minute<\/key><integer>41<\/integer>/);
+  assert.match(p, /<string>\/opt\/homebrew\/bin\/node<\/string><string>\/Users\/x\/Library\/Application Support\/SEA-HAF\/chat_llm_label.mjs<\/string><string>--daily<\/string><string>--model<\/string>/);
+  assert.ok(!/TOKEN|Bearer|EnvironmentVariables/.test(p));
 });

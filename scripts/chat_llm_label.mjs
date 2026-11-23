@@ -19,7 +19,14 @@
 //                      only those the model then classifies back to the same topic, and send them as training rows (never test
 //                      questions; api/generated.js). With --dry they are only printed.
 //   --topics a,b       with --generate: only these topics
-// The key is read from the environment variable CHAT_EXPORT_TOKEN, or typed when asked; it is never written to a file.
+//   --daily            the daily job: suggest topics for the queue, then write --generate N questions a topic (default 10)
+//   --install-daily HH:MM   (macOS) run --daily every day at HH:MM (default 07:41) with launchd: copies this script to
+//                      ~/Library/Application Support/SEA-HAF/, writes ~/Library/LaunchAgents/th.seahaf.chat-llm.plist, logs to
+//                      ~/Library/Logs/sea-haf-chat-llm.log. A day the Mac was asleep at that time runs when it wakes.
+//                      Run it again after downloading a newer script; --uninstall-daily removes the job.
+//   --save-key         (macOS) store the key in the login Keychain (asked without echo), for the daily job
+// The key is read from the environment variable CHAT_EXPORT_TOKEN, else from the macOS login Keychain (item "sea-haf-chat",
+// saved by --save-key), else typed when asked. It is never written to a file.
 // The questions go only to the LLM on this computer and back to the SEA-HAF site.
 
 export const TOPICS = {
@@ -134,6 +141,54 @@ export async function runGenerate({ site = 'https://sea-haf.pages.dev', token, p
   log(`done: ${total} questions ${dry ? 'written (dry run: nothing sent)' : 'sent as training rows; the weekly training (or a run of "Chat bot training") uses them'}`);
   return total;
 }
+// ---- macOS: the key in the login Keychain, and the daily job (launchd)
+const KC = ['-s', 'sea-haf-chat', '-a', 'CHAT_EXPORT_TOKEN'], LABEL = 'th.seahaf.chat-llm';
+async function keychainKey() {
+  if (process.platform !== 'darwin') return '';
+  const { execFileSync } = await import('node:child_process');
+  try { return execFileSync('/usr/bin/security', ['find-generic-password', ...KC, '-w'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim(); } catch (e) { return ''; }
+}
+async function saveKey() {
+  if (process.platform !== 'darwin') throw new Error('--save-key is for macOS (Keychain)');
+  const { execFileSync } = await import('node:child_process');
+  console.log('Paste the key (the CHAT_EXPORT_TOKEN value) when asked, twice; it is not shown.');
+  // "-w" last: the security tool asks for the key itself, so it never appears in a command line
+  execFileSync('/usr/bin/security', ['add-generic-password', '-U', ...KC, '-l', 'SEA-HAF chat key', '-w'], { stdio: 'inherit' });
+  console.log('saved in the login Keychain as "sea-haf-chat" (remove: security delete-generic-password -s sea-haf-chat)');
+}
+/** the launchd job description for --daily at hh:mm */
+export function plist({ node, script, hour, minute, log, args = [] }) {
+  const x = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;');
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0"><dict>
+  <key>Label</key><string>${LABEL}</string>
+  <key>ProgramArguments</key><array>${[node, script, '--daily', ...args].map(v => `<string>${x(v)}</string>`).join('')}</array>
+  <key>StartCalendarInterval</key><dict><key>Hour</key><integer>${hour}</integer><key>Minute</key><integer>${minute}</integer></dict>
+  <key>StandardOutPath</key><string>${x(log)}</string><key>StandardErrorPath</key><string>${x(log)}</string>
+  <key>ProcessType</key><string>Background</string>
+</dict></plist>
+`;
+}
+async function installDaily(at, extra) {
+  if (process.platform !== 'darwin') throw new Error('--install-daily is for macOS (launchd)');
+  const fs = await import('node:fs'), path = await import('node:path'), os = await import('node:os'), { execFileSync } = await import('node:child_process');
+  const m = /^(\d{1,2}):(\d{2})$/.exec(at || '07:41'); if (!m || +m[1] > 23 || +m[2] > 59) throw new Error('time as HH:MM, e.g. 07:41');
+  if (!(await keychainKey())) throw new Error('no key in the Keychain yet: run  node chat_llm_label.mjs --save-key  first');
+  const home = os.homedir(), dir = path.join(home, 'Library/Application Support/SEA-HAF'), script = path.join(dir, 'chat_llm_label.mjs');
+  const agent = path.join(home, 'Library/LaunchAgents', LABEL + '.plist'), log = path.join(home, 'Library/Logs/sea-haf-chat-llm.log');
+  fs.mkdirSync(dir, { recursive: true }); fs.mkdirSync(path.dirname(agent), { recursive: true });
+  fs.copyFileSync(new URL(import.meta.url).pathname, script);
+  fs.writeFileSync(agent, plist({ node: process.execPath, script, hour: +m[1], minute: +m[2], log, args: extra }));
+  const uid = process.getuid(); try { execFileSync('/bin/launchctl', ['bootout', `gui/${uid}/${LABEL}`], { stdio: 'ignore' }); } catch (e) {}
+  execFileSync('/bin/launchctl', ['bootstrap', `gui/${uid}`, agent]);
+  console.log(`daily job installed: every day at ${m[1].padStart(2, '0')}:${m[2]} (suggest topics, then write new training questions)\n  script ${script}\n  log    ${log}\n  run now: launchctl kickstart gui/${uid}/${LABEL}`);
+}
+async function uninstallDaily() {
+  const fs = await import('node:fs'), path = await import('node:path'), os = await import('node:os'), { execFileSync } = await import('node:child_process');
+  try { execFileSync('/bin/launchctl', ['bootout', `gui/${process.getuid()}/${LABEL}`], { stdio: 'ignore' }); } catch (e) {}
+  fs.rmSync(path.join(os.homedir(), 'Library/LaunchAgents', LABEL + '.plist'), { force: true }); console.log('daily job removed');
+}
 function readHidden(question) {   // the key typed without echo
   return new Promise(res => { const { stdin, stdout } = process; stdout.write(question); let s = '';
     if (!stdin.isTTY) { stdin.once('data', d => res(String(d).trim())); return; }
@@ -145,11 +200,22 @@ function readHidden(question) {   // the key typed without echo
     stdin.on('data', on); });
 }
 if (import.meta.url === `file://${process.argv[1]}` || process.argv[1]?.endsWith('chat_llm_label.mjs')) {
-  const a = process.argv.slice(2), opt = k => { const i = a.indexOf('--' + k); return i >= 0 ? a[i + 1] : undefined; };
+  const a = process.argv.slice(2), opt = k => { const i = a.indexOf('--' + k); return i >= 0 && a[i + 1] && !a[i + 1].startsWith('--') ? a[i + 1] : undefined; };
   (async () => {
-    const token = a.includes('--dry') && a.includes('--generate') ? '' : (process.env.CHAT_EXPORT_TOKEN || '').trim() || await readHidden('SEA-HAF key (CHAT_EXPORT_TOKEN, not shown): ');
-    if (!token && !(a.includes('--dry') && a.includes('--generate'))) { console.log('no key; stopped'); process.exit(1); }
+    if (a.includes('--save-key')) return saveKey();
+    if (a.includes('--uninstall-daily')) return uninstallDaily();
+    if (a.includes('--install-daily')) {   // pass the model / server options on to the daily job
+      const extra = []; for (const k of ['model', 'api', 'url', 'site', 'generate']) if (opt(k)) extra.push('--' + k, opt(k));
+      return installDaily(opt('install-daily'), extra); }
+    const genDry = a.includes('--dry') && a.includes('--generate');
+    const token = genDry ? '' : (process.env.CHAT_EXPORT_TOKEN || '').trim() || await keychainKey() || (process.stdin.isTTY ? await readHidden('SEA-HAF key (CHAT_EXPORT_TOKEN, not shown): ') : '');
+    if (!token && !genDry) { console.log('no key (set CHAT_EXPORT_TOKEN, or run --save-key once); stopped'); process.exit(1); }
     const llm = { api: opt('api') || 'ollama', url: opt('url'), model: opt('model') || 'qwen2.5:7b' };
+    if (a.includes('--daily')) {
+      console.log(`--- ${new Date().toISOString()} daily job`);
+      await run({ token, site: opt('site'), n: 200, ...llm });
+      await runGenerate({ token, site: opt('site'), per: +(opt('generate') || 10), ...llm });
+      return; }
     if (a.includes('--generate')) await runGenerate({ token, site: opt('site'), per: +(opt('generate') || 30), topics: opt('topics') ? opt('topics').split(',') : undefined, dry: a.includes('--dry'), ...llm });
     else await run({ token, site: opt('site'), n: +(opt('n') || 100), redo: a.includes('--redo'), dry: a.includes('--dry'), ...llm });
   })().catch(e => { console.log('stopped: ' + e.message + (/ECONNREFUSED|fetch failed/.test(e.message) ? ' (is Ollama / LM Studio running?)' : '')); process.exit(1); });

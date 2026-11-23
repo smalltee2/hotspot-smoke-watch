@@ -2766,9 +2766,10 @@ async function saveMapImage(kind,btn){
   const G=P.data?.grid; if(!G){ alert(T('No forecast loaded yet.','ยังไม่มีข้อมูลพยากรณ์')); return; }
   const b0=btn.textContent; btn.disabled=true; btn.textContent=T('Making the image…','กำลังสร้างภาพ…'); await new Promise(r=>setTimeout(r,30));
   try{
-    const vb=map.getBounds(), Gx=G.lon0+(G.nx-1)*G.step, Gy=G.lat0+(G.ny-1)*G.step;
-    let w=Math.max(vb.getWest(),G.lon0), e=Math.min(vb.getEast(),Gx), so=Math.max(vb.getSouth(),G.lat0), n=Math.min(vb.getNorth(),Gy);
-    if(!(e-w>0.2&&n-so>0.2)){ w=G.lon0; e=Gx; so=G.lat0; n=Gy; }
+    // the area of the "Area shown" setting: a Thai region or Thailand (its outline, the field cut to it), else the whole map
+    const Gx=G.lon0+(G.nx-1)*G.step, Gy=G.lat0+(G.ny-1)*G.step, RS=regionShape(), regName_=RS?($('region').selectedOptions[0]?.textContent||'').trim():'';
+    let w=G.lon0, e=Gx, so=G.lat0, n=Gy;
+    if(RS){ const pb=0.2; w=Math.max(G.lon0,RS.bbox[0]-pb); e=Math.min(Gx,RS.bbox[2]+pb); so=Math.max(G.lat0,RS.bbox[1]-pb); n=Math.min(Gy,RS.bbox[3]+pb); }
     const t=curT(), i=gIdx(t), dl=x=>new Date(x).toLocaleString(LOC(),{weekday:'long',day:'numeric',month:'long',year:'numeric',hour:'2-digit',minute:'2-digit',timeZone:'Asia/Bangkok'});
     const dd=s=>new Date(s+'T12:00:00+07:00').toLocaleDateString(LOC(),{day:'numeric',month:'short',year:'numeric',timeZone:'Asia/Bangkok'});
     let F,fx,fy,cell,title,sub,meta=null;
@@ -2802,7 +2803,7 @@ async function saveMapImage(kind,btn){
     const logo=await new Promise(res=>{ const im=new Image(); im.onload=()=>res(im); im.onerror=()=>res(null); im.src='assets/sea-haf-logo-light.svg'; });
     if(logo) g.drawImage(logo,pad,28,302,80);
     const font=(wt,px)=>`${wt} ${px}px "Noto Sans Thai","Sarabun",system-ui,sans-serif`, tx=logo?pad+330:pad;
-    g.fillStyle='#1d2321'; g.font=font(700,40); g.fillText(title,tx,66);
+    g.fillStyle='#1d2321'; g.font=font(700,40); g.fillText(title+(regName_?' · '+regName_:''),tx,66,W-tx-pad);
     g.font=font(500,24); g.fillStyle='#38423e'; g.fillText(sub,tx,104,W-tx-pad);
     g.font=font(400,18); g.fillStyle='#5d6763'; g.fillText(meta||`SEA-HAF · Southeast Asia Hybrid Air Quality Forecast · ${T('issued','ออกพยากรณ์')} ${dl(P.data.generated)}`,tx,134,W-tx-pad);
     const X=lon=>pad+(lon-w)/(e-w)*mapW, Y=lat=>head+(n-lat)/(n-so)*mapH;
@@ -2816,11 +2817,18 @@ async function saveMapImage(kind,btn){
     const fc=document.createElement('canvas'); fc.width=fx; fc.height=fy; const fg=fc.getContext('2d'), im=fg.createImageData(fx,fy);
     for(let y=0;y<fy;y++) for(let x=0;x<fx;x++){ const v=F[y*fx+x], c=v===v?rampColor(v,THAI_STOPS):null, o=((fy-1-y)*fx+x)*4;
       if(c){ im.data[o]=c[0]; im.data[o+1]=c[1]; im.data[o+2]=c[2]; im.data[o+3]=Math.round(Math.min(1,c[3]/EPA_ALPHA*0.82)*255); } }
-    fg.putImageData(im,0,0); g.imageSmoothingEnabled=true; g.imageSmoothingQuality='high'; g.drawImage(fc,X(w-cell/2),Y(n+cell/2),mapW+mapW/fx,mapH+mapH/fy);
+    fg.putImageData(im,0,0); g.imageSmoothingEnabled=true; g.imageSmoothingQuality='high';
+    const regionPath=()=>{ g.beginPath(); for(const pg of RS.polys) for(const ring of pg){ ring.forEach(([lo,la],k)=>k?g.lineTo(X(lo),Y(la)):g.moveTo(X(lo),Y(la))); g.closePath(); } };
+    if(RS){ g.save(); regionPath(); g.clip('evenodd'); }   // the field only inside the chosen region, as on the map
+    g.drawImage(fc,X(w-cell/2),Y(n+cell/2),mapW+mapW/fx,mapH+mapH/fy);
+    if(RS) g.restore();
     path(GEO_P,null,'rgba(60,70,66,.45)',0.8); path(GEO_C,null,'#3c4642',1.6);
+    if(RS){ regionPath(); g.strokeStyle='#1d2321'; g.lineWidth=2.2; g.stroke(); }
     // faint mark across the map: the source and the time shown (stays on crops and re-shares)
     { const mk=`SEA-HAF · ${kind==='h'?fmtT(t):sub.split(' (')[0]}`; g.save(); g.translate(pad+mapW/2,head+mapH/2); g.rotate(-16*Math.PI/180);
-      g.font=font(700,Math.round(Math.min(mapW,mapH)/14)); g.textAlign='center'; g.textBaseline='middle'; g.fillStyle='rgba(29,35,33,.13)'; g.fillText(mk,0,0); g.restore(); }
+      let fpx=Math.round(Math.min(mapW,mapH)/14); g.font=font(700,fpx); const tw=g.measureText(mk).width, lim=0.85*Math.min(mapW,mapH*1.6);
+      if(tw>lim){ fpx=Math.max(14,Math.floor(fpx*lim/tw)); g.font=font(700,fpx); }   // the whole mark stays inside the map
+      g.textAlign='center'; g.textBaseline='middle'; g.fillStyle='rgba(29,35,33,.13)'; g.fillText(mk,0,0); g.restore(); }
     g.restore(); g.strokeStyle='#9aa5a0'; g.lineWidth=1; g.strokeRect(pad,head,mapW,mapH);
     // legend: the continuous Thai PM2.5 colours with the PCD band edges
     const ly=head+mapH+34, lw=Math.min(760,mapW*0.55), ticks=[0,15,25,37.5,75,150], pos=v=>{ for(let k=1;k<ticks.length;k++) if(v<=ticks[k]) return (k-1+(v-ticks[k-1])/(ticks[k]-ticks[k-1]))/(ticks.length-1); return 1; };
@@ -2831,7 +2839,7 @@ async function saveMapImage(kind,btn){
     g.fillText(T('PM2.5 (µg/m³) · Thai PCD bands','PM2.5 (µg/m³) · ระดับตามเกณฑ์กรมควบคุมมลพิษ'),pad+lw+24,ly+18);
     g.font=font(400,16); g.fillStyle='#5d6763';
     g.fillText(T('Data: CAMS (Copernicus Atmosphere Monitoring Service), Air4Thai (PCD), OpenAQ, ECMWF, NASA FIRMS · Borders: World Bank','ข้อมูล: CAMS (Copernicus Atmosphere Monitoring Service), Air4Thai (กรมควบคุมมลพิษ), OpenAQ, ECMWF, NASA FIRMS · เส้นขอบ: World Bank'),pad,Hh-24);
-    const name=`SEA-HAF_PM25_${{h:'hourly',d:'24h',w:'weekly',m:'monthly'}[kind]}${stamp?'_'+stamp:''}.png`;
+    const name=`SEA-HAF_PM25_${{h:'hourly',d:'24h',w:'weekly',m:'monthly'}[kind]}${RS?'_'+$('region').value:''}${stamp?'_'+stamp:''}.png`;
     await new Promise(res=>cv.toBlob(bl=>{ const a=document.createElement('a'); a.href=URL.createObjectURL(bl); a.download=name; document.body.appendChild(a); a.click(); setTimeout(()=>{URL.revokeObjectURL(a.href); a.remove();},1000); res(); },'image/png'));
   }catch(err){ alert(T('Could not make the image: ','สร้างภาพไม่ได้: ')+err.message); }
   finally{ btn.disabled=false; btn.textContent=b0; }
@@ -2842,7 +2850,7 @@ async function saveMapImage(kind,btn){
       `<div class="savepop" hidden><b>${T('Save the map as an image','บันทึกแผนที่เป็นรูปภาพ')}</b>`+
       [['h',T('Hourly (the hour on the time bar)','รายชั่วโมง (เวลาบนแถบเวลา)')],['d',T('24-hour mean (yesterday, 00–24 h)','เฉลี่ย 24 ชั่วโมง (เมื่อวาน 00–24 น.)')],['w',T('Weekly mean (last week, Mon–Sun)','เฉลี่ยรายสัปดาห์ (สัปดาห์ที่แล้ว จ.–อา.)')],['m',T('Monthly mean (last month)','เฉลี่ยรายเดือน (เดือนที่แล้ว)')]]
         .map(([k,l],j)=>`<label><input type="radio" name="saveKind" value="${k}"${j?'':' checked'}> ${l}</label>`).join('')+
-      `<div class="note" style="font-size:.7rem">${T('Area: as on screen. Logo, title, time and legend are added.','พื้นที่: ตามที่เห็นบนจอ มีโลโก้ ชื่อ วันเวลา และคำอธิบายสีในภาพ')}</div><button type="button">${T('Save PNG','บันทึก PNG')}</button></div>`;
+      `<div class="note" style="font-size:.7rem">${T('Area: as set in "Area shown" (a region, Thailand or the whole map). Logo, title, time and legend are added.','พื้นที่: ตามที่ตั้งไว้ใน "พื้นที่แสดงผล" (ภาค ประเทศไทย หรือทั้งแผนที่) มีโลโก้ ชื่อ วันเวลา และคำอธิบายสีในภาพ')}</div><button type="button">${T('Save PNG','บันทึก PNG')}</button></div>`;
     L.DomEvent.disableClickPropagation(d); L.DomEvent.disableScrollPropagation(d);
     const pop=d.querySelector('.savepop');
     d.querySelector('a').addEventListener('click',ev=>{ ev.preventDefault(); pop.hidden=!pop.hidden; });

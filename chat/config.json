@@ -1,7 +1,13 @@
 {
   "feedback": {
+    "endpoint": "",
+    "exportUrl": "",
     "formUrl": "",
-    "fields": { "q": "", "y": "", "kind": "" },
+    "fields": {
+      "q": "",
+      "y": "",
+      "kind": ""
+    },
     "csvUrl": ""
   }
 }

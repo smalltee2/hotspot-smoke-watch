@@ -1639,6 +1639,8 @@ header .status>.btn{--water-fill:.72}
 .chat-in input{flex:1;min-width:0;font:inherit;padding:8px 10px;border-radius:8px;border:1px solid var(--line);background:var(--panel);color:var(--fg)}
 .chat-in button{border:0;border-radius:8px;padding:0 12px;background:#B8460C;color:#fff;cursor:pointer;font-size:1rem}
 @media (max-width:860px){.chatw{bottom:calc(84px + env(safe-area-inset-bottom));right:12px}.chat-fab{width:50px;height:50px}.chat-box{height:min(520px,calc(100vh - 250px),calc(100dvh - 250px))}}
+.chatw.kb{bottom:calc(var(--kb) + 6px);z-index:5000}.chatw.kb .chat-fab,.chatw.kb .chat-tease,.chatw.kb .chat-chips,.chatw.kb .chat-share{display:none}.chatw.kb .chat-box{height:calc(var(--vvh) - 12px)}
+@media (pointer:coarse){.chat-in input{font-size:16px}}
 @media print{.chatw{display:none}}
 /* developer page: save the map as an image (logo, title, time, legend) */
 .savectl{overflow:visible}
@@ -5547,11 +5549,21 @@ async function chatAsk(q,label,forced,kind){ q=String(q||'').trim(); if(!q) retu
 function chatToggle(open){ const w=chatEl(), box=w.querySelector('.chat-box'); CHAT.open=open??!CHAT.open; box.hidden=!CHAT.open; w.querySelector('.chat-fab').setAttribute('aria-expanded',String(CHAT.open)); w.querySelector('.chat-tease').hidden=true;
   try{ sessionStorage.setItem('hsw.chatTease','1'); }catch(e){}
   if(CHAT.open&&!CHAT.started){ CHAT.started=true; chatPush('bot',T('Hi! Ask me about PM2.5 here or in any Thai province — now, today or tomorrow — or tap a question below. I answer only from the forecast on this page.','หวัดดี! อยากรู้เรื่องฝุ่น PM2.5 ตรงนี้หรือจังหวัดไหน ตอนนี้ วันนี้ หรือพรุ่งนี้ ถามมาได้เลย หรือจะแตะคำถามข้างล่างก็ได้นะ (ตอบจากข้อมูลพยากรณ์ในระบบเท่านั้น)')); chatChips(); }
-  if(CHAT.open) setTimeout(()=>w.querySelector('.chat-in input').focus({preventScroll:true}),50); }
+  // the cursor goes to the question box with a mouse only: on a phone the keyboard would cover the suggestions at once
+  if(CHAT.open&&matchMedia('(pointer:fine)').matches) setTimeout(()=>w.querySelector('.chat-in input').focus({preventScroll:true}),50); }
+// phones: keep the chat above the on-screen keyboard. iOS does not shrink the page for the keyboard, so the visual viewport
+// gives its height; while it is open the chat sits on top of it, with only the conversation and the question box.
+// (The question box uses 16 px text on touch screens, or iOS zooms the page when it is tapped.)
+function chatFitKeyboard(){ const w=document.getElementById('chatW'), vv=window.visualViewport; if(!w||!vv) return;
+  const kb=Math.round(document.documentElement.clientHeight-vv.height-vv.offsetTop);
+  if(CHAT.open&&kb>80){ w.classList.add('kb'); w.style.setProperty('--kb',kb+'px'); w.style.setProperty('--vvh',Math.round(vv.height)+'px'); w.querySelector('.chat-log').scrollTop=1e9; }
+  else w.classList.remove('kb'); }
+if(window.visualViewport){ visualViewport.addEventListener('resize',chatFitKeyboard); visualViewport.addEventListener('scroll',chatFitKeyboard); }
 { const w=chatEl();
   // the launcher's icon moves (ring swing, typing bubble); viewers who ask for reduced motion get the still icon
   if(matchMedia('(prefers-reduced-motion: reduce)').matches) w.querySelectorAll('.chat-fab img').forEach(i=>{ i.src=i.src.replace('-animated',''); i.classList.add('still'); });
   w.querySelector('.chat-fab').onclick=()=>chatToggle(); w.querySelector('.chat-close').onclick=()=>chatToggle(false);
+  w.querySelector('.chat-in input').addEventListener('blur',()=>setTimeout(chatFitKeyboard,250));
   w.querySelector('.chat-chips').addEventListener('click',e=>{ const b=e.target.closest('button[data-q]'); if(b) chatAsk(b.dataset.q,b.textContent); });
   w.querySelector('.chat-log').addEventListener('click',e=>{ const b=e.target.closest('button'); if(!b) return;
     if(b.classList.contains('chat-wrong')){ b.remove(); chatPush('bot',T('Oops — what did you want to know?','อ้าว ขอโทษที อยากรู้เรื่องไหนเอ่ย?')+chatTopicBtns(b.dataset.q,Object.keys(CHAT_TOPIC).filter(k=>k!=='hi'),'fix')); chatEl().querySelector('.chat-log').scrollTop=1e9; return; }

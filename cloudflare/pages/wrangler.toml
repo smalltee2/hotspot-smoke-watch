@@ -12,8 +12,8 @@ ALLOWED_ORIGINS = "https://smalltee2.github.io"
 [[d1_databases]]
 binding = "DB"
 database_name = "sea-haf-db"
-database_id = "SET_BY_CLOUDFLARE_SETUP"
+database_id = "7fe6ac36-2102-4753-9d05-3dcf9b99d54e"
 
 [[kv_namespaces]]
 binding = "KV"
-id = "SET_BY_CLOUDFLARE_SETUP"
+id = "ed706bfd3a8648cbbd533c843618c21a"

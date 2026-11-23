@@ -17,3 +17,12 @@ CREATE TABLE IF NOT EXISTS chat_label (
   y  TEXT NOT NULL,
   t  TEXT NOT NULL
 );
+-- Topics suggested by the admin's local LLM (functions/api/suggest.js, scripts/chat_llm_label.mjs); shown on the labelling queue,
+-- never a label by itself. Made on first use by the Functions as well.
+CREATE TABLE IF NOT EXISTS chat_suggest (
+  qk    TEXT PRIMARY KEY,
+  y     TEXT NOT NULL,
+  conf  REAL,
+  model TEXT,
+  t     TEXT NOT NULL
+);

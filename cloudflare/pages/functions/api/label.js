@@ -1,6 +1,7 @@
 // The admin's labelling queue (dev page, "Chat questions to label"), only with "Authorization: Bearer <EXPORT_TOKEN>".
 //   GET  /api/label?n=40   questions not labelled yet (newest first), each with how often it was sent, the viewers' picks and the
-//                          classifier's guesses: [{q, n, votes: {topic: count}, guess: {topic: count}, kinds: [...]}]
+//                          classifier's guesses, and the local LLM's suggestion if any (api/suggest.js):
+//                          [{q, n, votes: {topic: count}, guess: {topic: count}, kinds: [...], llm: {y, conf, model} | null}]
 //   POST /api/label {"q": question, "y": topic | "skip"}   the admin's label (replaces an earlier one); "skip" = not a usable question
 // Labelled questions go to the weekly training (/api/export, kind admin): a fixed third of them becomes test questions
 // (chat/test_real.json, scripts/chat_learn.mjs), the rest training rows.
@@ -17,7 +18,8 @@ export async function onRequestGet({ request, env }) {
   for (const r of rows) { const k = qkey(r.q); if (done.has(k)) continue;
     const e = by.get(k) || by.set(k, { q: r.q, n: 0, votes: {}, guess: {}, kinds: new Set() }).get(k);
     e.n++; e.kinds.add(r.kind); const t = r.kind === 'pick' || r.kind === 'fix' ? e.votes : e.guess; t[r.y] = (t[r.y] || 0) + 1; }
-  const out = [...by.values()].slice(0, n).map(e => ({ ...e, kinds: [...e.kinds] }));
+  const sug = new Map(((await env.DB.prepare('SELECT qk, y, conf, model FROM chat_suggest').all()).results || []).map(r => [r.qk, { y: r.y, conf: r.conf, model: r.model }]));
+  const out = [...by.entries()].slice(0, n).map(([k, e]) => ({ ...e, kinds: [...e.kinds], llm: sug.get(k) || null }));
   return new Response(JSON.stringify({ queue: out, waiting: by.size, labelled: done.size }), { headers: { ...c.headers, 'Content-Type': 'application/json', 'Cache-Control': 'no-store' } });
 }
 export async function onRequestPost({ request, env }) {

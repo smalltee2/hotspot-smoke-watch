@@ -376,7 +376,9 @@ async function main() {
 
   // 1. station list (daily)
   const a4tRetry = state.stations && !state.stations.some(s => s.hourly || s.feed24) && now - (state.a4tTried || 0) > CFG.a4t.retryH * HOUR;
-  if (!state.stations || state.stationsCap !== CFG.maxStations || state.stationListVer !== CFG.stationListVer || now - (state.stationsAt || 0) > CFG.stationRefreshH * HOUR || a4tRetry) {
+  // SILAM mode takes the station list the CAMS run left in the state: it starts a few minutes later, so an age limit passed in
+  // between made it rebuild the list for itself (and work on other stations than the CAMS run that hour); its copy is not kept
+  if (!state.stations || (!SIL && (state.stationsCap !== CFG.maxStations || state.stationListVer !== CFG.stationListVer || now - (state.stationsAt || 0) > CFG.stationRefreshH * HOUR || a4tRetry))) {
     try {
       const all = await oaqStations();
       let fresh = all.filter(s => now - s.last < 7 * 24 * HOUR);
@@ -491,7 +493,9 @@ async function main() {
   // 3b. meteorology (fixed model, nested grids), refreshed every few hours
   let met = await readJSON(path.join(DATA, 'met.json'), null);
   const metKey = JSON.stringify(CFG.met.grids) + MET_MODEL + '|n2t2rh|elev|cc|up60';
-  if (!met || met.key !== metKey || now - met.fetched > CFG.met.refreshH * HOUR) {
+  // SILAM mode uses the met.json of the CAMS run as it is: its work folder is removed afterwards, so a refresh of its own (the
+  // 12 h passing between the two runs' starts, 23 Nov 2026: 5 min in a step limited to 8) was fetched twice, the CAMS run asking again an hour later
+  if (!met || (!SIL && (met.key !== metKey || now - met.fetched > CFG.met.refreshH * HOUR))) {
     try {
       met = await fetchMet(CFG.met.grids, { get, sleep, log, keepFrom: now - 60 * HOUR });   // 60 h back: 48-h backward trajectories (met refreshed every 12 h)
       met.key = metKey; await writeJSON(path.join(DATA, 'met.json'), met);

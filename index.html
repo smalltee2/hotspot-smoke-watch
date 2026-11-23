@@ -460,27 +460,35 @@ td.num{text-align:right;font-family:var(--font-data);font-variant-numeric:tabula
 .maplogo img.dk{display:none}
 /* SEA-HAF assistant (chat button, bottom right): answers from the page's own data */
 .chatw{position:fixed;right:16px;bottom:calc(28px + env(safe-area-inset-bottom));z-index:1300;display:flex;flex-direction:column;align-items:flex-end;gap:8px;font-size:.88rem}
-.chat-fab{width:56px;height:56px;border-radius:50%;border:0;background:#d9452b;color:#fff;display:grid;place-items:center;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,.3)}
+.chat-fab{width:56px;height:56px;border-radius:50%;border:0;padding:0;background:var(--panel);display:grid;place-items:center;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,.3)}
+.chat-fab img{width:40px;height:40px;display:block}
+.bot-dk{display:none!important}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .bot-lt{display:none!important}:root:not([data-theme="light"]) .bot-dk{display:block!important}}
+:root[data-theme="dark"] .bot-lt{display:none!important}:root[data-theme="dark"] .bot-dk{display:block!important}
+.chat-av{flex:none;display:inline-grid;place-items:center}.chat-av img{display:block}
+.chat-row{display:flex;align-items:flex-end;gap:6px;align-self:flex-start;max-width:96%}
+.chat-row .chat-m{max-width:none}
 .chat-fab:focus-visible{outline:3px solid #ffbf47;outline-offset:2px}
-.chat-tease{order:-1;display:flex;align-items:center;gap:6px;padding:9px 10px 9px 14px;border-radius:12px;background:#5b5654;color:#fff;box-shadow:0 3px 10px rgba(0,0,0,.25);cursor:pointer}
+.chat-tease{order:-1;display:flex;align-items:center;gap:6px;padding:9px 10px 9px 14px;border-radius:12px;background:#33414F;color:#fff;box-shadow:0 3px 10px rgba(0,0,0,.25);cursor:pointer}
 .chat-tease[hidden]{display:none}
 .chat-tease .chat-x{border:0;background:none;color:#fff;font-size:1.1rem;line-height:1;cursor:pointer;padding:0 2px}
 .chat-box{order:-2;width:min(360px,calc(100vw - 32px));height:min(520px,calc(100vh - 140px));display:flex;flex-direction:column;border-radius:14px;overflow:hidden;background:var(--panel);color:var(--fg);border:1px solid var(--line);box-shadow:0 8px 28px rgba(0,0,0,.3)}
 .chat-box[hidden]{display:none}
-.chat-head{position:static;display:flex;align-items:baseline;gap:8px;padding:10px 12px;background:#d9452b;color:#fff}
+.chat-head{position:static;display:flex;align-items:center;gap:8px;padding:8px 12px;background:#33414F;color:#fff}
+.chat-head .chat-av{background:#fff;border-radius:50%;padding:1px}
 .chat-head small{opacity:.9;font-size:.72rem;flex:1}
 .chat-head .chat-close{border:0;background:none;color:#fff;font-size:1.4rem;line-height:1;cursor:pointer}
 .chat-head,.chat-chips,.chat-in{flex-shrink:0}
 .chat-log{flex:1;min-height:0;overflow-y:auto;padding:10px;display:flex;flex-direction:column;gap:8px}
 .chat-m{max-width:88%;padding:8px 11px;border-radius:12px;line-height:1.45;word-wrap:break-word}
 .chat-m.bot{align-self:flex-start;background:color-mix(in srgb,var(--fg) 7%,var(--panel));border-bottom-left-radius:4px}
-.chat-m.me{align-self:flex-end;background:#d9452b;color:#fff;border-bottom-right-radius:4px}
+.chat-m.me{align-self:flex-end;background:#B8460C;color:#fff;border-bottom-right-radius:4px}
 .chat-m .cnote{display:block;margin-top:4px;font-size:.72rem;opacity:.75}
 .chat-chips{display:flex;flex-wrap:wrap;gap:6px;padding:0 10px 8px;max-height:96px;overflow-y:auto}
 .chat-chips button{font:inherit;font-size:.76rem;padding:5px 10px;border-radius:999px;border:1px solid var(--line);background:var(--panel);color:var(--fg);cursor:pointer}
 .chat-in{display:flex;gap:6px;padding:8px;border-top:1px solid var(--line)}
 .chat-in input{flex:1;min-width:0;font:inherit;padding:8px 10px;border-radius:8px;border:1px solid var(--line);background:var(--panel);color:var(--fg)}
-.chat-in button{border:0;border-radius:8px;padding:0 12px;background:#d9452b;color:#fff;cursor:pointer;font-size:1rem}
+.chat-in button{border:0;border-radius:8px;padding:0 12px;background:#B8460C;color:#fff;cursor:pointer;font-size:1rem}
 @media (max-width:860px){.chatw{bottom:calc(84px + env(safe-area-inset-bottom));right:12px}.chat-fab{width:50px;height:50px}.chat-box{height:min(520px,calc(100vh - 250px),calc(100dvh - 250px))}}
 @media print{.chatw{display:none}}
 /* developer page: save the map as an image (logo, title, time, legend) */
@@ -4262,12 +4270,15 @@ async function chatAnswer(q){ if(!P.data) return T('The data is still loading �
 // --- the widget
 function chatEl(){ let w=document.getElementById('chatW'); if(w) return w; w=document.createElement('div'); w.id='chatW'; w.className='chatw';
   w.innerHTML=`<div class="chat-tease" hidden><span></span><button type="button" class="chat-x" aria-label="${T('Close','ปิด')}">×</button></div>
-    <button type="button" class="chat-fab" aria-label="${T('Ask SEA-HAF','ถาม SEA-HAF')}" aria-expanded="false"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h12v9H8l-4 3z"/><path d="M16 9h4v9l-3-2.5h-7v-1.5"/></svg></button>
-    <section class="chat-box" hidden role="dialog" aria-label="${T('SEA-HAF assistant','ผู้ช่วย SEA-HAF')}"><div class="chat-head"><b>${T('Ask SEA-HAF','ถาม SEA-HAF')}</b><small>${T('answers from this forecast only','ตอบจากข้อมูลพยากรณ์ในระบบเท่านั้น')}</small><button type="button" class="chat-close" aria-label="${T('Close','ปิด')}">×</button></div>
+    <button type="button" class="chat-fab" aria-label="${T('Ask SEA-HAF','ถาม SEA-HAF')}" aria-expanded="false"><img class="bot-lt" src="assets/sea-haf-bot-light.svg" width="40" height="40" alt=""><img class="bot-dk" src="assets/sea-haf-bot-dark.svg" width="40" height="40" alt=""></button>
+    <section class="chat-box" hidden role="dialog" aria-label="${T('SEA-HAF assistant','ผู้ช่วย SEA-HAF')}"><div class="chat-head"><span class="chat-av"><img class="bot-lt" src="assets/sea-haf-bot-light.svg" width="28" height="28" alt=""><img class="bot-dk" src="assets/sea-haf-bot-dark.svg" width="28" height="28" alt=""></span><b>${T('Ask SEA-HAF','ถาม SEA-HAF')}</b><small>${T('answers from this forecast only','ตอบจากข้อมูลพยากรณ์ในระบบเท่านั้น')}</small><button type="button" class="chat-close" aria-label="${T('Close','ปิด')}">×</button></div>
       <div class="chat-log" aria-live="polite"></div><div class="chat-chips"></div>
       <form class="chat-in"><input type="text" maxlength="200" autocomplete="off" placeholder="${T('e.g. Chiang Mai tomorrow','เช่น เชียงใหม่ พรุ่งนี้')}" aria-label="${T('Your question','คำถาม')}"><button type="submit" aria-label="${T('Send','ส่ง')}">➤</button></form></section>`;
   document.body.appendChild(w); return w; }
-function chatPush(who,html){ const log=chatEl().querySelector('.chat-log'), m=document.createElement('div'); m.className='chat-m '+who; m.innerHTML=html; log.appendChild(m); log.scrollTop=log.scrollHeight; return m; }
+function chatPush(who,html){ const log=chatEl().querySelector('.chat-log'), m=document.createElement('div'); m.className='chat-m '+who; m.innerHTML=html;
+  if(who==='bot'){ const r=document.createElement('div'); r.className='chat-row'; r.innerHTML='<span class="chat-av"><img class="bot-lt" src="assets/sea-haf-bot-light.svg" width="26" height="26" alt=""><img class="bot-dk" src="assets/sea-haf-bot-dark.svg" width="26" height="26" alt=""></span>'; r.appendChild(m); log.appendChild(r); }   // the bot's avatar beside its answers
+  else log.appendChild(m);
+  log.scrollTop=log.scrollHeight; return m; }
 function chatChips(){ chatEl().querySelector('.chat-chips').innerHTML=CHAT_CHIPS().map(([l,q])=>`<button type="button" data-q="${esc(q)}">${esc(l)}</button>`).join(''); }
 async function chatAsk(q,label){ q=String(q||'').trim(); if(!q) return; chatPush('me',esc(label||q)); const wait=chatPush('bot','<span class="chat-dots">…</span>');
   let ans; try{ ans=await chatAnswer(q); }catch(e){ ans=T('Sorry, something went wrong while reading the data.','ขอโทษนะ อ่านข้อมูลไม่สำเร็จ ลองใหม่อีกครั้ง'); }

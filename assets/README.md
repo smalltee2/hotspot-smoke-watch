@@ -23,3 +23,7 @@ Colors: Ember #E5560F, Smoke #33414F (dark mode: #FF7A33, #C9D3DC).
 ## In this repository
 
 Only `favicon.svg` and `sea-haf-logo-light.svg` were supplied; `sea-haf-logo-dark.svg` is made from the light file with the dark-mode colours above (#33414F → #C9D3DC, #E5560F → #FF7A33). The pages use `favicon.svg` as the browser icon, an inline copy of the mark in the header (`.brand .mark`, same paths and colours) and the full logo at the top of the About tab. The workflow publishes this folder as `/assets/`. The PNG / ICO files listed above are not here yet.
+
+## Chatbot icon (concept B, AQI Ring)
+
+`sea-haf-bot-light.svg` (supplied) and `sea-haf-bot-dark.svg` (made from it with the dark-mode colours above: #33414F → #C9D3DC, #E5560F → #FF7A33, the white half of the S → #111820): the "S" of the logo in a circle, ringed clockwise from the top by good (green #3BB273), moderate (yellow #F2C230), unhealthy for sensitive groups (orange) and unhealthy (red #D64545). Used for the "Ask SEA-HAF" launcher (about 36 px in a 56 px button) and as the bot's avatar in the chat; light or dark file with the theme.

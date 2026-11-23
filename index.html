@@ -494,6 +494,10 @@ td.num{text-align:right;font-family:var(--font-data);font-variant-numeric:tabula
 .chat-pick button{font:inherit;font-size:.76rem;padding:4px 9px;border-radius:999px;border:1px solid #33414F;background:var(--panel);color:var(--fg);cursor:pointer}
 .chat-pick button:disabled{opacity:.5;cursor:default}
 .chat-wrong{display:block;margin-top:5px;padding:0;border:0;background:none;color:var(--muted);font:inherit;font-size:.72rem;text-decoration:underline;cursor:pointer}
+.chat-lab{flex-shrink:0;margin:0 10px 6px;padding:5px 8px;border-radius:8px;font-size:.72rem;background:color-mix(in srgb,var(--accent,#e5560f) 14%,transparent);color:var(--text,inherit)}
+.chatlabel{margin:0 0 18px;padding:12px;border:1px solid var(--line,#ccc);border-radius:10px}.chatlabel .cl-in{display:flex;gap:6px;flex-wrap:wrap}.chatlabel input{flex:1;min-width:160px}
+.chatlabel .cl-q{padding:8px 0;border-top:1px solid var(--line,#ddd)}.chatlabel .cl-q b{display:block;margin-bottom:3px}.chatlabel .cl-q small{color:var(--muted)}.chatlabel .cl-b{display:flex;flex-wrap:wrap;gap:4px;margin-top:5px}
+.chatlabel .cl-b button{font-size:.72rem;padding:3px 7px;border-radius:6px;border:1px solid var(--line,#bbb);background:transparent;color:inherit;cursor:pointer}.chatlabel .cl-b button.g{border-color:var(--accent,#e5560f)}
 .chat-share{display:flex;gap:6px;align-items:center;flex-shrink:0;padding:0 10px 6px;font-size:.7rem;color:var(--muted)}
 .chat-share[hidden]{display:none}
 .chat-in input{flex:1;min-width:0;font:inherit;padding:8px 10px;border-radius:8px;border:1px solid var(--line);background:var(--panel);color:var(--fg)}
@@ -4300,7 +4304,12 @@ function chatMLfeat(text,dim){ const s=' '+String(text).toLowerCase().replace(/[
   for(let n=2;n<=4;n++) for(let i=0;i+n<=s.length;i++){ let h=2166136261^n; const g=s.slice(i,i+n); for(let k=0;k<g.length;k++){ h^=g.charCodeAt(k); h=Math.imul(h,16777619); } ids.add((h>>>0)%dim); }
   return [...ids].sort((a,b)=>a-b); }
 function chatMLpredict(text){ const M=CHATML.model, w=CHATML.w; if(!M||!w) return null; const f=chatMLfeat(text,M.dim), K=M.intents.length, norm=1/Math.sqrt(Math.max(1,f.length)), z=[];
-  for(let k=0;k<K;k++){ let a=M.b[k]; const sc=M.scale[k], off=k*M.dim; for(const j of f) a+=w[off+j]*sc*norm; z.push(a); }
+  if(M.kind==='mlp'){ const H=M.hidden, h=new Float64Array(H);   // the small neural network: one hidden layer of ReLU units
+    for(let u=0;u<H;u++) h[u]=M.b1[u];
+    for(const j of f){ const off=j*H; for(let u=0;u<H;u++) h[u]+=w[off+u]*M.scale[u]*norm; }
+    for(let u=0;u<H;u++) if(h[u]<0) h[u]=0;
+    for(let k=0;k<K;k++){ let a=M.b[k]; for(let u=0;u<H;u++) a+=M.w2[k*H+u]*h[u]; z.push(a); } }
+  else for(let k=0;k<K;k++){ let a=M.b[k]; const sc=M.scale[k], off=k*M.dim; for(const j of f) a+=w[off+j]*sc*norm; z.push(a); }
   const m=Math.max(...z); let su=0; const p=z.map(v=>{ const e=Math.exp(v-m); su+=e; return e; }); return p.map(v=>v/su); }
 function chatMLload(){ return CHATML.loading||(CHATML.loading=(async()=>{ try{
   const [m,c]=await Promise.all(['chat/model.json','chat/config.json'].map(u=>fetch(u,{cache:'no-cache'}).then(r=>r.ok?r.json():null).catch(()=>null)));
@@ -4316,7 +4325,11 @@ const CHAT_TOPIC={pm:['PM2.5 level','ค่าฝุ่น PM2.5'],adv:['Health 
 function chatShareOK(){ try{ return localStorage.getItem('hsw.chatShare')!=='0'; }catch(e){ return true; } }
 function chatShareUI(){ const el=document.querySelector('#chatW .chat-share'); if(!el) return; const f=CHATML.cfg?.feedback, on=!!(f?.endpoint||f?.formUrl); el.hidden=!on;
   const cb=el.querySelector('input'); cb.checked=chatShareOK(); cb.onchange=()=>{ try{ localStorage.setItem('hsw.chatShare',cb.checked?'1':'0'); }catch(e){} }; }
-function chatFeedback(q,y,kind){ const c=CHATML.cfg?.feedback; if(!(c?.endpoint||c?.formUrl&&c.fields?.q)||!chatShareOK()||CHATML.sent>=20) return;
+// collecting mode (a link with ?chatlab=1, e.g. for a class trying the bot): every typed question is sent (kind "collect"), for the
+// admin to label on the dev page; a fixed third of the labelled ones becomes real test questions (scripts/chat_learn.mjs)
+const CHATLAB=/[?&#]chatlab=1\b/.test(location.search+location.hash);
+function chatFeedback(q,y,kind){ const c=CHATML.cfg?.feedback; if(!(c?.endpoint||c?.formUrl&&c.fields?.q)||!chatShareOK()||CHATML.sent>=(CHATLAB?300:20)) return;
+  if(!c.endpoint&&(kind==='unsure'||kind==='collect')) return;   // the Google Form takes labels only
   const clean=String(q).replace(/[\u0000-\u001f]/g,' ').trim().slice(0,200); if(!clean||/\d{7,}|@|https?:|www\./i.test(clean)) return;   // never phone numbers, e-mails or links
   CHATML.sent++;
   // the Cloudflare Pages function /api/feedback (cloudflare/pages/functions) when set: JSON as text/plain (no CORS preflight); else a Google Form
@@ -4327,6 +4340,7 @@ async function chatAnswer(q,forced){ if(!P.data) return {html:T('The data is sti
   const a=chatParse(q), rule=a.topic||((a.prov||a.day!=null||a.part)?'pm':null); let t=forced||null;
   if(!t){ const p=chatMLpredict(q);
     if(p){ const ord=CHATML.model.intents.map((k,i)=>[p[i],k]).sort((x,y)=>y[0]-x[0]);
+      if(!forced) CHAT.guess={p:ord[0][0],k:ord[0][1]};                       // for the admin's queue (chatAsk sends it when unsure)
       if(ord[0][0]>=0.5) t=ord[0][1];                                         // the classifier is sure enough
       else if(rule) t=rule;                                                   // else the keyword rules
       else if(ord[0][0]>=0.2) return {ask:ord.slice(0,3).map(o=>o[1])};       // else ask which topic was meant
@@ -4351,7 +4365,7 @@ function chatEl(){ let w=document.getElementById('chatW'); if(w) return w; w=doc
   w.innerHTML=`<div class="chat-tease" hidden><span></span><button type="button" class="chat-x" aria-label="${T('Close','ปิด')}">×</button></div>
     <button type="button" class="chat-fab" aria-label="${T('Ask SEA-HAF','ถาม SEA-HAF')}" aria-expanded="false"><img class="bot-lt" src="assets/sea-haf-bot-animated-light.svg" width="50" height="50" alt=""><img class="bot-dk" src="assets/sea-haf-bot-animated-dark.svg" width="50" height="50" alt=""></button>
     <section class="chat-box" hidden role="dialog" aria-label="${T('SEA-HAF assistant','ผู้ช่วย SEA-HAF')}"><div class="chat-head"><span class="chat-av"><img class="bot-lt" src="assets/sea-haf-bot-light.svg" width="28" height="28" alt=""><img class="bot-dk" src="assets/sea-haf-bot-dark.svg" width="28" height="28" alt=""></span><b>${T('Ask SEA-HAF','ถาม SEA-HAF')}</b><small>${T('answers from this forecast only','ตอบจากข้อมูลพยากรณ์ในระบบเท่านั้น')}</small><button type="button" class="chat-close" aria-label="${T('Close','ปิด')}">×</button></div>
-      <div class="chat-log" aria-live="polite"></div><div class="chat-chips"></div><label class="chat-share" hidden><input type="checkbox" checked> ${T('Send the questions I correct, anonymously, to help the bot learn','ส่งคำถามที่ช่วยแก้ ให้บอตเรียนรู้ (ไม่ระบุตัวตน)')}</label>
+      <div class="chat-log" aria-live="polite"></div><div class="chat-chips"></div><label class="chat-share" hidden><input type="checkbox" checked> ${T('Send questions the bot was unsure of, and the ones I correct, anonymously, to help it learn','ส่งคำถามที่บอตไม่แน่ใจ และที่ช่วยแก้ ให้บอตเรียนรู้ (ไม่ระบุตัวตน)')}</label>${CHATLAB?`<div class="chat-lab">${T('Collecting mode: every question you type is sent, anonymously, to improve the bot.','โหมดเก็บคำถาม: ทุกคำถามที่พิมพ์จะถูกส่งไปช่วยพัฒนาบอต (ไม่ระบุตัวตน)')}</div>`:''}
       <form class="chat-in"><input type="text" maxlength="200" autocomplete="off" placeholder="${T('e.g. Chiang Mai tomorrow','เช่น เชียงใหม่ พรุ่งนี้')}" aria-label="${T('Your question','คำถาม')}"><button type="submit" aria-label="${T('Send','ส่ง')}">➤</button></form></section>`;
   document.body.appendChild(w); return w; }
 function chatPush(who,html){ const log=chatEl().querySelector('.chat-log'), m=document.createElement('div'); m.className='chat-m '+who; m.innerHTML=html;
@@ -4362,10 +4376,12 @@ function chatChips(){ chatEl().querySelector('.chat-chips').innerHTML=CHAT_CHIPS
 const chatTopicBtns=(q,keys,kind)=>'<div class="chat-pick">'+keys.map(k=>`<button type="button" data-topic="${k}" data-kind="${kind}" data-q="${esc(q)}">${esc(T(...CHAT_TOPIC[k]))}</button>`).join('')+'</div>';
 async function chatAsk(q,label,forced,kind){ q=String(q||'').trim(); if(!q) return; chatPush('me',esc(label||q)); const wait=chatPush('bot','<span class="chat-dots">…</span>');
   await chatMLload();
-  let r; try{ r=await chatAnswer(q,forced); }catch(e){ r={html:T('Sorry, something went wrong while reading the data.','อุ๊ย ขอโทษนะ อ่านข้อมูลไม่สำเร็จ ลองถามอีกทีได้ไหม')}; }
+  CHAT.guess=null; let r; try{ r=await chatAnswer(q,forced); }catch(e){ r={html:T('Sorry, something went wrong while reading the data.','อุ๊ย ขอโทษนะ อ่านข้อมูลไม่สำเร็จ ลองถามอีกทีได้ไหม')}; }
   if(r.ask){ const keys=[...new Set([...r.ask,'other'])]; wait.innerHTML=T('Not quite sure — which do you mean?','ยังไม่แน่ใจเลย หมายถึงเรื่องไหนเอ่ย?')+chatTopicBtns(q,keys,'pick'); }
   else wait.innerHTML=r.html+(r.topic&&!forced?`<button type="button" class="chat-wrong" data-q="${esc(q)}">${T('Not what I asked?','ตอบไม่ตรง?')}</button>`:'');
   if(forced&&kind) chatFeedback(q,forced,kind);   // the viewer told us the topic: a labelled question for the next training
+  else if(!forced&&!label&&CHAT.guess){   // a typed question (not a suggestion chip): in collecting mode always, else when the classifier was unsure
+    if(CHATLAB) chatFeedback(q,CHAT.guess.k,'collect'); else if(CHAT.guess.p<0.6) chatFeedback(q,CHAT.guess.k,'unsure'); }
   chatChips(); chatEl().querySelector('.chat-log').scrollTop=1e9; }
 function chatToggle(open){ const w=chatEl(), box=w.querySelector('.chat-box'); CHAT.open=open??!CHAT.open; box.hidden=!CHAT.open; w.querySelector('.chat-fab').setAttribute('aria-expanded',String(CHAT.open)); w.querySelector('.chat-tease').hidden=true;
   try{ sessionStorage.setItem('hsw.chatTease','1'); }catch(e){}
@@ -4385,6 +4401,31 @@ function chatToggle(open){ const w=chatEl(), box=w.querySelector('.chat-box'); C
   document.addEventListener('keydown',e=>{ if(e.key==='Escape'&&CHAT.open) chatToggle(false); });
   let seen=null; try{ seen=sessionStorage.getItem('hsw.chatTease'); }catch(e){}
   if(!seen) setTimeout(()=>{ const t=w.querySelector('.chat-tease'); t.querySelector('span').textContent=T('Ask SEA-HAF 💬','อยากรู้เรื่องฝุ่น ถามได้นะ 💬'); if(!CHAT.open) t.hidden=false; },2500); }
+// --- dev page: the admin's labelling queue of chat questions (questions the classifier was unsure of, questions from the collecting
+// mode; cloudflare/pages/functions/api/label.js). The key is the EXPORT_TOKEN Pages secret (the CHAT_EXPORT_TOKEN value), typed here
+// and kept in this tab only (sessionStorage), never in the page or the repository.
+if(!PUBLIC){ const pane=document.getElementById('pane-method');
+  if(pane){ const box=document.createElement('div'); box.className='chatlabel';
+    box.innerHTML=`<h3>${T('Chat questions to label','คำถามแชทที่รอติดหัวข้อ')}</h3><p class="note">${T('Questions the bot was unsure of, and questions from the collecting mode (link with ?chatlab=1). Pick the topic each one is about, or Skip. The weekly training uses them: a fixed third become real test questions (chat/test_real.json), the rest training rows.','คำถามที่บอตไม่แน่ใจ และคำถามจากโหมดเก็บคำถาม (ลิงก์ที่มี ?chatlab=1) เลือกหัวข้อที่ถูกของแต่ละข้อ หรือกด ข้าม การฝึกรายสัปดาห์จะนำไปใช้: หนึ่งในสามเป็นชุดทดสอบจริง (chat/test_real.json) ที่เหลือเป็นข้อมูลฝึก')}</p>
+      <div class="cl-in"><input type="password" autocomplete="off" aria-label="EXPORT_TOKEN" placeholder="${T('key (EXPORT_TOKEN)','รหัส (EXPORT_TOKEN)')}"><button class="btn" type="button">${T('Load','โหลด')}</button></div><div class="cl-st note"></div><div class="cl-list"></div>`;
+    pane.prepend(box);
+    const inp=box.querySelector('input'), st=box.querySelector('.cl-st'), list=box.querySelector('.cl-list');
+    try{ inp.value=sessionStorage.getItem('hsw.labelTok')||''; }catch(e){}
+    const api=async()=>{ await chatMLload(); const e=CHATML.cfg?.feedback?.endpoint; return e?e.replace(/\/api\/feedback\/?$/,'/api/label'):null; };
+    const hdr=()=>({Authorization:'Bearer '+inp.value.trim()});
+    const fmt=o=>Object.entries(o).sort((a,b)=>b[1]-a[1]).map(([k,n])=>`${esc(T(...CHAT_TOPIC[k]||[k,k]))} ×${n}`).join(', ');
+    async function load(){ const u=await api(); if(!u){ st.textContent=T('No feedback endpoint in chat/config.json.','ยังไม่ได้ตั้ง endpoint ใน chat/config.json'); return; }
+      try{ sessionStorage.setItem('hsw.labelTok',inp.value.trim()); }catch(e){}
+      st.textContent='…'; let j; try{ const r=await fetch(u+'?n=60',{headers:hdr(),cache:'no-store'}); if(r.status===401){ st.textContent=T('Wrong key.','รหัสไม่ถูกต้อง'); return; } j=await r.json(); }catch(e){ st.textContent=T('Could not reach the site.','ติดต่อเว็บไม่ได้'); return; }
+      st.textContent=T(`${j.waiting} waiting, ${j.labelled} labelled so far`,`รอติดหัวข้อ ${j.waiting} ข้อ ติดแล้ว ${j.labelled} ข้อ`);
+      list.innerHTML=j.queue.map((x,i)=>{ const g=Object.entries(x.guess).sort((a,b)=>b[1]-a[1])[0]?.[0], v=Object.entries(x.votes).sort((a,b)=>b[1]-a[1])[0]?.[0];
+        return `<div class="cl-q" data-i="${i}"><b>${esc(x.q)}</b><small>${T('sent','ส่งมา')} ${x.n}× · ${esc(x.kinds.join(', '))}${Object.keys(x.votes).length?' · '+T('viewers: ','ผู้ใช้เลือก: ')+fmt(x.votes):''}${Object.keys(x.guess).length?' · '+T('bot guessed: ','บอตเดา: ')+fmt(x.guess):''}</small>
+          <div class="cl-b">${Object.keys(CHAT_TOPIC).map(k=>`<button type="button" data-y="${k}" class="${k===(v||g)?'g':''}">${esc(T(...CHAT_TOPIC[k]))}</button>`).join('')}<button type="button" data-y="skip">${T('Skip','ข้าม')}</button></div></div>`; }).join('');
+      list.onclick=async e=>{ const b=e.target.closest('button[data-y]'); if(!b) return; const row=b.closest('.cl-q'), x=j.queue[+row.dataset.i];
+        row.querySelectorAll('button').forEach(z=>z.disabled=true);
+        try{ const r=await fetch(u,{method:'POST',headers:{...hdr(),'Content-Type':'application/json'},body:JSON.stringify({q:x.q,y:b.dataset.y})}); if(!r.ok) throw 0; row.remove(); j.waiting--; j.labelled++; st.textContent=T(`${j.waiting} waiting, ${j.labelled} labelled so far`,`รอติดหัวข้อ ${j.waiting} ข้อ ติดแล้ว ${j.labelled} ข้อ`); }
+        catch(err){ row.querySelectorAll('button').forEach(z=>z.disabled=false); st.textContent=T('Not saved, try again.','บันทึกไม่สำเร็จ ลองอีกครั้ง'); } }; }
+    box.querySelector('button').onclick=load; inp.addEventListener('keydown',e=>{ if(e.key==='Enter') load(); }); } }
 </script>
 </body>
 </html>

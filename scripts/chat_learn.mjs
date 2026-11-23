@@ -1,13 +1,19 @@
-// Ask SEA-HAF: add the questions viewers labelled to the training rows (chat/learned.json).
+// Ask SEA-HAF: add the labelled questions to the training rows (chat/learned.json) and the real test questions (chat/test_real.json).
 // The page sends {question, topic, kind} to the Cloudflare Pages site (cloudflare/pages/functions/api/feedback.js → D1; chat/config.json feedback.endpoint)
 // or a Google Form when a viewer picks the topic they meant ("which do you mean?" / "not what I asked?"). Its CSV (the site's
 // /api/export with the CHAT_EXPORT_TOKEN secret, feedback.exportUrl; or the form's published sheet, feedback.csvUrl) is read here:
 // rows are cleaned (no phone numbers, e-mails or links; 2–200 characters; known topics only), the same question is merged and its
 // topic set by majority (at least 2/3 of its labels), and at most MAX_NEW new questions are added per run. scripts/chat_train.mjs
 // then retrains, and keeps the old model if the accuracy on the fixed test questions would drop.
+// The admin's labels (kind "admin": questions the classifier was unsure of, and questions asked in the collecting mode, labelled
+// on the dev page) are trusted as they are: a fixed third of them (by a hash of the question) becomes test questions
+// (chat/test_real.json, never trained on, also not through viewers' labels), the rest training rows with full weight (n = 3).
 import fs from 'node:fs';
 import path from 'node:path';
 import { INTENTS } from './chatml.mjs';
+import { share, norm } from './chat_train.mjs';
+
+export const TEST_SHARE = 1 / 3;
 
 export const MAX_NEW = 200;
 /** CSV text -> rows of fields (quotes, doubled quotes and line breaks inside quotes) */
@@ -27,7 +33,8 @@ export function merge(learned, sheetRows) {
   const by = new Map(learned.map(r => [r.q.toLowerCase(), { ...r, votes: { ...(r.votes || { [r.y]: r.n || 1 }) } }]));
   const before = new Set(by.keys()); let skipped = 0;
   const tally = new Map();
-  for (const r of sheetRows) { const q = cleanQ(r[1]), y = String(r[2] || '').trim(); if (!ok(q) || !INTENTS.includes(y)) { skipped++; continue; }
+  for (const r of sheetRows) { const q = cleanQ(r[1]), y = String(r[2] || '').trim(); if (String(r[3] || '').trim() === 'admin') continue;   // the admin's labels: mergeAdmin
+    if (!ok(q) || !INTENTS.includes(y)) { skipped++; continue; }
     const k = q.toLowerCase(); const v = tally.get(k) || { q, votes: {} }; v.votes[y] = (v.votes[y] || 0) + 1; tally.set(k, v); }
   let added = 0;
   for (const [k, v] of tally) {
@@ -41,6 +48,18 @@ export function merge(learned, sheetRows) {
   }
   return { learned: [...by.values()].map(({ q, y, n, votes }) => ({ q, y, n, votes })), added, skipped };
 }
+/** the admin's labels (CSV rows of kind admin) -> {learned, testReal, toTest, toTrain}: a fixed third to the test questions,
+ *  the rest into the training rows (replacing what viewers voted); viewers' labels of a test question are removed */
+export function mergeAdmin(learned, testReal, sheetRows) {
+  const test = new Map(testReal.map(r => [norm(r.q), r])), train = new Map(learned.map(r => [norm(r.q), r]));
+  let toTest = 0, toTrain = 0;
+  for (const r of sheetRows) { if (String(r[3] || '').trim() !== 'admin') continue;
+    const q = cleanQ(r[1]), y = String(r[2] || '').trim(), k = norm(q); if (!ok(q) || !INTENTS.includes(y)) continue;
+    if (share(q) < TEST_SHARE) { if (!test.has(k)) toTest++; test.set(k, { q, y }); train.delete(k); }
+    else { if (!train.has(k) || train.get(k).admin !== y) toTrain++; train.set(k, { q, y, n: 3, admin: y }); } }
+  for (const k of test.keys()) train.delete(k);   // a test question is never trained on, whoever labelled it
+  return { learned: [...train.values()], testReal: [...test.values()], toTest, toTrain };
+}
 async function main() {
   const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..'), CHAT = path.join(ROOT, 'chat');
   const cfg = JSON.parse(fs.readFileSync(path.join(CHAT, 'config.json'), 'utf8'));
@@ -52,8 +71,11 @@ async function main() {
   if (!r.ok) { console.log(`chat learn: feedback source HTTP ${r.status}; nothing added`); return; }
   const rows = parseCSV(await r.text()).slice(1);   // header row first
   const f = path.join(CHAT, 'learned.json'), old = JSON.parse(fs.readFileSync(f, 'utf8'));
-  const m = merge(old, rows);
-  fs.writeFileSync(f, JSON.stringify(m.learned, null, 0).replace(/},{/g, '},\n{') + '\n');
-  console.log(`chat learn: ${rows.length} sheet rows, ${m.added} new questions, ${m.skipped} skipped (empty, unknown topic, contact details or links), ${m.learned.length} learned in all`);
+  const m = merge(old.filter(r => !r.admin), rows);
+  const tf = path.join(CHAT, 'test_real.json'), tr = fs.existsSync(tf) ? JSON.parse(fs.readFileSync(tf, 'utf8')) : [];
+  const a = mergeAdmin(m.learned, tr, rows);
+  const dump = x => JSON.stringify(x, null, 0).replace(/},{/g, '},\n{') + '\n';
+  fs.writeFileSync(f, dump(a.learned)); fs.writeFileSync(tf, dump(a.testReal));
+  console.log(`chat learn: ${rows.length} rows; viewers: ${m.added} new questions, ${m.skipped} skipped (empty, unknown topic, contact details or links); admin: ${a.toTrain} to training, ${a.toTest} to the test questions; ${a.learned.length} learned, ${a.testReal.length} real test questions in all`);
 }
 if (import.meta.url === `file://${process.argv[1]}`) main().catch(e => { console.log(`chat learn failed: ${e.message}`); process.exitCode = 0; });

@@ -1,7 +1,7 @@
 {
   "feedback": {
-    "endpoint": "",
-    "exportUrl": "",
+    "endpoint": "https://sea-haf.pages.dev/api/feedback",
+    "exportUrl": "https://sea-haf.pages.dev/api/export",
     "formUrl": "",
     "fields": {
       "q": "",

@@ -5381,12 +5381,19 @@ function chatAnsAdvice(pl,off){ const nm=chatPlaceName(pl); let c,lab;
   else { const st=chatStats(pl,chatDayHours(off)); c=st?.mean; lab=chatDayName(off); }
   if(c==null) return T('No value there for that time yet.','ช่วงนั้นยังไม่มีค่าของที่นั่นเลยนะ');
   const b=chatBand(c); return T(`${lab[0].toUpperCase()+lab.slice(1)} at <b>${nm}</b> PM2.5 is about ${chatN(c)} µg/m³ (“${b.en}” ${b.emo}).`,`${lab}ที่<b>${nm}</b> ฝุ่นอยู่ประมาณ ${chatN(c)} µg/m³ (“${b.th}” ${b.emo})`)+'<br>'+chatAdvice(c)+'<br>'+chatAdvNote(); }
-function chatAnsRank(off){ const hrs=off==null?[chatNowH()]:chatDayHours(off).filter((_,k)=>k%2===0); if(!hrs.length) return T('The forecast does not reach that day yet.','พยากรณ์ยังไปไม่ถึงวันนั้นเลยนะ');
-  const rows=chatThai().map(x=>({x,s:chatStats({x},hrs)})).filter(r=>r.s).sort((a,b)=>b.s.mean-a.s.mean); if(!rows.length) return T('No values yet.','ตอนนี้ยังไม่มีตัวเลขเลยนะ');
+// reg: a key of REGION_PROV (only that region's provinces), or none for the whole country
+function chatAnsRank(off,reg){ const hrs=off==null?[chatNowH()]:chatDayHours(off).filter((_,k)=>k%2===0); if(!hrs.length) return T('The forecast does not reach that day yet.','พยากรณ์ยังไปไม่ถึงวันนั้นเลยนะ');
+  const inReg=x=>!reg||(REGION_PROV[reg]||[]).includes(x.p.n);
+  const rows=chatThai().filter(inReg).map(x=>({x,s:chatStats({x},hrs)})).filter(r=>r.s).sort((a,b)=>b.s.mean-a.s.mean); if(!rows.length) return T('No values yet.','ตอนนี้ยังไม่มีตัวเลขเลยนะ');
   const lab=off==null?T('right now','ตอนนี้'):chatDayName(off), li=r=>`${provName(r.x.p)} ${chatN(r.s.mean)} ${chatBand(r.s.mean).emo}`;
-  return T(`Highest PM2.5 ${lab} (province mean, µg/m³):`,`${lab}จังหวัดที่ฝุ่นเยอะสุด 5 อันดับแรก (เฉลี่ยทั้งจังหวัด µg/m³):`)+'<br>'+rows.slice(0,5).map((r,k)=>`${k+1}. ${li(r)}`).join('<br>')+
-    '<br>'+T(`Cleanest: ${li(rows.at(-1))}`,`ส่วนที่อากาศดีสุด${lab}คือ ${li(rows.at(-1))}`); }
-function chatAnsHot(pl){ const hs=S.hots||[]; if(!hs.length) return T('No satellite hotspots in the current data (last 1–2 days).','ช่วง 1–2 วันนี้ ดาวเทียมยังไม่เจอจุดความร้อนเลยนะ');
+  const rn=reg?REG_N[reg]:null, inR=rn?T(` in ${rn[0]}`,`${rn[1]} `):'';
+  return T(`Highest PM2.5 ${lab}${inR} (province mean, µg/m³):`,`${lab}${rn?' '+inR:''}จังหวัดที่ฝุ่นเยอะสุด ${Math.min(5,rows.length)} อันดับแรก (เฉลี่ยทั้งจังหวัด µg/m³):`)+'<br>'+rows.slice(0,5).map((r,k)=>`${k+1}. ${li(r)}`).join('<br>')+
+    '<br>'+T(`Cleanest${inR}: ${li(rows.at(-1))}`,`ส่วนที่อากาศดีสุด${rn?'ใน'+rn[1]:''}${lab}คือ ${li(rows.at(-1))}`); }
+function chatAnsHot(pl,reg){ const hs=S.hots||[]; if(!hs.length) return T('No satellite hotspots in the current data (last 1–2 days).','ช่วง 1–2 วันนี้ ดาวเทียมยังไม่เจอจุดความร้อนเลยนะ');
+  if(reg&&!(pl&&pl.x)){ const rows=chatThai().filter(x=>(REGION_PROV[reg]||[]).includes(x.p.n)).map(x=>({x,n:hs.filter(h=>x.polys.some(pg=>inRing(h.lon,h.lat,pg[0]))).length})).sort((a,b)=>b.n-a.n), tot=rows.reduce((a,r)=>a+r.n,0), rn=REG_N[reg];
+    if(!tot) return T(`No satellite hotspots in ${rn[0]} in the last 1–2 days.`,`1–2 วันที่ผ่านมา ดาวเทียมไม่เจอจุดความร้อนใน${rn[1]}เลยนะ`);
+    const top=rows.filter(r=>r.n).slice(0,5).map((r,k)=>`${k+1}. ${provName(r.x.p)} ${r.n}`).join('<br>');
+    return T(`${tot.toLocaleString()} satellite hotspots in ${rn[0]} in the last 1–2 days; most in:`,`1–2 วันที่ผ่านมา ดาวเทียมเจอจุดความร้อนใน${rn[1]} ${tot.toLocaleString()} จุด จังหวัดที่เจอมากสุด:`)+'<br>'+top; }
   if(pl&&pl.x){ const n=hs.filter(h=>pl.x.polys.some(pg=>inRing(h.lon,h.lat,pg[0]))).length; return T(`${n} satellite hotspot${n===1?'':'s'} in <b>${provName(pl.x.p)}</b> in the last 1–2 days (${hs.length.toLocaleString()} in the whole map area).`,`1–2 วันที่ผ่านมา ดาวเทียมเจอจุดความร้อนใน<b>${provName(pl.x.p)}</b> ${n} จุด (ทั้งแผนที่มี ${hs.length.toLocaleString()} จุด)`); }
   if(pl){ let n=0,d=1e9; for(const h of hs){ const k=haversineKm(pl.lat,pl.lon,h.lat,h.lon); if(k<=50) n++; if(k<d) d=k; }
     return T(`${n} hotspot${n===1?'':'s'} within 50 km of you in the last 1–2 days; the nearest is about ${Math.round(d)} km away.`,`1–2 วันที่ผ่านมา มีจุดความร้อนรอบตัวคุณในรัศมี 50 กม. ${n} จุด จุดที่ใกล้สุดห่างไปประมาณ ${Math.round(d)} กม.`); }
@@ -5424,7 +5431,10 @@ function chatParse(q){ const s=q.toLowerCase(), has=(...k)=>k.some(w=>/^[a-z0-9 
   const part=CHAT_PARTS.find(p_=>has(...p_.k))||null;
   // fog (mist) is weather; "หมอกควัน" / haze / smog is the smoke haze, i.e. PM2.5
   const fog=has('หมอก','fog','mist','foggy')&&!has('หมอกควัน','haze','smog');
-  return {day:day==null&&has('คืนนี้','tonight')?0:day,topic:fog?'fog':topic==null&&has('หมอกควัน','haze','smog')?'pm':topic,prov:chatFindProv(q),here,part}; }
+  // a Thai region (as in "Area shown"): the north-east first, as its Thai name also contains "เหนือ" and "ตะวันออก"
+  const reg=has('ตะวันออกเฉียงเหนือ','อีสาน','northeast','north-east','north east','northeastern','isan','isaan')?'northeast':has('ภาคเหนือ','ทางเหนือ','เหนือตอนบน','northern','north')?'north':
+    has('ภาคใต้','ทางใต้','ปักษ์ใต้','southern','south')?'south':has('ภาคตะวันออก','ทางตะวันออก','eastern','east')?'east':has('ภาคกลาง','central')?'central':null;
+  return {day:day==null&&has('คืนนี้','tonight')?0:day,topic:fog?'fog':topic==null&&has('หมอกควัน','haze','smog')?'pm':topic,prov:chatFindProv(q),here,part,reg}; }
 // parts of the day (Thai hours; 27 = 03:00 the next day). The first that matches wins, so "เช้ามืด" is checked before "เช้า"
 const CHAT_PARTS=[{k:['เช้ามืด','dawn'],h:[3,6],th:'ช่วงเช้ามืด',en:'before dawn'},{k:['เช้า','morning'],h:[6,10],th:'ช่วงเช้า',en:'in the morning'},
   {k:['สาย'],h:[9,12],th:'ช่วงสาย',en:'late morning'},{k:['เที่ยง','กลางวัน','noon','midday'],h:[11,15],th:'ช่วงกลางวัน',en:'around midday'},
@@ -5513,10 +5523,10 @@ async function chatAnswer(q,forced){ if(!P.data) return {html:T('The data is sti
   return {topic:t,html:await chatAnswerTopic(q,a,t)}; }
 async function chatAnswerTopic(q,a,t){
   if(t==='hi') return T('Hi! I answer from the SEA-HAF forecast on this page: PM2.5 now or tomorrow at your location or any Thai province, health advice, the worst provinces, hotspots, weather and how accurate we have been.','หวัดดี! ถามเรื่องฝุ่นมาได้เลยนะ อย่างฝุ่นตอนนี้หรือพรุ่งนี้ ตรงที่คุณอยู่หรือจังหวัดไหนก็ได้ ควรใส่หน้ากากไหม จังหวัดไหนฝุ่นเยอะสุด จุดความร้อน สภาพอากาศ หรือพยากรณ์แม่นแค่ไหน');
-  if(t==='acc') return chatAnsAcc(); if(CHAT_FAQ[t]) return CHAT_FAQ[t](); if(t==='rank') return chatAnsRank(a.day);
+  if(t==='acc') return chatAnsAcc(); if(CHAT_FAQ[t]) return CHAT_FAQ[t](); if(t==='rank'||(t==='pm'&&a.reg&&!a.prov&&!a.here)) return chatAnsRank(a.day,a.reg);
   let pl=a.prov?{x:a.prov}:null;
-  if(!pl&&(a.here||chatNeedsPlace(t)||t==='hot')){ const L_=await chatLocate(); if(L_) pl=L_; else if(t!=='hot') return T('Which place? Type a province (e.g. “Chiang Mai tomorrow”), or allow location access and ask again.','อยากรู้ของที่ไหนดี? พิมพ์ชื่อจังหวัดมาได้เลย (เช่น “เชียงใหม่ พรุ่งนี้”) หรือเปิดให้เข้าถึงตำแหน่งแล้วถามอีกทีนะ'); }
-  if(t==='hot') return chatAnsHot(pl);
+  if(!pl&&!(t==='hot'&&a.reg&&!a.here)&&(a.here||chatNeedsPlace(t)||t==='hot')){ const L_=await chatLocate(); if(L_) pl=L_; else if(t!=='hot') return T('Which place? Type a province (e.g. “Chiang Mai tomorrow”), or allow location access and ask again.','อยากรู้ของที่ไหนดี? พิมพ์ชื่อจังหวัดมาได้เลย (เช่น “เชียงใหม่ พรุ่งนี้”) หรือเปิดให้เข้าถึงตำแหน่งแล้วถามอีกทีนะ'); }
+  if(t==='hot') return chatAnsHot(pl,a.reg);
   if(t==='fog'){ const mp={h:[4,10],th:'ช่วงเช้า',en:'in the morning'}; return chatAnsFog(pl,chatWin(a.day,!a.part||a.part.k.includes('เช้า')?mp:a.part)); }   // fog forms before sunrise: mornings from 04:00   // fog: the early morning unless asked otherwise
   // a part of the day (e.g. "พรุ่งนี้เช้า"): the hours of that part, not the whole day
   if(a.part){ const w=chatWin(a.day,a.part);

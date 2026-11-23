@@ -282,4 +282,11 @@ jobs:
           if grep -q SET_BY_CLOUDFLARE_SETUP cloudflare/pages/wrangler.toml; then echo "::warning title=Cloudflare::run the 'Cloudflare setup' workflow once first"; exit 0; fi
           D="$RUNNER_TEMP/cfpages"; rm -rf "$D"; mkdir -p "$D"
           cp -r cloudflare/pages/functions cloudflare/pages/wrangler.toml "$D/" && cp -r _site "$D/site"
-          cd "$D" && npx -y wrangler@4.160.1 pages deploy site --project-name sea-haf --branch main --commit-dirty=true
+          # Cloudflare's API now and then answers with a passing internal error (e.g. code 10500): try up to 3 times;
+          # if all fail, the step is marked failed with a warning (GitHub Pages is already deployed and the run stays green)
+          cd "$D"
+          for i in 1 2 3; do
+            npx -y wrangler@4.160.1 pages deploy site --project-name sea-haf --branch main --commit-dirty=true && exit 0
+            echo "Cloudflare deploy attempt $i failed"; [ $i -lt 3 ] && sleep $((20 * i))
+          done
+          echo "::warning title=Cloudflare::deploy to Cloudflare Pages failed 3 times; the next run tries again"; exit 1

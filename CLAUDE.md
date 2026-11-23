@@ -68,7 +68,7 @@ See `README.md` for the method and data sources.
   accuracy card stay CAMS until the logged comparison shows SILAM is at least as good.
 - Ask SEA-HAF (chat): the topic classifier is `scripts/chatml.mjs` (page copy `chatMLfeat` / `chatMLpredict` in index.html must stay identical; `scripts/chatml.test.mjs` checks). Retrain with `node scripts/chat_train.mjs` after changing `scripts/chat_data.mjs`; never train on `chat/test.json`. Answers come only from the page's data, never from the model.
 - Cloudflare Pages copy (`cloudflare/pages/`, deployed by the last step of update.yml): run wrangler only in a folder outside the repository (inside it wrangler rewrites the project as a Worker); keep page paths relative (the site is at the root on pages.dev, under `/hotspot-smoke-watch/` on GitHub); a Cloudflare failure must never stop the GitHub deploy.
-- Public page is `/` (redesign), the original layout is `/classic.html`, the developer page `/dev.html`.
+- Main site: https://sea-haf.pages.dev (Cloudflare Pages); backup: GitHub Pages (same `_site`, deployed first). Public page is `/` (redesign), the original layout is `/classic.html`, the developer page `/dev.html`.
 - The redesign's glass menu frames: styles in `index_modern.html` ("Glass menu frames"), motion in `glass/nav.mjs`, WebGL2 water
   (wide layout only) in `glass/water.mjs`, wired by `glass/boot.mjs`; the workflow publishes these three to `_site/glass/`.
   Run `node --test glass/*.test.mjs` after changing them. Text on the glass must keep >= 4.5:1 in both themes.

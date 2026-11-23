@@ -1,0 +1,43 @@
+name: Chat bot training
+
+# Ask SEA-HAF learns which topic a question is about (scripts/chatml.mjs). Weekly: read the questions viewers labelled through
+# the chat ("which do you mean?" / "not what I asked?"), sent to the Google Form whose response sheet is published as CSV
+# (chat/config.json feedback.csvUrl; nothing happens until it is set), merge them into chat/learned.json (scripts/chat_learn.mjs),
+# retrain (scripts/chat_train.mjs --gate: the old model is kept when the accuracy on the fixed test questions, chat/test.json,
+# would drop by more than 1 point) and commit. The hourly run publishes chat/ with the site, so the new model is live within
+# the hour. No key or secret is needed: the sheet is public CSV and the form takes anonymous answers.
+on:
+  schedule:
+    - cron: '23 20 * * 0'   # Monday 03:23 Bangkok
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+concurrency:
+  group: chat-train
+  cancel-in-progress: false
+
+jobs:
+  train:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+      - name: Add the questions viewers labelled
+        run: node scripts/chat_learn.mjs
+      - name: Retrain (keeps the old model if the test accuracy would drop)
+        run: node scripts/chat_train.mjs --gate
+      - name: Unit tests of the classifier
+        run: node --test scripts/chatml.test.mjs
+      - name: Commit
+        run: |
+          git config user.name "hotspot-bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add chat/learned.json chat/model.json
+          if git diff --cached --quiet; then echo "nothing new"; exit 0; fi
+          git commit -qm "chat: weekly training $(date -u +'%Y-%m-%d')"
+          for i in 1 2 3; do git pull --rebase -q && git push -q && break; sleep 5; done

@@ -1,8 +1,8 @@
 name: Chat bot training
 
 # Ask SEA-HAF learns which topic a question is about (scripts/chatml.mjs). Weekly: read the questions viewers labelled through
-# the chat ("which do you mean?" / "not what I asked?"), kept by the Cloudflare Worker cloudflare/chat-feedback/ (read through
-# its /export with the CHAT_EXPORT_TOKEN secret; chat/config.json feedback.exportUrl; nothing happens until it is set), merge them
+# the chat ("which do you mean?" / "not what I asked?"), kept in the D1 database of the Cloudflare Pages site (cloudflare/pages/functions/api; read through
+# its /api/export with the CHAT_EXPORT_TOKEN secret; chat/config.json feedback.exportUrl; nothing happens until it is set), merge them
 # into chat/learned.json (scripts/chat_learn.mjs),
 # retrain (scripts/chat_train.mjs --gate: the old model is kept when the accuracy on the fixed test questions, chat/test.json,
 # would drop by more than 1 point) and commit. The hourly run publishes chat/ with the site, so the new model is live within

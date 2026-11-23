@@ -1,0 +1,69 @@
+name: Cloudflare setup
+
+# One-time (safe to run again) creation of SEA-HAF's Cloudflare resources, beside the GitHub Pages site:
+#   Pages project "sea-haf" (https://sea-haf.pages.dev; the hourly run uploads the site to it),
+#   D1 database "sea-haf-db" with the tables of cloudflare/pages/schema.sql (the chat's labelled questions),
+#   KV namespace "sea-haf-kv" (short-lived counters, e.g. the chat's per-day limit),
+#   Pages secret EXPORT_TOKEN (= the CHAT_EXPORT_TOKEN GitHub secret; the weekly chat training reads the questions with it).
+# Then writes the D1 / KV ids (not secrets) into cloudflare/pages/wrangler.toml and commits it. Needs the GitHub secrets
+# CLOUDFLARE_API_TOKEN (account permissions: Cloudflare Pages Edit, D1 Edit, Workers KV Storage Edit) and CLOUDFLARE_ACCOUNT_ID,
+# made by the owner. Nothing is printed of any secret; existing resources are kept as they are.
+on:
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  setup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      CHAT_EXPORT_TOKEN: ${{ secrets.CHAT_EXPORT_TOKEN }}
+      PROJECT: sea-haf
+      DB_NAME: sea-haf-db
+      KV_TITLE: sea-haf-kv
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+      - name: Check the secrets
+        run: |
+          [ -n "$CLOUDFLARE_API_TOKEN" ] && [ -n "$CLOUDFLARE_ACCOUNT_ID" ] || { echo "::error::set the CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID secrets first"; exit 1; }
+      - name: Pages project, D1 database, KV namespace
+        id: res
+        run: |
+          set -euo pipefail
+          API="https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID"
+          cf() { curl -sS --fail-with-body -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" -H "Content-Type: application/json" "$@"; }
+          # Pages project (production branch main; direct upload, not connected to the repository)
+          if cf "$API/pages/projects/$PROJECT" > p.json 2>/dev/null; then echo "Pages project $PROJECT exists"
+          else cf -X POST "$API/pages/projects" -d "{\"name\":\"$PROJECT\",\"production_branch\":\"main\"}" > p.json; echo "Pages project $PROJECT created"; fi
+          echo "subdomain=$(jq -r '.result.subdomain' p.json)" >> "$GITHUB_OUTPUT"
+          # D1 database
+          DB_ID=$(cf "$API/d1/database?name=$DB_NAME" | jq -r --arg n "$DB_NAME" '.result[] | select(.name==$n) | .uuid' | head -1)
+          if [ -z "$DB_ID" ]; then DB_ID=$(cf -X POST "$API/d1/database" -d "{\"name\":\"$DB_NAME\"}" | jq -r '.result.uuid'); echo "D1 $DB_NAME created"; else echo "D1 $DB_NAME exists"; fi
+          # its tables (each statement of schema.sql on its own; all are IF NOT EXISTS)
+          node -e 'const s=require("fs").readFileSync("cloudflare/pages/schema.sql","utf8").replace(/--[^\n]*/g,"");for(const q of s.split(";").map(x=>x.trim()).filter(Boolean))console.log(JSON.stringify({sql:q}))' |
+            while read -r body; do cf -X POST "$API/d1/database/$DB_ID/query" -d "$body" > /dev/null; done
+          echo "D1 tables ready"
+          # KV namespace
+          KV_ID=$(cf "$API/storage/kv/namespaces?per_page=100" | jq -r --arg t "$KV_TITLE" '.result[] | select(.title==$t) | .id' | head -1)
+          if [ -z "$KV_ID" ]; then KV_ID=$(cf -X POST "$API/storage/kv/namespaces" -d "{\"title\":\"$KV_TITLE\"}" | jq -r '.result.id'); echo "KV $KV_TITLE created"; else echo "KV $KV_TITLE exists"; fi
+          [ -n "$DB_ID" ] && [ "$DB_ID" != null ] && [ -n "$KV_ID" ] && [ "$KV_ID" != null ]
+          # the ids go into the Pages project's wrangler.toml (they are not secrets)
+          sed -i "s/^database_id = .*/database_id = \"$DB_ID\"/; /^\[\[kv_namespaces\]\]/,/^id = /s/^id = .*/id = \"$KV_ID\"/" cloudflare/pages/wrangler.toml
+          grep -q "$DB_ID" cloudflare/pages/wrangler.toml && grep -q "$KV_ID" cloudflare/pages/wrangler.toml
+      - name: Pages secret EXPORT_TOKEN (from the CHAT_EXPORT_TOKEN secret)
+        if: env.CHAT_EXPORT_TOKEN != ''
+        run: cd "$RUNNER_TEMP" && printf '%s' "$CHAT_EXPORT_TOKEN" | npx -y wrangler@4.160.1 pages secret put EXPORT_TOKEN --project-name "$PROJECT"
+      - name: Commit the ids
+        run: |
+          git config user.name "hotspot-bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add cloudflare/pages/wrangler.toml
+          if git diff --cached --quiet; then echo "ids unchanged"; else git commit -qm "Cloudflare: D1 and KV ids of the Pages project" && git push -q; fi
+          echo "::notice title=Cloudflare::site https://${{ steps.res.outputs.subdomain }} — the next hourly run uploads it"

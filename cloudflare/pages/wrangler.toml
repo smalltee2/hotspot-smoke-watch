@@ -1,0 +1,19 @@
+# Cloudflare Pages project of SEA-HAF (direct upload from .github/workflows/update.yml; Cloudflare does not build the repository).
+# The deploy step copies this file and functions/ into a folder outside the repository (wrangler would otherwise turn the repo
+# into a Worker project) with the built site in ./site. The ids below are filled in by .github/workflows/cloudflare-setup.yml;
+# they are not secrets. The export token is a Pages secret, never written here.
+name = "sea-haf"
+pages_build_output_dir = "./site"
+compatibility_date = "2024-09-23"
+
+[vars]
+ALLOWED_ORIGINS = "https://smalltee2.github.io"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "sea-haf-db"
+database_id = "SET_BY_CLOUDFLARE_SETUP"
+
+[[kv_namespaces]]
+binding = "KV"
+id = "SET_BY_CLOUDFLARE_SETUP"

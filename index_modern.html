@@ -5480,7 +5480,7 @@ const CHAT_TOPIC={pm:['PM2.5 level','ค่าฝุ่น PM2.5'],adv:['Health 
   wx:['Rain, temperature','ฝน / อุณหภูมิ'],fog:['Fog','หมอก'],acc:['Forecast accuracy','พยากรณ์แม่นแค่ไหน'],src:['Data sources','ข้อมูลมาจากไหน'],how:['How it works','ระบบทำงานยังไง'],
   whatpm:['What PM2.5 is','PM2.5 คืออะไร'],aqi:['What AQI is','AQI คืออะไร'],hi:['Just saying hi','ทักทาย'],other:['Something else','เรื่องอื่น']};
 // learning from viewers: a question with the topic the viewer picked ("which do you mean?" or "not what I asked?") is sent,
-// without anything else, to the Cloudflare Worker (or a Google Form) in chat/config.json (when set, unless the viewer switched it off);
+// without anything else, to the Cloudflare Pages site's /api/feedback (D1; or a Google Form) in chat/config.json (when set, unless the viewer switched it off);
 // .github/workflows/chat-train.yml adds them to the training rows weekly and retrains (scripts/chat_learn.mjs, chat_train.mjs)
 function chatShareOK(){ try{ return localStorage.getItem('hsw.chatShare')!=='0'; }catch(e){ return true; } }
 function chatShareUI(){ const el=document.querySelector('#chatW .chat-share'); if(!el) return; const f=CHATML.cfg?.feedback, on=!!(f?.endpoint||f?.formUrl); el.hidden=!on;
@@ -5488,7 +5488,7 @@ function chatShareUI(){ const el=document.querySelector('#chatW .chat-share'); i
 function chatFeedback(q,y,kind){ const c=CHATML.cfg?.feedback; if(!(c?.endpoint||c?.formUrl&&c.fields?.q)||!chatShareOK()||CHATML.sent>=20) return;
   const clean=String(q).replace(/[\u0000-\u001f]/g,' ').trim().slice(0,200); if(!clean||/\d{7,}|@|https?:|www\./i.test(clean)) return;   // never phone numbers, e-mails or links
   CHATML.sent++;
-  // the Cloudflare Worker (cloudflare/chat-feedback/) when set: JSON as text/plain (no CORS preflight); else a Google Form
+  // the Cloudflare Pages function /api/feedback (cloudflare/pages/functions) when set: JSON as text/plain (no CORS preflight); else a Google Form
   if(c.endpoint){ fetch(c.endpoint,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({q:clean,y,kind})}).catch(()=>{}); return; }
   const body=new URLSearchParams({[c.fields.q]:clean,[c.fields.y]:y,[c.fields.kind]:kind});
   fetch(c.formUrl,{method:'POST',mode:'no-cors',body}).catch(()=>{}); }

@@ -1,7 +1,7 @@
 // Ask SEA-HAF: add the questions viewers labelled to the training rows (chat/learned.json).
-// The page sends {question, topic, kind} to the Cloudflare Worker (cloudflare/chat-feedback/, chat/config.json feedback.endpoint)
-// or a Google Form when a viewer picks the topic they meant ("which do you mean?" / "not what I asked?"). Its CSV (the Worker's
-// /export with the CHAT_EXPORT_TOKEN secret, feedback.exportUrl; or the form's published sheet, feedback.csvUrl) is read here:
+// The page sends {question, topic, kind} to the Cloudflare Pages site (cloudflare/pages/functions/api/feedback.js → D1; chat/config.json feedback.endpoint)
+// or a Google Form when a viewer picks the topic they meant ("which do you mean?" / "not what I asked?"). Its CSV (the site's
+// /api/export with the CHAT_EXPORT_TOKEN secret, feedback.exportUrl; or the form's published sheet, feedback.csvUrl) is read here:
 // rows are cleaned (no phone numbers, e-mails or links; 2–200 characters; known topics only), the same question is merged and its
 // topic set by majority (at least 2/3 of its labels), and at most MAX_NEW new questions are added per run. scripts/chat_train.mjs
 // then retrains, and keeps the old model if the accuracy on the fixed test questions would drop.
@@ -44,7 +44,7 @@ export function merge(learned, sheetRows) {
 async function main() {
   const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..'), CHAT = path.join(ROOT, 'chat');
   const cfg = JSON.parse(fs.readFileSync(path.join(CHAT, 'config.json'), 'utf8'));
-  // the Cloudflare Worker's export (token from the CHAT_EXPORT_TOKEN secret, never logged) or a Google Form's published CSV
+  // the Pages site's /api/export (token from the CHAT_EXPORT_TOKEN secret, never logged) or a Google Form's published CSV
   const ex = cfg.feedback?.exportUrl, url = ex || cfg.feedback?.csvUrl;
   if (!url) { console.log('chat learn: no feedback source set (chat/config.json feedback.exportUrl or csvUrl); nothing to add'); return; }
   if (ex && !process.env.CHAT_EXPORT_TOKEN) { console.log('chat learn: CHAT_EXPORT_TOKEN secret not set; nothing added'); return; }

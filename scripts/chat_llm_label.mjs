@@ -211,8 +211,15 @@ async function installDaily(at, extra) {
   fs.mkdirSync(dir, { recursive: true }); fs.mkdirSync(path.dirname(agent), { recursive: true });
   fs.copyFileSync(new URL(import.meta.url).pathname, script);
   fs.writeFileSync(agent, plist({ node: process.execPath, script, hour: +m[1], minute: +m[2], log, args: extra }));
-  const uid = process.getuid(); try { execFileSync('/bin/launchctl', ['bootout', `gui/${uid}/${LABEL}`], { stdio: 'ignore' }); } catch (e) {}
-  execFileSync('/bin/launchctl', ['bootstrap', `gui/${uid}`, agent]);
+  // an earlier copy of the job may still be loaded (or running): unload it and wait until launchd has let it go, else
+  // "bootstrap" fails with "5: Input/output error"
+  const uid = process.getuid(), loaded = () => { try { execFileSync('/bin/launchctl', ['print', `gui/${uid}/${LABEL}`], { stdio: 'ignore' }); return true; } catch (e) { return false; } };
+  try { execFileSync('/bin/launchctl', ['bootout', `gui/${uid}/${LABEL}`], { stdio: 'ignore' }); } catch (e) {}
+  for (let i = 0; i < 40 && loaded(); i++) await new Promise(r => setTimeout(r, 250));
+  for (let i = 0; ; i++) {
+    try { execFileSync('/bin/launchctl', ['bootstrap', `gui/${uid}`, agent], { stdio: 'pipe' }); break; }
+    catch (e) { if (i >= 4) throw new Error('launchctl bootstrap failed: ' + String(e.stderr || e.message).trim()); await new Promise(r => setTimeout(r, 1000)); }
+  }
   console.log(`daily job installed: every day at ${m[1].padStart(2, '0')}:${m[2]} (suggest topics, then write new training questions)\n  script ${script}\n  log    ${log}\n  run now: launchctl kickstart gui/${uid}/${LABEL}`);
 }
 async function uninstallDaily() {

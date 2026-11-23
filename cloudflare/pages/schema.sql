@@ -26,3 +26,12 @@ CREATE TABLE IF NOT EXISTS chat_suggest (
   model TEXT,
   t     TEXT NOT NULL
 );
+-- Questions written by the admin's local LLM (functions/api/generated.js, scripts/chat_llm_label.mjs --generate): training rows
+-- only (exported as kind llmgen), never test questions. Made on first use by the Functions as well.
+CREATE TABLE IF NOT EXISTS chat_gen (
+  qk    TEXT PRIMARY KEY,
+  q     TEXT NOT NULL,
+  y     TEXT NOT NULL,
+  model TEXT,
+  t     TEXT NOT NULL
+);

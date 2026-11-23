@@ -459,6 +459,7 @@ td.num{text-align:right;font-family:var(--font-data);font-variant-numeric:tabula
 .maplogo img{display:block;width:180px;height:auto}
 .maplogo img.dk{display:none}
 /* developer page: save the map as an image (logo, title, time, legend) */
+.savectl{overflow:visible}
 .savectl a{display:grid;place-items:center;width:30px;height:30px;color:var(--fg);background:var(--panel);cursor:pointer}
 .savepop{position:absolute;left:40px;top:0;z-index:1000;width:250px;padding:10px 12px;border-radius:8px;background:var(--panel);color:var(--fg);border:1px solid var(--line);box-shadow:0 4px 14px rgba(0,0,0,.25);font-size:.8rem;line-height:1.4}
 .savepop label{display:flex;gap:6px;align-items:flex-start;margin:4px 0;cursor:pointer}
@@ -2834,8 +2835,8 @@ async function saveMapImage(kind,btn){
   finally{ btn.disabled=false; btn.textContent=b0; }
 }
 {
-  const SaveCtl=L.Control.extend({onAdd(){ const d=L.DomUtil.create('div','leaflet-bar savectl'); d.style.position='relative';
-    d.innerHTML=`<a role="button" href="#" title="${T('Save the map as an image','บันทึกแผนที่เป็นรูปภาพ')}" aria-label="${T('Save the map as an image','บันทึกแผนที่เป็นรูปภาพ')}"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg></a>`+
+  const SaveCtl=L.Control.extend({onAdd(){ const d=L.DomUtil.create('div','savectl'); d.style.position='relative';   // the panel sits outside the .leaflet-bar, which clips its content
+    d.innerHTML=`<div class="leaflet-bar"><a role="button" href="#" title="${T('Save the map as an image','บันทึกแผนที่เป็นรูปภาพ')}" aria-label="${T('Save the map as an image','บันทึกแผนที่เป็นรูปภาพ')}"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg></a></div>`+
       `<div class="savepop" hidden><b>${T('Save the map as an image','บันทึกแผนที่เป็นรูปภาพ')}</b>`+
       [['h',T('Hourly (the hour on the time bar)','รายชั่วโมง (เวลาบนแถบเวลา)')],['d',T('24-hour mean (ending then)','เฉลี่ย 24 ชั่วโมง (สิ้นสุดเวลานั้น)')],['w',T('Weekly mean (past 7 days)','เฉลี่ยรายสัปดาห์ (7 วันที่ผ่านมา)')],['m',T('Monthly mean (past 30 days)','เฉลี่ยรายเดือน (30 วันที่ผ่านมา)')]]
         .map(([k,l],j)=>`<label><input type="radio" name="saveKind" value="${k}"${j?'':' checked'}> ${l}</label>`).join('')+

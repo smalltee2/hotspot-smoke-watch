@@ -1,0 +1,14 @@
+# Deploy with: npx wrangler deploy   (or paste worker.js into a Worker in the Cloudflare dashboard; see README.md)
+name = "sea-haf-chat-feedback"
+main = "worker.js"
+compatibility_date = "2024-09-23"
+
+[vars]
+ALLOWED_ORIGINS = "https://smalltee2.github.io"
+
+# create it first: npx wrangler kv namespace create FEEDBACK   → paste the id it prints here
+[[kv_namespaces]]
+binding = "FEEDBACK"
+id = "PASTE_THE_KV_NAMESPACE_ID_HERE"
+
+# the export token is a secret, never written here: npx wrangler secret put EXPORT_TOKEN

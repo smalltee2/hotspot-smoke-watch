@@ -27,3 +27,5 @@ Only `favicon.svg` and `sea-haf-logo-light.svg` were supplied; `sea-haf-logo-dar
 ## Chatbot icon (concept B, AQI Ring)
 
 `sea-haf-bot-light.svg` (supplied) and `sea-haf-bot-dark.svg` (made from it with the dark-mode colours above: #33414F → #C9D3DC, #E5560F → #FF7A33, the white half of the S → #111820): the "S" of the logo in a circle, ringed clockwise from the top by good (green #3BB273), moderate (yellow #F2C230), unhealthy for sensitive groups (orange) and unhealthy (red #D64545). Used for the "Ask SEA-HAF" launcher (about 36 px in a 56 px button) and as the bot's avatar in the chat; light or dark file with the theme.
+
+`sea-haf-bot-animated-light.svg` (supplied) and `sea-haf-bot-animated-dark.svg` (same colour change): the same icon with the ring swinging and a "typing" speech bubble (SVG animation, 4 s loop; viewBox 0 −14 78 78, the ring on the left, the bubble at the top right). Used for the chat launcher; viewers who ask their system for reduced motion get the still icon.

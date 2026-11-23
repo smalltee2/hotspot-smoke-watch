@@ -5417,18 +5417,57 @@ function chatParse(q){ const s=q.toLowerCase(), has=(...k)=>k.some(w=>/^[a-z0-9 
     has('ฝุ่น','pm','aqi','air','อากาศ','ค่า','ระดับ','here','now','ตอนนี้','ตรงนี้','ที่นี่','แถวนี้','ใกล้')?'pm':
     has('สวัสดี','hello','hi','หวัดดี','ช่วย','help')?'hi':null;
   const here=has('here','ตรงนี้','ที่นี่','แถวนี้','ใกล้ฉัน','ใกล้ฉัน','near me','my location','ตำแหน่ง','บ้าน');
-  return {day,topic,prov:chatFindProv(q),here}; }
-function chatNeedsPlace(t){ return ['pm','adv','wx'].includes(t); }
+  const part=CHAT_PARTS.find(p_=>has(...p_.k))||null;
+  // fog (mist) is weather; "หมอกควัน" / haze / smog is the smoke haze, i.e. PM2.5
+  const fog=has('หมอก','fog','mist','foggy')&&!has('หมอกควัน','haze','smog');
+  return {day:day==null&&has('คืนนี้','tonight')?0:day,topic:fog?'fog':topic==null&&has('หมอกควัน','haze','smog')?'pm':topic,prov:chatFindProv(q),here,part}; }
+// parts of the day (Thai hours; 27 = 03:00 the next day). The first that matches wins, so "เช้ามืด" is checked before "เช้า"
+const CHAT_PARTS=[{k:['เช้ามืด','dawn'],h:[3,6],th:'ช่วงเช้ามืด',en:'before dawn'},{k:['เช้า','morning'],h:[6,10],th:'ช่วงเช้า',en:'in the morning'},
+  {k:['สาย'],h:[9,12],th:'ช่วงสาย',en:'late morning'},{k:['เที่ยง','กลางวัน','noon','midday'],h:[11,15],th:'ช่วงกลางวัน',en:'around midday'},
+  {k:['บ่าย','afternoon'],h:[13,17],th:'ช่วงบ่าย',en:'in the afternoon'},{k:['เย็น','evening'],h:[16,19],th:'ช่วงเย็น',en:'in the evening'},
+  {k:['ค่ำ','กลางคืน','ดึก','คืนนี้','night','tonight'],h:[19,27],th:'ช่วงค่ำถึงดึก',en:'at night'}];
+const chatHH=h=>String(h%24).padStart(2,'0')+':00';
+// the hours of a part of a day; without a day: today if that part has not ended yet, else tomorrow
+function chatWin(off,part){ if(off==null) off=Date.now()<todayStart()+part.h[1]*HR?0:1; const d0=todayStart()+off*864e5;
+  return {off,hours:(P.data?.hours||[]).filter(t=>t>=d0+part.h[0]*HR&&t<d0+part.h[1]*HR),
+    lab:T(`${chatDayName(off)} ${part.en} (${chatHH(part.h[0])}–${chatHH(part.h[1])})`,`${chatDayName(off)}${part.th} (${chatHH(part.h[0])}–${chatHH(part.h[1])} น.) `)}; }
+function chatAnsPmWin(pl,w){ const nm=chatPlaceName(pl), st=chatStats(pl,w.hours); if(!st) return T(`The forecast does not reach ${w.lab} yet.`,`พยากรณ์ยังไปไม่ถึง${w.lab}เลยนะ`);
+  const b=chatBand(st.mean);
+  return T(`${w.lab[0].toUpperCase()+w.lab.slice(1)} at <b>${nm}</b>: PM2.5 about <b>${chatN(st.mean)} µg/m³</b> on average, “${b.en}” ${b.emo}; highest around ${hm(st.tPeak)} (~${chatN(st.peak)}).`,
+    `${w.lab}ที่<b>${nm}</b> ฝุ่น PM2.5 เฉลี่ยประมาณ <b>${chatN(st.mean)} µg/m³</b> ถือว่า “${b.th}” ${b.emo} หนาสุดราว ๆ ${hm(st.tPeak)} น. (~${chatN(st.peak)})`)+'<br>'+chatAdvice(st.mean); }
+function chatWxPt(pl){ return pl.lat!=null?[pl.lat,pl.lon]:[(pl.x.b[1]+pl.x.b[3])/2,(pl.x.b[0]+pl.x.b[2])/2]; }
+function chatAnsWxWin(pl,w){ const [lat,lon]=chatWxPt(pl), nm=chatPlaceName(pl); let lo=Infinity,hi=-Infinity,r=0,n=0;
+  for(const t of w.hours){ const x=t2At(lat,lon,t); if(x!=null){lo=Math.min(lo,x);hi=Math.max(hi,x);} const p_=rainAt(lat,lon,t); if(p_!=null){r+=p_;n++;} }
+  if(!n) return T('The weather forecast does not reach that time yet.','พยากรณ์อากาศยังไปไม่ถึงช่วงนั้นเลยนะ');
+  const tr=isFinite(lo)?(Math.round(lo)===Math.round(hi)?`${Math.round(lo)}`:`${Math.round(lo)}–${Math.round(hi)}`):null;
+  return T(`${w.lab[0].toUpperCase()+w.lab.slice(1)} at <b>${nm}</b>: ${r>=0.3?`rain likely, about ${r.toFixed(1)} mm in all`:'rain unlikely'}${tr?`; ${tr} °C`:''}.`,
+    `${w.lab}ที่<b>${nm}</b> ${r>=0.3?`น่าจะมีฝนตกนะ รวม ๆ ราว ${r.toFixed(1)} มม.`:'ไม่น่าจะมีฝน'}${tr?` อุณหภูมิประมาณ ${tr} °C`:''}`); }
+// fog: not forecast as such; judged from the ECMWF humidity and 10-m wind of those hours (fog needs near-saturated air and little wind)
+function chatAnsFog(pl,w){ const [lat,lon]=chatWxPt(pl), nm=chatPlaceName(pl); let rh=-1,ws=null,n=0,sw=0;
+  for(const t of w.hours){ const x=wxAt(lat,lon,t); if(!x||x.rh==null) continue; n++; const v=Math.hypot(x.u10,x.v10); sw+=v; if(x.rh>rh){rh=x.rh;ws=v;} }
+  if(!n) return T('No humidity forecast for that time yet, so I cannot tell about fog.','ยังไม่มีพยากรณ์ความชื้นของช่วงนั้นเลย เลยบอกเรื่องหมอกไม่ได้นะ');
+  const wm=sw/n, k=rh>=95&&wm<2.5?2:rh>=90&&wm<3.5?1:0;
+  const verdict=[T('fog is unlikely','ไม่น่าจะมีหมอกนะ'),T('a thin mist is possible','อาจมีหมอกบาง ๆ ได้'),T('fog is quite likely','มีโอกาสเกิดหมอกค่อนข้างสูงเลย')][k];
+  const st=chatStats(pl,w.hours), pm=st?T(` As for dust then: PM2.5 about ${chatN(st.mean)} µg/m³ (“${chatBand(st.mean).en}” ${chatBand(st.mean).emo}).`,` ส่วนฝุ่นช่วงนั้นประมาณ ${chatN(st.mean)} µg/m³ (“${chatBand(st.mean).th}” ${chatBand(st.mean).emo})`):'';
+  return T(`${w.lab[0].toUpperCase()+w.lab.slice(1)} at <b>${nm}</b>: ${verdict} — humidity up to ${Math.round(rh)}%, wind about ${wm.toFixed(1)} m/s.${pm}`,
+    `${w.lab}ที่<b>${nm}</b> ${verdict} ความชื้นสูงสุดราว ${Math.round(rh)}% ลมประมาณ ${wm.toFixed(1)} m/s${pm}`)+
+    `<span class="cnote">${T('We do not forecast fog directly; this is judged from the ECMWF humidity and wind.','ระบบไม่ได้พยากรณ์หมอกโดยตรงนะ อันนี้ประเมินจากความชื้นกับลมของ ECMWF')}</span>`; }
+function chatNeedsPlace(t){ return ['pm','adv','wx','fog'].includes(t); }
 async function chatLocate(){ if(CHAT.loc) return CHAT.loc; if(hereLL) return CHAT.loc={lat:hereLL.lat,lon:hereLL.lon};
   return new Promise(res=>{ if(!navigator.geolocation) return res(null); navigator.geolocation.getCurrentPosition(p=>res(CHAT.loc={lat:p.coords.latitude,lon:p.coords.longitude}),()=>res(null),{enableHighAccuracy:false,timeout:12000,maximumAge:10*60e3}); }); }
 async function chatAnswer(q){ if(!P.data) return T('The data is still loading — give it a moment and ask again.','ข้อมูลยังโหลดไม่เสร็จเลย รอแป๊บนึงแล้วถามใหม่นะ');
-  const a=chatParse(q); let t=a.topic; if(!t&&(a.prov||a.day!=null)) t='pm';
+  const a=chatParse(q); let t=a.topic; if(!t&&(a.prov||a.day!=null||a.part)) t='pm';
   if(!t) return T('Hmm, I did not quite get that. Try one of these:','อืม... ยังไม่ค่อยเข้าใจเลยอ่ะ ลองถามแบบนี้ดูไหม:');
   if(t==='hi') return T('Hi! I answer from the SEA-HAF forecast on this page: PM2.5 now or tomorrow at your location or any Thai province, health advice, the worst provinces, hotspots, weather and how accurate we have been.','หวัดดี! ถามเรื่องฝุ่นมาได้เลยนะ อย่างฝุ่นตอนนี้หรือพรุ่งนี้ ตรงที่คุณอยู่หรือจังหวัดไหนก็ได้ ควรใส่หน้ากากไหม จังหวัดไหนฝุ่นเยอะสุด จุดความร้อน สภาพอากาศ หรือพยากรณ์แม่นแค่ไหน');
   if(t==='acc') return chatAnsAcc(); if(CHAT_FAQ[t]) return CHAT_FAQ[t](); if(t==='rank') return chatAnsRank(a.day);
   let pl=a.prov?{x:a.prov}:null;
   if(!pl&&(a.here||chatNeedsPlace(t)||t==='hot')){ const L_=await chatLocate(); if(L_) pl=L_; else if(t!=='hot') return T('Which place? Type a province (e.g. “Chiang Mai tomorrow”), or allow location access and ask again.','อยากรู้ของที่ไหนดี? พิมพ์ชื่อจังหวัดมาได้เลย (เช่น “เชียงใหม่ พรุ่งนี้”) หรือเปิดให้เข้าถึงตำแหน่งแล้วถามอีกทีนะ'); }
-  if(t==='hot') return chatAnsHot(pl); if(t==='adv') return chatAnsAdvice(pl,a.day); if(t==='wx') return chatAnsWx(pl,a.day);
+  if(t==='hot') return chatAnsHot(pl);
+  if(t==='fog'){ const mp={h:[4,10],th:'ช่วงเช้า',en:'in the morning'}; return chatAnsFog(pl,chatWin(a.day,!a.part||a.part.k.includes('เช้า')?mp:a.part)); }   // fog forms before sunrise: mornings from 04:00   // fog: the early morning unless asked otherwise
+  // a part of the day (e.g. "พรุ่งนี้เช้า"): the hours of that part, not the whole day
+  if(a.part){ const w=chatWin(a.day,a.part);
+    if(t==='wx') return chatAnsWxWin(pl,w); if(t==='adv') return chatAnsPmWin(pl,w)+'<br>'+chatAdvNote(); return chatAnsPmWin(pl,w); }
+  if(t==='adv') return chatAnsAdvice(pl,a.day); if(t==='wx') return chatAnsWx(pl,a.day);
   return chatAnsPm(pl,a.day===0?null:a.day); }
 // --- the widget
 function chatEl(){ let w=document.getElementById('chatW'); if(w) return w; w=document.createElement('div'); w.id='chatW'; w.className='chatw';

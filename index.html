@@ -489,6 +489,12 @@ td.num{text-align:right;font-family:var(--font-data);font-variant-numeric:tabula
 .chat-chips{display:flex;flex-wrap:wrap;gap:6px;padding:0 10px 8px;max-height:96px;overflow-y:auto}
 .chat-chips button{font:inherit;font-size:.76rem;padding:5px 10px;border-radius:999px;border:1px solid var(--line);background:var(--panel);color:var(--fg);cursor:pointer}
 .chat-in{display:flex;gap:6px;padding:8px;border-top:1px solid var(--line)}
+.chat-pick{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px}
+.chat-pick button{font:inherit;font-size:.76rem;padding:4px 9px;border-radius:999px;border:1px solid #33414F;background:var(--panel);color:var(--fg);cursor:pointer}
+.chat-pick button:disabled{opacity:.5;cursor:default}
+.chat-wrong{display:block;margin-top:5px;padding:0;border:0;background:none;color:var(--muted);font:inherit;font-size:.72rem;text-decoration:underline;cursor:pointer}
+.chat-share{display:flex;gap:6px;align-items:center;flex-shrink:0;padding:0 10px 6px;font-size:.7rem;color:var(--muted)}
+.chat-share[hidden]{display:none}
 .chat-in input{flex:1;min-width:0;font:inherit;padding:8px 10px;border-radius:8px;border:1px solid var(--line);background:var(--panel);color:var(--fg)}
 .chat-in button{border:0;border-radius:8px;padding:0 12px;background:#B8460C;color:#fff;cursor:pointer;font-size:1rem}
 @media (max-width:860px){.chatw{bottom:calc(84px + env(safe-area-inset-bottom));right:12px}.chat-fab{width:50px;height:50px}.chat-box{height:min(520px,calc(100vh - 250px),calc(100dvh - 250px))}}
@@ -4294,9 +4300,46 @@ function chatAnsFog(pl,w){ const [lat,lon]=chatWxPt(pl), nm=chatPlaceName(pl); l
 function chatNeedsPlace(t){ return ['pm','adv','wx','fog'].includes(t); }
 async function chatLocate(){ if(CHAT.loc) return CHAT.loc; if(hereLL) return CHAT.loc={lat:hereLL.lat,lon:hereLL.lon};
   return new Promise(res=>{ if(!navigator.geolocation) return res(null); navigator.geolocation.getCurrentPosition(p=>res(CHAT.loc={lat:p.coords.latitude,lon:p.coords.longitude}),()=>res(null),{enableHighAccuracy:false,timeout:12000,maximumAge:10*60e3}); }); }
-async function chatAnswer(q){ if(!P.data) return T('The data is still loading — give it a moment and ask again.','ข้อมูลยังโหลดไม่เสร็จเลย รอแป๊บนึงแล้วถามใหม่นะ');
-  const a=chatParse(q); let t=a.topic; if(!t&&(a.prov||a.day!=null||a.part)) t='pm';
-  if(!t) return T('Hmm, I did not quite get that. Try one of these:','อืม... ยังไม่ค่อยเข้าใจเลยอ่ะ ลองถามแบบนี้ดูไหม:');
+// --- the learned topic classifier (chat/model.json from scripts/chat_train.mjs): character 2–4-grams hashed into dim buckets,
+// logistic regression with int8 weights. chatMLfeat / chatMLpredict must stay identical to featurize / predict in scripts/chatml.mjs
+// (scripts/chatml.test.mjs compares them). It only picks the topic; places, days and parts of the day are read by the rules.
+const CHATML={model:null,w:null,cfg:null,loading:null,sent:0};
+function chatMLfeat(text,dim){ const s=' '+String(text).toLowerCase().replace(/[!?.,;:"“”'‘’()\[\]{}<>…~]/g,' ').replace(/\s+/g,' ').trim()+' ', ids=new Set();
+  for(let n=2;n<=4;n++) for(let i=0;i+n<=s.length;i++){ let h=2166136261^n; const g=s.slice(i,i+n); for(let k=0;k<g.length;k++){ h^=g.charCodeAt(k); h=Math.imul(h,16777619); } ids.add((h>>>0)%dim); }
+  return [...ids].sort((a,b)=>a-b); }
+function chatMLpredict(text){ const M=CHATML.model, w=CHATML.w; if(!M||!w) return null; const f=chatMLfeat(text,M.dim), K=M.intents.length, norm=1/Math.sqrt(Math.max(1,f.length)), z=[];
+  for(let k=0;k<K;k++){ let a=M.b[k]; const sc=M.scale[k], off=k*M.dim; for(const j of f) a+=w[off+j]*sc*norm; z.push(a); }
+  const m=Math.max(...z); let su=0; const p=z.map(v=>{ const e=Math.exp(v-m); su+=e; return e; }); return p.map(v=>v/su); }
+function chatMLload(){ return CHATML.loading||(CHATML.loading=(async()=>{ try{
+  const [m,c]=await Promise.all(['chat/model.json','chat/config.json'].map(u=>fetch(u,{cache:'no-cache'}).then(r=>r.ok?r.json():null).catch(()=>null)));
+  if(m&&m.q){ const bin=atob(m.q), w=new Int8Array(bin.length); for(let i=0;i<bin.length;i++) w[i]=(bin.charCodeAt(i)<<24)>>24; CHATML.w=w; CHATML.model=m; }
+  CHATML.cfg=c; chatShareUI(); }catch(e){} })()); }
+// topics, for the "which do you mean?" and "not what I asked?" buttons
+const CHAT_TOPIC={pm:['PM2.5 level','ค่าฝุ่น PM2.5'],adv:['Health advice, masks','ควรทำตัวยังไง / ใส่หน้ากากไหม'],rank:['Worst / cleanest provinces','จังหวัดไหนฝุ่นเยอะสุด'],hot:['Fires, hotspots','จุดความร้อน / ไฟ'],
+  wx:['Rain, temperature','ฝน / อุณหภูมิ'],fog:['Fog','หมอก'],acc:['Forecast accuracy','พยากรณ์แม่นแค่ไหน'],src:['Data sources','ข้อมูลมาจากไหน'],how:['How it works','ระบบทำงานยังไง'],
+  whatpm:['What PM2.5 is','PM2.5 คืออะไร'],aqi:['What AQI is','AQI คืออะไร'],hi:['Just saying hi','ทักทาย'],other:['Something else','เรื่องอื่น']};
+// learning from viewers: a question with the topic the viewer picked ("which do you mean?" or "not what I asked?") is sent,
+// without anything else, to the Google Form in chat/config.json (when one is set and the viewer has not switched it off);
+// .github/workflows/chat-train.yml adds them to the training rows weekly and retrains (scripts/chat_learn.mjs, chat_train.mjs)
+function chatShareOK(){ try{ return localStorage.getItem('hsw.chatShare')!=='0'; }catch(e){ return true; } }
+function chatShareUI(){ const el=document.querySelector('#chatW .chat-share'); if(!el) return; const on=!!CHATML.cfg?.feedback?.formUrl; el.hidden=!on;
+  const cb=el.querySelector('input'); cb.checked=chatShareOK(); cb.onchange=()=>{ try{ localStorage.setItem('hsw.chatShare',cb.checked?'1':'0'); }catch(e){} }; }
+function chatFeedback(q,y,kind){ const c=CHATML.cfg?.feedback; if(!c?.formUrl||!c.fields?.q||!chatShareOK()||CHATML.sent>=20) return;
+  const clean=String(q).replace(/[\u0000-\u001f]/g,' ').trim().slice(0,200); if(!clean||/\d{7,}|@|https?:|www\./i.test(clean)) return;   // never phone numbers, e-mails or links
+  CHATML.sent++; const body=new URLSearchParams({[c.fields.q]:clean,[c.fields.y]:y,[c.fields.kind]:kind});
+  fetch(c.formUrl,{method:'POST',mode:'no-cors',body}).catch(()=>{}); }
+async function chatAnswer(q,forced){ if(!P.data) return {html:T('The data is still loading — give it a moment and ask again.','ข้อมูลยังโหลดไม่เสร็จเลย รอแป๊บนึงแล้วถามใหม่นะ')};
+  const a=chatParse(q), rule=a.topic||((a.prov||a.day!=null||a.part)?'pm':null); let t=forced||null;
+  if(!t){ const p=chatMLpredict(q);
+    if(p){ const ord=CHATML.model.intents.map((k,i)=>[p[i],k]).sort((x,y)=>y[0]-x[0]);
+      if(ord[0][0]>=0.5) t=ord[0][1];                                         // the classifier is sure enough
+      else if(rule) t=rule;                                                   // else the keyword rules
+      else if(ord[0][0]>=0.2) return {ask:ord.slice(0,3).map(o=>o[1])};       // else ask which topic was meant
+    } else t=rule; }
+  if(!t) return {html:T('Hmm, I did not quite get that. Try one of these:','อืม... ยังไม่ค่อยเข้าใจเลยอ่ะ ลองถามแบบนี้ดูไหม:')};
+  if(t==='other') return {topic:t,html:T('That one is outside what I know — I only answer about dust, haze, fog, weather, hotspots and SEA-HAF itself.','เรื่องนี้ตอบไม่ได้จริง ๆ นะ ตอบได้แค่เรื่องฝุ่น หมอกควัน หมอก อากาศ จุดความร้อน แล้วก็เรื่องของ SEA-HAF เอง')};
+  return {topic:t,html:await chatAnswerTopic(q,a,t)}; }
+async function chatAnswerTopic(q,a,t){
   if(t==='hi') return T('Hi! I answer from the SEA-HAF forecast on this page: PM2.5 now or tomorrow at your location or any Thai province, health advice, the worst provinces, hotspots, weather and how accurate we have been.','หวัดดี! ถามเรื่องฝุ่นมาได้เลยนะ อย่างฝุ่นตอนนี้หรือพรุ่งนี้ ตรงที่คุณอยู่หรือจังหวัดไหนก็ได้ ควรใส่หน้ากากไหม จังหวัดไหนฝุ่นเยอะสุด จุดความร้อน สภาพอากาศ หรือพยากรณ์แม่นแค่ไหน');
   if(t==='acc') return chatAnsAcc(); if(CHAT_FAQ[t]) return CHAT_FAQ[t](); if(t==='rank') return chatAnsRank(a.day);
   let pl=a.prov?{x:a.prov}:null;
@@ -4313,7 +4356,7 @@ function chatEl(){ let w=document.getElementById('chatW'); if(w) return w; w=doc
   w.innerHTML=`<div class="chat-tease" hidden><span></span><button type="button" class="chat-x" aria-label="${T('Close','ปิด')}">×</button></div>
     <button type="button" class="chat-fab" aria-label="${T('Ask SEA-HAF','ถาม SEA-HAF')}" aria-expanded="false"><img class="bot-lt" src="assets/sea-haf-bot-animated-light.svg" width="50" height="50" alt=""><img class="bot-dk" src="assets/sea-haf-bot-animated-dark.svg" width="50" height="50" alt=""></button>
     <section class="chat-box" hidden role="dialog" aria-label="${T('SEA-HAF assistant','ผู้ช่วย SEA-HAF')}"><div class="chat-head"><span class="chat-av"><img class="bot-lt" src="assets/sea-haf-bot-light.svg" width="28" height="28" alt=""><img class="bot-dk" src="assets/sea-haf-bot-dark.svg" width="28" height="28" alt=""></span><b>${T('Ask SEA-HAF','ถาม SEA-HAF')}</b><small>${T('answers from this forecast only','ตอบจากข้อมูลพยากรณ์ในระบบเท่านั้น')}</small><button type="button" class="chat-close" aria-label="${T('Close','ปิด')}">×</button></div>
-      <div class="chat-log" aria-live="polite"></div><div class="chat-chips"></div>
+      <div class="chat-log" aria-live="polite"></div><div class="chat-chips"></div><label class="chat-share" hidden><input type="checkbox" checked> ${T('Send the questions I correct, anonymously, to help the bot learn','ส่งคำถามที่ช่วยแก้ ให้บอตเรียนรู้ (ไม่ระบุตัวตน)')}</label>
       <form class="chat-in"><input type="text" maxlength="200" autocomplete="off" placeholder="${T('e.g. Chiang Mai tomorrow','เช่น เชียงใหม่ พรุ่งนี้')}" aria-label="${T('Your question','คำถาม')}"><button type="submit" aria-label="${T('Send','ส่ง')}">➤</button></form></section>`;
   document.body.appendChild(w); return w; }
 function chatPush(who,html){ const log=chatEl().querySelector('.chat-log'), m=document.createElement('div'); m.className='chat-m '+who; m.innerHTML=html;
@@ -4321,9 +4364,14 @@ function chatPush(who,html){ const log=chatEl().querySelector('.chat-log'), m=do
   else log.appendChild(m);
   log.scrollTop=log.scrollHeight; return m; }
 function chatChips(){ chatEl().querySelector('.chat-chips').innerHTML=CHAT_CHIPS().map(([l,q])=>`<button type="button" data-q="${esc(q)}">${esc(l)}</button>`).join(''); }
-async function chatAsk(q,label){ q=String(q||'').trim(); if(!q) return; chatPush('me',esc(label||q)); const wait=chatPush('bot','<span class="chat-dots">…</span>');
-  let ans; try{ ans=await chatAnswer(q); }catch(e){ ans=T('Sorry, something went wrong while reading the data.','อุ๊ย ขอโทษนะ อ่านข้อมูลไม่สำเร็จ ลองถามอีกทีได้ไหม'); }
-  wait.innerHTML=ans; chatChips(); chatEl().querySelector('.chat-log').scrollTop=1e9; }
+const chatTopicBtns=(q,keys,kind)=>'<div class="chat-pick">'+keys.map(k=>`<button type="button" data-topic="${k}" data-kind="${kind}" data-q="${esc(q)}">${esc(T(...CHAT_TOPIC[k]))}</button>`).join('')+'</div>';
+async function chatAsk(q,label,forced,kind){ q=String(q||'').trim(); if(!q) return; chatPush('me',esc(label||q)); const wait=chatPush('bot','<span class="chat-dots">…</span>');
+  await chatMLload();
+  let r; try{ r=await chatAnswer(q,forced); }catch(e){ r={html:T('Sorry, something went wrong while reading the data.','อุ๊ย ขอโทษนะ อ่านข้อมูลไม่สำเร็จ ลองถามอีกทีได้ไหม')}; }
+  if(r.ask){ const keys=[...new Set([...r.ask,'other'])]; wait.innerHTML=T('Not quite sure — which do you mean?','ยังไม่แน่ใจเลย หมายถึงเรื่องไหนเอ่ย?')+chatTopicBtns(q,keys,'pick'); }
+  else wait.innerHTML=r.html+(r.topic&&!forced?`<button type="button" class="chat-wrong" data-q="${esc(q)}">${T('Not what I asked?','ตอบไม่ตรง?')}</button>`:'');
+  if(forced&&kind) chatFeedback(q,forced,kind);   // the viewer told us the topic: a labelled question for the next training
+  chatChips(); chatEl().querySelector('.chat-log').scrollTop=1e9; }
 function chatToggle(open){ const w=chatEl(), box=w.querySelector('.chat-box'); CHAT.open=open??!CHAT.open; box.hidden=!CHAT.open; w.querySelector('.chat-fab').setAttribute('aria-expanded',String(CHAT.open)); w.querySelector('.chat-tease').hidden=true;
   try{ sessionStorage.setItem('hsw.chatTease','1'); }catch(e){}
   if(CHAT.open&&!CHAT.started){ CHAT.started=true; chatPush('bot',T('Hi! Ask me about PM2.5 here or in any Thai province — now, today or tomorrow — or tap a question below. I answer only from the forecast on this page.','หวัดดี! อยากรู้เรื่องฝุ่น PM2.5 ตรงนี้หรือจังหวัดไหน ตอนนี้ วันนี้ หรือพรุ่งนี้ ถามมาได้เลย หรือจะแตะคำถามข้างล่างก็ได้นะ (ตอบจากข้อมูลพยากรณ์ในระบบเท่านั้น)')); chatChips(); }
@@ -4333,6 +4381,9 @@ function chatToggle(open){ const w=chatEl(), box=w.querySelector('.chat-box'); C
   if(matchMedia('(prefers-reduced-motion: reduce)').matches) w.querySelectorAll('.chat-fab img').forEach(i=>{ i.src=i.src.replace('-animated',''); i.classList.add('still'); });
   w.querySelector('.chat-fab').onclick=()=>chatToggle(); w.querySelector('.chat-close').onclick=()=>chatToggle(false);
   w.querySelector('.chat-chips').addEventListener('click',e=>{ const b=e.target.closest('button[data-q]'); if(b) chatAsk(b.dataset.q,b.textContent); });
+  w.querySelector('.chat-log').addEventListener('click',e=>{ const b=e.target.closest('button'); if(!b) return;
+    if(b.classList.contains('chat-wrong')){ b.remove(); chatPush('bot',T('Oops — what did you want to know?','อ้าว ขอโทษที อยากรู้เรื่องไหนเอ่ย?')+chatTopicBtns(b.dataset.q,Object.keys(CHAT_TOPIC).filter(k=>k!=='hi'),'fix')); chatEl().querySelector('.chat-log').scrollTop=1e9; return; }
+    if(b.dataset.topic){ b.closest('.chat-pick')?.querySelectorAll('button').forEach(x=>x.disabled=true); chatAsk(b.dataset.q,T(...CHAT_TOPIC[b.dataset.topic]),b.dataset.topic,b.dataset.kind); } });
   w.querySelector('.chat-in').addEventListener('submit',e=>{ e.preventDefault(); const i=w.querySelector('.chat-in input'); chatAsk(i.value); i.value=''; });
   w.querySelector('.chat-x').onclick=e=>{ e.stopPropagation(); w.querySelector('.chat-tease').hidden=true; try{ sessionStorage.setItem('hsw.chatTease','1'); }catch(err){} };
   w.querySelector('.chat-tease span').onclick=()=>chatToggle(true);

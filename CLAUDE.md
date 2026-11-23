@@ -66,6 +66,7 @@ See `README.md` for the method and data sources.
   Its state is `state.silamState` (keys `MODEL_KEYS` in `silam_chain.mjs`: add a key there when `update.mjs` gets new per-model
   state), logs in `data/history/silam/`, page files in `data/silam/`. The default page data, the warnings shown first and the
   accuracy card stay CAMS until the logged comparison shows SILAM is at least as good.
+- Ask SEA-HAF (chat): the topic classifier is `scripts/chatml.mjs` (page copy `chatMLfeat` / `chatMLpredict` in index.html must stay identical; `scripts/chatml.test.mjs` checks). Retrain with `node scripts/chat_train.mjs` after changing `scripts/chat_data.mjs`; never train on `chat/test.json`. Answers come only from the page's data, never from the model.
 - Public page is `/` (redesign), the original layout is `/classic.html`, the developer page `/dev.html`.
 - The redesign's glass menu frames: styles in `index_modern.html` ("Glass menu frames"), motion in `glass/nav.mjs`, WebGL2 water
   (wide layout only) in `glass/water.mjs`, wired by `glass/boot.mjs`; the workflow publishes these three to `_site/glass/`.

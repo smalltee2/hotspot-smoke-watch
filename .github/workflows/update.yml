@@ -6,7 +6,7 @@ on:
   workflow_dispatch: {}    # "Run workflow" button for manual runs
   push:
     branches: [main]
-    paths: ['scripts/**', 'index.html', 'index_modern.html', '.github/workflows/update.yml']   # rerun and redeploy when code or page changes
+    paths: ['scripts/**', 'index.html', 'index_modern.html', 'chat/**', 'assets/**', '.github/workflows/update.yml']   # rerun and redeploy when code or page changes
 
 # Pages is deployed from this workflow (Settings → Pages → Source: GitHub Actions).
 # Large, constantly changing files (latest/met/state JSON) go only to Pages and the Actions cache.
@@ -218,6 +218,8 @@ jobs:
           mkdir -p _site/glass && cp glass/nav.mjs glass/water.mjs glass/boot.mjs _site/glass/
           # logo and browser icon (assets/README.md)
           mkdir -p _site/assets && cp assets/*.svg _site/assets/
+          # Ask SEA-HAF: the learned question classifier and the feedback form settings (chat/, read by the page)
+          mkdir -p _site/chat && cp chat/model.json chat/config.json _site/chat/
           # page version = hash of the page sources, so only a change to a page itself counts as a new version
           BUILD=$(cat index.html index_modern.html glass/nav.mjs glass/water.mjs glass/boot.mjs | sha1sum | cut -c1-12)
           sed -i "s/<meta name=\"build\" content=\"dev\">/<meta name=\"build\" content=\"${BUILD}\">/" _site/index.html _site/index_modern.html _site/classic.html _site/dev.html

@@ -1597,7 +1597,9 @@ header .status>.btn{--water-fill:.72}
 /* SEA-HAF assistant (chat button, bottom right): answers from the page's own data */
 .chatw{position:fixed;right:16px;bottom:calc(28px + env(safe-area-inset-bottom));z-index:1300;display:flex;flex-direction:column;align-items:flex-end;gap:8px;font-size:.88rem}
 .chat-fab{width:56px;height:56px;border-radius:50%;border:0;padding:0;background:var(--panel);display:grid;place-items:center;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,.3)}
-.chat-fab img{width:40px;height:40px;display:block}
+.chat-fab{overflow:visible}
+.chat-fab img{width:50px;height:50px;display:block;transform:translate(5px,-1px)}
+.chat-fab img.still{width:40px;height:40px;transform:none}
 .bot-dk{display:none!important}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .bot-lt{display:none!important}:root:not([data-theme="light"]) .bot-dk{display:block!important}}
 :root[data-theme="dark"] .bot-lt{display:none!important}:root[data-theme="dark"] .bot-dk{display:block!important}
@@ -5431,7 +5433,7 @@ async function chatAnswer(q){ if(!P.data) return T('The data is still loading �
 // --- the widget
 function chatEl(){ let w=document.getElementById('chatW'); if(w) return w; w=document.createElement('div'); w.id='chatW'; w.className='chatw';
   w.innerHTML=`<div class="chat-tease" hidden><span></span><button type="button" class="chat-x" aria-label="${T('Close','ปิด')}">×</button></div>
-    <button type="button" class="chat-fab" aria-label="${T('Ask SEA-HAF','ถาม SEA-HAF')}" aria-expanded="false"><img class="bot-lt" src="assets/sea-haf-bot-light.svg" width="40" height="40" alt=""><img class="bot-dk" src="assets/sea-haf-bot-dark.svg" width="40" height="40" alt=""></button>
+    <button type="button" class="chat-fab" aria-label="${T('Ask SEA-HAF','ถาม SEA-HAF')}" aria-expanded="false"><img class="bot-lt" src="assets/sea-haf-bot-animated-light.svg" width="50" height="50" alt=""><img class="bot-dk" src="assets/sea-haf-bot-animated-dark.svg" width="50" height="50" alt=""></button>
     <section class="chat-box" hidden role="dialog" aria-label="${T('SEA-HAF assistant','ผู้ช่วย SEA-HAF')}"><div class="chat-head"><span class="chat-av"><img class="bot-lt" src="assets/sea-haf-bot-light.svg" width="28" height="28" alt=""><img class="bot-dk" src="assets/sea-haf-bot-dark.svg" width="28" height="28" alt=""></span><b>${T('Ask SEA-HAF','ถาม SEA-HAF')}</b><small>${T('answers from this forecast only','ตอบจากข้อมูลพยากรณ์ในระบบเท่านั้น')}</small><button type="button" class="chat-close" aria-label="${T('Close','ปิด')}">×</button></div>
       <div class="chat-log" aria-live="polite"></div><div class="chat-chips"></div>
       <form class="chat-in"><input type="text" maxlength="200" autocomplete="off" placeholder="${T('e.g. Chiang Mai tomorrow','เช่น เชียงใหม่ พรุ่งนี้')}" aria-label="${T('Your question','คำถาม')}"><button type="submit" aria-label="${T('Send','ส่ง')}">➤</button></form></section>`;
@@ -5449,6 +5451,8 @@ function chatToggle(open){ const w=chatEl(), box=w.querySelector('.chat-box'); C
   if(CHAT.open&&!CHAT.started){ CHAT.started=true; chatPush('bot',T('Hi! Ask me about PM2.5 here or in any Thai province — now, today or tomorrow — or tap a question below. I answer only from the forecast on this page.','หวัดดี! อยากรู้เรื่องฝุ่น PM2.5 ตรงนี้หรือจังหวัดไหน ตอนนี้ วันนี้ หรือพรุ่งนี้ ถามมาได้เลย หรือจะแตะคำถามข้างล่างก็ได้นะ (ตอบจากข้อมูลพยากรณ์ในระบบเท่านั้น)')); chatChips(); }
   if(CHAT.open) setTimeout(()=>w.querySelector('.chat-in input').focus({preventScroll:true}),50); }
 { const w=chatEl();
+  // the launcher's icon moves (ring swing, typing bubble); viewers who ask for reduced motion get the still icon
+  if(matchMedia('(prefers-reduced-motion: reduce)').matches) w.querySelectorAll('.chat-fab img').forEach(i=>{ i.src=i.src.replace('-animated',''); i.classList.add('still'); });
   w.querySelector('.chat-fab').onclick=()=>chatToggle(); w.querySelector('.chat-close').onclick=()=>chatToggle(false);
   w.querySelector('.chat-chips').addEventListener('click',e=>{ const b=e.target.closest('button[data-q]'); if(b) chatAsk(b.dataset.q,b.textContent); });
   w.querySelector('.chat-in').addEventListener('submit',e=>{ e.preventDefault(); const i=w.querySelector('.chat-in input'); chatAsk(i.value); i.value=''; });

@@ -1,7 +1,8 @@
 // Unit tests of the local-LLM labelling helper (scripts/chat_llm_label.mjs), with a fake LLM server and site: node --test scripts/chat_llm_label.test.mjs
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { TOPICS, prompt, parseReply, askLLM, run, generate, runGenerate, plist, modelChange, appleString } from './chat_llm_label.mjs';
+import { TOPICS, prompt, parseReply, askLLM, run, generate, runGenerate, plist, modelChange, appleString, genPrompt, offTopic, looksLikeThisScript } from './chat_llm_label.mjs';
+import fs from 'node:fs';
 import { INTENTS } from './chatml.mjs';
 
 test('the helper knows the same topics as the classifier, and its examples use them', () => {
@@ -64,4 +65,14 @@ test('notification when the model on the site changes kind (first look only reme
   c = modelChange(c.state, mlp); assert.deepEqual(c.change, ['linear', 'mlp']); assert.match(c.note, /deep learning.*32 hidden units.*97\.0 %/);
   c = modelChange(c.state, lin); assert.deepEqual(c.change, ['mlp', 'linear']); assert.match(c.note, /linear/);
   assert.equal(appleString('a "b" \\c'), '"a \\"b\\" \\\\c"');
+});
+test('"other": its own request without places or times, and questions naming the bot subjects are dropped', () => {
+  const o = genPrompt('other', 10, 'English').at(-1).content, f = genPrompt('fog', 10, 'English').at(-1).content;
+  assert.ok(!/places in Thailand/.test(o) && /NOTHING to do with/.test(o) && /places in Thailand/.test(f));
+  assert.ok(offTopic('ราคาทองวันนี้เท่าไหร่') && offTopic('who won the football'));
+  assert.ok(!offTopic('สถานการณ์ฟิล์มและหมอกในพนมเปญวันนี้') && !offTopic('will it rain at the match'));
+});
+test('self-update: only a file that looks like this script is taken', () => {
+  assert.ok(looksLikeThisScript(fs.readFileSync(new URL('./chat_llm_label.mjs', import.meta.url), 'utf8')));
+  assert.ok(!looksLikeThisScript('<html>404</html>') && !looksLikeThisScript(null));
 });

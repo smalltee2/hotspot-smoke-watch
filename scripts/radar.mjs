@@ -12,8 +12,11 @@
 //   5. publishes the last 12 h and the nowcast at 0.025° in rain-obs.json (field "radar"), replaces ECMWF rain in the
 //      meteorology used by the smoke model where the radar sees, and archives the values at the stations and gauges for the
 //      ML experts and for fitting the blend weights (scripts/mlwx.mjs; replay/fit_blend.py style).
-// Coverage mask: the API's coverage tiles (transparent = a radar sees here). Cells outside coverage are -1 (missing), so the
-// page and the merge fall back to GSMaP / ECMWF there (Laos, Myanmar, Cambodia and the sea beyond radar range).
+// Coverage mask: the API's coverage tiles (transparent = a radar sees here) AND the echo footprint: cells within
+// RVCFG.echoRadius of a cell where the radar has ever shown an echo (counts kept in the cache). The API's coverage alone marked
+// 98 % of the box as seen (Nov 2026), so places no Thai radar reaches (northern Laos, Cambodia, the open sea) were stored as
+// measured dry and drew a dry rectangle on the map. Cells outside coverage are -1 (missing), so the page and the merge fall back
+// to PARDIG / GSMaP / ECMWF there. The footprint grows as echoes are seen: until it rains somewhere, that place keeps the fallback.
 import zlib from 'node:zlib';
 
 const HOUR = 3600e3, MIN = 60e3, DEG = Math.PI / 180;
@@ -27,6 +30,7 @@ export const RVCFG = {
   nowLeadH: 3, block: 40, search: 8,                 // nowcast: 3 h; motion blocks of 40 cells (1°), search ±8 cells (±0.2°) per 10 min
   minDbz: 10, maxRate: 100,                          // below 10 dBZ no rain; rates capped (hail, clutter)
   maskRefreshH: 24, paceMs: 700,                     // coverage mask refreshed daily; ≤ ~85 tile requests/min (limit 100/min/IP)
+  echoRadius: 10, echoMin: 1,                        // echo footprint: within 10 cells (0.25°) of a cell that has shown ≥ 0.1 mm/h
 };
 export const GRID = (() => { const [W, S, E, N] = RVCFG.bbox, st = RVCFG.step; return { lon0: W, lat0: S, step: st, nx: Math.round((E - W) / st) + 1, ny: Math.round((N - S) / st) + 1 }; })();
 
@@ -101,6 +105,20 @@ export const unpackI16 = s => { const b = zlib.inflateSync(Buffer.from(s, 'base6
 const packU8 = a => zlib.deflateSync(Buffer.from(a.buffer, a.byteOffset, a.byteLength), { level: 9 }).toString('base64');
 const unpackU8 = s => new Uint8Array(zlib.inflateSync(Buffer.from(s, 'base64')));
 
+// ---- echo footprint: counts of fields (frames, hours) with an echo per cell, and the coverage they give (dilated by echoRadius)
+export function noteEchoes(counts, a) { let k = 0; for (let i = 0; i < a.length; i++) if (a[i] >= RVCFG.echoMin && counts[i] < 65535) { counts[i]++; k++; } return k; }
+export function echoCover(counts, nx = GRID.nx, ny = GRID.ny, r = RVCFG.echoRadius) {
+  const row = new Uint8Array(nx * ny), out = new Uint8Array(nx * ny);
+  for (let y = 0; y < ny; y++) { let last = -1e9; const o = y * nx;   // horizontal pass: distance to the nearest echo cell in the row
+    const L = new Int32Array(nx); for (let x = 0; x < nx; x++) { if (counts[o + x] > 0) last = x; L[x] = x - last; }
+    last = 1e9; for (let x = nx - 1; x >= 0; x--) { if (counts[o + x] > 0) last = x; row[o + x] = Math.min(L[x], last - x) <= r ? 1 : 0; } }
+  for (let x = 0; x < nx; x++) { let last = -1e9; const U = new Int32Array(ny);   // vertical pass on the row result: a square of side 2r+1
+    for (let y = 0; y < ny; y++) { if (row[y * nx + x]) last = y; U[y] = y - last; }
+    last = 1e9; for (let y = ny - 1; y >= 0; y--) { if (row[y * nx + x]) last = y; out[y * nx + x] = Math.min(U[y], last - y) <= r ? 1 : 0; } }
+  return out; }
+// a field with the cells outside the coverage set to -1 (missing); returns the field and whether it changed
+export function clipField(a, cov) { let ch = false; for (let i = 0; i < a.length; i++) if (!cov[i] && a[i] >= 0) { a[i] = -1; ch = true; } return ch; }
+
 // ---- hourly update of the cache: { mask: { t, d }, frames: { [tMs]: d }, hours: { [tStartMs]: { d, n } }, fetched }
 // Frame and hour fields: Int16 ×10 mm/h, -1 = no radar coverage. Hours are the mean of the frames in (t, t+60 min].
 export async function updateRadar(cache, now, { get, sleep, log = console.log } = {}) {
@@ -118,16 +136,27 @@ export async function updateRadar(cache, now, { get, sleep, log = console.log } 
   // without a mask a pixel with no echo cannot be told from a place no radar sees: it would be stored as 0 mm/h, replace ECMWF
   // rain there and enter the logs as measured dry. Only possible on a first run (a failed refresh keeps the previous mask).
   if (!cache.mask) throw new Error('no radar coverage mask yet, frames not read');
-  const mask = unpackU8(cache.mask.d);
+  const mask = unpackU8(cache.mask.d), nCell = GRID.nx * GRID.ny;
+  // echo counts: started from the fields already held (their echoes are real: zeros never count), then every new frame
+  let echo = null; if (cache.echo) { const b = zlib.inflateSync(Buffer.from(cache.echo.d, 'base64')); echo = new Uint16Array(b.buffer.slice(b.byteOffset, b.byteOffset + b.byteLength)); }
+  if (!echo || echo.length !== nCell) { echo = new Uint16Array(nCell);
+    for (const h of Object.values(cache.hours)) noteEchoes(echo, unpackI16(h.d)); for (const d of Object.values(cache.frames)) noteEchoes(echo, unpackI16(d)); }
   // new frames
   let nNew = 0;
   for (const f of past.sort((a, b) => a.time - b.time)) { const t = f.time * 1000; if (cache.frames[t]) continue;
     try { const { sum, cnt } = frameField(await fetchTiles((x, y) => `${api.host}${f.path}/${RVCFG.size}/${RVCFG.z}/${x}/${y}/${RVCFG.color}/${RVCFG.opts}.png`));
       const a = new Int16Array(sum.length); for (let c = 0; c < a.length; c++) a[c] = !cnt[c] || !mask[c] ? -1 : Math.min(3000, Math.round(sum[c] / cnt[c] * 10));
-      cache.frames[t] = packI16(a); nNew++; }
+      noteEchoes(echo, a); cache.frames[t] = packI16(a); nNew++; }
     catch (e) { log(`radar frame ${new Date(t).toISOString().slice(11, 16)}Z failed: ${e.message}`); } }
   for (const k of Object.keys(cache.frames)) if (+k < now - RVCFG.keepFramesH * HOUR) delete cache.frames[k];
   for (const k of Object.keys(cache.hours)) if (+k < now - RVCFG.keepHoursH * HOUR) delete cache.hours[k];
+  // coverage = the API's mask AND the echo footprint; held frames and hours are clipped to it (idempotent: a cell set to missing
+  // stays missing), so the hours, the nowcast, the merge into the meteorology, the station archive and the page all see it
+  const cov = echoCover(echo); for (let i = 0; i < nCell; i++) if (!mask[i]) cov[i] = 0;
+  cache.echo = { d: zlib.deflateSync(Buffer.from(echo.buffer), { level: 9 }).toString('base64') };
+  cache.cover = { d: packU8(cov), covered: +(cov.reduce((a, v) => a + v, 0) / nCell).toFixed(3) };
+  for (const [k, d] of Object.entries(cache.frames)) { const a = unpackI16(d); if (clipField(a, cov)) cache.frames[k] = packI16(a); }
+  for (const h of Object.values(cache.hours)) { const a = unpackI16(h.d); if (clipField(a, cov)) { h.d = packI16(a); delete h._a; } }
   // hourly means for hours that have ended (frames at :10 … :00 of the next hour)
   const times = Object.keys(cache.frames).map(Number).sort((a, b) => a - b);
   for (let T = Math.floor((times[0] || now) / HOUR) * HOUR; T + HOUR <= now; T += HOUR) {
@@ -140,6 +169,7 @@ export async function updateRadar(cache, now, { get, sleep, log = console.log } 
   }
   cache.fetched = now; cache.latest = times[times.length - 1] || null;
   log(`radar: ${past.length} frames listed, ${nNew} new (${req} tile requests), ${times.length} frames and ${Object.keys(cache.hours).length} hourly fields held, latest ${cache.latest ? new Date(cache.latest).toISOString().slice(11, 16) + 'Z' : '-'}`);
+  log(`radar coverage used: ${(cache.cover.covered * 100).toFixed(0)} % of the box (API mask ${(cache.mask.covered * 100).toFixed(0)} %, limited to within ${(RVCFG.echoRadius * RVCFG.step).toFixed(2)}° of echoes seen)`);
   return cache;
 }
 
@@ -232,7 +262,7 @@ export function webRadar(cache, now, factor, nc) {
   if (!ts.length && !nc) return null;
   return { source: 'Weather radar via RainViewer (Thailand: Thai Meteorological Department), Universal Blue colours -> dBZ -> Marshall–Palmer rain rate, hourly mean over the hour starting at each time, 0.025° cells; -1 = no radar coverage',
            lon0: GRID.lon0, lat0: GRID.lat0, step: GRID.step, nx: GRID.nx, ny: GRID.ny, scale: 10, enc: 'deflate-int16', factor,
-           latest: cache.latest || null, mask: cache.mask ? cache.mask.d : null, times: ts, d: ts.map(t => cache.hours[t].d),
+           latest: cache.latest || null, mask: cache.cover ? cache.cover.d : cache.mask ? cache.mask.d : null, times: ts, d: ts.map(t => cache.hours[t].d),
            nowcast: nc ? { t0: nc.t0, hours: nc.hours, frames: nc.frames, d: nc.fields.map(packI16), motion: nc.motion } : null };
 }
 

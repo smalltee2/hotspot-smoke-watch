@@ -602,7 +602,7 @@ async function main() {
     log(`radar: ECMWF rain replaced at ${nRep} node-hours; nowcast ${nc ? `${nc.hours.length} h from ${new Date(nc.t0).toISOString().slice(11, 16)}Z, echo motion ${nc.motion.u} / ${nc.motion.v} km/h E/N (${nc.motion.blocks} of ${nc.motion.of} blocks)` : 'not possible (fewer than 3 consecutive frames)'}`);
     const webR = webRadar(rcache, now, sc.factor, nc);
     if (webR) { const ro = await readJSON(path.join(DATA, 'rain-obs.json'), null) || { times: [], d: [], src: [] }; ro.radar = webR; await writeJSON(path.join(DATA, 'rain-obs.json'), ro);
-      rainInfo ||= { file: 'data/rain-obs.json', times: [], src: null }; rainInfo.radar = { latest: rcache.latest, factor: sc.factor, hours: webR.times.length, nowcast: nc ? { t0: nc.t0, hours: nc.hours, motion: nc.motion } : null, covered: rcache.mask?.covered ?? null }; }
+      rainInfo ||= { file: 'data/rain-obs.json', times: [], src: null }; rainInfo.radar = { latest: rcache.latest, factor: sc.factor, hours: webR.times.length, nowcast: nc ? { t0: nc.t0, hours: nc.hours, motion: nc.motion } : null, covered: rcache.cover?.covered ?? rcache.mask?.covered ?? null, apiCovered: rcache.mask?.covered ?? null }; }
     // ECMWF against the radar over the last 72 h: timing shift and amount factor field (published; applied by the page with CFG.rainBlend)
     let D = null;
     if (met) { const metPure = await readJSON(path.join(DATA, 'met.json'), null);   // as issued: met.json is written before any observation is merged

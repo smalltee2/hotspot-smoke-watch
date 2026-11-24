@@ -188,7 +188,9 @@ async function get(url, opt = {}, tries = 3, waitMs = 2000, timeoutMs = 60e3) {
       const r = await fetch(url, { ...opt, signal: AbortSignal.timeout(timeoutMs) });
       if (r.status === 429) { await sleep(5000 * (i + 1)); continue; }
       if (!r.ok) throw new Error(`HTTP ${r.status} ${(await r.text()).slice(0, 200)}`);
-      if (HTTPC && !SIL && !opt.method) { let buf = null; try { buf = Buffer.from(await r.clone().arrayBuffer()); await fs.mkdir(HTTPC, { recursive: true }); await fs.writeFile(httpFile(url), buf); } catch { } }
+      // the reply is kept for the SILAM run. Its body is read here, once, inside the retry: read from a copy with the error swallowed,
+      // a download cut by the time limit left the reply unreadable and unretried ("Body is unusable", met refresh of 24 Nov 2026 07Z)
+      if (HTTPC && !SIL && !opt.method) { const buf = Buffer.from(await r.arrayBuffer()); try { await fs.mkdir(HTTPC, { recursive: true }); await fs.writeFile(httpFile(url), buf); } catch { } return new Response(buf); }
       return r;
     } catch (e) {
       if (e.cause?.code && !e.message.includes(e.cause.code)) e.message += ` (${e.cause.code})`;   // e.g. ECONNRESET, UND_ERR_CONNECT_TIMEOUT

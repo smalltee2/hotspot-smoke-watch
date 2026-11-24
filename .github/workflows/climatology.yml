@@ -27,7 +27,7 @@ jobs:
       # the hourly run's station list (data/state.json). Restore only, with the hourly run's exact path list (the cache version
       # depends on it); nothing is saved, so the hourly run's cache is not touched
       - name: Restore the hourly run's state (station list)
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v6
         with:
           path: |
             data/state.json

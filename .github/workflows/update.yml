@@ -254,7 +254,10 @@ jobs:
         with:
           path: _site
       # GitHub sometimes does not list a just-uploaded Pages artifact yet ("No artifacts named github-pages were found",
-      # run #1382): wait and deploy once more instead of losing the hour. A second failure still fails the job.
+      # run #1382; on most runs since 24 Nov 2026): wait 15 s before the first try, and if it still fails wait and deploy once
+      # more instead of losing the hour. A second failure still fails the job.
+      - if: always() && steps.build.outcome == 'success'
+        run: sleep 15
       - id: deployment
         if: always() && steps.build.outcome == 'success'
         continue-on-error: true

@@ -2869,6 +2869,36 @@ async function saveMapImage(kind,btn){
     if(RS) g.restore();
     path(GEO_P,null,'rgba(60,70,66,.45)',0.8); path(GEO_C,null,'#3c4642',1.6);
     if(RS){ regionPath(); g.strokeStyle='#1d2321'; g.lineWidth=2.2; g.stroke(); }
+    // the layers switched on in the map at this moment (hourly image only: they belong to the hour on the time bar): drawn from the
+    // map's own markers, so the image shows what the viewer sees: towns, hotspots, stations (Air4Thai / OpenAQ), accuracy badges
+    const shownKeys=[];
+    if(kind==='h'){ const sc=Math.max(1.3,mapW/1100), INK='#1d2321';
+      const each=(layer,fn)=>{ if(!map.hasLayer(layer)) return 0; let k=0; layer.eachLayer(m=>{ const ll=m.getLatLng?.(); if(ll&&ll.lng>=w&&ll.lng<=e&&ll.lat>=so&&ll.lat<=n){ if(fn(m,X(ll.lng),Y(ll.lat))!==false) k++; } }); return k; };
+      const html=m=>m.options?.icon?.options?.html||'', css=(h,p)=>(new RegExp(p+':\\s*([^;"]+)').exec(h)||[])[1];
+      const circ=(x,y,r,fill,stroke,lw,alpha=1)=>{ g.globalAlpha=alpha; g.beginPath(); g.arc(x,y,r,0,2*Math.PI); if(fill){ g.fillStyle=fill; g.fill(); } if(stroke){ g.strokeStyle=stroke; g.lineWidth=lw; g.stroke(); } g.globalAlpha=1; };
+      const labels=[];
+      // towns: their dots, and the names of the main ones (the minor town names would crowd the image; a name that would
+      // overlap one already written is left out)
+      const nTown=each(townLayer,(m,x,y)=>{ if(m instanceof L.CircleMarker){ const o=m.options; circ(x,y,o.radius*sc*0.8,o.fillColor,INK,1.5); return; }
+        const tt=m.getTooltip?.(); if(!tt||/minor/.test(tt.options.className||'')) return false; g.font=font(600,Math.round(13*sc)); g.fillStyle=INK; g.strokeStyle='rgba(255,255,255,.85)'; g.lineWidth=3;
+        const tx_=String(tt.getContent()).replace(/<[^>]+>/g,'').replace(/&amp;/g,'&'), r_=[x+8*sc,y-10*sc,g.measureText(tx_).width,16*sc];
+        if(labels.some(q=>r_[0]<q[0]+q[2]&&q[0]<r_[0]+r_[2]&&r_[1]<q[1]+q[3]&&q[1]<r_[1]+r_[3])) return false;   // no name over another
+        labels.push(r_); g.strokeText(tx_,x+8*sc,y+4*sc); g.fillText(tx_,x+8*sc,y+4*sc); return false; });
+      const nHot=each(hotLayer,(m,x,y)=>{ if(!(m instanceof L.CircleMarker)) return false; const o=m.options; circ(x,y,o.radius*sc*0.85,o.fillColor,o.color,Math.max(1,(o.weight||1)*sc*0.7),o.fillOpacity??0.9); });
+      // stations: OpenAQ / other monitors as squares (low-cost sensors faded), Air4Thai as a measured centre with the forecast ring
+      const nSt=each(stationLayer,(m,x,y)=>{ const h=html(m), bg=css(h,'background'); if(!bg) return false; const a=/opacity:\s*\.6/.test(h)?0.6:1, d=12*sc;
+        g.globalAlpha=a; g.fillStyle=bg; g.fillRect(x-d/2,y-d/2,d,d); g.strokeStyle=INK; g.lineWidth=1.5; g.strokeRect(x-d/2,y-d/2,d,d); g.globalAlpha=1; })
+        +each(a4tLayer,(m,x,y)=>{ const h=html(m), bg=css(h,'background'), ring=(/box-shadow:\s*0 0 0 3px ([^;"]+)/.exec(h)||[])[1]; if(!bg) return false;
+          if(ring) circ(x,y,(6+3)*sc,ring,null,0); circ(x,y,6*sc,bg,INK,1.2); });
+      // accuracy badges (share of hours in the right band): a small box with the number
+      const nAcc=[accLayer,accLcLayer,iqLayer].reduce((k,l)=>k+each(l,(m,x,y)=>{ const h=html(m), v=(/<b>([^<]*)<\/b>/.exec(h)||[])[1]; if(!v) return false;
+        const bw=34*sc*0.8, bh=17*sc*0.8, x0=x-bw/2, y0=y-22*sc*0.8; g.fillStyle='#ffffff'; g.fillRect(x0,y0,bw,bh); g.strokeStyle=INK; g.lineWidth=1; g.setLineDash(/accbadge lc/.test(h)?[3,2]:[]); g.strokeRect(x0,y0,bw,bh); g.setLineDash([]);
+        g.fillStyle=INK; g.font=font(700,Math.round(10*sc*0.8)); g.textAlign='center'; g.textBaseline='middle'; g.fillText(v,x,y0+bh/2); g.textAlign='left'; g.textBaseline='alphabetic'; }),0);
+      if(nHot) shownKeys.push(['hot',T(`Satellite hotspots (${nHot}, last 1–2 days)`,`จุดความร้อนจากดาวเทียม (${nHot} จุด, 1–2 วันล่าสุด)`)]);
+      if(nSt) shownKeys.push(['st',T(`Stations (${nSt}): centre = measured, ring = forecast`,`สถานีตรวจวัด (${nSt}): สีด้านใน = ค่าตรวจวัด, วงนอก = ค่าพยากรณ์`)]);
+      if(nAcc) shownKeys.push(['acc',T('Badges: forecast accuracy at the station (7 days)','ป้าย: ความแม่นยำของพยากรณ์ที่สถานี (7 วัน)')]);
+      if(nTown) shownKeys.push(['town',T('Towns','เมือง')]);
+    }
     // faint mark across the map: the source and the time shown (stays on crops and re-shares)
     { const mk=`SEA-HAF · ${kind==='h'?fmtT(t):sub.split(' (')[0]}`; g.save(); g.translate(mx+mapW/2,head+mapH/2); g.rotate(-16*Math.PI/180);
       let fpx=Math.round(Math.min(mapW,mapH)/14); g.font=font(700,fpx); const tw=g.measureText(mk).width, lim=0.85*Math.min(mapW,mapH*1.6);
@@ -2882,6 +2912,8 @@ async function saveMapImage(kind,btn){
     g.strokeStyle='#5d6763'; g.strokeRect(pad,ly,lw,22); g.fillStyle='#1d2321'; g.font=font(500,18);
     for(const v of ticks){ const x=pad+pos(v)*lw; g.fillRect(x,ly+22,1,6); g.fillText(String(v),x-(v>=100?14:v>=10?9:5),ly+48); }
     g.fillText(T('PM2.5 (µg/m³) · Thai PCD bands','PM2.5 (µg/m³) · ระดับตามเกณฑ์กรมควบคุมมลพิษ'),pad+lw+24,ly+18);
+    // what else is in the image (the layers that were switched on)
+    if(shownKeys.length){ g.font=font(400,15); g.fillStyle='#38423e'; g.fillText(shownKeys.map(k=>k[1]).join(' · '),pad+lw+24,ly+46,W-(pad+lw+24)-pad); }
     g.font=font(400,16); g.fillStyle='#5d6763';
     g.fillText(T('Data: CAMS (Copernicus Atmosphere Monitoring Service), Air4Thai (PCD), OpenAQ, ECMWF, NASA FIRMS · Borders: World Bank','ข้อมูล: CAMS (Copernicus Atmosphere Monitoring Service), Air4Thai (กรมควบคุมมลพิษ), OpenAQ, ECMWF, NASA FIRMS · เส้นขอบ: World Bank'),pad,Hh-24);
     const name=`SEA-HAF_PM25_${{h:'hourly',d:'24h',w:'weekly',m:'monthly'}[kind]}${RS?'_'+$('region').value:''}${stamp?'_'+stamp:''}.png`;
@@ -2896,7 +2928,7 @@ async function saveMapImage(kind,btn){
       `<div class="savepop" hidden><b>${dl('Save the map as an image','บันทึกแผนที่เป็นรูปภาพ')}</b>`+
       [['h',dl('Hourly (the hour on the time bar)','รายชั่วโมง (เวลาบนแถบเวลา)')],['d',dl('24-hour mean (yesterday, 00–24 h)','เฉลี่ย 24 ชั่วโมง (เมื่อวาน 00–24 น.)')],['w',dl('Weekly mean (last week, Mon–Sun)','เฉลี่ยรายสัปดาห์ (สัปดาห์ที่แล้ว จ.–อา.)')],['m',dl('Monthly mean (last month)','เฉลี่ยรายเดือน (เดือนที่แล้ว)')]]
         .map(([k,l],j)=>`<label><input type="radio" name="saveKind" value="${k}"${j?'':' checked'}> ${l}</label>`).join('')+
-      `<div class="note" style="font-size:.7rem">${dl('Area: as set in "Area shown" (a region, Thailand or the whole map). Logo, title, time and legend are added.','พื้นที่: ตามที่ตั้งไว้ใน "พื้นที่แสดงผล" (ภาค ประเทศไทย หรือทั้งแผนที่) มีโลโก้ ชื่อ วันเวลา และคำอธิบายสีในภาพ')}</div><button type="button" data-en="Save PNG" data-th="บันทึก PNG">${T('Save PNG','บันทึก PNG')}</button></div>`;
+      `<div class="note" style="font-size:.7rem">${dl('Area: as set in "Area shown" (a region, Thailand or the whole map). Logo, title, time and legend are added. The hourly image also shows the hotspots, stations and accuracy badges switched on in the map.','พื้นที่: ตามที่ตั้งไว้ใน "พื้นที่แสดงผล" (ภาค ประเทศไทย หรือทั้งแผนที่) มีโลโก้ ชื่อ วันเวลา และคำอธิบายสีในภาพ ภาพรายชั่วโมงจะมีจุดความร้อน สถานี และป้ายความแม่นยำที่เปิดอยู่บนแผนที่ด้วย')}</div><button type="button" data-en="Save PNG" data-th="บันทึก PNG">${T('Save PNG','บันทึก PNG')}</button></div>`;
     (S.saveRelabel=()=>{ const a=d.querySelector('a'), t=T('Save the map as an image','บันทึกแผนที่เป็นรูปภาพ'); a.title=t; a.setAttribute('aria-label',t); })();
     L.DomEvent.disableClickPropagation(d); L.DomEvent.disableScrollPropagation(d);
     const pop=d.querySelector('.savepop');

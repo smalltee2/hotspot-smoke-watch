@@ -30,6 +30,8 @@ export const RVCFG = {
   nowLeadH: 3, block: 40, search: 8,                 // nowcast: 3 h; motion blocks of 40 cells (1°), search ±8 cells (±0.2°) per 10 min
   minDbz: 10, maxRate: 100,                          // below 10 dBZ no rain; rates capped (hail, clutter)
   maskRefreshH: 24, paceMs: 700,                     // coverage mask refreshed daily; ≤ ~85 tile requests/min (limit 100/min/IP)
+  despeckle: { r: 2, min: 11 },                      // noise filter: an echo cell needs ≥ 11 echo cells in its 5 × 5 neighbourhood (spokes and
+                                                     // speckles, 1–2 cells wide, fall below it; rain areas wider than ~3 cells pass)
   echoRadius: 4, echoMin: 1, echoHours: 2,          // echo footprint: within 4 cells (0.1°) of a cell that has shown ≥ 0.1 mm/h in at
                                                      // least 2 different hours (rain lasts and recurs; a speckle of noise is seen once)
 };
@@ -110,6 +112,18 @@ const unpackU8 = s => new Uint8Array(zlib.inflateSync(Buffer.from(s, 'base64')))
 export function noteEchoes(counts, a, hour = null, last = null) { let k = 0;
   for (let i = 0; i < a.length; i++) if (a[i] >= RVCFG.echoMin && counts[i] < 65535) { if (last) { if (last[i] === hour) continue; last[i] = hour; } counts[i]++; k++; }
   return k; }   // with hour / last: counts the different hours with an echo (several frames of one hour count once)
+// noise filter: echo cells with too few echo cells around them (radial spokes from interference, beam artefacts, single speckles)
+// are set to 0 mm/h; missing cells (-1) stay missing. Returns the number of cells removed.
+export function despeckle(a, nx = GRID.nx, ny = GRID.ny, { r, min } = RVCFG.despeckle) {
+  const on = new Uint8Array(a.length); for (let i = 0; i < a.length; i++) on[i] = a[i] >= RVCFG.echoMin ? 1 : 0;
+  const S = new Int32Array((nx + 1) * (ny + 1));   // summed-area table of the echo cells
+  for (let y = 0; y < ny; y++) { let row = 0; for (let x = 0; x < nx; x++) { row += on[y * nx + x]; S[(y + 1) * (nx + 1) + x + 1] = S[y * (nx + 1) + x + 1] + row; } }
+  let k = 0;
+  for (let y = 0; y < ny; y++) for (let x = 0; x < nx; x++) { const i = y * nx + x; if (!on[i]) continue;
+    const x0 = Math.max(0, x - r), x1 = Math.min(nx, x + r + 1), y0 = Math.max(0, y - r), y1 = Math.min(ny, y + r + 1);
+    const n = S[y1 * (nx + 1) + x1] - S[y0 * (nx + 1) + x1] - S[y1 * (nx + 1) + x0] + S[y0 * (nx + 1) + x0];
+    if (n < min) { a[i] = 0; k++; } }
+  return k; }
 export const echoSeen = counts => counts.map(c => (c >= RVCFG.echoHours ? 1 : 0));
 export function echoCover(counts, nx = GRID.nx, ny = GRID.ny, r = RVCFG.echoRadius) {
   const row = new Uint8Array(nx * ny), out = new Uint8Array(nx * ny);
@@ -144,6 +158,11 @@ export async function updateRadar(cache, now, { get, sleep, log = console.log } 
   // echo-hour counts per cell (and the last hour counted): started from the hourly fields already held (each a different hour; their
   // echoes are real: zeros never count), then every new frame, counted once per hour
   const inflate16 = (d, T) => { const b = zlib.inflateSync(Buffer.from(d, 'base64')); return new T(b.buffer.slice(b.byteOffset, b.byteOffset + b.byteLength)); };
+  // held fields from before the noise filter: filtered once (frames and hours), and the echo counts started again from them
+  if (!cache.despeckled) { let k = 0;
+    for (const [t, d] of Object.entries(cache.frames)) { const a = unpackI16(d); const n = despeckle(a); if (n) { cache.frames[t] = packI16(a); k += n; } }
+    for (const h of Object.values(cache.hours)) { const a = unpackI16(h.d); const n = despeckle(a); if (n) { h.d = packI16(a); delete h._a; k += n; } }
+    cache.despeckled = 1; delete cache.echoH; log(`radar noise filter applied to the held fields: ${k} echo cells removed`); }
   let echo = cache.echoH ? inflate16(cache.echoH.d, Uint16Array) : null, lastH = cache.echoH ? inflate16(cache.echoH.last, Uint32Array) : null;
   if (!echo || echo.length !== nCell || !lastH || lastH.length !== nCell) { echo = new Uint16Array(nCell); lastH = new Uint32Array(nCell);
     for (const [T, h] of Object.entries(cache.hours)) noteEchoes(echo, unpackI16(h.d), +T / HOUR, lastH); }
@@ -153,7 +172,7 @@ export async function updateRadar(cache, now, { get, sleep, log = console.log } 
   for (const f of past.sort((a, b) => a.time - b.time)) { const t = f.time * 1000; if (cache.frames[t]) continue;
     try { const { sum, cnt } = frameField(await fetchTiles((x, y) => `${api.host}${f.path}/${RVCFG.size}/${RVCFG.z}/${x}/${y}/${RVCFG.color}/${RVCFG.opts}.png`));
       const a = new Int16Array(sum.length); for (let c = 0; c < a.length; c++) a[c] = !cnt[c] || !mask[c] ? -1 : Math.min(3000, Math.round(sum[c] / cnt[c] * 10));
-      noteEchoes(echo, a, Math.floor((t - 1) / HOUR), lastH); cache.frames[t] = packI16(a); nNew++; }   // the hour the frame belongs to: (T, T+60 min]
+      despeckle(a); noteEchoes(echo, a, Math.floor((t - 1) / HOUR), lastH); cache.frames[t] = packI16(a); nNew++; }   // the hour the frame belongs to: (T, T+60 min]
     catch (e) { log(`radar frame ${new Date(t).toISOString().slice(11, 16)}Z failed: ${e.message}`); } }
   for (const k of Object.keys(cache.frames)) if (+k < now - RVCFG.keepFramesH * HOUR) delete cache.frames[k];
   for (const k of Object.keys(cache.hours)) if (+k < now - RVCFG.keepHoursH * HOUR) delete cache.hours[k];

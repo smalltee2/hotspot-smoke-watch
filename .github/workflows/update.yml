@@ -92,6 +92,12 @@ jobs:
         timeout-minutes: 6
         run: python3 scripts/silam.py
 
+      - name: ECMWF rain at 0.25° over the whole map (ECMWF open data, GRIB2 read in Python; a new run twice a day, kept on the history branch)
+        if: steps.restore.outcome == 'success'
+        continue-on-error: true
+        timeout-minutes: 5
+        run: python3 scripts/ecmwf_pr.py
+
       - name: Fetch data, correct forecast, write JSON
         env:
           OPENAQ_API_KEY: ${{ secrets.OPENAQ_API_KEY }}
@@ -240,7 +246,7 @@ jobs:
               const m = JSON.parse(fs.readFileSync("data/met.json", "utf8")), t = JSON.parse(fs.readFileSync("data/latest.json", "utf8")).generated, H = 3600e3;
               const tr = t ? packTraj(m, t - 49 * H, t + 75 * H) : null; if (tr) fs.writeFileSync("data/met-traj.json", JSON.stringify(tr));' || echo "::warning title=met-traj::could not rebuild met-traj.json"
           fi
-          for f in latest.json met-web.json met-traj.json ml-field.json t2-corr.json rain-obs.json wx-ml.json perf.json perf-series.json rk-bias.json rk-bias-A.json verify.json runlog.json accuracy.json pm-mean.json; do [ -f "data/$f" ] && cp "data/$f" _site/data/ || true; done
+          for f in latest.json met-web.json met-traj.json ml-field.json t2-corr.json rain-obs.json ecmwf-pr.json wx-ml.json perf.json perf-series.json rk-bias.json rk-bias-A.json verify.json runlog.json accuracy.json pm-mean.json; do [ -f "data/$f" ] && cp "data/$f" _site/data/ || true; done
           for f in elev.json elev025.json; do [ -f data/static/$f ] && cp data/static/$f _site/data/static/ || true; done
           # the SILAM chain's page files (absent when its run failed: the page then hides the SILAM layer)
           if [ -f data/silam/latest.json ]; then mkdir -p _site/data/silam && cp data/silam/*.json _site/data/silam/; fi

@@ -3996,12 +3996,24 @@ async function saveMapImage(kind,btn){
         w=c-span/2; e=c+span/2; if(w<G.lon0){ e+=G.lon0-w; w=G.lon0; } if(e>Gx){ w-=e-Gx; e=Gx; } } }
     const t=curT(), i=gIdx(t), dl=x=>new Date(x).toLocaleString(LOC(),{weekday:'long',day:'numeric',month:'long',year:'numeric',hour:'2-digit',minute:'2-digit',timeZone:'Asia/Bangkok'});
     const dd=s=>new Date(s+'T12:00:00+07:00').toLocaleDateString(LOC(),{day:'numeric',month:'short',year:'numeric',timeZone:'Asia/Bangkok'});
-    let F,fx,fy,cell,title,sub,meta=null;
+    let F,fx,fy,cell,title,sub,meta=null,shownPix=null,shownMode='total';
     let stamp='';
     if(kind==='h'){
       if(i<0) throw new Error(T('no data at this hour','ไม่มีข้อมูลที่เวลานี้'));
       cell=(e-w)*(n-so)>40?0.05:0.025; fx=Math.ceil((e-w)/cell); fy=Math.ceil((n-so)/cell);
-      F=hourField(i,so,w,fx,fy,cell,false); title=T('PM2.5, hourly','PM2.5 รายชั่วโมง');
+      // what the map shows at this hour (the layer, the 24-h mean switch, the scale, the faded forecast cells), read from the
+      // painted field itself; the plain hourly PM2.5 field when the map has none to read
+      const mode=layerMode();
+      if(mode==='nasa') throw new Error(T('the NASA satellite picture cannot be saved here; choose another layer first.','บันทึกภาพดาวเทียม NASA ไม่ได้ กรุณาเลือกชั้นข้อมูลอื่นก่อน'));
+      if(FIELD_PAINT&&S.fine){ const Fs=S.fine, wx=['rain','temp','vent'].includes(mode), boost=wx?0.82*255/150:0.82/EPA_ALPHA;
+        const fcAt=(la,lo)=>{ if(!Fs.fc) return false; const ix=Math.floor((lo-Fs.w)/Fs.cell), iy=Math.floor((la-Fs.so)/Fs.cell); return ix>=0&&iy>=0&&ix<Fs.nx&&iy<Fs.ny&&Fs.fc[iy*Fs.nx+ix]===1; };
+        shownPix=(la,lo)=>{ const v=fieldValue(Fs,la,lo); if(v!==v) return null; const c=FIELD_PAINT.colour(v); if(!c) return null;
+          return [c[0],c[1],c[2],Math.round(Math.min(255,c[3]*boost)*(fcAt(la,lo)?0.7:1))]; };
+        shownMode=mode; }
+      F=shownPix?new Float32Array(fx*fy):hourField(i,so,w,fx,fy,cell,false);
+      const avgT=avg24()&&!['rain','temp','vent'].includes(mode)?T(', 24-h mean',' ค่าเฉลี่ย 24 ชม.'):'';
+      title={rain:T('Rain, mm/h','ฝน (มม./ชม.)'),temp:T('Temperature, °C','อุณหภูมิ (°C)'),vent:T('Ventilation index, m²/s','ดัชนีการระบายอากาศ (ม.²/วินาที)'),
+        fire:T('PM2.5 from fire smoke','PM2.5 จากควันไฟ')+avgT,silam:T('PM2.5 (SILAM)','PM2.5 (SILAM)')+avgT,unc:T('Map uncertainty','ความไม่แน่นอนของแผนที่')}[shownPix?mode:'']||(avgT?T('PM2.5','PM2.5')+avgT:T('PM2.5, hourly','PM2.5 รายชั่วโมง'));
       sub=(t>Date.now()?T('Forecast for ','พยากรณ์ ณ '):T('Map for ','แผนที่ ณ '))+dl(t)+T(' (Thai time)',' น. (เวลาไทย)');
       stamp=new Date(t+7*HR).toISOString().slice(0,13).replace(/[-T:]/g,'');
     } else {
@@ -4039,7 +4051,9 @@ async function saveMapImage(kind,btn){
     path(GEO_C,'#f5f5f2',null,0);
     // the field: one pixel per cell, scaled up with smoothing (row 0 of F is the south edge)
     const fc=document.createElement('canvas'); fc.width=fx; fc.height=fy; const fg=fc.getContext('2d'), im=fg.createImageData(fx,fy);
-    for(let y=0;y<fy;y++) for(let x=0;x<fx;x++){ const v=F[y*fx+x], c=v===v?rampColor(v,THAI_STOPS):null, o=((fy-1-y)*fx+x)*4;
+    for(let y=0;y<fy;y++) for(let x=0;x<fx;x++){ const o=((fy-1-y)*fx+x)*4;
+      if(shownPix){ const c=shownPix(so+y*cell,w+x*cell); if(c){ im.data[o]=c[0]; im.data[o+1]=c[1]; im.data[o+2]=c[2]; im.data[o+3]=c[3]; } continue; }
+      const v=F[y*fx+x], c=v===v?rampColor(v,THAI_STOPS):null;
       if(c){ im.data[o]=c[0]; im.data[o+1]=c[1]; im.data[o+2]=c[2]; im.data[o+3]=Math.round(Math.min(1,c[3]/EPA_ALPHA*0.82)*255); } }
     fg.putImageData(im,0,0); g.imageSmoothingEnabled=true; g.imageSmoothingQuality='high';
     const regionPath=()=>{ g.beginPath(); for(const pg of RS.polys) for(const ring of pg){ ring.forEach(([lo,la],k)=>k?g.lineTo(X(lo),Y(la)):g.moveTo(X(lo),Y(la))); g.closePath(); } };
@@ -4085,17 +4099,24 @@ async function saveMapImage(kind,btn){
       g.textAlign='center'; g.textBaseline='middle'; g.fillStyle='rgba(29,35,33,.13)'; g.fillText(mk,0,0); g.restore(); }
     g.restore(); g.strokeStyle='#9aa5a0'; g.lineWidth=1; g.strokeRect(mx,head,mapW,mapH);
     // legend: the continuous Thai PM2.5 colours with the PCD band edges
-    const ly=head+mapH+34, lw=Math.min(760,mapW*0.55), ticks=[0,15,25,37.5,75,150], pos=v=>{ for(let k=1;k<ticks.length;k++) if(v<=ticks[k]) return (k-1+(v-ticks[k-1])/(ticks[k]-ticks[k-1]))/(ticks.length-1); return 1; };
-    for(let px=0;px<lw;px++){ const fr=px/lw, k=Math.min(ticks.length-2,Math.floor(fr*(ticks.length-1))), v=ticks[k]+(fr*(ticks.length-1)-k)*(ticks[k+1]-ticks[k]), c=rampColor(Math.max(1,v),THAI_STOPS);
+    // the legend of what is drawn: the layer's own colour scale (PM2.5 on the Thai or the US scale, rain, temperature, ventilation)
+    const us=shownPix&&mapStops()!==THAI_STOPS, hx=h=>h?hexRGB(h):null;
+    const LEG=shownMode==='rain'?{ticks:[0.1,0.5,1,2,5,10,20],col:v=>hx(wxColor('rain',v)),lab:T('Rain (mm/h)','ฝน (มม./ชม.)')}
+      :shownMode==='temp'?{ticks:[10,15,20,25,30,35,40],col:v=>tempRGB(v),lab:T('Temperature at 2 m (°C)','อุณหภูมิ 2 ม. (°C)')}
+      :shownMode==='vent'?{ticks:[0,1000,2000,4000,6000,10000,15000],col:v=>hx(wxColor('vent',v)),lab:T('Ventilation index (m²/s)','ดัชนีการระบายอากาศ (ม.²/วินาที)')}
+      :us?{ticks:US_STOPS.map(x=>x[0]),col:v=>rampColor(Math.max(1,v),US_STOPS),lab:T('PM2.5 (µg/m³) · US AQI colours','PM2.5 (µg/m³) · สีตาม AQI สหรัฐฯ')}
+      :{ticks:[0,15,25,37.5,75,150],col:v=>rampColor(Math.max(1,v),THAI_STOPS),lab:T('PM2.5 (µg/m³) · Thai PCD bands','PM2.5 (µg/m³) · ระดับตามเกณฑ์กรมควบคุมมลพิษ')};
+    const ly=head+mapH+34, lw=Math.min(760,mapW*0.55), ticks=LEG.ticks, pos=v=>{ for(let k=1;k<ticks.length;k++) if(v<=ticks[k]) return (k-1+(v-ticks[k-1])/(ticks[k]-ticks[k-1]))/(ticks.length-1); return 1; };
+    for(let px=0;px<lw;px++){ const fr=px/lw, k=Math.min(ticks.length-2,Math.floor(fr*(ticks.length-1))), v=ticks[k]+(fr*(ticks.length-1)-k)*(ticks[k+1]-ticks[k])+1e-6, c=LEG.col(v);
       g.fillStyle=c?`rgb(${c[0]},${c[1]},${c[2]})`:'#eee'; g.fillRect(pad+px,ly,1,22); }
     g.strokeStyle='#5d6763'; g.strokeRect(pad,ly,lw,22); g.fillStyle='#1d2321'; g.font=font(500,18);
-    for(const v of ticks){ const x=pad+pos(v)*lw; g.fillRect(x,ly+22,1,6); g.fillText(String(v),x-(v>=100?14:v>=10?9:5),ly+48); }
-    g.fillText(T('PM2.5 (µg/m³) · Thai PCD bands','PM2.5 (µg/m³) · ระดับตามเกณฑ์กรมควบคุมมลพิษ'),pad+lw+24,ly+18);
+    for(const v of ticks){ const x=pad+pos(v)*lw; g.fillRect(x,ly+22,1,6); g.textAlign='center'; g.fillText(v>=1000?(v/1000)+'k':String(v),x,ly+48); g.textAlign='left'; }
+    g.fillText(LEG.lab,pad+lw+24,ly+18);
     // what else is in the image (the layers that were switched on)
     if(shownKeys.length){ g.font=font(400,15); g.fillStyle='#38423e'; g.fillText(shownKeys.map(k=>k[1]).join(' · '),pad+lw+24,ly+46,W-(pad+lw+24)-pad); }
     g.font=font(400,16); g.fillStyle='#5d6763';
     g.fillText(T('Data: CAMS (Copernicus Atmosphere Monitoring Service), Air4Thai (PCD), OpenAQ, ECMWF, NASA FIRMS · Borders: World Bank','ข้อมูล: CAMS (Copernicus Atmosphere Monitoring Service), Air4Thai (กรมควบคุมมลพิษ), OpenAQ, ECMWF, NASA FIRMS · เส้นขอบ: World Bank'),pad,Hh-24);
-    const name=`SEA-HAF_PM25_${{h:'hourly',d:'24h',w:'weekly',m:'monthly'}[kind]}${RS?'_'+$('region').value:''}${stamp?'_'+stamp:''}.png`;
+    const name=`SEA-HAF_${{rain:'rain',temp:'temperature',vent:'ventilation',fire:'PM25-fire',silam:'PM25-SILAM',unc:'uncertainty'}[shownMode]||'PM25'}_${{h:'hourly',d:'24h',w:'weekly',m:'monthly'}[kind]}${RS?'_'+$('region').value:''}${stamp?'_'+stamp:''}.png`;
     await new Promise(res=>cv.toBlob(bl=>{ const a=document.createElement('a'); a.href=URL.createObjectURL(bl); a.download=name; document.body.appendChild(a); a.click(); setTimeout(()=>{URL.revokeObjectURL(a.href); a.remove();},1000); res(); },'image/png'));
   }catch(err){ alert(T('Could not make the image: ','สร้างภาพไม่ได้: ')+err.message); }
   finally{ btn.disabled=false; btn.textContent=b0; }

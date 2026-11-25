@@ -1,7 +1,7 @@
 // Unit tests of the radar coverage (scripts/radar.mjs): node --test scripts/radar.test.mjs
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { noteEchoes, echoCover, echoSeen, clipField, RVCFG } from './radar.mjs';
+import { noteEchoes, echoCover, echoSeen, clipField, despeckle, RVCFG } from './radar.mjs';
 
 test('echo footprint: counts only cells with rain, never zeros or missing cells', () => {
   const c = new Uint16Array(5); assert.equal(noteEchoes(c, Int16Array.from([0, -1, 1, 25, 0])), 2); assert.deepEqual([...c], [0, 0, 1, 1, 0]);
@@ -46,4 +46,17 @@ test('updateRadar: with an all-covered API mask, only the echo footprint is kept
   const slon = (sx + 210 / 512) / n * 360 - 180, slat = Math.atan(Math.sinh(Math.PI * (1 - 2 * (sy + 210 / 512) / n))) / DEG;
   assert.equal(radarAt(c, slat, slon, Math.floor(now / 3600e3) * 3600e3 - 2 * 3600e3), null, 'a one-frame speckle does not make coverage');
   const c2 = await updateRadar(c, now + 600e3, { get, sleep: async () => {}, log: () => {} }); assert.equal(c2.cover.covered, c.cover.covered);   // the counts carry over
+});
+test('noise filter: spokes (1-2 cells wide) and speckles go, rain areas stay, missing cells stay missing', () => {
+  const nx = 40, ny = 40, a = new Int16Array(nx * ny);
+  for (let x = 2; x < 38; x++) a[5 * nx + x] = 30;                                   // a spoke 1 cell wide
+  for (let x = 2; x < 38; x++) { a[10 * nx + x] = 30; a[11 * nx + x] = 30; }       // a spoke 2 cells wide
+  a[30 * nx + 5] = 50;                                                              // a single speckle
+  for (let y = 20; y < 28; y++) for (let x = 20; x < 28; x++) a[y * nx + x] = 12;   // a shower 8 × 8 cells (20 km)
+  a[0] = -1;
+  const k = despeckle(a, nx, ny);
+  assert.equal(k, 36 + 72 + 1 + 4);                                                // + the shower's 4 square corners (9 echo cells around)
+  assert.ok([...a.slice(5 * nx, 12 * nx)].every(v => v === 0)); assert.equal(a[30 * nx + 5], 0);
+  for (let y = 20; y < 28; y++) for (let x = 20; x < 28; x++) if (!((y === 20 || y === 27) && (x === 20 || x === 27))) assert.equal(a[y * nx + x], 12);
+  assert.equal(a[0], -1);
 });

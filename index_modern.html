@@ -1662,7 +1662,7 @@ header .status>.btn{--water-fill:.72}
 @media (min-width:861px){.leaflet-bottom.leaflet-left .maplogo{margin-bottom:calc(var(--scrubH,58px) + 34px)}}
 .summary div.tap{cursor:pointer}.summary div.tap:hover b,.summary div.tap:focus-visible b{text-decoration:underline}.alert.warned-hl{outline:2px solid var(--focus);outline-offset:2px;transition:outline-color .3s}
 .summary div.warnon b,.summary div.warnon span{color:#c62828}@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .summary div.warnon b,:root:not([data-theme="light"]) .summary div.warnon span{color:#ff6b6b}}:root[data-theme="dark"] .summary div.warnon b,:root[data-theme="dark"] .summary div.warnon span{color:#ff6b6b}.summary div.warnon b::before{content:"";display:inline-block;width:.95em;height:.95em;margin-right:.22em;vertical-align:-.1em;background:currentColor;-webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill-rule='evenodd' d='M12 1.6a1.6 1.6 0 0 1 1.6 1.6v.6a6.6 6.6 0 0 1 5 6.4v4.3l1.9 2.7a.9.9 0 0 1-.7 1.4H4.2a.9.9 0 0 1-.7-1.4l1.9-2.7v-4.3a6.6 6.6 0 0 1 5-6.4v-.6A1.6 1.6 0 0 1 12 1.6zM11 7.2h2l-.3 5.6h-1.4zM12 13.8a1.15 1.15 0 1 0 0 2.3a1.15 1.15 0 1 0 0-2.3zM9.6 19.9h4.8a2.4 2.4 0 0 1-4.8 0z'/%3E%3C/svg%3E") center/contain no-repeat;mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill-rule='evenodd' d='M12 1.6a1.6 1.6 0 0 1 1.6 1.6v.6a6.6 6.6 0 0 1 5 6.4v4.3l1.9 2.7a.9.9 0 0 1-.7 1.4H4.2a.9.9 0 0 1-.7-1.4l1.9-2.7v-4.3a6.6 6.6 0 0 1 5-6.4v-.6A1.6 1.6 0 0 1 12 1.6zM11 7.2h2l-.3 5.6h-1.4zM12 13.8a1.15 1.15 0 1 0 0 2.3a1.15 1.15 0 1 0 0-2.3zM9.6 19.9h4.8a2.4 2.4 0 0 1-4.8 0z'/%3E%3C/svg%3E") center/contain no-repeat;transform-origin:50% 8%;animation:bellring 3s ease-in-out infinite}@keyframes bellring{0%,40%,100%{transform:rotate(0)}5%{transform:rotate(18deg)}10%{transform:rotate(-16deg)}15%{transform:rotate(13deg)}20%{transform:rotate(-10deg)}25%{transform:rotate(7deg)}30%{transform:rotate(-4deg)}35%{transform:rotate(2deg)}}@media (prefers-reduced-motion: reduce){.summary div.warnon b::before{animation:none}}
-.leaflet-tooltip.dlabel,.leaflet-tooltip.slabel{background:none !important;border:0 !important;box-shadow:none !important;color:var(--muted) !important;padding:0 !important;text-shadow:0 0 3px var(--land,#fff),0 0 3px var(--land,#fff),0 0 2px var(--land,#fff) !important}.leaflet-tooltip.dlabel{font:600 10px/1 var(--font-body,system-ui) !important}.leaflet-tooltip.slabel{font:italic 400 9px/1 var(--font-body,system-ui) !important;opacity:.9 !important}.leaflet-tooltip.dlabel::before,.leaflet-tooltip.slabel::before{display:none}
+.leaflet-tooltip.dlabel,.leaflet-tooltip.slabel{background:none !important;border:0 !important;box-shadow:none !important;color:var(--muted) !important;padding:0 !important;text-shadow:0 0 3px var(--land,#fff),0 0 3px var(--land,#fff),0 0 2px var(--land,#fff) !important}.leaflet-tooltip.dlabel{font:700 13px/1.15 var(--font-body,system-ui) !important;color:var(--fg) !important}.leaflet-tooltip.slabel{font:500 11.5px/1.15 var(--font-body,system-ui) !important;opacity:1 !important}.leaflet-tooltip.dlabel::before,.leaflet-tooltip.slabel::before{display:none}
 </style>
 <script type="module" src="glass/boot.mjs"></script>
 </head>
@@ -1774,14 +1774,11 @@ header .status>.btn{--water-fill:.72}
       <h3 class="pub-only" data-th="พื้นที่และการแจ้งเตือน">Area and alerts</h3>
       <div class="field"><label for="region" data-th="พื้นที่แสดงผล">Region</label>
         <select id="region">
-          <option value="north" data-th="ภาคเหนือ">Northern Thailand</option>
-          <option value="northeast" data-th="ภาคตะวันออกเฉียงเหนือ (อีสาน)">Northeastern Thailand (Isan)</option>
-          <option value="central" data-th="ภาคกลาง">Central Thailand</option>
-          <option value="east" data-th="ภาคตะวันออก">Eastern Thailand</option>
-          <option value="south" data-th="ภาคใต้">Southern Thailand</option>
           <option value="thailand" data-th="ประเทศไทย">Thailand</option>
           <option value="msea" data-th="เอเชียตะวันออกเฉียงใต้ภาคพื้นทวีป">Mainland Southeast Asia</option>
         </select></div>
+      <div class="field"><label for="provSel" data-th="จังหวัด (ดูเขตอำเภอและตำบล)">Province (shows its districts and sub-districts)</label>
+        <select id="provSel"></select></div>
       <div class="dev-only">
       <div class="field"><label for="mapkey">NASA FIRMS MAP_KEY</label>
         <input id="mapkey" type="password" autocomplete="off" placeholder="32-character key from firms.modaps.eosdis.nasa.gov/api/map_key">
@@ -2619,9 +2616,22 @@ const REGION_PROV={
     'Ranong','Phang Nga','Phuket','Krabi','Trang','Satun'],
 };
 const REGION_CACHE={};
+// "Area shown" is Thailand or the whole map; under Thailand a second menu (#provSel) narrows it to one province, where the
+// districts and sub-districts are then drawn at every zoom (drawAdm). provKey(): the province's English name, '' for none
+const provKey=()=>$('region').value==='thailand'?($('provSel')?.value||''):'';
+const provSelP=()=>{ const n=provKey(); return n?GEO_P.features.find(f=>f.properties.c==='THA'&&f.properties.n===n)?.properties||null:null; };
+const regKey=()=>$('region').value+(provKey()?':'+provKey():'');
+const regionLabel=()=>{ const p=provSelP(); return p?provName(p):($('region').selectedOptions[0]?.textContent||'').trim(); };
+function provSelFill(){ const el=$('provSel'); if(!el) return; const cur=el.value;
+  const ps=GEO_P.features.filter(f=>f.properties.c==='THA').map(f=>f.properties).sort((a,b)=>provName(a).localeCompare(provName(b),LANG==='th'?'th':'en'));
+  el.textContent=''; el.add(new Option(T('All provinces (whole country)','ทุกจังหวัด (ทั้งประเทศ)'),'')); for(const q of ps) el.add(new Option(provName(q),q.n)); el.value=cur;
+  if(el.value!==cur) el.value=''; }
+function provSelSync(){ const f=$('provSel')?.closest('.field'); if(f) f.hidden=$('region').value!=='thailand'; }
+{ provSelFill(); const v=store.get('hsw.prov'); if(v&&[...$('provSel').options].some(o=>o.value===v)) $('provSel').value=v; provSelSync();
+  $('provSel').addEventListener('change',()=>store.set('hsw.prov',$('provSel').value)); }
 function regionShape(){ // {polys:[[ring,...],...] in [lon,lat], bbox} or null for the whole domain
-  const k=$('region').value; if(k==='msea') return null; if(REGION_CACHE[k]) return REGION_CACHE[k];
-  const feats=GEO_P.features.filter(f=>f.properties.c==='THA'&&(k==='thailand'||(REGION_PROV[k]||[]).includes(f.properties.n)));
+  if($('region').value==='msea') return null; const pk=provKey(), k=regKey(); if(REGION_CACHE[k]) return REGION_CACHE[k];
+  const feats=GEO_P.features.filter(f=>f.properties.c==='THA'&&(pk?f.properties.n===pk:true));
   const polys=[]; let w=180,so=90,e=-180,n=-90;
   for(const f of feats){const ps=f.geometry.type==='Polygon'?[f.geometry.coordinates]:f.geometry.coordinates;
     for(const pg of ps){polys.push(pg); for(const [x,y] of pg[0]){w=Math.min(w,x);e=Math.max(e,x);so=Math.min(so,y);n=Math.max(n,y);}}}
@@ -2705,16 +2715,21 @@ const ADM_Z={l2:9,n2:10,l3:11,n3:12}, ADML={l2:null,n2:null,l3:null,n3:null,n2ke
 function admLabel(q,cls){ const c=provCentroid(q.f); return L.marker(c,{icon:L.divIcon({className:'',html:'',iconSize:[0,0]}),interactive:false,keyboard:false})
   .bindTooltip(esc(LANG==='th'?q.p.th:q.p.en),{permanent:true,direction:'center',className:cls}); }
 function drawAdm(){ const on=typeof shown==='function'&&$('shAdm')&&shown('shAdm'), z=map.getZoom(), bm=$('bmSel')?.value, sat=bm==='sat';
+  // one province chosen: its districts (borders and names) and sub-district borders at every zoom, sub-district names from zoom 10
+  const pv=provSelP(), pth=pv?pv.th:null, Z=pv?{l2:0,n2:0,l3:0,n3:10}:ADM_Z, mode=pth||'';
   const drop=k=>{ if(ADML[k]){ map.removeLayer(ADML[k]); ADML[k]=null; } };
-  const style=lv=>({pane:'lines',interactive:false,style:{color:sat?'#ffffff':cssVar('--border')||'#79837e',weight:lv===2?0.9:0.6,opacity:lv===2?0.75:0.55,dashArray:lv===2?'5 3':'2 3',fill:false}});
-  if(on&&z>=ADM_Z.l2){ if(!ADM[2]) loadAdm(2).then(j=>{ if(j) drawAdm(); }); else { if(!ADML.l2) ADML.l2=L.geoJSON(ADM[2],style(2)).addTo(map);
-      if(z>=ADM_Z.n2){ const v=map.getBounds().pad(0.2), key=[v.getWest(),v.getSouth(),v.getEast(),v.getNorth()].map(x=>x.toFixed(1)).join(',')+LANG;
-        if(ADML.n2key!==key){ drop('n2'); ADML.n2key=key; ADML.n2=L.layerGroup(ADM[2].idx.filter(q=>q.b[2]>=v.getWest()&&q.b[0]<=v.getEast()&&q.b[3]>=v.getSouth()&&q.b[1]<=v.getNorth()).map(q=>admLabel(q,'dlabel'))).addTo(map); } }
+  if(ADML.mode!==mode){ for(const k of ['l2','n2','l3','n3']) drop(k); ADML.n2key=ADML.n3key=''; ADML.mode=mode; }
+  const mine=q=>!pth||q.p.pth===pth, fc=lv=>pth?{type:'FeatureCollection',features:ADM[lv].features.filter(f=>f.properties.pth===pth)}:ADM[lv];
+  const style=lv=>({pane:'lines',interactive:false,style:{color:sat?'#ffffff':cssVar('--border')||'#79837e',weight:lv===2?(pth?1.5:0.9):(pth?0.8:0.6),opacity:lv===2?(pth?0.95:0.75):(pth?0.7:0.55),dashArray:lv===2?(pth?null:'5 3'):'2 3',fill:false}});
+  const inView=(q,v)=>q.b[2]>=v.getWest()&&q.b[0]<=v.getEast()&&q.b[3]>=v.getSouth()&&q.b[1]<=v.getNorth();
+  if(on&&z>=Z.l2){ if(!ADM[2]) loadAdm(2).then(j=>{ if(j) drawAdm(); }); else { if(!ADML.l2) ADML.l2=L.geoJSON(fc(2),style(2)).addTo(map);
+      if(z>=Z.n2){ const v=map.getBounds().pad(0.2), key=[v.getWest(),v.getSouth(),v.getEast(),v.getNorth()].map(x=>x.toFixed(1)).join(',')+LANG;
+        if(ADML.n2key!==key){ drop('n2'); ADML.n2key=key; ADML.n2=L.layerGroup(ADM[2].idx.filter(q=>mine(q)&&inView(q,v)).map(q=>admLabel(q,'dlabel'))).addTo(map); } }
       else { drop('n2'); ADML.n2key=''; } } }
   else { drop('l2'); drop('n2'); ADML.n2key=''; }
-  if(on&&z>=ADM_Z.l3){ if(!ADM[3]) loadAdm(3).then(j=>{ if(j) drawAdm(); }); else { if(!ADML.l3) ADML.l3=L.geoJSON(ADM[3],style(3)).addTo(map);
-      if(z>=ADM_Z.n3){ const v=map.getBounds().pad(0.1), key=[v.getWest(),v.getSouth(),v.getEast(),v.getNorth()].map(x=>x.toFixed(2)).join(',')+LANG;
-        if(ADML.n3key!==key){ drop('n3'); ADML.n3key=key; ADML.n3=L.layerGroup(ADM[3].idx.filter(q=>q.b[2]>=v.getWest()&&q.b[0]<=v.getEast()&&q.b[3]>=v.getSouth()&&q.b[1]<=v.getNorth()).map(q=>admLabel(q,'slabel'))).addTo(map); } }
+  if(on&&z>=Z.l3){ if(!ADM[3]) loadAdm(3).then(j=>{ if(j) drawAdm(); }); else { if(!ADML.l3) ADML.l3=L.geoJSON(fc(3),style(3)).addTo(map);
+      if(z>=Z.n3){ const v=map.getBounds().pad(0.1), key=[v.getWest(),v.getSouth(),v.getEast(),v.getNorth()].map(x=>x.toFixed(2)).join(',')+LANG;
+        if(ADML.n3key!==key){ drop('n3'); ADML.n3key=key; ADML.n3=L.layerGroup(ADM[3].idx.filter(q=>mine(q)&&inView(q,v)).map(q=>admLabel(q,'slabel'))).addTo(map); } }
       else { drop('n3'); ADML.n3key=''; } } }
   else { drop('l3'); drop('n3'); ADML.n3key=''; }
   declutterSoon(); }
@@ -4034,7 +4049,7 @@ async function saveMapImage(kind,btn){
   const b0=btn.textContent; btn.disabled=true; btn.textContent=T('Making the image…','กำลังสร้างภาพ…'); await new Promise(r=>setTimeout(r,30));
   try{
     // the area of the "Area shown" setting: a Thai region or Thailand (its outline, the field cut to it), else the whole map
-    const Gx=G.lon0+(G.nx-1)*G.step, Gy=G.lat0+(G.ny-1)*G.step, RS=regionShape(), regName_=RS?($('region').selectedOptions[0]?.textContent||'').trim():'';
+    const Gx=G.lon0+(G.nx-1)*G.step, Gy=G.lat0+(G.ny-1)*G.step, RS=regionShape(), regName_=RS?regionLabel():'';
     let w=G.lon0, e=Gx, so=G.lat0, n=Gy;
     if(RS){ const pb=0.2; w=Math.max(G.lon0,RS.bbox[0]-pb); e=Math.min(Gx,RS.bbox[2]+pb); so=Math.max(G.lat0,RS.bbox[1]-pb); n=Math.min(Gy,RS.bbox[3]+pb); }
     // a tall area (Thailand, the North) would pass the image's height limit: widen it east and west, around its centre, so the map
@@ -4298,7 +4313,7 @@ async function saveMapImage(kind,btn){
     g.font=font(400,15); g.fillStyle='#38423e'; klines.forEach((l,j)=>g.fillText(l,kx,k0+20*j,kw));
     g.font=font(400,16); g.fillStyle='#5d6763';
     g.fillText(T('Data: CAMS (Copernicus Atmosphere Monitoring Service), Air4Thai (PCD), OpenAQ, ECMWF, NASA FIRMS','ข้อมูล: CAMS (Copernicus Atmosphere Monitoring Service), Air4Thai (กรมควบคุมมลพิษ), OpenAQ, ECMWF, NASA FIRMS')+credits.map(c=>', '+c).join('')+T(' · Borders: World Bank',' · เส้นขอบ: World Bank'),pad,Hh-24,W-2*pad);
-    const name=`SEA-HAF_${{rain:'rain',temp:'temperature',vent:'ventilation',fire:'PM25-fire',silam:'PM25-SILAM',unc:'uncertainty',nasa:'NASA-truecolour'}[shownMode]||'PM25'}_${{h:'hourly',d:'24h',w:'weekly',m:'monthly'}[kind]}${RS?'_'+$('region').value:''}${stamp?'_'+stamp:''}.png`;
+    const name=`SEA-HAF_${{rain:'rain',temp:'temperature',vent:'ventilation',fire:'PM25-fire',silam:'PM25-SILAM',unc:'uncertainty',nasa:'NASA-truecolour'}[shownMode]||'PM25'}_${{h:'hourly',d:'24h',w:'weekly',m:'monthly'}[kind]}${RS?'_'+(provKey()?provKey().replace(/\s+/g,'-'):$('region').value):''}${stamp?'_'+stamp:''}.png`;
     await new Promise(res=>cv.toBlob(bl=>{ const a=document.createElement('a'); a.href=URL.createObjectURL(bl); a.download=name; document.body.appendChild(a); a.click(); setTimeout(()=>{URL.revokeObjectURL(a.href); a.remove();},1000); res(); },'image/png'));
   }catch(err){ alert(T('Could not make the image: ','สร้างภาพไม่ได้: ')+err.message); }
   finally{ btn.disabled=false; btn.textContent=b0; }
@@ -4619,7 +4634,7 @@ function clickInfoHTML(lat,lon){
     <div class="cp-w">${ws!=null?`${T('Wind','ลม')} ${ws.toFixed(1)} ${T('m/s','ม./วิ')} ${T('from','จาก')} ${compass(windFrom(w.u10,w.v10))}`:''}${w.rh!=null?` · ${T('humidity','ความชื้น')} ${Math.round(w.rh)} %`:''}</div>
     ${(()=>{const vi=ventAt(lat,lon,t), c=ventCat(vi); return vi==null?'':`<div class="cp-w">${T('Ventilation','การระบายอากาศ')} ${Math.round(vi).toLocaleString()} m²/s · <span class="vent-${c.k}">${T(c.en,c.th)}</span>${c.k==='poor'?T(' — smoke and dust stay near the ground',' — ควันและฝุ่นสะสมใกล้พื้น'):''}</div>`;})()}`:'';
   // the district average at this hour (areaSeries, when the district boundaries are loaded)
-  const dAvg=(()=>{ const dp=admAt(2,lat,lon), A=dp&&AREA_CACHE.dgroups&&AREA_CACHE.key?.startsWith($('region').value+'|D')?AREA_CACHE:null, g=A?.dgroups.get(dp.c), i=g?A.H.indexOf(t):-1;
+  const dAvg=(()=>{ const dp=admAt(2,lat,lon), A=dp&&AREA_CACHE.dgroups&&AREA_CACHE.key?.startsWith(regKey()+'|D')?AREA_CACHE:null, g=A?.dgroups.get(dp.c), i=g?A.H.indexOf(t):-1;
     return g&&i>=0&&g.mean[i]!=null?`<div class="cp-w">${T(`Average over ${admName(dp,2)}`,`เฉลี่ยทั้ง ${admName(dp,2)}`)} <b>${fmtN(g.mean[i])}</b> µg/m³ ${pill(g.mean[i])}</div>`:''; })();
   return `<div class="cp"><button type="button" class="cp-x" data-a="x" aria-label="${T('Close','ปิด')}">×</button><div class="cp-h"><b>${esc(placeLine(lat,lon))||(pv?esc(provName(pv)):T('Selected point','จุดที่เลือก'))}</b><span>${esc(when)} · ${lat.toFixed(3)}°N ${lon.toFixed(3)}°E</span></div>${pm}${dAvg}${wx}
     ${trajHTML()}
@@ -5310,20 +5325,21 @@ function trendBlock(H,v,opt={}){
 }
 const AREA_CACHE={key:null}, INC_FIELDS={sim:null,map:new Map()};
 function areaSeries(){
-  const k=$('region').value, key=k+'|'+(ADM[2]?'D':'')+'|'+(P.data?P.data.generated:'')+'|'+(S.simInc?S.assimApplied:0)+'|'+(useA()?'A':'-')+'|'+(T2D?T2D.key:'')+'|'+(RAINOBS?RAINOBS.key:'')+'|'+(MET?MET.fetched:'')+'|'+(WXML?WXML.t0:'')+'|'+Object.keys(RFAC).filter(k=>RFAC[k]).join(',');
+  const k=$('region').value, key=regKey()+'|'+(ADM[2]?'D':'')+'|'+(P.data?P.data.generated:'')+'|'+(S.simInc?S.assimApplied:0)+'|'+(useA()?'A':'-')+'|'+(T2D?T2D.key:'')+'|'+(RAINOBS?RAINOBS.key:'')+'|'+(MET?MET.fetched:'')+'|'+(WXML?WXML.t0:'')+'|'+Object.keys(RFAC).filter(k=>RFAC[k]).join(',');
   if(AREA_CACHE.key===key) return AREA_CACHE;
   // provinces: 0.1° lattice inside Thai provinces. Area average: the same points, or on the whole-domain map a 0.25° lattice
   // over everything (so Thailand's denser lattice does not dominate the domain mean)
   const R=regionShape(), H=P.data.hours, pts=[], grid=(b,st,f)=>{for(let iy=Math.ceil(b[1]/st);iy*st<=b[3];iy++) for(let ix=Math.ceil(b[0]/st);ix*st<=b[2];ix++) f(+(iy*st).toFixed(3),+(ix*st).toFixed(3));};
-  const groups=new Map([['__all',{name:$('region').selectedOptions[0]?.textContent||REGIONS[k].name,p:null,idx:[]}]]);
+  const groups=new Map([['__all',{name:regionLabel()||REGIONS[k].name,p:null,idx:[]}]]);
   const addProv=(j,pv)=>{if(!pv||pv.c!=='THA') return; if(!groups.has(pv.n)) groups.set(pv.n,{name:pv.n,p:pv,idx:[]}); groups.get(pv.n).idx.push(j);};
   grid(R?R.bbox:REGIONS.thailand.bbox,0.1,(la,lo)=>{if(!inRegion(la,lo)) return; const pv=provinceOf(la,lo); if(!pv||pv.c!=='THA') return;
     const j=pts.push({la,lo})-1; addProv(j,pv); if(R) groups.get('__all').idx.push(j);});
   // districts (when their boundaries are loaded): the same 0.1° points, and the centre of a district that no point falls in
   let dgroups=null;
-  if(ADM[2]){ dgroups=new Map(); const addD=(j,dp)=>{ if(!dgroups.has(dp.c)) dgroups.set(dp.c,{p:dp,idx:[]}); dgroups.get(dp.c).idx.push(j); };
+  if(ADM[2]){ dgroups=new Map(); const pth_=provSelP()?.th;   // one province chosen: its own districts only (the two border sets differ a little)
+    const addD=(j,dp)=>{ if(pth_&&dp.pth!==pth_) return; if(!dgroups.has(dp.c)) dgroups.set(dp.c,{p:dp,idx:[]}); dgroups.get(dp.c).idx.push(j); };
     const n0=pts.length; for(let j=0;j<n0;j++){ const dp=admAt(2,pts[j].la,pts[j].lo); if(dp) addD(j,dp); }
-    for(const q of ADM[2].idx){ if(dgroups.has(q.p.c)) continue; const c=provCentroid(q.f), la=c.lat??c[0], lo=c.lng??c[1]; if(!inRegion(la,lo)) continue; addD(pts.push({la,lo})-1,q.p); } }
+    for(const q of ADM[2].idx){ if(dgroups.has(q.p.c)||(pth_&&q.p.pth!==pth_)) continue; const c=provCentroid(q.f), la=c.lat??c[0], lo=c.lng??c[1]; if(!pth_&&!inRegion(la,lo)) continue; addD(pts.push({la,lo})-1,q.p); } }
   if(!R) grid(REGIONS.msea.bbox,0.25,(la,lo)=>{groups.get('__all').idx.push(pts.push({la,lo})-1);});
   // value of every point at every hour (CAMS → bias-corrected map), then mean and 10th/90th percentile per area
   // same quantity as the map (assimilation increment and learned correction included); the increment is taken from a 0.25° field
@@ -5348,8 +5364,8 @@ function renderAreaTrend(){
   provs.sort((a,b)=>nm(a[1]).localeCompare(nm(b[1]),LOC()));
   const g=A.groups.get(areaSel), multi=provs.length>1;
   box.className='trend';
-  box.innerHTML=`${multi?`<label class="note">${T('Area','พื้นที่')} <select id="areaSel"><option value="__all">${esc(T('Whole region','ทั้งภูมิภาค'))}: ${esc($('region').selectedOptions[0]?.textContent||'')}</option>${provs.map(([id,x])=>`<option value="${esc(id)}"${id===areaSel?' selected':''}>${esc(nm(x))}</option>`).join('')}</select></label>`:''}
-    <div><strong>${esc(areaSel==='__all'?($('region').selectedOptions[0]?.textContent||g.name):nm(g))}</strong></div>
+  box.innerHTML=`${multi?`<label class="note">${T('Area','พื้นที่')} <select id="areaSel"><option value="__all">${esc(T('Whole region','ทั้งภูมิภาค'))}: ${esc(regionLabel())}</option>${provs.map(([id,x])=>`<option value="${esc(id)}"${id===areaSel?' selected':''}>${esc(nm(x))}</option>`).join('')}</select></label>`:''}
+    <div><strong>${esc(areaSel==='__all'?(regionLabel()||g.name):nm(g))}</strong></div>
     ${trendBlock(H,g.mean,{lo:g.lo,hi:g.hi,wx:g.wx,label:'PM2.5 trend, '+(g.p?g.p.n:g.name)})}`;
   const sel=$('areaSel'); if(sel){sel.value=areaSel; sel.onchange=()=>{areaSel=sel.value; renderAreaTrend();};}
   renderProvList(A); if(A.dgroups) renderDistList(A);
@@ -5376,7 +5392,7 @@ function sumWind(R,H,d){ if(!MET) return null; const b=R?R.bbox:REGIONS.msea.bbo
 function buildSummary(){
   if(!P.data||!P.data.grid) return null;
   const A=areaSeries(), H=A.H, now=Date.now(), R=regionShape(); if(!A.groups.has(SUMAREA)) SUMAREA='__all';
-  const g=A.groups.get(SUMAREA), isAll=SUMAREA==='__all', regionName=$('region').selectedOptions[0]?.textContent||g.name, area=isAll?regionName:provName(g.p);
+  const g=A.groups.get(SUMAREA), isAll=SUMAREA==='__all', regionName=regionLabel()||g.name, area=isAll?regionName:provName(g.p);
   const provs=[...A.groups.entries()].filter(([k])=>k!=='__all').map(([,x])=>({name:provName(x.p),days:sumDays(H,x.mean)}));
   const D=sumDays(H,g.mean), WX=dailyWx(H,g.wx,now), keys=[0,1,2,3].map(k=>bkkDay(now+k*864e5));
   const full=d=>D.get(d)&&D.get(d).n>=18;
@@ -5522,7 +5538,10 @@ function lockRegion(){
 function fitRegion(){const B=lockRegion(); map.fitBounds(B,{...mapPads(),animate:false});}
 window.addEventListener('resize',()=>{clearTimeout(window.__lockT); window.__lockT=setTimeout(()=>{map.invalidateSize(); lockRegion();},250);});
 if(window.ResizeObserver) new ResizeObserver(()=>map.invalidateSize()).observe(document.querySelector('.mapwrap'));
-$('region').addEventListener('change',()=>{fitRegion(); drawRegionMask(); computeReceptors(); if(S.hots.length){drawHotspots();} renderAll(); redrawTime();});
+const regionChanged=()=>{provSelSync(); fitRegion(); drawRegionMask(); computeReceptors(); if(S.hots.length){drawHotspots();} renderAll(); redrawTime(); drawAdm();};
+$('region').addEventListener('change',regionChanged);
+// a province chosen: the map goes to it and the Warnings list switches to its districts
+$('provSel').addEventListener('change',()=>{ regionChanged(); if(provKey()) setWarnView('dist'); });
 drawRegionMask(); fitRegion();
 
 // map scale as eleven equal blocks, labelled at the band boundaries (µg/m³)
@@ -5564,7 +5583,7 @@ relabelPhone();
 $('btnLang').onclick=()=>{ LANG=LANG==='th'?'en':'th'; store.set('hsw.lang',LANG); applyStaticLang(); chatRelabel(); S.saveRelabel?.(); relabelPhone(); initLegToggle.relabel?.(); initSideToggle.relabel?.(); refreshClickInfo();
   {const lb=document.querySelector('.locate-btn'); if(lb){lb.title=T('Show PM2.5 at my location','ดูค่าฝุ่นที่ตำแหน่งของฉัน'); lb.setAttribute('aria-label',lb.title);}} if(S.mode) setMode(S.mode); else $('modeChip').textContent=T('No data','ไม่มีข้อมูล');
   renderLegend(); renderAll(); renderHereBox(); if(LOCPOP) renderLocPop(); drawStations?.(); redrawTime();
-  if(BANNER) banner(BANNER.f,BANNER.cls); if(LOADFAIL) loadFail(true); provLabels?.eachLayer(m=>m.setTooltipContent(provLabelText(m.feature))); drawAdm.relabel?.(); declutterSoon(); };
+  if(BANNER) banner(BANNER.f,BANNER.cls); if(LOADFAIL) loadFail(true); provLabels?.eachLayer(m=>m.setTooltipContent(provLabelText(m.feature))); drawAdm.relabel?.(); provSelFill(); declutterSoon(); };
 {const v=store.get('hsw.unitSel'); if(v) $('unitSel').value=v;}
 setWarnView(store.get('hsw.warnView')||'prov'); $('warnView').addEventListener('change',e=>setWarnView(e.target.value));
 $('unitSel').addEventListener('change',()=>{store.set('hsw.unitSel',$('unitSel').value); renderLegend(); renderAll(); redrawTime();});

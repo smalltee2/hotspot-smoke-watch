@@ -225,6 +225,7 @@ td.num{text-align:right;font-family:var(--font-data);font-variant-numeric:tabula
 /* area menus above the tabs (owner, 27 Nov 2026: the area drives the whole page, so it is not kept in Settings) */
 .areabar{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0;padding:0 16px}.areabar label{display:block;font-size:.78rem;color:var(--muted);margin-bottom:3px}.areabar .field{margin:0;min-width:0}.areabar select{width:100%;min-width:0}.areabar .field[hidden]{display:none}.areabar:has(.field[hidden]){grid-template-columns:1fr}
 /* My places tab: place search and the saved list */
+.ptnew{border:1px solid var(--line);border-radius:8px;padding:10px;margin:8px 0 12px;background:var(--bg)}.ptnew input,.plrow input{width:100%;min-width:0;font:inherit;padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:var(--panel);color:inherit}.ptnew .actions{margin-top:8px}.plrow .ren{flex:1;min-width:0}
 .plrow{display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--line)}.plrow .pn{flex:1;min-width:0;border:0;background:none;padding:0;text-align:left;font:inherit;color:inherit;cursor:pointer}.plrow .pn b{display:block;font-weight:600}.plrow .pn span{display:block;font-size:.76rem;color:var(--muted)}.plrow .btn{flex:none;padding:4px 10px;font-size:.78rem}.plrow .pn:hover b,.plrow .pn:focus-visible b{text-decoration:underline}
 .sumcard .sumctl{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:10px 0 4px;font-size:.8rem}
 .sumcard .sumctl select{font:inherit;max-width:100%}
@@ -690,6 +691,8 @@ td.num{text-align:right;font-family:var(--font-data);font-variant-numeric:tabula
         <label class="btn" for="csvIn" data-th="อัปโหลดไฟล์ CSV ของ FIRMS">Upload FIRMS CSV</label>
         <input id="csvIn" type="file" accept=".csv,text/csv" hidden>
       </div>
+      <div class="actions"><button class="btn primary" id="btnPtHere" type="button" data-th="＋ เพิ่มตำแหน่งปัจจุบันของฉัน">＋ Add my current location</button></div>
+      <div id="ptNew" hidden></div>
       <div class="field"><label for="placeQ" data-th="ค้นหาสถานที่ (ตำบล อำเภอ จังหวัด หรือเมือง)">Find a place (sub-district, district, province or town)</label>
         <input id="placeQ" type="search" autocomplete="off" enterkeyhint="search"></div>
       <div id="placeRes" aria-live="polite"></div>
@@ -2866,7 +2869,7 @@ function renderHereBox(){
   const box=$('hereBox'); if(!hereLL){box.hidden=true;return;}
   const inside=!map.options.maxBounds||map.options.maxBounds.contains([hereLL.lat,hereLL.lon]);
   box.innerHTML=`<div class="hhead"><strong>${T('My location','ตำแหน่งของฉัน')}</strong><button class="x" type="button" id="hereClose" aria-label="${T('Close my location','ปิด')}">×</button></div>`+
-    hereHTML(hereLL.lat,hereLL.lon,hereLL.acc)+(inside?'':`<p class="note">${T('You are outside the selected region. Pick a larger region to see your location on the map.','คุณอยู่นอกพื้นที่ที่เลือก เลือกพื้นที่ที่ใหญ่ขึ้นในแท็บตั้งค่าเพื่อเห็นตำแหน่งบนแผนที่')}</p>`);
+    hereHTML(hereLL.lat,hereLL.lon,hereLL.acc)+(inside?'':`<p class="note">${T('You are outside the area shown. Pick a larger area in the menus above the tabs to see your location on the map.','คุณอยู่นอกพื้นที่ที่แสดง เลือกพื้นที่ที่ใหญ่ขึ้นจากเมนูเหนือแท็บเพื่อเห็นตำแหน่งบนแผนที่')}</p>`);
   box.hidden=false;
   $('hereClose').onclick=()=>{hereLL=null; ACC_AT=null; box.hidden=true; renderAcc(); if(hereLayer){map.removeLayer(hereLayer);hereLayer=null;} document.querySelector('.locate-btn')?.classList.remove('on');};
   {const a=$('hereAcc'); if(a) a.onclick=()=>openAcc('here');}
@@ -2875,7 +2878,16 @@ function renderHereBox(){
     S.myPts.push({name:'My location',lat:+hereLL.lat.toFixed(4),lon:+hereLL.lon.toFixed(4),cc:'★'}); store.set('hsw.points',JSON.stringify(S.myPts));
     computeReceptors(); drawTowns(); renderWarnings(); b.textContent=T('Added','เพิ่มแล้ว'); b.disabled=true;};
 }
+// the map is locked to the chosen area, so a place outside it could not be shown (owner, 27 Nov 2026: the locate button left the
+// map where it was). Going to a place outside the area widens the area first: to Thailand when the place is in Thailand, else
+// to the whole map; a toast says so. Returns false when the place is outside the page's map altogether.
+function areaReach(lat,lon){ if(inRegion(lat,lon)) return true; if(!inBox(lat,lon,REGIONS.msea.bbox)) return false;
+  const pv=provinceOf(lat,lon), was=regionLabel(), th=pv?.c==='THA';
+  $('region').value=th?'thailand':'msea'; store.set('hsw.region',$('region').value); if($('provSel')){ $('provSel').value=''; store.set('hsw.prov',''); }
+  $('region').dispatchEvent(new Event('change'));
+  toast(T(`That place is outside ${was}, so the area shown is now ${regionLabel()}.`,`ตำแหน่งนี้อยู่นอก${was} จึงเปลี่ยนพื้นที่แสดงผลเป็น${regionLabel()}`)); return true; }
 function showHere(lat,lon,acc,fly){
+  if(fly) areaReach(lat,lon);
   hereLL={lat,lon,acc}; ACC_AT=null;
   if(hereLayer) map.removeLayer(hereLayer);
   const col=cssVar('--focus');
@@ -3951,13 +3963,35 @@ function renderProvList(A){
 // a search over the names the page holds: Thai provinces, districts, sub-districts (OCHA boundaries) and the towns. Nothing is
 // sent to a search service. A result goes to the map on tap; "Add" saves it under its name at the area's centre.
 function myPtsSave(){ store.set('hsw.points',JSON.stringify(S.myPts)); computeReceptors(); drawTowns(); renderWarnings(); }
-function goPlace(lat,lon,b){ if(window.PHONEUI?.active()) PHONEUI.set('peek'); if(b) map.fitBounds([[b[1],b[0]],[b[3],b[2]]],{padding:[20,20],maxZoom:13}); else map.setView([lat,lon],Math.max(map.getZoom(),11)); }
+function goPlace(lat,lon,b){ if(window.PHONEUI?.active()) PHONEUI.set('peek'); areaReach(lat,lon); if(b) map.fitBounds([[b[1],b[0]],[b[3],b[2]]],{padding:[20,20],maxZoom:13}); else map.setView([lat,lon],Math.max(map.getZoom(),11)); }
 function renderMyPts(){ const box=$('myPtsList'); if(!box) return;
-  box.innerHTML=S.myPts.length?S.myPts.map((q,i)=>`<div class="plrow"><button type="button" class="pn" data-go="${i}"><b>★ ${esc(townName(q))}</b><span>${q.lat.toFixed(3)}, ${q.lon.toFixed(3)}</span></button><button type="button" class="btn" data-del="${i}" aria-label="${esc(T('Remove','ลบ')+' '+townName(q))}">${T('Remove','ลบ')}</button></div>`).join('')
+  box.innerHTML=S.myPts.length?S.myPts.map((q,i)=>`<div class="plrow"><button type="button" class="pn" data-go="${i}"><b>★ ${esc(townName(q))}</b><span>${q.lat.toFixed(3)}, ${q.lon.toFixed(3)}</span></button><button type="button" class="btn" data-ren="${i}" aria-label="${esc(T('Rename','แก้ชื่อ')+' '+townName(q))}">${T('Rename','แก้ชื่อ')}</button><button type="button" class="btn" data-del="${i}" aria-label="${esc(T('Remove','ลบ')+' '+townName(q))}">${T('Remove','ลบ')}</button></div>`).join('')
     :`<p class="note">${T('No saved places yet.','ยังไม่มีจุดที่บันทึกไว้')}</p>`;
   box.querySelectorAll('[data-go]').forEach(el=>el.onclick=()=>{ const q=S.myPts[+el.dataset.go]; if(q) goPlace(q.lat,q.lon); });
   box.querySelectorAll('[data-del]').forEach(el=>el.onclick=()=>{ S.myPts.splice(+el.dataset.del,1); myPtsSave(); });
+  // rename in place: the row becomes a text box with Save (Enter) and Cancel (Esc)
+  box.querySelectorAll('[data-ren]').forEach(el=>el.onclick=()=>{ const i=+el.dataset.ren, q=S.myPts[i], row=el.closest('.plrow'); if(!q) return;
+    row.innerHTML=`<input class="ren" type="text" maxlength="40" aria-label="${T('Name of this place','ชื่อของจุดนี้')}"><button type="button" class="btn primary">${T('Save','บันทึก')}</button><button type="button" class="btn">${T('Cancel','ยกเลิก')}</button>`;
+    const inp=row.querySelector('input'), [bS,bC]=row.querySelectorAll('button'); inp.value=townName(q); inp.focus(); inp.select();
+    const save=()=>{ const v=ptName(inp.value); if(v) q.name=v; myPtsSave(); };
+    bS.onclick=save; bC.onclick=renderMyPts; inp.onkeydown=e=>{ if(e.key==='Enter'){e.preventDefault();save();} else if(e.key==='Escape') renderMyPts(); }; });
   const b=$('btnClearPts'); if(b) b.hidden=S.myPts.length<2; const q=$('placeQ'); if(q) q.placeholder=T('e.g. Mae Rim, Chiang Mai','เช่น แม่ริม เชียงใหม่'); }
+const ptName=s=>String(s||'').replace(/[<>]/g,'').replace(/\s+/g,' ').trim().slice(0,40);   // plain text only
+// "Add my current location": ask the browser for the position, then a small form to name the place before it is saved
+function ptNewForm(lat,lon){ const box=$('ptNew'); if(!box) return; box.hidden=false; box.className='ptnew';
+  box.innerHTML=`<div class="field" style="margin:0"><label for="ptNewName">${T('Name this place','ตั้งชื่อจุดนี้')}</label><input id="ptNewName" type="text" maxlength="40" placeholder="${T('e.g. Home, Office, School','เช่น บ้าน ที่ทำงาน โรงเรียนลูก')}"></div>
+    <p class="note" id="ptNewWhere" style="margin:6px 0 0">${lat.toFixed(4)}, ${lon.toFixed(4)}</p><div class="actions"><button class="btn primary" type="button" id="ptNewSave">${T('Save','บันทึก')}</button><button class="btn" type="button" id="ptNewCancel">${T('Cancel','ยกเลิก')}</button></div>`;
+  Promise.all([loadAdm(2),loadAdm(3)]).then(()=>{ const w=$('ptNewWhere'); if(!w) return; const t=admAt(3,lat,lon), d=admAt(2,lat,lon), pv=provinceOf(lat,lon);
+    const nm=[t&&admName(t,3),d&&admName(d,2),pv&&(LANG==='th'&&pv.c==='THA'&&!admBkk(d)?'จ.':'')+provName(pv)].filter(Boolean).join(' '); if(nm) w.textContent=`${nm} (${lat.toFixed(4)}, ${lon.toFixed(4)})`; });
+  const inp=$('ptNewName'), close=()=>{ box.hidden=true; box.innerHTML=''; };
+  const save=()=>{ const v=ptName(inp.value); addMyPoint(lat,lon,v||undefined); toast(T(`Added: ${v||'my point'}`,`เพิ่มแล้ว: ${v||'จุดของฉัน'}`)); close(); };
+  $('ptNewSave').onclick=save; $('ptNewCancel').onclick=close; inp.onkeydown=e=>{ if(e.key==='Enter'){e.preventDefault();save();} else if(e.key==='Escape') close(); }; inp.focus({preventScroll:true}); goPlace(lat,lon); if(window.PHONEUI?.active()) PHONEUI.set('full'); }
+$('btnPtHere')?.addEventListener('click',()=>{ const b=$('btnPtHere'), fail=m=>{ b.disabled=false; toast(m); };
+  if(!navigator.geolocation) return fail(T('This browser cannot share its location. Tap the map to add a place instead.','เบราว์เซอร์นี้ไม่รองรับการระบุตำแหน่ง ให้แตะบนแผนที่เพื่อเพิ่มจุดแทน'));
+  b.disabled=true; navigator.geolocation.getCurrentPosition(pos=>{ b.disabled=false; const la=pos.coords.latitude, lo=pos.coords.longitude;
+      if(!inBox(la,lo,REGIONS.msea.bbox)) return toast(T('Your location is outside the map of this page.','ตำแหน่งของคุณอยู่นอกแผนที่ของหน้านี้')); ptNewForm(la,lo); },
+    err=>fail(err.code===1?T('Location permission was declined. Allow location for this site in the browser settings, then try again.','ไม่ได้รับอนุญาตให้ใช้ตำแหน่ง กรุณาอนุญาตในการตั้งค่าเบราว์เซอร์แล้วลองอีกครั้ง'):T('Could not get your location. Try again, or tap the map to add a place.','ระบุตำแหน่งไม่ได้ ลองอีกครั้ง หรือแตะบนแผนที่เพื่อเพิ่มจุดแทน')),
+    {enableHighAccuracy:true,timeout:15000,maximumAge:60000}); });
 const plNorm=s=>String(s||'').toLowerCase().replace(/^(ตำบล|อำเภอ|จังหวัด|แขวง|เขต|ต\.|อ\.|จ\.)\s*/,'').replace(/[\s.\-]+/g,'');
 let PLACE_RES=[], placeTm=0, placeSeq=0;
 async function placeSearch(raw){ const box=$('placeRes'), seq=++placeSeq; if(!box) return; const words=String(raw||'').trim().split(/[\s,]+/).map(plNorm).filter(Boolean);

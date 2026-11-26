@@ -86,3 +86,16 @@ test('R² and MAPE from the sums', () => {
   const c = NEW(); addPair(c, 10, 10); addPair(c, 20, 10); addPair(c, 30, 10);
   assert.equal(scores(c).r2, null);                           // measurements do not vary: no R²
 });
+test('calendar-day means: rows valid at 17 UTC, leads 24 and 48, >= 18 measured hours, 30-day window', async () => {
+  const { scoreDays } = await import('./accuracy.mjs');
+  const H = 3600e3, tEnd = Date.parse('2026-11-26T05:00Z'), day = Date.parse('2026-11-25T17:00Z'), k13 = t => new Date(t).toISOString().slice(0, 13);
+  const obs = new Map(); for (let q = 0; q < 24; q++) obs.set(`a|${k13(day - q * H)}`, 20);          // Thai day 25 Nov: 24 hours of 20
+  for (let q = 0; q < 17; q++) obs.set(`b|${k13(day - q * H)}`, 20);                                 // only 17 hours: not scored
+  const row = (id, L, tv, f, x = {}) => ({ station_id: id, lead_h: String(L), valid_utc: new Date(tv).toISOString().slice(0, 16) + 'Z', obs_basis: 'h', monitor: '1', blend24ML: String(f), ...x });
+  const m = scoreDays([row('a', 24, day, 22), row('a', 24, day, 99), row('a', 48, day, 25), row('a', 12, day, 30), row('a', 24, day - 6 * H, 30),
+    row('b', 24, day, 22), row('a', 24, day - 40 * 864e5, 22)], obs, tEnd);
+  const a = m.get('a');
+  assert.equal(a.m1[0], 1); assert.equal(a.m1[2], 2);       // 22 vs 20, the repeat ignored
+  assert.equal(a.m2[0], 1); assert.equal(a.m2[2], 5);       // 25 vs 20
+  assert.equal(m.get('b'), undefined);
+});

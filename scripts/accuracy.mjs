@@ -13,6 +13,7 @@
 //   high hours          hours measured >= 37.5 µg/m³ that the forecast also put >= 37.5 (caught), and the forecasts >= 37.5 that
 //                       were not (false alarms)
 // Run: node scripts/accuracy.mjs   (after update.mjs; reads data/latest.json for the station names and places)
+import { dropSpikesHourKeys } from './obsqc.mjs';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 
@@ -103,6 +104,7 @@ async function main() {
   for (const f of files.filter(f => /obs-\d{8}T\d{2}\.csv$/.test(f))) for (const r of parse(await fs.readFile(f, 'utf8'))) {
     const v = num(r.obs_pm25), t = Date.parse(r.time_utc); if (v == null || !Number.isFinite(t) || t > now) continue;
     const k = `${r.station_id}|${k13(Math.round(t / H) * H)}`; if (!obs.has(k)) obs.set(k, v); }
+  dropSpikesHourKeys(obs);   // instrument spikes kept in the logs (scripts/obsqc.mjs)
   for (const k of obs.keys()) { const t = Date.parse(k.split('|')[1] + ':00Z'); if (t > tEnd) tEnd = t; }
   if (!tEnd) { console.log('accuracy: no measurements in the logs'); return; }
   const isMon = id => meta.get(id)?.monitor !== false, out = new Map(), fc1 = new Map(), outLc = new Map();

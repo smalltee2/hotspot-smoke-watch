@@ -14,6 +14,7 @@
 //   rain: mm in the hour ending at the valid hour, observed = JAXA GSMaP gauge-calibrated at 0.025° at the station; raw = ECMWF;
 //          published = after learning (pr_ml); reference = same-hour persistence as for temperature; also daily totals per lead
 // Run: node scripts/perf.mjs [--force]   (skips when data/perf.json is younger than 3 h)
+import { dropSpikesHourKeys } from './obsqc.mjs';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 
@@ -78,6 +79,7 @@ async function main() {
   for (const f of files.filter(f => /obs-\d{8}T\d{2}\.csv$/.test(f))) for (const r of parse(await fs.readFile(f, 'utf8'))) {
     const v = num(r.obs_pm25), t = Date.parse(r.time_utc); if (v == null || !Number.isFinite(t)) continue;
     const k = `${r.station_id}|${k13(Math.round(t / H) * H)}`; if (!obs.has(k)) obs.set(k, v); }
+  dropSpikesHourKeys(obs);   // instrument spikes kept in the logs (scripts/obsqc.mjs)
   const obs24 = (id, t) => { let s = 0, n = 0; for (let i = 0; i < 24; i++) { const v = obs.get(`${id}|${k13(t - i * H)}`); if (v != null) { s += v; n++; } } return n >= 18 ? s / n : null; };
   const pmGroup = new Map();   // station id → group, from the logs
   const PM = collector({ raw: 'cams', published: 'system', ref: 'persistence', allGroup: '__none__', thrMetric: '24h', thresholds: [37.5, 75], stationMetric: '24h',

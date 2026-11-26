@@ -10,8 +10,8 @@ The page then downscales it to 0.025° with the CHELSA rain pattern, as before (
 For the newest complete 00/12 UTC run not extracted yet, it writes data/history/<YYYY-MM>/ecpr-<YYYYMMDDHH>.json:
   { run, source, lon0, lat0, step, nx, ny, scale: 10, enc: 'deflate-int16', t0: [ms], t1: [ms], d: [b64, ...] }
 one block per forecast interval (t0, t1] (3 h, later 6 h): the mean rain rate in mm/h × scale, rows south to north, zlib-deflated
-Int16 (as rain-obs.json). It also copies the newest extracted run to data/ecmwf-pr.json, the file the page reads. The history
-branch keeps the runs 35 days. Never fails the job (the page falls back to the Open-Meteo field).
+Int16 (as rain-obs.json). It also copies the newest extracted run to data/ecmwf-pr.json, the file the page reads (not a run older than
+MAX_AGE_H: after a long failure the page falls back rather than show an old forecast). The history branch keeps the runs 35 days. Never fails the job (the page falls back to the Open-Meteo field).
 Run: python3 scripts/ecmwf_pr.py
 """
 import base64, datetime as dt, json, os, shutil, sys, time, urllib.request, zlib
@@ -19,6 +19,7 @@ import base64, datetime as dt, json, os, shutil, sys, time, urllib.request, zlib
 MIRRORS = ['https://storage.googleapis.com/ecmwf-open-data', 'https://ecmwf-forecasts.s3.eu-central-1.amazonaws.com']
 BOX = (92.0, 5.0, 110.0, 25.0)   # lon0, lat0, lon1, lat1: the page's map box, on the 0.25° grid
 STEPS = list(range(0, 145, 3)) + list(range(150, 169, 6))   # to 168 h, as the page's weather forecast
+MAX_AGE_H = 36   # a run older than this is not given to the page (in normal running the newest run is at most ~20 h old)
 ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..')
 HIST = os.environ.get('ECPR_HIST') or os.path.join(ROOT, 'data', 'history')
 OUT = os.environ.get('ECPR_OUT') or os.path.join(ROOT, 'data', 'ecmwf-pr.json')
@@ -140,6 +141,12 @@ def newest_file():
     return best
 
 
+def run_age_h(path, now):
+    """hours since the start of the run in the file name ecpr-<YYYYMMDDHH>.json"""
+    base = dt.datetime.strptime(os.path.basename(path)[5:15], '%Y%m%d%H').replace(tzinfo=dt.timezone.utc)
+    return (now - base).total_seconds() / 3600
+
+
 def main():
     now = dt.datetime.now(dt.timezone.utc)
     run = None
@@ -168,7 +175,12 @@ def main():
             except Exception as e:   # noqa: BLE001
                 warn(f'run {day} {hh:02d}Z not extracted: {e}')
     nf = newest_file()
-    if nf:
+    if nf and run_age_h(nf, now) > MAX_AGE_H:
+        # extraction has failed for a while: an old run must not stand in for the forecast (the page would show it as current)
+        if os.path.exists(OUT):
+            os.remove(OUT)
+        warn(f'newest extracted run {os.path.basename(nf)} is {run_age_h(nf, now):.0f} h old; the page keeps the Open-Meteo rain')
+    elif nf:
         shutil.copyfile(nf, OUT)
         print(f'ECMWF rain: page file from {os.path.basename(nf)}')
     else:

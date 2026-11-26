@@ -3383,7 +3383,7 @@ function plainWx(w,wd,nowMax){ const th=LANG==='th', b=[]; if(w&&isFinite(w.tmin
   if(wd) b.push(wd.spd<1?T('calm','ลมสงบ'):wd.spd<4?T(`light wind from the ${compass(wd.dir)}`,`ลมอ่อนจากทิศ${compass(wd.dir)}`):wd.spd<8?T(`breezy from the ${compass(wd.dir)}`,`ลมปานกลางจากทิศ${compass(wd.dir)}`):T(`windy from the ${compass(wd.dir)}`,`ลมแรงจากทิศ${compass(wd.dir)}`));
   return b.length?T('Weather: ','อากาศ: ')+b.join(th?' ':', ')+(th?'':'.'):''; }
 // one day in two or three short sentences. f: dayFactors; w: dailyWx entry; label: Today/Tomorrow/weekday; prev: previous day's mean
-function plainDay(f,w,label,prev,extra){ if(f.pm==null) return null; const th=LANG==='th', b=pcdBand(f.pm), lvl=T(b.en,b.th), tr=plainTrend(f.pm,prev);
+function plainDay(f,w,label,prev,extra,lv){ if(f.pm==null) return null; const th=LANG==='th', b=lv?.band||pcdBand(f.pm), lvl=(lv?.mostly?T('mostly ','ส่วนใหญ่'):'')+T(b.en,b.th), tr=plainTrend(f.pm,prev);
   const trw=tr?trendTxt(tr,'day'):null;
   const pk=f.peakT!=null?(h=>h>=4&&h<=10?T('worst in the early morning','แย่ที่สุดช่วงเช้ามืด'):h>=17||h<=2?T('worst in the evening and night','แย่ที่สุดช่วงเย็นถึงกลางคืน'):null)(new Date(f.peakT+7*HR).getUTCHours()):null;
   let s=`<b>${label}:</b> PM₂.₅ ${lvl.toLowerCase()}${trw?` (${trw})`:''}${pk?`, ${pk}`:''}${th?' ':': '}${plainDriver(f)}${th?'':'.'}`;
@@ -4260,7 +4260,7 @@ function areaSeries(){
       g.mean.push(a.reduce((s,x)=>s+x,0)/a.length); g.lo.push(a[Math.floor(0.1*(a.length-1))]); g.hi.push(a[Math.ceil(0.9*(a.length-1))]);});}
   for(const g of groups.values()) g.wx=wxSeries(H,g.idx.map(j=>pts[j]));
   if(dgroups) for(const g of dgroups.values()) g.wx=wxSeries(H,g.idx.map(j=>pts[j]));
-  return Object.assign(AREA_CACHE,{key,groups,dgroups,H});
+  return Object.assign(AREA_CACHE,{key,groups,dgroups,H,pts,val});
 }
 let areaSel='__all';
 function renderAreaTrend(){
@@ -4318,6 +4318,31 @@ function buildSummary(){
     if(w&&w.rain>=10) s+=T(' Rain helps wash particles out of the air.',' ฝนช่วยชะล้างฝุ่นออกจากอากาศ');
     else if((wd&&wd.vent!=null&&wd.vent<2000)||(wd&&wd.spd<1.5&&(!w||w.rain<0.1))) s+=T(' Poor ventilation: smoke and dust build up near the ground.',' การระบายอากาศไม่ดี ควันและฝุ่นสะสมใกล้พื้น');
     return s; };
+  // spread over the area (owner, 27 Nov 2026): an area mean takes in sea and clean hills, so it can read "very good" while parts of
+  // the map are high. Each day is also judged over sub-areas — the districts of a province, else the provinces of any country in
+  // the region or on the whole map (sea left out) — with their daily means (>= 18 h): the typical level is their median, and the
+  // sub-areas in a higher band are named. No district boundaries loaded for a province: its 90th-percentile point instead.
+  const SP=(()=>{ const byD=!isAll||!!provKey(), U=new Map();
+    if(byD&&!ADM[2]) return null;
+    const clean=n=>n.replace(/^(Tỉnh|Thành phố)\s+/,'');
+    for(const j of g.idx){ const q=A.pts[j]; let k,name;
+      if(byD){ const dp=admAt(2,q.la,q.lo); const pth=g.p?g.p.th:provSelP()?.th; if(!dp||(pth&&dp.pth!==pth)) continue; k=dp.c; name=dp; }
+      else { const pv=provinceOf(q.la,q.lo); if(!pv) continue; k=pv.c+'|'+pv.n; name=pv; }
+      let u=U.get(k); if(!u) U.set(k,u={p:name,js:[]}); u.js.push(j); }
+    const nameOf=u=>byD?admName(u.p,2):u.p.c==='THA'?provName(u.p):`${clean(u.p.n)} (${ctryName(u.p.c)})`;
+    const out=[...U.values()].map(u=>{ const ser=H.map((_,i)=>{ let a=0,n=0; for(const j of u.js){ const x=A.val[i][j]; if(x!=null){a+=x;n++;} } return n?a/n:null; });
+      return {name:nameOf(u),days:sumDays(H,ser)}; });
+    return out.length>=2?{units:out,word:byD?T('districts','อำเภอ'):T('provinces','จังหวัด'),byD}:null; })();
+  const bIdx=v=>PCD.findIndex(b=>v<=b.max);
+  const spread=d=>{ if(!SP) return null; const L_=SP.units.map(u=>({name:u.name,o:u.days.get(d)})).filter(x=>x.o&&x.o.n>=18).map(x=>({name:x.name,v:x.o.mean})).sort((a,b)=>b.v-a.v);
+    if(L_.length<2) return null; const med=L_[Math.floor(L_.length/2)].v, above=L_.filter(x=>bIdx(x.v)>bIdx(med));
+    return {typ:pcdBand(med),worst:pcdBand(L_[0].v),above:above.filter(x=>bIdx(x.v)===bIdx(L_[0].v)),list:L_,over:L_.filter(x=>x.v>37.5)}; };   // above: the sub-areas in the worst band (named under its label)
+  const nameList=xs=>{ const t=xs.slice(0,3).map(x=>`${x.name} ${n1(x.v)}`); return t.length>1?t.slice(0,-1).join(', ')+T(' and ',' และ ')+t.at(-1):t[0]; };
+  // the plain line's extra: which parts are higher, and how many sub-areas are above the Thai standard
+  const spreadLine=d=>{ const sp=spread(d); if(!sp||!sp.above.length) return '';
+    return T(`Higher in parts: ${nameList(sp.above)} µg/m³ (${sp.worst.en.toLowerCase()})${sp.over.length?`; ${sp.over.length} of ${sp.list.length} ${SP.word} above the Thai standard of 37.5`:''}.`,
+      `บางพื้นที่สูงกว่า: ${nameList(sp.above)} µg/m³ (${sp.worst.th})${sp.over.length?` ${sp.over.length} จาก ${sp.list.length} ${SP.word}เกินค่ามาตรฐาน 37.5`:''}`); };
+  const lvOf=d=>{ const sp=spread(d); return sp?{band:sp.typ,mostly:sp.above.length>0}:null; };
   let lastPM=null; for(const v of D.values()) lastPM=v.t1;
   // one day's paragraph(s); a day past the end of the PM2.5 forecast gets the weather only
   const dayText=(d,prev,label)=>{ const o=D.get(d);
@@ -4333,12 +4358,12 @@ function buildSummary(){
     if(p!=null){ const r=(o.mean-p)/p; chg=Math.abs(r)<0.1?T(', similar to the day before',' ใกล้เคียงกับวันก่อนหน้า'):r>0?T(`, up ${Math.round(r*100)} % on the day before`,` เพิ่มขึ้น ${Math.round(r*100)}% จากวันก่อนหน้า`):T(`, down ${Math.round(-r*100)} % on the day before`,` ลดลง ${Math.round(-r*100)}% จากวันก่อนหน้า`); }
     out.push(T(`PM₂.₅ averaged over ${area} ${d===keys[0]?'is':'is forecast at'} ${n1(o.mean)} µg/m³ for the day (${b.name})${chg}. The highest hourly value is around ${hmB(o.tmax)} (${n1(o.max)} µg/m³).`,
       `PM₂.₅ เฉลี่ยทั้ง${area} ${d===keys[0]?'วันนี้อยู่ที่':'คาดว่าอยู่ที่'} ${n1(o.mean)} µg/m³ (${b.name})${chg} ค่ารายชั่วโมงสูงสุดราว ${hmB(o.tmax)} น. (${n1(o.max)} µg/m³)`));
-    if(isAll&&provs.length>1){ const ps=provs.map(x=>({name:x.name,o:x.days.get(d)})).filter(x=>x.o&&x.o.n>=18).sort((a,b)=>b.o.mean-a.o.mean);
-      if(ps.length){ const over=ps.filter(x=>x.o.mean>37.5), over75=ps.filter(x=>x.o.mean>75), top=(over.length?over:ps).slice(0,3).map(x=>`${x.name} ${n1(x.o.mean)}`), list=top.length>1?top.slice(0,-1).join(', ')+T(' and ',' และ ')+top.at(-1):top[0];
-        out.push(over.length
-          ? T(`${over.length} of ${ps.length} provinces ${over.length>1?'are':'is'} above the Thai 24-h standard of 37.5 µg/m³${over75.length?`, ${over75.length} of them above 75 µg/m³ (affects health)`:''}; highest: ${list} µg/m³.`,
-              `${over.length} จาก ${ps.length} จังหวัดเกินค่ามาตรฐาน 24 ชม. ของไทย 37.5 µg/m³${over75.length?` ในจำนวนนี้ ${over75.length} จังหวัดเกิน 75 µg/m³ (มีผลต่อสุขภาพ)`:''} สูงสุด: ${list} µg/m³`)
-          : T(`No province is above the Thai 24-h standard of 37.5 µg/m³; highest: ${list} µg/m³.`,`ไม่มีจังหวัดใดเกินค่ามาตรฐาน 24 ชม. ของไทย 37.5 µg/m³ สูงสุด: ${list} µg/m³`)); } }
+    { const sp=spread(d); if(sp){ const W_=SP.word, over75=sp.over.filter(x=>x.v>75), top=nameList(sp.over.length?sp.over:sp.list);
+        out.push(sp.over.length
+          ? T(`${sp.over.length} of ${sp.list.length} ${W_} are above the Thai 24-h standard of 37.5 µg/m³${over75.length?`, ${over75.length} of them above 75 µg/m³ (affects health)`:''}; highest: ${top} µg/m³.`,
+              `${sp.over.length} จาก ${sp.list.length} ${W_}เกินค่ามาตรฐาน 24 ชม. ของไทย 37.5 µg/m³${over75.length?` ในจำนวนนี้ ${over75.length} แห่งเกิน 75 µg/m³ (มีผลต่อสุขภาพ)`:''} สูงสุด: ${top} µg/m³`)
+          : T(`None of the ${sp.list.length} ${W_} is above the Thai 24-h standard of 37.5 µg/m³; highest: ${top} µg/m³.`,`ไม่มี${W_}ใดใน ${sp.list.length} แห่งเกินค่ามาตรฐาน 24 ชม. ของไทย 37.5 µg/m³ สูงสุด: ${top} µg/m³`)); }
+      else if(!isAll||provKey()){ const hi=sumDays(H,g.hi).get(d); if(hi&&hi.n>=18&&bIdx(hi.mean)>bIdx(o.mean)) out.push(T(`The more polluted tenth of the area averages about ${n1(hi.mean)} µg/m³ (${band(hi.mean).name}).`,`ส่วนที่ฝุ่นสูงที่สุด 10% ของพื้นที่เฉลี่ยราว ${n1(hi.mean)} µg/m³ (${band(hi.mean).name})`)); } }
     const ws=wxText(d); if(ws) out.push(ws);
     return {label,d,mean:o.mean,band:b,text:out}; };
   const secs=[];
@@ -4367,8 +4392,8 @@ function buildSummary(){
     if(s0&&f0.pm!=null) s0.why=explainPM(f0); if(f1.pm!=null) f1.why=explainPM(f1); var whyTomorrow=f1.why||'';
     // plain lines (general audience); province count as the one extra fact for a region
     var plainToday=null, plainTomorrow=null; { const WXd=dailyWx(H,g.wx,now);
-      const provLine=d=>{ if(!isAll||provs.length<2) return ''; const ps=provs.map(x=>x.days.get(d)).filter(o=>o&&o.n>=18), over=ps.filter(o=>o.mean>37.5).length; return over?T(`${over} of ${ps.length} provinces above the standard.`,`${over} จาก ${ps.length} จังหวัดเกินค่ามาตรฐาน`):''; };
-      plainToday=plainDay(f0,WXd.get(keys[0]),T('Today','วันนี้'),fY.pm,provLine(keys[0])); plainTomorrow=plainDay(f1,WXd.get(keys[1]),T('Tomorrow','พรุ่งนี้'),f0.pm,provLine(keys[1])); } }
+      const provLine=d=>spreadLine(d);   // which parts are higher (any level; was: Thai provinces above the standard, regions only)
+      plainToday=plainDay(f0,WXd.get(keys[0]),T('Today','วันนี้'),fY.pm,provLine(keys[0]),lvOf(keys[0])); plainTomorrow=plainDay(f1,WXd.get(keys[1]),T('Tomorrow','พรุ่งนี้'),f0.pm,provLine(keys[1]),lvOf(keys[1])); } }
   const s1=dayText(keys[1],keys[0],T('Tomorrow','พรุ่งนี้')); if(s1){ if(whyTomorrow) s1.why=whyTomorrow; secs.push(s1); }
   const n2=[dayText(keys[2],keys[1],''),dayText(keys[3],keys[2],'')].filter(Boolean);
   if(n2.length) secs.push({label:T('Next two days','อีก 2 วันถัดไป'),sub:n2.map(x=>({...x,label:dLong(x.d)}))});
@@ -4377,17 +4402,21 @@ function buildSummary(){
   const lab=d=>d===keys[0]?T('today','วันนี้'):d===keys[1]?T('tomorrow','พรุ่งนี้'):dLong(d);
   let ov=''; if(fd.length){ const a=D.get(fd[0]).mean, z=D.get(fd.at(-1)).mean, r=(z-a)/a, wv=D.get(worst).mean;
     const dir=fd.length<2?'':Math.abs(r)<0.15?T('stays about the same','ทรงตัว'):r>0?T('worsens','แย่ลง'):T('improves','ดีขึ้น');
-    ov=T(`${area}: air quality is ${band(a).name.toLowerCase()} today${dir?` and ${dir} over the following days`:''}; the highest daily mean in the forecast is ${lab(worst)} at ${n1(wv)} µg/m³ (${band(wv).name}).`,
-      `${area}: คุณภาพอากาศวันนี้อยู่ในระดับ${band(a).name}${dir?` และ${dir}ในวันต่อ ๆ ไป`:''} ค่าเฉลี่ยรายวันสูงสุดในช่วงพยากรณ์คือ${lab(worst)} ${n1(wv)} µg/m³ (${band(wv).name})`); }
+    const sp0=spread(fd[0]), mix=sp0&&sp0.above.length;
+    ov=T(`${area}: air quality is ${mix?`mostly ${sp0.typ.en.toLowerCase()} today, ${sp0.worst.en.toLowerCase()} in parts`:`${band(a).name.toLowerCase()} today`}${dir?`; the area mean ${dir} over the following days`:''}; the highest area-mean day in the forecast is ${lab(worst)} at ${n1(wv)} µg/m³ (${band(wv).name}).`,
+      `${area}: คุณภาพอากาศวันนี้${mix?`ส่วนใหญ่อยู่ในระดับ${sp0.typ.th} บางพื้นที่${sp0.worst.th}`:`อยู่ในระดับ${band(a).name}`}${dir?` ค่าเฉลี่ยทั้งพื้นที่${dir}ในวันต่อ ๆ ไป`:''} วันที่ค่าเฉลี่ยทั้งพื้นที่สูงสุดในช่วงพยากรณ์คือ${lab(worst)} ${n1(wv)} µg/m³ (${band(wv).name})`); }
   const run=new Date(P.data.generated).toLocaleString(LOC(),{day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit',timeZone:'Asia/Bangkok'});
   const foot=T(`SEA-HAF forecast, run of ${run} (Thai time). PM₂.₅: CAMS forecast corrected with monitoring stations, 0.025° map; daily values are the means of the 24 hours of each Thai calendar day; bands follow the Thai Pollution Control Department. Weather: ECMWF, with observed rain (weather radar, Google DeepMind PARDIG and JAXA GSMaP) for past hours. Drafted automatically from the forecast data; please check before publishing.`,
     `พยากรณ์ SEA-HAF รอบ ${run} (เวลาประเทศไทย) PM₂.₅: พยากรณ์ CAMS ปรับแก้ด้วยสถานีตรวจวัด แผนที่ 0.025° ค่ารายวันคือค่าเฉลี่ย 24 ชั่วโมงของแต่ละวันตามเวลาไทย ระดับตามเกณฑ์กรมควบคุมมลพิษ สภาพอากาศ: ECMWF และฝนตรวจวัด (เรดาร์ตรวจอากาศ Google DeepMind PARDIG และ JAXA GSMaP) สำหรับชั่วโมงที่ผ่านมา ข้อความนี้ร่างอัตโนมัติจากข้อมูลพยากรณ์ โปรดตรวจทานก่อนเผยแพร่`);
   // plain headline and the next two days in one line each
   const plain=[]; { const b0=full(keys[0])?pcdBand(D.get(keys[0]).mean):null, tr=full(keys[1])&&full(keys[0])?plainTrend(D.get(keys[1]).mean,D.get(keys[0]).mean):null;
-    if(b0) plain.push(`<b>${esc(area)}:</b> ${T(`${b0.en} air today`,`อากาศ${b0.th}วันนี้`)}${tr?(th?' ':', ')+trendTxt(tr,'next'):''}${th?'':'.'}`);
+    const sp0=full(keys[0])?spread(keys[0]):null;
+    if(sp0&&sp0.above.length) plain.push(`<b>${esc(area)}:</b> ${T(`mostly ${sp0.typ.en.toLowerCase()} air today, but ${sp0.worst.en.toLowerCase()} in parts (${esc(nameList(sp0.above))} µg/m³)`,`อากาศส่วนใหญ่${sp0.typ.th}วันนี้ แต่บางพื้นที่${sp0.worst.th} (${esc(nameList(sp0.above))} µg/m³)`)}${tr?(th?' ':'; ')+T('area mean ','ค่าเฉลี่ยทั้งพื้นที่')+trendTxt(tr,'next'):''}${th?'':'.'}`);
+    else if(b0) plain.push(`<b>${esc(area)}:</b> ${T(`${(sp0?sp0.typ:b0).en} air today`,`อากาศ${(sp0?sp0.typ:b0).th}วันนี้`)}${tr?(th?' ':', ')+trendTxt(tr,'next'):''}${th?'':'.'}`);
     if(plainToday) plain.push(plainToday); if(plainTomorrow) plain.push(plainTomorrow);
     const WXd=dailyWx(H,g.wx,now); for(const d of [keys[2],keys[3]]){ const o=D.get(d); if(!o||o.n<18) continue; const b=pcdBand(o.mean), w=WXd.get(d), prev=D.get(keys[keys.indexOf(d)-1]);
-      plain.push(`<b>${esc(dLong(d))}:</b> PM₂.₅ ${T(b.en,b.th).toLowerCase()}${prev&&prev.n>=18?` (${trendTxt(plainTrend(o.mean,prev.mean),'short')})`:''}${w&&isFinite(w.tmin)?`${th?' ':'; '}${Math.round(w.tmin)}–${Math.round(w.tmax)} °C, ${rainDayCat(w.rain)}`:''}${th?'':'.'}`); } }
+      const sp=spread(d), mx=sp&&sp.above.length, bb=sp?sp.typ:b;
+      plain.push(`<b>${esc(dLong(d))}:</b> PM₂.₅ ${mx?T('mostly ','ส่วนใหญ่'):''}${T(bb.en,bb.th).toLowerCase()}${mx?T(`, ${sp.worst.en.toLowerCase()} in parts (${esc(nameList(sp.above.slice(0,2)))})`,` บางพื้นที่${sp.worst.th} (${esc(nameList(sp.above.slice(0,2)))})`):''}${prev&&prev.n>=18?` (${trendTxt(plainTrend(o.mean,prev.mean),'short')})`:''}${w&&isFinite(w.tmin)?`${th?' ':'; '}${Math.round(w.tmin)}–${Math.round(w.tmax)} °C, ${rainDayCat(w.rain)}`:''}${th?'':'.'}`); } }
   return {area,ov,secs,foot,plain,provs:[...A.groups.entries()].filter(([k])=>k!=='__all').map(([k,x])=>[k,provName(x.p)]).sort((a,b)=>a[1].localeCompare(b[1],LOC())),regionName};
 }
 function summaryText(S_){ const strip=h=>h.replace(/<[^>]+>/g,''); const L_=[T('PM₂.₅ forecast summary','สรุปพยากรณ์ PM₂.₅')+' — '+S_.area,'',...(S_.plain||[]).map(strip),'',T('— More detail —','— รายละเอียดเพิ่มเติม —'),S_.ov,''];

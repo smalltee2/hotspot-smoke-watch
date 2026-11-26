@@ -23,7 +23,9 @@ import path from 'node:path';
 export const ACC = { days: 7, horizons: { s: [1, 3, 6], l: [12, 24], d2: [48] }, daily: { y1: 24, y2: 48 }, minHours24: 18, bands: [15, 25, 37.5, 75], thr: 37.5, mapeMin: 10,
   // the map badges (since 26 Nov 2026): calendar-day means (00–24 h Thai time) over the last 30 days, forecast 24 h (m1) and 48 h
   // (m2) before the day ended, so a monitor has ~30 independent days for its R² (7 days of running means gave ~7)
-  month: { days: 30, leads: { m1: 24, m2: 48 } } };
+  month: { days: 30, leads: { m1: 24, m2: 48 } },
+  // reported beside the day means (owner, 26 Nov 2026): the hourly values over the same 30 days, forecast 24 h (h1) and 48 h (h2) ahead
+  hours30: { leads: { h1: 24, h2: 48 } } };
 const DAILY = Object.fromEntries(Object.entries(ACC.daily).map(([k, L]) => [L, k]));
 const HZ = Object.fromEntries(Object.entries(ACC.horizons).flatMap(([k, ls]) => ls.map(L => [L, k])));
 const H = 3600e3;
@@ -61,7 +63,28 @@ export function scores(a, minN = 1) {
  *  isMonitor(id): fallback for rows logged before the monitor column; tEnd: newest valid hour counted (ms).
  *  want: true = reference monitors (the headline score), false = low-cost sensors (scored apart: see main).
  *  Returns Map id -> { s: next hours, l: next day, d2: two days ahead, y1 / y2: daily mean 24 h / 48 h ahead } (sums) over the last ACC.days days. */
-const getSt = (out, id) => { let s = out.get(id); if (!s) out.set(id, s = { s: NEW(), l: NEW(), d2: NEW(), y1: NEW(), y2: NEW(), m1: NEW(), m2: NEW() }); return s; };
+const getSt = (out, id) => { let s = out.get(id); if (!s) out.set(id, s = { s: NEW(), l: NEW(), d2: NEW(), y1: NEW(), y2: NEW(), m1: NEW(), m2: NEW(), h1: NEW(), h2: NEW() }); return s; };
+const HOURS30 = Object.fromEntries(Object.entries(ACC.hours30.leads).map(([k, L]) => [L, k]));
+/** Hourly values over the last ACC.month.days days at leads 24 and 48 h: the published hourly forecast against the measured hour,
+ *  hourly reference monitors (h1 / h2 in out). */
+export function scoreHours30(rows, obs, tEnd, isMonitor = () => true, out = new Map(), want = true) {
+  const t0 = tEnd - ACC.month.days * 24 * H, seen = new Set();
+  for (const r of rows) {
+    const L = +r.lead_h, k = HOURS30[L]; if (!k || r.obs_basis !== 'h') continue;
+    const mon = r.monitor === '0' ? false : r.monitor === '1' ? true : isMonitor(r.station_id); if (mon !== want) continue;
+    const tv = Date.parse(r.valid_utc); if (!(tv > t0 && tv <= tEnd)) continue;
+    const key = `${r.station_id}|${L}|${r.valid_utc.slice(0, 13)}`; if (seen.has(key)) continue; seen.add(key);
+    const o = obs.get(`${r.station_id}|${r.valid_utc.slice(0, 13)}`), f = first(r.correctedML, r.correctedA, r.corrected);
+    if (o != null && f != null) addPair(getSt(out, r.station_id)[k], f, o);
+  }
+  return out;
+}
+// the rows of one lead set only, without splitting every line into an object (the 30-day hourly pass reads ~720 log files)
+const parseLeads = (txt, leads) => { const L = txt.split('\n'); if (L.length < 2) return []; const h = L[0].split(','), li = h.indexOf('lead_h'), out = [];
+  for (let i = 1; i < L.length; i++) { const l = L[i]; if (!l) continue; let a = -1; for (let q = 0; q < li; q++) a = l.indexOf(',', a + 1); if (a < 0) continue;
+    const b = l.indexOf(',', a + 1), lead = l.slice(a + 1, b < 0 ? undefined : b); if (!leads.has(lead)) continue;
+    const v = l.split(','), o = {}; h.forEach((k, j) => o[k] = v[j]); out.push(o); }
+  return out; };
 const MONTH = Object.fromEntries(Object.entries(ACC.month.leads).map(([k, L]) => [L, k]));
 /** Calendar-day means over the last ACC.month.days days: rows valid at 17 UTC (24:00 Thai time) with lead 24 or 48 h (they are in
  *  the logs of the runs issued at 17 UTC), the published 24-h mean forecast against the mean of the 24 measured hours of that Thai
@@ -143,10 +166,15 @@ async function main() {
   if (!tEnd) { console.log('accuracy: no measurements in the logs'); return; }
   const isMon = id => meta.get(id)?.monitor !== false, out = new Map(), fc1 = new Map(), outLc = new Map();
   for (const f of files.filter(f => /fcst-\d{8}T\d{2}\.csv$/.test(f) && fileT(f) >= tEnd - (ACC.month.days * 24 + 49) * H)) {
-    const recent = fileT(f) >= tEnd - (ACC.days * 24 + 49) * H, t17 = /T17\.csv$/.test(f); if (!recent && !t17) continue;   // older: only the 17 UTC runs (day means)
-    const rows = parse(await fs.readFile(f, 'utf8'));
+    const recent = fileT(f) >= tEnd - (ACC.days * 24 + 49) * H, t17 = /T17\.csv$/.test(f), txt = await fs.readFile(f, 'utf8');
+    if (!recent) {   // older files: the 24 / 48 h rows only (hourly 30-day scores; day means from the 17 UTC runs)
+      const rows = parseLeads(txt, new Set(['24', '48']));
+      scoreHours30(rows, obs, tEnd, isMon, out); scoreHours30(rows, obs, tEnd, isMon, outLc, false);
+      if (t17) { scoreDays(rows, obs, tEnd, isMon, out); scoreDays(rows, obs, tEnd, isMon, outLc, false); }
+      continue; }
+    const rows = parse(txt);
+    scoreHours30(rows, obs, tEnd, isMon, out); scoreHours30(rows, obs, tEnd, isMon, outLc, false);
     if (t17) { scoreDays(rows, obs, tEnd, isMon, out); scoreDays(rows, obs, tEnd, isMon, outLc, false); }
-    if (!recent) continue;
     scoreRows(rows, obs, tEnd, isMon, out); scoreRows(rows, obs, tEnd, isMon, outLc, false);
     for (const r of rows) if (r.lead_h === '1') { const v = first(r.correctedML, r.correctedA, r.corrected); if (v != null) fc1.set(`${r.station_id}|${r.valid_utc.slice(0, 13)}`, v); } }
   const iqRows = []; for (const f of files.filter(f => /iqair-\d{8}T\d{2}\.csv$/.test(f))) iqRows.push(...parse(await fs.readFile(f, 'utf8')));
@@ -154,23 +182,23 @@ async function main() {
   const iqCities = scoreIqair(iqRows, fc1, points, tEnd - ACC.days * 24 * H, tEnd);
   const r1 = a => a.map((v, i) => (i === 13 ? +v.toFixed(3) : [1, 2, 3, 8, 9, 10, 11].includes(i) ? +v.toFixed(1) : v)), stations = [];
   for (const [id, s] of out) { const m = meta.get(id); if (!m || m.lat == null) continue;
-    stations.push({ id, name: m.name || id, ...(m.nameTH ? { nameTH: m.nameTH } : {}), lat: m.lat, lon: m.lon, cc: m.cc || '', s: r1(s.s), l: r1(s.l), d2: r1(s.d2), y1: r1(s.y1), y2: r1(s.y2), m1: r1(s.m1), m2: r1(s.m2) }); }
+    stations.push({ id, name: m.name || id, ...(m.nameTH ? { nameTH: m.nameTH } : {}), lat: m.lat, lon: m.lon, cc: m.cc || '', s: r1(s.s), l: r1(s.l), d2: r1(s.d2), y1: r1(s.y1), y2: r1(s.y2), m1: r1(s.m1), m2: r1(s.m2), h1: r1(s.h1), h2: r1(s.h2) }); }
   // low-cost sensors (OpenAQ: AirGradient, PurpleAir, …), scored apart and never mixed into the headline score: they read high in
   // humid air, and the station correction learns from each sensor's own readings, so this says how close the forecast is to the
   // sensors, not to the true value. Only sensors that pass the pipeline's 30-day check against their neighbours (latest.json qc
   // 'pass' / 'isolated'; files without qc: all). All countries: they are most useful where reference monitors are few.
   const lcOk = m => !m.qc || m.qc === 'pass' || m.qc === 'isolated', lowcost = [];
   for (const [id, s] of outLc) { const m = meta.get(id); if (!m || m.lat == null || m.monitor || !lcOk(m)) continue;
-    lowcost.push({ id, name: m.name || id, lat: m.lat, lon: m.lon, cc: m.cc || '', s: r1(s.s), l: r1(s.l), d2: r1(s.d2), y1: r1(s.y1), y2: r1(s.y2), m1: r1(s.m1), m2: r1(s.m2) }); }
+    lowcost.push({ id, name: m.name || id, lat: m.lat, lon: m.lon, cc: m.cc || '', s: r1(s.s), l: r1(s.l), d2: r1(s.d2), y1: r1(s.y1), y2: r1(s.y2), m1: r1(s.m1), m2: r1(s.m2), h1: r1(s.h1), h2: r1(s.h2) }); }
   const r1i = r1;
-  const doc = { version: 1, generated: Date.now(), tEnd, days: ACC.days, horizons: ACC.horizons, daily: ACC.daily, month: ACC.month, bands: ACC.bands, thr: ACC.thr,
+  const doc = { version: 1, generated: Date.now(), tEnd, days: ACC.days, horizons: ACC.horizons, daily: ACC.daily, month: ACC.month, hours30: ACC.hours30, bands: ACC.bands, thr: ACC.thr,
     iqair: iqCities.map(c => ({ ...c, sea: r1i(c.sea) })), lowcost,
     mapeMin: ACC.mapeMin, cols: COLS, stations };
   await fs.writeFile(path.join(DATA, 'accuracy.json'), JSON.stringify(doc));
   const part = (k, list = stations) => { const a = NEW(); for (const s of list) s[k].forEach((v, i) => a[i] += v); const S = scores(a);
-    return S ? `${{ s: 'next hours', l: 'next day', d2: 'two days ahead', y1: 'daily mean 24 h ahead', y2: 'daily mean 48 h ahead', m1: `calendar days (${ACC.month.days} d) 24 h ahead`, m2: `calendar days (${ACC.month.days} d) 48 h ahead` }[k]} ${S.n} pairs, R² ${S.r2 == null ? '–' : S.r2.toFixed(2)}, NRMSE ${S.nrmse == null ? '–' : S.nrmse.toFixed(0) + ' %'}, MAPE ${S.mape == null ? '–' : S.mape.toFixed(0) + ' %'}, colour band right ${(S.bandRight * 100).toFixed(0)} %, typical error ${S.mae.toFixed(1)} µg/m³, bias ${S.bias.toFixed(1)}, hours >= ${ACC.thr} caught ${S.caught} of ${S.high}, false alarms ${S.falseAlarms} of ${S.warned}` : `${k}: none`; };
-  const msg = `${stations.length} monitors, ${ACC.days} days to ${k13(tEnd)}Z; ${part('s')}; ${part('l')}; ${part('d2')}; ${part('y1')}; ${part('y2')}; ${part('m1')}; ${part('m2')} (${((Date.now() - t00) / 1e3).toFixed(1)} s)`;
+    return S ? `${{ s: 'next hours', l: 'next day', d2: 'two days ahead', y1: 'daily mean 24 h ahead', y2: 'daily mean 48 h ahead', m1: `calendar days (${ACC.month.days} d) 24 h ahead`, m2: `calendar days (${ACC.month.days} d) 48 h ahead`, h1: `hours (${ACC.month.days} d) 24 h ahead`, h2: `hours (${ACC.month.days} d) 48 h ahead` }[k]} ${S.n} pairs, R² ${S.r2 == null ? '–' : S.r2.toFixed(2)}, NRMSE ${S.nrmse == null ? '–' : S.nrmse.toFixed(0) + ' %'}, MAPE ${S.mape == null ? '–' : S.mape.toFixed(0) + ' %'}, colour band right ${(S.bandRight * 100).toFixed(0)} %, typical error ${S.mae.toFixed(1)} µg/m³, bias ${S.bias.toFixed(1)}, hours >= ${ACC.thr} caught ${S.caught} of ${S.high}, false alarms ${S.falseAlarms} of ${S.warned}` : `${k}: none`; };
+  const msg = `${stations.length} monitors, ${ACC.days} days to ${k13(tEnd)}Z; ${part('s')}; ${part('l')}; ${part('d2')}; ${part('y1')}; ${part('y2')}; ${part('m1')}; ${part('m2')}; ${part('h1')}; ${part('h2')} (${((Date.now() - t00) / 1e3).toFixed(1)} s)`;
   console.log('accuracy: ' + msg);
-  console.log(`accuracy, low-cost sensors (apart): ${lowcost.length} sensors; ${part('s', lowcost)}; ${part('l', lowcost)}; ${part('y1', lowcost)}; ${part('m1', lowcost)}`);
+  console.log(`accuracy, low-cost sensors (apart): ${lowcost.length} sensors; ${part('s', lowcost)}; ${part('l', lowcost)}; ${part('y1', lowcost)}; ${part('m1', lowcost)}; ${part('h1', lowcost)}`);
 }
 if (import.meta.url === `file://${process.argv[1]}`) main().catch(e => { console.error('accuracy failed:', e.stack || e.message); if (process.env.GITHUB_ACTIONS) console.log(`::warning title=accuracy::accuracy.mjs failed: ${e.message}`); process.exitCode = 0; });

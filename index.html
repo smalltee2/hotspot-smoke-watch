@@ -3814,7 +3814,8 @@ async function runModel(hotsRaw,mode,windOverride,quiet){
   if(mode==='live'&&!P.data){const cams=await fetchCams(S.recep); if(cams) S.recep.forEach((r,i)=>r.cams=cams[i]);}
   setMode(mode); busy(null);
   if(mode==='demo') banner(()=>T('<b>Demo run.</b> Hotspots and winds are synthetic, generated to show how the page behaves. Nothing here describes real conditions.','<b>ข้อมูลจำลอง</b> จุดความร้อนและลมสร้างขึ้นเพื่อแสดงการทำงานของหน้าเว็บ ไม่ใช่สภาพจริง'));
-  else if(S.sources.length>800) banner(()=>T(`Modelling the 800 strongest of ${S.sources.length} fire groups (0.1° cell × day) to keep the page fast.`,`คำนวณเฉพาะ 800 กลุ่มไฟที่แรงที่สุดจาก ${S.sources.length} กลุ่ม (ช่อง 0.1° × วัน) เพื่อให้หน้าเว็บทำงานเร็ว`),'info');
+  else if(S.sources.length>800&&!PUBLIC) banner(   // technical note: developer page only (owner, 26 Nov 2026)
+    ()=>T(`Modelling the 800 strongest of ${S.sources.length} fire groups (0.1° cell × day) to keep the page fast.`,`คำนวณเฉพาะ 800 กลุ่มไฟที่แรงที่สุดจาก ${S.sources.length} กลุ่ม (ช่อง 0.1° × วัน) เพื่อให้หน้าเว็บทำงานเร็ว`),'info');
   else banner('');
   // slider
   setTimeline(); FIELD_CACHE.clear();

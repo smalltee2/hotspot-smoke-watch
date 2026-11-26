@@ -708,7 +708,7 @@ td.num{text-align:right;font-family:var(--font-data);font-variant-numeric:tabula
       <div class="lvl"><i style="background:var(--aq4)"></i><span data-th="&lt;b&gt;เริ่มมีผลกระทบต่อสุขภาพ&lt;/b&gt; (37.6–75): ทุกคนควรลดเวลาอยู่กลางแจ้ง กลุ่มเสี่ยงควรอยู่ในอาคารหรือใส่หน้ากากกันฝุ่น หากมีอาการ เช่น ไอ แน่นหน้าอก ควรพบแพทย์"><b>Starting to affect health</b> (37.6–75): everyone should spend less time outdoors; sensitive groups should stay indoors or wear a dust mask; see a doctor if you cough or feel chest tightness.</span></div>
       <div class="lvl"><i style="background:var(--aq5)"></i><span data-th="&lt;b&gt;มีผลกระทบต่อสุขภาพ&lt;/b&gt; (มากกว่า 75): ทุกคนควรงดกิจกรรมกลางแจ้ง ใส่หน้ากาก N95 เมื่อออกนอกอาคาร และอยู่ในห้องที่มีเครื่องฟอกอากาศถ้าทำได้"><b>Affects health</b> (above 75): everyone should avoid outdoor activity, wear an N95 mask outside, and stay in a room with an air purifier if possible.</span></div>
       <h3 data-th="ความแม่นยำของพยากรณ์คิดอย่างไร">How the forecast accuracy is worked out</h3>
-      <p class="note" data-th="เราเทียบค่าเฉลี่ย PM&lt;sub&gt;2.5&lt;/sub&gt; รายวัน (00:00–24:00 น.) ที่หน้านี้พยากรณ์ไว้ล่วงหน้า 1 วัน (24 ชม.) กับค่าเฉลี่ยรายวันที่สถานีตรวจวัดมาตรฐานของกรมควบคุมมลพิษ (Air4Thai) วัดได้จริงในวันเดียวกัน ทุกวัน ย้อนหลัง 30 วัน แล้วคิด&lt;br&gt;&lt;b&gt;ความแม่นยำ = 100 − NRMSE&lt;/b&gt; โดย NRMSE = RMSE ÷ ค่าเฉลี่ยที่วัดได้ × 100 และ RMSE คือค่าคลาดเคลื่อนกำลังสองเฉลี่ยแล้วถอดราก&lt;br&gt;ตัวอย่าง: ถ้าค่าที่วัดได้เฉลี่ย 20 µg/m³ และพยากรณ์คลาดไปราว 4 µg/m³ (RMSE) จะได้ NRMSE 20 % ความแม่นยำ 80 %&lt;br&gt;ความแม่นยำรายชั่วโมงคิดแบบเดียวกันจากค่ารายชั่วโมงในช่วง 30 วันเดียวกัน ตัวเลขจะต่ำกว่าค่ารายวัน เพราะค่ารายชั่วโมงขึ้นลงมากกว่า">We compare the daily mean PM<sub>2.5</sub> (00:00–24:00 Thai time) that this page forecast one day (24 h) ahead with the daily mean the Pollution Control Department's reference monitors (Air4Thai) actually measured that day, day by day over the last 30 days, and work out<br><b>accuracy = 100 − NRMSE</b>, where NRMSE = RMSE ÷ mean measured value × 100, and the RMSE is the root-mean-square error.<br>Example: if the measured daily means average 20 µg/m³ and the forecast is off by about 4 µg/m³ (RMSE), the NRMSE is 20 % and the accuracy 80 %.<br>The hourly accuracy is worked out the same way on the hourly values of the same 30 days; it is lower than the daily one, as hourly values go up and down more.</p>
+      <p class="note" data-th="เราเทียบค่าเฉลี่ย PM&lt;sub&gt;2.5&lt;/sub&gt; รายวัน (00:00–24:00 น.) ที่หน้านี้พยากรณ์ไว้ล่วงหน้า 1 วัน (24 ชม.) กับค่าเฉลี่ยรายวันที่สถานีตรวจวัดมาตรฐานของกรมควบคุมมลพิษ (Air4Thai) วัดได้จริงในวันเดียวกัน ทุกวัน ย้อนหลัง 30 วัน แล้วคิด&lt;br&gt;&lt;b&gt;ความแม่นยำ = 100 − NRMSE&lt;/b&gt; โดย NRMSE = RMSE ÷ ค่าเฉลี่ยที่วัดได้ × 100 และ RMSE คือค่าคลาดเคลื่อนกำลังสองเฉลี่ยแล้วถอดราก&lt;br&gt;ตัวอย่าง: ถ้าค่าที่วัดได้เฉลี่ย 20 µg/m³ และพยากรณ์คลาดไปราว 4 µg/m³ (RMSE) จะได้ NRMSE 20 % ความแม่นยำ 80 %">We compare the daily mean PM<sub>2.5</sub> (00:00–24:00 Thai time) that this page forecast one day (24 h) ahead with the daily mean the Pollution Control Department's reference monitors (Air4Thai) actually measured that day, day by day over the last 30 days, and work out<br><b>accuracy = 100 − NRMSE</b>, where NRMSE = RMSE ÷ mean measured value × 100, and the RMSE is the root-mean-square error.<br>Example: if the measured daily means average 20 µg/m³ and the forecast is off by about 4 µg/m³ (RMSE), the NRMSE is 20 % and the accuracy 80 %.</p>
       <h3 data-th="ข้อควรรู้">Good to know</h3>
       <ul class="note">
         <li data-th="นี่คือการพยากรณ์ ไม่ใช่ประกาศทางการ ค่าจริงอาจต่างไปได้ โดยเฉพาะเมื่อพยากรณ์ล่วงหน้านาน วันที่ 3–5 ควรใช้ดูแนวโน้มมากกว่าตัวเลข">This is a forecast, not an official notice. Real values can differ, especially further ahead: read days 3–5 as a trend rather than exact numbers.</li>
@@ -2228,17 +2228,17 @@ async function loadAccuracy(){
 // (all countries) and never mixed into the score at the reference monitors: they read high in humid air and the forecast at each
 // sensor is corrected with its own readings, so this is closeness to the sensors, not to the true value
 function accLc(){ const list=(ACCD?.lowcost||[]).filter(s=>inRegion(s.lat,s.lon)), g={list};
-  const M1=accSum(list,'m1'); g.m1=accMon(M1.a); g.m2=accMon(accSum(list,'m2').a); g.nSt=M1.n; g.h1=accHour(accSum(list,'h1').a); return g; }
+  const M1=accSum(list,'m1'); g.m1=accMon(M1.a); g.m2=accMon(accSum(list,'m2').a); g.nSt=M1.n; return g; }
 // the area total under the map item, for the chosen comparison (each writes only while its comparison is chosen)
 function renderRefSum(){ const el=ACC_SRC==='ref'?$('accSum'):null; if(!el) return; if(!ACCD){ setDual(el,'',''); return; }
-  const list=ACCD.stations.filter(s=>inRegion(s.lat,s.lon)), S_=accSum(list,'m1'), mo=accMon(S_.a), D=accMonN(), ho=accHour(accSum(list,'h1').a), hh=ho?.nrmse!=null?[`, hourly ${accAccT(ho.nrmse)}`,` รายชั่วโมง ${accAccT(ho.nrmse)}`]:['',''];
+  const list=ACCD.stations.filter(s=>inRegion(s.lat,s.lon)), S_=accSum(list,'m1'), mo=accMon(S_.a), D=accMonN();
   if(!mo){ setDual(el,`Label = accuracy of the daily mean forecast 24 h ahead, last ${D} days (how it is worked out: About tab) · not enough data in this area yet (Thai monitors only)`,`ป้าย = ความแม่นยำของพยากรณ์ค่าเฉลี่ยรายวันล่วงหน้า 24 ชม. ${D} วันล่าสุด (วิธีคิดอยู่ในแท็บเกี่ยวกับ) · ข้อมูลในพื้นที่นี้ยังไม่พอ (เฉพาะสถานีในไทย)`); return; }
-  setDual(el,`Label = accuracy of the daily mean forecast 24 h ahead, last ${D} days (how it is worked out: About tab) · all ${S_.n} monitors here together: accuracy, daily ${accAccT(mo.nrmse)}${hh[0]}, typical error ±${fmtN(mo.mae)} µg/m³`,
-    `ป้าย = ความแม่นยำของพยากรณ์ค่าเฉลี่ยรายวันล่วงหน้า 24 ชม. ${D} วันล่าสุด (วิธีคิดอยู่ในแท็บเกี่ยวกับ) · รวม ${S_.n} สถานีในพื้นที่: ความแม่นยำ รายวัน ${accAccT(mo.nrmse)}${hh[1]} คลาดเคลื่อนโดยเฉลี่ย ±${fmtN(mo.mae)} µg/m³`); }
+  setDual(el,`Label = accuracy of the daily mean forecast 24 h ahead, last ${D} days (how it is worked out: About tab) · all ${S_.n} monitors here together: accuracy ${accAccT(mo.nrmse)}, typical error ±${fmtN(mo.mae)} µg/m³`,
+    `ป้าย = ความแม่นยำของพยากรณ์ค่าเฉลี่ยรายวันล่วงหน้า 24 ชม. ${D} วันล่าสุด (วิธีคิดอยู่ในแท็บเกี่ยวกับ) · รวม ${S_.n} สถานีในพื้นที่: ความแม่นยำ ${accAccT(mo.nrmse)} คลาดเคลื่อนโดยเฉลี่ย ±${fmtN(mo.mae)} µg/m³`); }
 function renderLcSum(){ const el=ACC_SRC==='lc'?$('accSum'):null; if(!el) return; const g=ACCD?.lowcost?accLc():null;
   if(!g){ setDual(el,'',''); return; }
   if(!g.m1){ setDual(el,'Not enough days in this area yet','ข้อมูลในพื้นที่นี้ยังไม่พอ'); return; }
-  setDual(el,`Label = accuracy against the sensors, daily mean forecast 24 h ahead, last ${accMonN()} days · all ${g.nSt} sensors here: accuracy, daily ${accAccT(g.m1.nrmse)}${g.h1?.nrmse!=null?`, hourly ${accAccT(g.h1.nrmse)}`:''}, typical error ±${fmtN(g.m1.mae)} µg/m³`,`ป้าย = ความแม่นยำเทียบกับเซนเซอร์ ค่าเฉลี่ยรายวันล่วงหน้า 24 ชม. ${accMonN()} วันล่าสุด · รวม ${g.nSt} จุดในพื้นที่: ความแม่นยำ รายวัน ${accAccT(g.m1.nrmse)}${g.h1?.nrmse!=null?` รายชั่วโมง ${accAccT(g.h1.nrmse)}`:''} คลาดเคลื่อนโดยเฉลี่ย ±${fmtN(g.m1.mae)} µg/m³`); }
+  setDual(el,`Label = accuracy against the sensors, daily mean forecast 24 h ahead, last ${accMonN()} days · all ${g.nSt} sensors here: accuracy ${accAccT(g.m1.nrmse)}, typical error ±${fmtN(g.m1.mae)} µg/m³`,`ป้าย = ความแม่นยำเทียบกับเซนเซอร์ ค่าเฉลี่ยรายวันล่วงหน้า 24 ชม. ${accMonN()} วันล่าสุด · รวม ${g.nSt} จุดในพื้นที่: ความแม่นยำ ${accAccT(g.m1.nrmse)} คลาดเคลื่อนโดยเฉลี่ย ±${fmtN(g.m1.mae)} µg/m³`); }
 // developer page: the low-cost score under the card's table
 function accLcNote(){ if(PUBLIC||!ACCD?.lowcost) return ''; const g=accLc(); if(!g.nSt) return '';
   const f=(sc,en,th)=>sc?T(`${en} <b>${accAccT(sc.nrmse)}</b> (±${fmtN(sc.mae)}, bias ${fmtN(sc.bias)})`,`${th} <b>${accAccT(sc.nrmse)}</b> (±${fmtN(sc.mae)}, เอนเอียง ${fmtN(sc.bias)})`):'';
@@ -2254,9 +2254,7 @@ function accSc(a,minN,minMape=ACC_MIN_MAPE){ if(!a||a[0]<minN) return null; cons
 const ACC_MIN_MAPE=24;   // hours measured >= 10 µg/m³ needed for a MAPE
 const accR2T=x=>x==null?'–':x.toFixed(2), accMapeT=x=>x==null?'–':Math.round(x)+'%', accAccT=x=>x==null?'–':Math.max(0,Math.round(100-x))+'%';
 // the hover line of a badge: the two main numbers, then the error in µg/m³ and the tendency
-const accStatLine=(x,t,hx)=>x?`${t}: ${T('accuracy, daily','ความแม่นยำ รายวัน')} <b>${accAccT(x.nrmse)}</b>${hx?.nrmse!=null?` · ${T('hourly','รายชั่วโมง')} <b>${accAccT(hx.nrmse)}</b>`:''} · ${T('typical error','คลาดเคลื่อนโดยเฉลี่ย')} ±${fmtN(x.mae)} µg/m³ · ${accTend(x)}`:'';
-// hourly values over the same 30 days (accuracy.json h1 / h2 from 26 Nov 2026): >= 100 hours for a monitor
-const accHour=a=>accSc(a,100);
+const accStatLine=(x,t)=>x?`${t}: ${T('accuracy','ความแม่นยำ')} <b>${accAccT(x.nrmse)}</b> · ${T('typical error','คลาดเคลื่อนโดยเฉลี่ย')} ±${fmtN(x.mae)} µg/m³ · ${accTend(x)}`:'';
 // badge: one number, accuracy = 100 − NRMSE (NRMSE = RMSE / mean measured, the usual normalised error in air-quality model
 // evaluation; owner, 26 Nov 2026); bar = the same; files without the new sums: the colour-band share as before
 // daily means (24 h, the Thai AQI basis) forecast 24 h / 48 h before: the badges' basis since 26 Nov 2026
@@ -2275,8 +2273,7 @@ function accGroup(level,lat,lon){ if(!ACCD) return null; const all=ACCD.stations
   else g={label:T('Thailand','ประเทศไทย'),list:all};
   // one accuracy everywhere (owner, 26 Nov 2026): 100 − NRMSE of the daily mean (00–24 h Thai time) forecast 24 h (m1) and 48 h
   // (m2) ahead, last 30 days; the monitors of the group summed (accuracy.json from 26 Nov 2026; older files: none)
-  const M1=accSum(g.list,'m1'); g.m1=accMon(M1.a); g.m2=accMon(accSum(g.list,'m2').a); g.nSt=M1.n;
-  g.h1=accHour(accSum(g.list,'h1').a); g.h2=accHour(accSum(g.list,'h2').a); return g;
+  const M1=accSum(g.list,'m1'); g.m1=accMon(M1.a); g.m2=accMon(accSum(g.list,'m2').a); g.nSt=M1.n; return g;
 }
 const accPct=x=>Math.round(x*100)+'%';
 const accIn10=(k,n)=>Math.round(10*k/Math.max(1,n));
@@ -2293,20 +2290,18 @@ function accTable(g){ if(g?.out) return `<p class="note">${T('The forecast is ch
   if(!g||(!g.m1&&!g.m2)) return `<p class="note">${T('Not enough measured days here yet to judge the forecast.','ยังมีวันที่ตรวจวัดไม่พอจะประเมินความแม่นยำที่นี่')}</p>`;
   const c=(sc,f)=>`<td>${sc?f(sc):'–'}</td>`, row=(th,f)=>`<tr><th>${th}</th>${c(g.m1,f)}${c(g.m2,f)}</tr>`;
   return `<div class="tablewrap"><table class="acctab"><thead><tr><th></th><th>${T('Next day','วันพรุ่งนี้')}<small>${T('24 h ahead','ล่วงหน้า 24 ชม.')}</small></th><th>${T('Two days ahead','ล่วงหน้า 2 วัน')}<small>${T('48 h ahead','ล่วงหน้า 48 ชม.')}</small></th></tr></thead><tbody>`+
-    row(T('Accuracy, daily mean','ความแม่นยำ ค่าเฉลี่ยรายวัน'),sc=>`<b>${accAccT(sc.nrmse)}</b>`)+
-    `<tr><th>${T('Accuracy, hourly values','ความแม่นยำ ค่ารายชั่วโมง')}</th><td>${g.h1?.nrmse!=null?`<b>${accAccT(g.h1.nrmse)}</b>`:'–'}</td><td>${g.h2?.nrmse!=null?`<b>${accAccT(g.h2.nrmse)}</b>`:'–'}</td></tr>`+
-    row(T('Typical error, daily mean','คลาดเคลื่อนโดยเฉลี่ย ค่ารายวัน'),sc=>`±${fmtN(sc.mae)} µg/m³`)+
+    row(T('Accuracy','ความแม่นยำ'),sc=>`<b>${accAccT(sc.nrmse)}</b>`)+
+    row(T('Typical error','คลาดเคลื่อนโดยเฉลี่ย'),sc=>`±${fmtN(sc.mae)} µg/m³`)+
     // the high-day counts (warned in time, warnings that did not happen) are for the admin page only; public pages keep it simple
     (PUBLIC?'':row(T('Days above 37.5 warned in time','วันที่ฝุ่นเกิน 37.5 ที่เตือนทัน'),accHighD)+
     row(T('Warnings that did not happen','เตือนแล้วไม่เกินจริง'),accFAD))+
     row(T('Tendency','แนวโน้ม'),accTend)+'</tbody></table></div>'+
-    `<p class="note accd2">${T('Daily mean PM₂.₅ (00–24 h, the Thai AQI basis) and hourly values, last 30 days. How the accuracy is worked out: see the About tab. Further ahead (days 3–4) is not scored yet: use it for the trend.','ค่าเฉลี่ย PM₂.₅ รายวัน (00–24 น. ฐานของ AQI ไทย) และค่ารายชั่วโมง 30 วันล่าสุด วิธีคิดความแม่นยำดูได้ในแท็บเกี่ยวกับ ไกลกว่านี้ (วันที่ 3–4) ยังไม่มีผลตรวจ ใช้ดูแนวโน้ม')}</p>`; }
+    `<p class="note accd2">${T('Daily mean PM₂.₅ (00–24 h, the Thai AQI basis), last 30 days. How the accuracy is worked out: see the About tab. Further ahead (days 3–4) is not scored yet: use it for the trend.','ค่าเฉลี่ย PM₂.₅ รายวัน (00–24 น. ฐานของ AQI ไทย) 30 วันล่าสุด วิธีคิดความแม่นยำดูได้ในแท็บเกี่ยวกับ ไกลกว่านี้ (วันที่ 3–4) ยังไม่มีผลตรวจ ใช้ดูแนวโน้ม')}</p>`; }
 function accWhere(){ if(ACC_AT) return {...ACC_AT,mine:false,st:true}; if(hereLL) return {lat:hereLL.lat,lon:hereLL.lon,mine:true}; const c=map.getCenter(); return {lat:c.lat,lon:c.lng,mine:false}; }
 function renderAcc(){
   renderRefSum(); renderLcSum(); const box=$('accBox'); if(!box) return; box.hidden=!ACCD; if(!ACCD) return;
   const th=accGroup('th');
-  const hT=th?.h1?.nrmse!=null?[` · hourly ${accAccT(th.h1.nrmse)}`,` · รายชั่วโมง ${accAccT(th.h1.nrmse)}`]:['',''];
-  $('accHead').textContent=th?.m1?T(`Thailand, next day: accuracy, daily ${accAccT(th.m1.nrmse)}${hT[0]}`,`ไทย พยากรณ์วันพรุ่งนี้ ความแม่นยำ รายวัน ${accAccT(th.m1.nrmse)}${hT[1]}`):'';
+  $('accHead').textContent=th?.m1?T(`Thailand, next day: accuracy ${accAccT(th.m1.nrmse)}`,`ไทย พยากรณ์วันพรุ่งนี้ ความแม่นยำ ${accAccT(th.m1.nrmse)}`):'';
   for(const b of box.querySelectorAll('[data-acc]')) b.setAttribute('aria-pressed',String(b.dataset.acc===ACC_LEVEL));
   let g, extra='';
   if(ACC_LEVEL==='here'){ const w=accWhere(); g=accGroup('here',w.lat,w.lon);
@@ -2322,18 +2317,18 @@ function openAcc(level){ if(level){ACC_LEVEL=level; store.set('hsw.accLevel',lev
   if(window.PHONEUI?.active()){ document.querySelector('#tabbar [data-go="warn"]')?.click(); PHONEUI.set('full'); } else $('tab-warn')?.click();   // phones: the card is in the bottom sheet
   const d=$('accBox'); if(!d) return; d.open=true; renderAcc(); d.scrollIntoView({behavior:'smooth',block:'start'}); }
 function accHereRow(lat,lon){ const g=accGroup('here',lat,lon); if(!g) return ''; const sc=g.m1; if(!sc) return '';
-  return `<tr><th>${T('Forecast accuracy','ความแม่นยำของพยากรณ์')}</th><td>${T('accuracy, daily','ความแม่นยำ รายวัน')} ${accAccT(sc.nrmse)}${g.h1?.nrmse!=null?` · ${T('hourly','รายชั่วโมง')} ${accAccT(g.h1.nrmse)}`:''} · ±${fmtN(sc.mae)} µg/m³ ${T(`(next day, ${accMonN()} days)`,`(พรุ่งนี้ ${accMonN()} วัน)`)}`+
+  return `<tr><th>${T('Forecast accuracy','ความแม่นยำของพยากรณ์')}</th><td>${T('accuracy','ความแม่นยำ')} ${accAccT(sc.nrmse)} · ±${fmtN(sc.mae)} µg/m³ ${T(`(next day, daily mean, ${accMonN()} days)`,`(พรุ่งนี้ ค่าเฉลี่ยรายวัน ${accMonN()} วัน)`)}`+
     `<br><span class="note">${esc(g.label)}</span> <button class="linkbtn" type="button" id="hereAcc">${T('Details','รายละเอียด')}</button></td></tr>`; }
 function drawAcc(){
   accLayer.clearLayers(); if(!ACCD) return;
   // the badges are thinned on screen: where two would touch, the monitor with more scored hours keeps its badge (zoom in for all)
   const placed=[], list=ACCD.stations.filter(s=>inRegion(s.lat,s.lon)).sort((a,b)=>(b.l[0]+b.s[0])-(a.l[0]+a.s[0]));
-  for(const s of list){ const d1=accMon(s.m1), d2=accMon(s.m2), h1=accHour(s.h1), h2=accHour(s.h2), sc=d1?.nrmse!=null?d1:null; if(!sc) continue;
+  for(const s of list){ const d1=accMon(s.m1), d2=accMon(s.m2), sc=d1?.nrmse!=null?d1:null; if(!sc) continue;
     const pt=map.latLngToLayerPoint([s.lat,s.lon]); if(placed.some(q=>Math.abs(q.x-pt.x)<36&&Math.abs(q.y-pt.y)<20)) continue; placed.push(pt);   // each badge sits just above its monitor, clear of the town names beside the dots
     const icon=L.divIcon({className:'',html:accBadge(sc,false),iconSize:[32,17],iconAnchor:[16,22]});
-    const line=(x,t,hx)=>x?(x.nrmse!=null?accStatLine(x,t,hx):`${t}: ${T('colour band right','บอกระดับความเข้มข้นถูก')} <b>${accPct(x.band)}</b> · ±${fmtN(x.mae)} µg/m³ · ${accTend(x)}`):'';
+    const line=(x,t)=>x?(x.nrmse!=null?accStatLine(x,t):`${t}: ${T('colour band right','บอกระดับความเข้มข้นถูก')} <b>${accPct(x.band)}</b> · ±${fmtN(x.mae)} µg/m³ · ${accTend(x)}`):'';
     L.marker([s.lat,s.lon],{icon,keyboard:false,zIndexOffset:500}).bindTooltip(()=>`<b>${esc(stName(s))}</b><br>${T(`Last ${accMonN()} days, daily means (00–24 h)`,`${accMonN()} วันล่าสุด ค่าเฉลี่ยรายวัน (00–24 น.)`)}${d1?T(`, ${d1.n} days`,` ${d1.n} วัน`):''}<br>`+
-      [line(d1,T('Next day','วันพรุ่งนี้'),h1),line(d2,T('Two days ahead','ล่วงหน้า 2 วัน'),h2)].filter(Boolean).join('<br>')).on('click',()=>{ACC_AT={lat:s.lat,lon:s.lon}; openAcc('here');}).addTo(accLayer); }
+      [line(d1,T('Next day','วันพรุ่งนี้')),line(d2,T('Two days ahead','ล่วงหน้า 2 วัน'))].filter(Boolean).join('<br>')).on('click',()=>{ACC_AT={lat:s.lat,lon:s.lon}; openAcc('here');}).addTo(accLayer); }
   if(accOn('ref')) map.addLayer(accLayer); else map.removeLayer(accLayer);
   drawAccLc();
 }
@@ -2342,12 +2337,12 @@ function drawAcc(){
 function drawAccLc(){
   accLcLayer.clearLayers(); if(!ACCD?.lowcost) return;
   const placed=[], list=ACCD.lowcost.filter(s=>inRegion(s.lat,s.lon)).sort((a,b)=>(b.l[0]+b.s[0])-(a.l[0]+a.s[0]));
-  for(const s of list){ const d1=accMon(s.m1), d2=accMon(s.m2), h1=accHour(s.h1), h2=accHour(s.h2), sc=d1?.nrmse!=null?d1:null; if(!sc) continue;
+  for(const s of list){ const d1=accMon(s.m1), d2=accMon(s.m2), sc=d1?.nrmse!=null?d1:null; if(!sc) continue;
     const pt=map.latLngToLayerPoint([s.lat,s.lon]); if(placed.some(q=>Math.abs(q.x-pt.x)<36&&Math.abs(q.y-pt.y)<20)) continue; placed.push(pt);
     const icon=L.divIcon({className:'',html:accBadge(sc,true),iconSize:[32,17],iconAnchor:[16,22]});
-    const line=(x,t,hx)=>x?(x.nrmse!=null?accStatLine(x,t,hx):`${t}: ${T('colour band right','บอกระดับความเข้มข้นถูก')} <b>${accPct(x.band)}</b> · ±${fmtN(x.mae)} µg/m³ · ${accTend(x)}`):'';
+    const line=(x,t)=>x?(x.nrmse!=null?accStatLine(x,t):`${t}: ${T('colour band right','บอกระดับความเข้มข้นถูก')} <b>${accPct(x.band)}</b> · ±${fmtN(x.mae)} µg/m³ · ${accTend(x)}`):'';
     L.marker([s.lat,s.lon],{icon,keyboard:false,zIndexOffset:400}).bindTooltip(()=>`<b>${esc(s.name||s.id)}</b> · ${T('low-cost sensor (OpenAQ)','เซนเซอร์ราคาประหยัด (OpenAQ)')}<br><br>`+
-      `${T(`Last ${accMonN()} days, daily means (00–24 h)`,`${accMonN()} วันล่าสุด ค่าเฉลี่ยรายวัน (00–24 น.)`)}<br>`+[line(d1,T('Next day','วันพรุ่งนี้'),h1),line(d2,T('Two days ahead','ล่วงหน้า 2 วัน'),h2)].filter(Boolean).join('<br>')+
+      `${T(`Last ${accMonN()} days, daily means (00–24 h)`,`${accMonN()} วันล่าสุด ค่าเฉลี่ยรายวัน (00–24 น.)`)}<br>`+[line(d1,T('Next day','วันพรุ่งนี้')),line(d2,T('Two days ahead','ล่วงหน้า 2 วัน'))].filter(Boolean).join('<br>')+
       `<br><span class="note">${T('Compared with the sensor\'s own readings, which run high in humid air: closeness to the sensor, not to the true value.','เทียบกับค่าที่เซนเซอร์วัดได้ ซึ่งมักสูงเกินจริงเมื่ออากาศชื้น จึงบอกความใกล้กับค่าเซนเซอร์ ไม่ใช่ค่าจริง')}</span>`).addTo(accLcLayer); }
   if(accOn('lc')) map.addLayer(accLcLayer); else map.removeLayer(accLcLayer);
 }
@@ -4557,8 +4552,8 @@ function chatAnsWx(pl,off){ const lat=pl.lat??pl.x.b[1]/2+pl.x.b[3]/2, lon=pl.lo
   if(!n) return T('The weather forecast does not reach that day yet.','พยากรณ์อากาศยังไปไม่ถึงวันนั้นเลยนะ');
   return T(`${chatDayName(off)} at <b>${nm}</b>: ${isFinite(lo)?`${lo.toFixed(0)}–${hi.toFixed(0)} °C, `:''}rain about ${r.toFixed(1)} mm${r<0.5?' (mostly dry)':''}.`,`${chatDayName(off)}ที่<b>${nm}</b>: ${isFinite(lo)?`อุณหภูมิประมาณ ${lo.toFixed(0)}–${hi.toFixed(0)} °C `:''}ฝนรวม ๆ ราว ${r.toFixed(1)} มม.${r<0.5?' (แทบไม่ตกเลย)':''}`); }
 function chatAnsAcc(){ const g=typeof accGroup==='function'?accGroup('th'):null; if(!g||!g.m1) return T('The accuracy summary has not loaded yet.','ข้อมูลความแม่นยำยังโหลดไม่เสร็จ รอแป๊บนึงนะ');
-  return T(`Over the last ${accMonN()} days, at the reference monitors in Thailand, the next-day forecast of the daily mean PM2.5 has an accuracy of <b>${accAccT(g.m1.nrmse)}</b> (typically ±${fmtN(g.m1.mae)} µg/m³)${g.h1?.nrmse!=null?`, <b>${accAccT(g.h1.nrmse)}</b> for the hourly values`:''}${g.m2?`, and <b>${accAccT(g.m2.nrmse)}</b> two days ahead`:''}. How it is worked out is in the About tab; tick “Forecast accuracy” on the map to see each monitor.`,
-    `ถ้าดู ${accMonN()} วันที่ผ่านมา เทียบกับสถานีวัดฝุ่นมาตรฐานในไทย พยากรณ์ค่าเฉลี่ยรายวันของวันพรุ่งนี้มีความแม่นยำ <b>${accAccT(g.m1.nrmse)}</b> (คลาดเคลื่อนราว ±${fmtN(g.m1.mae)} µg/m³)${g.h1?.nrmse!=null?` ค่ารายชั่วโมงแม่นยำ <b>${accAccT(g.h1.nrmse)}</b>`:''}${g.m2?` ล่วงหน้า 2 วันแม่นยำ <b>${accAccT(g.m2.nrmse)}</b>`:''} วิธีคิดดูได้ในแท็บเกี่ยวกับ อยากดูรายสถานีก็เปิด “ความแม่นยำของพยากรณ์” บนแผนที่ได้เลย`); }
+  return T(`Over the last ${accMonN()} days, at the reference monitors in Thailand, the next-day forecast of the daily mean PM2.5 has an accuracy of <b>${accAccT(g.m1.nrmse)}</b> (typically ±${fmtN(g.m1.mae)} µg/m³)${g.m2?`, and <b>${accAccT(g.m2.nrmse)}</b> two days ahead`:''}. How it is worked out is in the About tab; tick “Forecast accuracy” on the map to see each monitor.`,
+    `ถ้าดู ${accMonN()} วันที่ผ่านมา เทียบกับสถานีวัดฝุ่นมาตรฐานในไทย พยากรณ์ค่าเฉลี่ยรายวันของวันพรุ่งนี้มีความแม่นยำ <b>${accAccT(g.m1.nrmse)}</b> (คลาดเคลื่อนราว ±${fmtN(g.m1.mae)} µg/m³)${g.m2?` ล่วงหน้า 2 วันแม่นยำ <b>${accAccT(g.m2.nrmse)}</b>`:''} วิธีคิดดูได้ในแท็บเกี่ยวกับ อยากดูรายสถานีก็เปิด “ความแม่นยำของพยากรณ์” บนแผนที่ได้เลย`); }
 const CHAT_FAQ={
   how:()=>T('In short: we start from the CAMS forecast (Copernicus/ECMWF), add smoke from satellite fire hotspots (NASA FIRMS), then correct it with the monitors every hour — a Kalman filter at each station, a self-learning correction that learns from the past days, and a map correction (regression kriging) that spreads the station corrections over a 0.025° grid (about 2.5 km) with terrain and weather. Then hour by hour 3–5 days ahead.',
     'เล่าแบบสั้น ๆ นะ: เราเริ่มจากพยากรณ์ของ CAMS (Copernicus/ECMWF) แล้วเติมควันจากจุดไฟที่ดาวเทียม NASA FIRMS เห็น จากนั้นก็เอาค่าที่สถานีวัดได้จริงมาปรับทุกชั่วโมง มีทั้ง Kalman filter ที่ปรับรายสถานี ระบบที่เรียนรู้จากความคลาดเคลื่อนของวันก่อน ๆ เอง แล้วก็ตัวปรับแผนที่ (regression kriging) ที่เกลี่ยค่าแก้จากสถานีไปทั่วแผนที่ ละเอียด 0.025° (ราว 2.5 กม.) โดยดูภูมิประเทศกับสภาพอากาศประกอบด้วย ออกมาเป็นพยากรณ์รายชั่วโมงล่วงหน้า 3–5 วัน'),

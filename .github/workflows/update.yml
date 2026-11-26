@@ -247,7 +247,7 @@ jobs:
               const tr = t ? packTraj(m, t - 49 * H, t + 75 * H) : null; if (tr) fs.writeFileSync("data/met-traj.json", JSON.stringify(tr));' || echo "::warning title=met-traj::could not rebuild met-traj.json"
           fi
           for f in latest.json met-web.json met-traj.json ml-field.json t2-corr.json rain-obs.json ecmwf-pr.json wx-ml.json perf.json perf-series.json rk-bias.json rk-bias-A.json verify.json runlog.json accuracy.json pm-mean.json; do [ -f "data/$f" ] && cp "data/$f" _site/data/ || true; done
-          for f in elev.json elev025.json; do [ -f data/static/$f ] && cp data/static/$f _site/data/static/ || true; done
+          for f in elev.json elev025.json th-adm2.json th-adm3.json; do [ -f data/static/$f ] && cp data/static/$f _site/data/static/ || true; done
           # the SILAM chain's page files (absent when its run failed: the page then hides the SILAM layer)
           if [ -f data/silam/latest.json ]; then mkdir -p _site/data/silam && cp data/silam/*.json _site/data/silam/; fi
           [ -d data/static/prclim ] && cp -r data/static/prclim _site/data/static/ || true

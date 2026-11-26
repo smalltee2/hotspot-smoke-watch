@@ -526,6 +526,7 @@ td.num{text-align:right;font-family:var(--font-data);font-variant-numeric:tabula
 .leaflet-bottom.leaflet-left .maplogo{margin-bottom:calc(var(--scrubH,58px) + 20px)}
 .summary div.tap{cursor:pointer}.summary div.tap:hover b,.summary div.tap:focus-visible b{text-decoration:underline}.alert.warned-hl{outline:2px solid var(--focus);outline-offset:2px;transition:outline-color .3s}
 .summary div.warnon b,.summary div.warnon span{color:#c62828}@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .summary div.warnon b,:root:not([data-theme="light"]) .summary div.warnon span{color:#ff6b6b}}:root[data-theme="dark"] .summary div.warnon b,:root[data-theme="dark"] .summary div.warnon span{color:#ff6b6b}.summary div.warnon b::before{content:"";display:inline-block;width:.95em;height:.95em;margin-right:.22em;vertical-align:-.1em;background:currentColor;-webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill-rule='evenodd' d='M12 1.6a1.6 1.6 0 0 1 1.6 1.6v.6a6.6 6.6 0 0 1 5 6.4v4.3l1.9 2.7a.9.9 0 0 1-.7 1.4H4.2a.9.9 0 0 1-.7-1.4l1.9-2.7v-4.3a6.6 6.6 0 0 1 5-6.4v-.6A1.6 1.6 0 0 1 12 1.6zM11 7.2h2l-.3 5.6h-1.4zM12 13.8a1.15 1.15 0 1 0 0 2.3a1.15 1.15 0 1 0 0-2.3zM9.6 19.9h4.8a2.4 2.4 0 0 1-4.8 0z'/%3E%3C/svg%3E") center/contain no-repeat;mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill-rule='evenodd' d='M12 1.6a1.6 1.6 0 0 1 1.6 1.6v.6a6.6 6.6 0 0 1 5 6.4v4.3l1.9 2.7a.9.9 0 0 1-.7 1.4H4.2a.9.9 0 0 1-.7-1.4l1.9-2.7v-4.3a6.6 6.6 0 0 1 5-6.4v-.6A1.6 1.6 0 0 1 12 1.6zM11 7.2h2l-.3 5.6h-1.4zM12 13.8a1.15 1.15 0 1 0 0 2.3a1.15 1.15 0 1 0 0-2.3zM9.6 19.9h4.8a2.4 2.4 0 0 1-4.8 0z'/%3E%3C/svg%3E") center/contain no-repeat;transform-origin:50% 8%;animation:bellring 3s ease-in-out infinite}@keyframes bellring{0%,40%,100%{transform:rotate(0)}5%{transform:rotate(18deg)}10%{transform:rotate(-16deg)}15%{transform:rotate(13deg)}20%{transform:rotate(-10deg)}25%{transform:rotate(7deg)}30%{transform:rotate(-4deg)}35%{transform:rotate(2deg)}}@media (prefers-reduced-motion: reduce){.summary div.warnon b::before{animation:none}}
+.leaflet-tooltip.dlabel,.leaflet-tooltip.slabel{background:none !important;border:0 !important;box-shadow:none !important;color:var(--muted) !important;padding:0 !important;text-shadow:0 0 3px var(--land,#fff),0 0 3px var(--land,#fff),0 0 2px var(--land,#fff) !important}.leaflet-tooltip.dlabel{font:600 10px/1 var(--font-body,system-ui) !important}.leaflet-tooltip.slabel{font:italic 400 9px/1 var(--font-body,system-ui) !important;opacity:.9 !important}.leaflet-tooltip.dlabel::before,.leaflet-tooltip.slabel::before{display:none}
 </style>
 </head>
 <body>
@@ -581,6 +582,7 @@ td.num{text-align:right;font-family:var(--font-data);font-variant-numeric:tabula
       <div class="wview"><label for="warnView" data-th="แสดงพยากรณ์">Show forecast</label>
         <select id="warnView">
           <option value="prov" data-th="รายจังหวัด (เฉลี่ยทั้งจังหวัด)">By province (province average)</option>
+          <option value="dist" data-th="รายอำเภอ (เฉลี่ยทั้งอำเภอ)">By district (district average)</option>
           <option value="town" data-th="รายเมือง (ที่ตัวเมือง)">By town (at the town)</option>
           <option value="station" data-th="สถานีตรวจวัด">Monitoring stations</option>
         </select></div>
@@ -592,6 +594,11 @@ td.num{text-align:right;font-family:var(--font-data);font-variant-numeric:tabula
         <h3 data-th="พยากรณ์รายจังหวัด">Forecast by province</h3>
         <p class="note" data-th="ค่าเฉลี่ยของทุกจุด 0.1° ในจังหวัด เรียงจากค่าสูงสุด">Average over every 0.1° point in the province, highest first.</p>
         <div id="provList"></div>
+      </div>
+      <div id="wv-dist" class="wv" hidden>
+        <h3 data-th="พยากรณ์รายอำเภอ">Forecast by district</h3>
+        <p class="note" data-th="ค่าเฉลี่ยของทุกจุด 0.1° ในอำเภอ (อำเภอเล็กใช้ค่าที่กลางอำเภอ) เรียงจากค่าสูงสุด แตะชื่ออำเภอเพื่อซูมไปที่อำเภอนั้น">Average over every 0.1° point in the district (small districts: the value at their centre), highest first. Tap a district to zoom to it.</p>
+        <div id="distList"><p class="note" data-th="กำลังโหลดเขตอำเภอ…">Loading the district boundaries…</p></div>
       </div>
       <div id="wv-town" class="wv" hidden>
         <h3 data-th="พยากรณ์รายเมือง">Forecast by town</h3>
@@ -709,7 +716,7 @@ td.num{text-align:right;font-family:var(--font-data);font-variant-numeric:tabula
         <li data-th="ค่าทางการดูได้ที่ Air4Thai ของกรมควบคุมมลพิษ (air4thai.pcd.go.th)">For official readings, see the Pollution Control Department's Air4Thai (air4thai.pcd.go.th).</li>
       </ul>
       <h3 data-th="ข้อมูลนำเข้าจาก">Input data from</h3>
-      <p class="note" data-th="จุดไฟ: NASA FIRMS (ดาวเทียม VIIRS) · ฝุ่นพยากรณ์: Copernicus CAMS&lt;span class=&quot;dev-only&quot;&gt; และ SILAM ของสถาบันอุตุนิยมวิทยาฟินแลนด์ (FMI, CC BY 4.0)&lt;/span&gt; · ลมและสภาพอากาศ: ECMWF · ค่าสถานี: กรมควบคุมมลพิษ (Air4Thai รายชั่วโมง) และเครือข่ายอื่นผ่าน OpenAQ · การใช้ที่ดิน: NASA MODIS · เขตแดนประเทศและจังหวัด: World Bank Official Boundaries (เขตแดน สี และชื่อบนแผนที่ไม่ได้แสดงการรับรองสถานะทางกฎหมายของดินแดนใด)">Fires: NASA FIRMS (VIIRS satellites) · PM<sub>2.5</sub> forecast: Copernicus CAMS<span class="dev-only"> and SILAM of the Finnish Meteorological Institute (FMI, CC BY 4.0)</span> · Wind and weather: ECMWF · Stations: Pollution Control Department (Air4Thai, hourly) and other networks via OpenAQ · Land cover: NASA MODIS · Borders: World Bank Official Boundaries (borders, colours and names on the map do not imply any judgment on the legal status of any territory).</p>
+      <p class="note" data-th="จุดไฟ: NASA FIRMS (ดาวเทียม VIIRS) · ฝุ่นพยากรณ์: Copernicus CAMS&lt;span class=&quot;dev-only&quot;&gt; และ SILAM ของสถาบันอุตุนิยมวิทยาฟินแลนด์ (FMI, CC BY 4.0)&lt;/span&gt; · ลมและสภาพอากาศ: ECMWF · ค่าสถานี: กรมควบคุมมลพิษ (Air4Thai รายชั่วโมง) และเครือข่ายอื่นผ่าน OpenAQ · การใช้ที่ดิน: NASA MODIS · เขตอำเภอและตำบล: กรมแผนที่ทหาร (2562) ผ่าน OCHA HDX (CC BY-IGO) · เขตแดนประเทศและจังหวัด: World Bank Official Boundaries (เขตแดน สี และชื่อบนแผนที่ไม่ได้แสดงการรับรองสถานะทางกฎหมายของดินแดนใด)">Fires: NASA FIRMS (VIIRS satellites) · PM<sub>2.5</sub> forecast: Copernicus CAMS<span class="dev-only"> and SILAM of the Finnish Meteorological Institute (FMI, CC BY 4.0)</span> · Wind and weather: ECMWF · Stations: Pollution Control Department (Air4Thai, hourly) and other networks via OpenAQ · Land cover: NASA MODIS · District and sub-district borders: Royal Thai Survey Department (2019) via OCHA HDX (CC BY-IGO) · Country and province borders: World Bank Official Boundaries (borders, colours and names on the map do not imply any judgment on the legal status of any territory).</p>
       <p class="note dev-only"><a href="dev.html" data-th="หน้าสำหรับนักวิจัยและผู้พัฒนา (วิธีการคำนวณ ค่าตั้งค่า และผลตรวจสอบ) →">Page for researchers and developers (methods, settings and verification) →</a></p>
     </section>
 
@@ -896,6 +903,7 @@ td.num{text-align:right;font-family:var(--font-data);font-variant-numeric:tabula
           <div class="note" id="radarNote" style="font-size:.66rem" data-th="เรดาร์ตรวจอากาศผ่าน RainViewer (ไทย: กรมอุตุนิยมวิทยา) ทุก 10 นาที ย้อนหลัง 2 ชม. (ไม่ใช่เวลาบนแถบเวลาพยากรณ์) รวมเรดาร์ของหลายประเทศที่ RainViewer ได้รับ (ไทย เวียดนาม มาเลเซีย ฯลฯ ไม่มีในลาว กัมพูชา และส่วนใหญ่ของเมียนมา) บางสถานีอาจปิดอยู่ ประมาณฝน: 20 dBZ ≈ 0.6, 30 ≈ 3, 40 ≈ 12, 50 ≈ 50 มม./ชม. (Marshall–Palmer)">Weather radar via RainViewer (Thailand: Thai Meteorological Department), every 10 min for the last 2 h (not the forecast hour on the time bar). Composite of the national radar networks RainViewer receives (Thailand, Viet Nam, Malaysia and others; none over Laos, Cambodia or most of Myanmar); some radars may be offline. Rain rate roughly: 20 dBZ ≈ 0.6, 30 ≈ 3, 40 ≈ 12, 50 ≈ 50 mm/h (Marshall–Palmer).</div></div>
         <label class="dev-only"><input type="checkbox" id="shWindArr"> <span data-th="ลูกศรลมพร้อมค่า (ชี้ดู)">Wind arrows with values (hover)</span></label>
         <label class="dev-only"><input type="checkbox" id="shProv"> <span data-th="เขตและชื่อจังหวัด">Province borders and names</span></label>
+        <label><input type="checkbox" id="shAdm" checked> <span data-th="เขตและชื่ออำเภอ/ตำบล (เมื่อซูมเข้า)">District and sub-district borders and names (when zoomed in)</span></label>
         <label><input type="checkbox" id="shObs" checked> <span data-th="ค่าตรวจวัดที่สถานี">Measured at stations</span></label>
         <div class="accsrc obssrc" role="group" aria-label="Show"><span data-th="แสดง">Show</span><button type="button" data-obssrc="both" aria-pressed="true" data-th="ทั้งสอง">Both</button><button type="button" data-obssrc="a4t" aria-pressed="false" title="Air4Thai (Pollution Control Department): inside = measured, ring = our map at the same hour">Air4Thai</button><button type="button" data-obssrc="oaq" aria-pressed="false" title="OpenAQ: other monitors and low-cost sensors, measured now (paler = low-cost sensor)">OpenAQ</button></div>
         <div id="obsDesc" class="note" style="font-size:.68rem;margin:-2px 0 4px 22px"></div>
@@ -1516,8 +1524,8 @@ function labelZoom(){const z=map.getZoom();map.getContainer().classList.toggle('
 // names must not cover each other or another town's dot. Order: provincial capitals, towns, province names. A town name that
 // collides on the right of its dot tries the left; if both sides are taken it is hidden. Run after each redraw and move.
 function declutterLabels(){ const C=map.getContainer(), cr=C.getBoundingClientRect(), kept=[];
-  const els=[...C.querySelectorAll('.leaflet-tooltip.tlabel,.leaflet-tooltip.plabel')];
-  const rank=el=>el.classList.contains('plabel')?2:el.classList.contains('minor')?1:0; els.sort((a,b)=>rank(a)-rank(b));
+  const els=[...C.querySelectorAll('.leaflet-tooltip.tlabel,.leaflet-tooltip.plabel,.leaflet-tooltip.dlabel,.leaflet-tooltip.slabel')];
+  const rank=el=>el.classList.contains('slabel')?4:el.classList.contains('dlabel')?3:el.classList.contains('plabel')?2:el.classList.contains('minor')?1:0; els.sort((a,b)=>rank(a)-rank(b));
   const dots=(S.townDots||[]).map(d=>{const p=map.latLngToContainerPoint([d.lat,d.lon]), x=cr.left+p.x, y=cr.top+p.y, k=d.r+1; return {cx:x,cy:y,left:x-k,right:x+k,top:y-k,bottom:y+k};});   // drawn on canvas: positions from coordinates
   const hit=(a,q,pad)=>a.left<q.right+pad&&a.right>q.left-pad&&a.top<q.bottom+1&&a.bottom>q.top-1;
   for(const el of els){ el.classList.remove('lbl-x'); el.style.marginLeft=''; if(el.style.opacity==='0') continue;   // a label being removed (Leaflet fades it out for 200 ms)
@@ -1531,6 +1539,26 @@ function declutterLabels(){ const C=map.getContainer(), cr=C.getBoundingClientRe
     el.classList.add('lbl-x'); } }
 let dcT=0; const declutterSoon=()=>{ clearTimeout(dcT); dcT=setTimeout(declutterLabels,80); };   // after the map has settled: mid-move, every label still sits where the view started
 map.on('zoomend',()=>{labelZoom(); declutterSoon();}); map.on('moveend resize',declutterSoon);
+// district borders from zoom 9 and names from zoom 10; sub-district borders from zoom 11 and names from zoom 12 (only those in view)
+const ADM_Z={l2:9,n2:10,l3:11,n3:12}, ADML={l2:null,n2:null,l3:null,n3:null,n2key:'',n3key:''};
+function admLabel(q,cls){ const c=provCentroid(q.f); return L.marker(c,{icon:L.divIcon({className:'',html:'',iconSize:[0,0]}),interactive:false,keyboard:false})
+  .bindTooltip(esc(LANG==='th'?q.p.th:q.p.en),{permanent:true,direction:'center',className:cls}); }
+function drawAdm(){ const on=typeof shown==='function'&&$('shAdm')&&shown('shAdm'), z=map.getZoom(), bm=$('bmSel')?.value, sat=bm==='sat';
+  const drop=k=>{ if(ADML[k]){ map.removeLayer(ADML[k]); ADML[k]=null; } };
+  const style=lv=>({pane:'lines',interactive:false,style:{color:sat?'#ffffff':cssVar('--border')||'#79837e',weight:lv===2?0.9:0.6,opacity:lv===2?0.75:0.55,dashArray:lv===2?'5 3':'2 3',fill:false}});
+  if(on&&z>=ADM_Z.l2){ if(!ADM[2]) loadAdm(2).then(j=>{ if(j) drawAdm(); }); else { if(!ADML.l2) ADML.l2=L.geoJSON(ADM[2],style(2)).addTo(map);
+      if(z>=ADM_Z.n2){ const v=map.getBounds().pad(0.2), key=[v.getWest(),v.getSouth(),v.getEast(),v.getNorth()].map(x=>x.toFixed(1)).join(',')+LANG;
+        if(ADML.n2key!==key){ drop('n2'); ADML.n2key=key; ADML.n2=L.layerGroup(ADM[2].idx.filter(q=>q.b[2]>=v.getWest()&&q.b[0]<=v.getEast()&&q.b[3]>=v.getSouth()&&q.b[1]<=v.getNorth()).map(q=>admLabel(q,'dlabel'))).addTo(map); } }
+      else { drop('n2'); ADML.n2key=''; } } }
+  else { drop('l2'); drop('n2'); ADML.n2key=''; }
+  if(on&&z>=ADM_Z.l3){ if(!ADM[3]) loadAdm(3).then(j=>{ if(j) drawAdm(); }); else { if(!ADML.l3) ADML.l3=L.geoJSON(ADM[3],style(3)).addTo(map);
+      if(z>=ADM_Z.n3){ const v=map.getBounds().pad(0.1), key=[v.getWest(),v.getSouth(),v.getEast(),v.getNorth()].map(x=>x.toFixed(2)).join(',')+LANG;
+        if(ADML.n3key!==key){ drop('n3'); ADML.n3key=key; ADML.n3=L.layerGroup(ADM[3].idx.filter(q=>q.b[2]>=v.getWest()&&q.b[0]<=v.getEast()&&q.b[3]>=v.getSouth()&&q.b[1]<=v.getNorth()).map(q=>admLabel(q,'slabel'))).addTo(map); } }
+      else { drop('n3'); ADML.n3key=''; } } }
+  else { drop('l3'); drop('n3'); ADML.n3key=''; }
+  declutterSoon(); }
+drawAdm.relabel=()=>{ for(const k of ['n2','n3']) if(ADML[k]){ map.removeLayer(ADML[k]); ADML[k]=null; } ADML.n2key=ADML.n3key=''; drawAdm(); };
+map.on('zoomend moveend',()=>drawAdm());
 const TILESETS={
   light:()=>[`https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/${isDark()?'World_Dark_Gray_Base':'World_Light_Gray_Base'}/MapServer/tile/{z}/{y}/{x}`,{maxZoom:16,attribution:'Basemap © Esri, HERE, Garmin, © OpenStreetMap contributors'}],
   street:()=>['https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap contributors'}],
@@ -2653,10 +2681,10 @@ function applyVisibility(){
     for(const l of layers){ if(shown(id)) map.addLayer(l); else map.removeLayer(l); }
   for(const [k,l] of [['ref',accLayer],['lc',accLcLayer],['iq',iqLayer]]){ if(accOn(k)) map.addLayer(l); else map.removeLayer(l); }
   for(const [k,l] of [['a4t',a4tLayer],['oaq',stationLayer]]){ if(obsOn(k)) map.addLayer(l); else map.removeLayer(l); }
-  drawContours(); drawWind();
+  drawContours(); drawWind(); drawAdm();
 }
 document.getElementById('shProv').addEventListener('change',e=>{store.set('hsw.shProv',e.target.checked?'1':'0');styleBase();});
-for(const id of ['shContour','shObs','shAcc','shHot','shTown','shWind','shWindArr']){
+for(const id of ['shContour','shObs','shAcc','shHot','shTown','shWind','shWindArr','shAdm']){
   const v=store.get('hsw.'+id); if(v!=null) $(id).checked=v==='1';
   $(id).addEventListener('change',()=>{store.set('hsw.'+id,$(id).checked?'1':'0');applyVisibility();});
 }
@@ -2764,7 +2792,8 @@ function hereHTML(lat,lon,acc){
   const pv=provinceOf(lat,lon);
   let rangeRow=''; {const RK_=curRK(), iA=RK_?gIdx(RK_.t):-1, sg=iA>=0?rkSigma(camsAt(lat,lon,iA),lat,lon):null, vA=iA>=0?totalAt(lat,lon,RK_.t):null;
     if(sg!=null&&vA!=null&&!PUBLIC) rangeRow=`<tr><th>${T('Likely range at','ช่วงที่น่าจะเป็น เวลา')} ${hm(RK_.t)} (68%)</th><td class="num">${fmtN(Math.max(0,(vA+1)*Math.exp(-sg)-1))}–${fmtN((vA+1)*Math.exp(sg)-1)} µg/m³</td></tr>`;}
-  return `<div class="here"><div class="note">${pv?esc(provName(pv))+(LANG!=='th'&&pv.th?' · '+esc(pv.th):''):T('Your location','ตำแหน่งของคุณ')}${acc?` · ±${acc<1000?Math.round(acc)+T(' m',' ม.'):(acc/1000).toFixed(1)+T(' km',' กม.')}`:''}</div>
+  if(!ADM[2]||!ADM[3]) Promise.all([loadAdm(2),loadAdm(3)]).then(()=>{ if(hereLL&&!$('hereBox').hidden) renderHereBox(); });
+  return `<div class="here"><div class="note">${placeLine(lat,lon)?esc(placeLine(lat,lon)):pv?esc(provName(pv))+(LANG!=='th'&&pv.th?' · '+esc(pv.th):''):T('Your location','ตำแหน่งของคุณ')}${acc?` · ±${acc<1000?Math.round(acc)+T(' m',' ม.'):(acc/1000).toFixed(1)+T(' km',' กม.')}`:''}</div>
     ${vNow!=null?`<div class="big">${fmtN(vNow)} <small style="font-size:.7rem">µg/m³</small></div>${pill(vNow)} <span class="note">${T('PM₂.₅ now (forecast map)','PM₂.₅ ขณะนี้ (จากแผนที่พยากรณ์)')}</span>`:`<p class="note">${T('No forecast here yet.','ยังไม่มีค่าพยากรณ์ที่ตำแหน่งนี้')}</p>`}
     <table><tbody>
       ${rangeRow}
@@ -3417,7 +3446,7 @@ function openLocPop(lat,lon,acc){ LOCPOP={lat,lon,acc}; renderLocPop.focused=0; 
 // ---- short summary of a clicked place (redesigned page): PM2.5 and weather at the slider time
 function clickInfoHTML(lat,lon){
   const t=curT(); if(t==null||!P.data){ const pv0=provinceOf(lat,lon);   // no forecast: name the place anyway, and say what to do
-    return `<div class="cp"><button type="button" class="cp-x" data-a="x" aria-label="${T('Close','ปิด')}">×</button><div class="cp-h"><b>${pv0?esc(provName(pv0)):T('Selected point','จุดที่เลือก')}</b><span>${lat.toFixed(3)}°N ${lon.toFixed(3)}°E</span></div><div class="cp-n">${
+    return `<div class="cp"><button type="button" class="cp-x" data-a="x" aria-label="${T('Close','ปิด')}">×</button><div class="cp-h"><b>${esc(placeLine(lat,lon))||(pv0?esc(provName(pv0)):T('Selected point','จุดที่เลือก'))}</b><span>${lat.toFixed(3)}°N ${lon.toFixed(3)}°E</span></div><div class="cp-n">${
       S.mode==='demo'?T('The demo models fire smoke only, so there are no PM₂.₅ or weather values for places. The live page shows them here.','ข้อมูลจำลองคำนวณเฉพาะควันไฟ จึงไม่มีค่า PM₂.₅ และสภาพอากาศของแต่ละจุด หน้าเว็บที่ใช้ข้อมูลจริงจะแสดงค่าเหล่านี้ที่นี่')
       :T('There are no values for this place because the forecast is not loaded. Tap Refresh at the top of the page to try again.','ยังไม่มีค่าของจุดนี้ เพราะยังโหลดข้อมูลพยากรณ์ไม่ได้ กด รีเฟรช ที่ด้านบนของหน้าเพื่อลองอีกครั้ง')}</div></div>`; }
   const pv=provinceOf(lat,lon), v=totalAt(lat,lon,t), w=wxAt(lat,lon,t), r=rainAt(lat,lon,t), wi=wxIcon(lat,lon,t,r), past=t<=Date.now();
@@ -3428,7 +3457,10 @@ function clickInfoHTML(lat,lon){
   const wx=w?`<div class="cp-r">${wi?wi.svg:''}<div><span class="cp-k">${T('Weather','สภาพอากาศ')}</span><b>${w.t2!=null?w.t2.toFixed(1)+' °C':'–'}</b><span class="cp-l">${wi?esc(wi.label):''}${r!=null&&r>=0.1?` · ${r<10?r.toFixed(1):Math.round(r)} ${T('mm/h','มม./ชม.')}`:''}</span></div></div>
     <div class="cp-w">${ws!=null?`${T('Wind','ลม')} ${ws.toFixed(1)} ${T('m/s','ม./วิ')} ${T('from','จาก')} ${compass(windFrom(w.u10,w.v10))}`:''}${w.rh!=null?` · ${T('humidity','ความชื้น')} ${Math.round(w.rh)} %`:''}</div>
     ${(()=>{const vi=ventAt(lat,lon,t), c=ventCat(vi); return vi==null?'':`<div class="cp-w">${T('Ventilation','การระบายอากาศ')} ${Math.round(vi).toLocaleString()} m²/s · <span class="vent-${c.k}">${T(c.en,c.th)}</span>${c.k==='poor'?T(' — smoke and dust stay near the ground',' — ควันและฝุ่นสะสมใกล้พื้น'):''}</div>`;})()}`:'';
-  return `<div class="cp"><button type="button" class="cp-x" data-a="x" aria-label="${T('Close','ปิด')}">×</button><div class="cp-h"><b>${pv?esc(provName(pv)):T('Selected point','จุดที่เลือก')}</b><span>${esc(when)} · ${lat.toFixed(3)}°N ${lon.toFixed(3)}°E</span></div>${pm}${wx}
+  // the district average at this hour (areaSeries, when the district boundaries are loaded)
+  const dAvg=(()=>{ const dp=admAt(2,lat,lon), A=dp&&AREA_CACHE.dgroups&&AREA_CACHE.key?.startsWith($('region').value+'|D')?AREA_CACHE:null, g=A?.dgroups.get(dp.c), i=g?A.H.indexOf(t):-1;
+    return g&&i>=0&&g.mean[i]!=null?`<div class="cp-w">${T(`Average over ${admName(dp,2)}`,`เฉลี่ยทั้ง ${admName(dp,2)}`)} <b>${fmtN(g.mean[i])}</b> µg/m³ ${pill(g.mean[i])}</div>`:''; })();
+  return `<div class="cp"><button type="button" class="cp-x" data-a="x" aria-label="${T('Close','ปิด')}">×</button><div class="cp-h"><b>${esc(placeLine(lat,lon))||(pv?esc(provName(pv)):T('Selected point','จุดที่เลือก'))}</b><span>${esc(when)} · ${lat.toFixed(3)}°N ${lon.toFixed(3)}°E</span></div>${pm}${dAvg}${wx}
     ${trajHTML()}
     <div class="cp-b"><button type="button" class="btn primary" data-a="more">${T('More details','รายละเอียด')}</button><button type="button" class="btn" data-a="pt">${T('Add as my point','เพิ่มเป็นจุดของฉัน')}</button></div></div>`;
 }
@@ -3451,6 +3483,7 @@ function renderClickInfo(){ if(!CLICK) return; const {lat,lon}=CLICK, el=clickCa
   el.querySelector('[data-a=trajX]')?.addEventListener('click',()=>{ clearTraj(); renderClickInfo(); }); }
 function closeClickInfo(){ if(CLICK?.pin) map.removeLayer(CLICK.pin); clearTraj(); CLICK=null; const el=document.getElementById('clickCard'); if(el) el.hidden=true; if(window.PHONEUI?.active()) PHONEUI.set('peek'); }
 function clickInfo(lat,lon){
+  Promise.all([loadAdm(2),loadAdm(3)]).then(()=>{ if(CLICK&&CLICK.lat===lat&&CLICK.lon===lon){ if(P.data?.grid) areaSeries(); renderClickInfo(); } });
   if(CLICK?.pin) map.removeLayer(CLICK.pin); clearTraj();
   const pinC=cssVar('--ink')||cssVar('--ember')||'#ea580c';   // the selected place is a control, not data: ink where the page defines it, not fire orange
   CLICK={lat,lon,pin:L.circleMarker([lat,lon],{radius:7,color:'#fff',weight:2.5,fillColor:pinC,fillOpacity:1,interactive:false,pane:'markerPane'}).addTo(map)};
@@ -3793,8 +3826,18 @@ function openWarnTowns(){ setWarnView('town');
 { const d=$('sWarn')?.parentElement; if(d){ d.classList.add('tap'); d.setAttribute('role','button'); d.tabIndex=0;
     const lab=()=>{ const t=T('Show the towns with a warning','ดูเมืองที่มีคำเตือน'); d.title=t; d.setAttribute('aria-label',t); }; lab(); d.addEventListener('focus',lab); d.addEventListener('mouseenter',lab);
     d.addEventListener('click',openWarnTowns); d.addEventListener('keydown',e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); openWarnTowns(); } }); } }
-function setWarnView(v){ if(!['prov','town','station'].includes(v)) v='prov'; $('warnView').value=v; store.set('hsw.warnView',v);
-  for(const k of ['prov','town','station']) $('wv-'+k).hidden=k!==v; }
+function setWarnView(v){ if(!['prov','dist','town','station'].includes(v)) v='prov'; $('warnView').value=v; store.set('hsw.warnView',v);
+  for(const k of ['prov','dist','town','station']) $('wv-'+k).hidden=k!==v;
+  if(v==='dist') loadAdm(2).then(j=>{ if(!j){ $('distList').innerHTML=`<p class="note">${T('The district boundaries could not be loaded.','โหลดเขตอำเภอไม่ได้')}</p>`; return; } if(P.data?.grid) renderDistList(areaSeries()); }); }
+// the list by district: the same hourly series as the provinces (areaSeries dgroups), highest first; tap = zoom to the district
+function renderDistList(A){ const box=$('distList'); if(!box) return; if(!A?.dgroups){ if(!ADM[2]) return; box.innerHTML=''; return; }
+  const H=A.H, tNow=Math.floor(Date.now()/HR)*HR, iNow=H.findIndex(t=>t>=tNow), W=wins(), top=ws=>Math.max(0,...ws.map(w=>w?.v??0));
+  const rows=[...A.dgroups.values()].map(g=>({g,ws:W.map(([a,b])=>winMax(H,g.mean,tNow,a,b,false))})).sort((x,y)=>top(y.ws)-top(x.ws)).slice(0,40);
+  box.innerHTML=rows.length?rows.map(r=>card2({attr:`data-dist="${esc(r.g.p.c)}"`,name:admName(r.g.p,2),tag:LANG==='th'?(admBkk(r.g.p)?'กรุงเทพฯ':'จ.'+r.g.p.pth):r.g.p.pen,
+      sub:iNow>=0&&r.g.mean[iNow]!=null?`${T('now','ขณะนี้')} ${fmtN(r.g.mean[iNow])}`:'',ws:r.ws,W,wx:W.map(([a,b])=>wxWinArea(H,r.g.wx,tNow,a,b))})).join('')
+    :`<p class="note">${T('No district of this area has forecast values yet.','ยังไม่มีค่าพยากรณ์ของอำเภอในพื้นที่นี้')}</p>`;
+  box.querySelectorAll('[data-dist]').forEach(el=>el.onclick=()=>{ const q=ADM[2]?.byCode.get(el.dataset.dist); if(!q) return;
+    if(window.PHONEUI?.active()) PHONEUI.set('peek'); map.fitBounds(L.geoJSON(q.f).getBounds(),{padding:[20,20],maxZoom:11}); }); }
 function renderProvList(A){
   const box=$('provList'); if(!A){box.innerHTML='';return;} const H=A.H, tNow=Math.floor(Date.now()/HR)*HR, iNow=H.findIndex(t=>t>=tNow);
   const nm=g=>g.p?provName(g.p):g.name, W=wins(), top=ws=>Math.max(0,...ws.map(w=>w?.v??0));
@@ -3832,6 +3875,25 @@ function inRing(x,y,r){let c=false;for(let i=0,j=r.length-1;i<r.length;j=i++){co
 function provinceOf(lat,lon){for(const q of PROV_IDX){if(lon<q.b[0]||lon>q.b[2]||lat<q.b[1]||lat>q.b[3])continue;
   for(const pg of q.polys){if(inRing(lon,lat,pg[0])&&!pg.slice(1).some(h=>inRing(lon,lat,h)))return q.p;}}return null;}
 const CN={THA:'TH',LAO:'LA',MMR:'MM',KHM:'KH',VNM:'VN',CHN:'CN',MYS:'MY'};
+// ---- districts (amphoe, level 2) and sub-districts (tambon, level 3) of Thailand: data/static/th-adm2.json / th-adm3.json
+// (scripts/admin_bounds.mjs: Royal Thai Survey Department 2019 via OCHA COD-AB, CC BY-IGO; simplified by mapthai, MIT), loaded on
+// first use (zoom, the list by district, a tapped place). Point-in-polygon with bboxes, as for the provinces.
+const ADM={2:null,3:null,load:{}};
+function loadAdm(lv){ if(ADM[lv]) return Promise.resolve(ADM[lv]); if(ADM.load[lv]) return ADM.load[lv];
+  return ADM.load[lv]=fetch(`data/static/th-adm${lv}.json`).then(r=>r.ok?r.json():null).then(j=>{ if(!j?.features) return null;
+    j.idx=j.features.map(f=>{ const polys=f.geometry.type==='Polygon'?[f.geometry.coordinates]:f.geometry.coordinates; let w=180,so=90,e=-180,n=-90;
+      for(const pg of polys) for(const [x,y] of pg[0]){w=Math.min(w,x);e=Math.max(e,x);so=Math.min(so,y);n=Math.max(n,y);}
+      return {p:f.properties,f,polys,b:[w,so,e,n]}; });
+    j.byCode=new Map(j.idx.map(q=>[q.p.c,q])); ADM[lv]=j; return j; }).catch(()=>null); }
+function admAt(lv,lat,lon){ const j=ADM[lv]; if(!j) return null; for(const q of j.idx){ if(lon<q.b[0]||lon>q.b[2]||lat<q.b[1]||lat>q.b[3]) continue;
+  for(const pg of q.polys){ if(inRing(lon,lat,pg[0])&&!pg.slice(1).some(h=>inRing(lon,lat,h))) return q.p; } } return null; }
+// names in the page's language: Thai "ต. / อ. / จ." (Bangkok: แขวง / เขต), English "… subdistrict, … district, … province"
+const admBkk=p=>p&&/^TH10/.test(p.c);
+function admName(p,lv){ if(!p) return ''; if(LANG==='th') return (lv===3?(admBkk(p)?'แขวง':'ต.'):(admBkk(p)?'เขต':'อ.'))+p.th; return p.en+(lv===3?(admBkk(p)?' sub-district':' subdistrict'):' district'); }
+function placeLine(lat,lon){ const pv=provinceOf(lat,lon), d=admAt(2,lat,lon), t=admAt(3,lat,lon);
+  if(!d&&!t) return pv?provName(pv):'';
+  const prov=LANG==='th'?(admBkk(d||t)?'กรุงเทพมหานคร':'จ.'+(d||t).pth):(d||t).pen;
+  return [t?admName(t,3):'',d?admName(d,2):'',prov].filter(Boolean).join(LANG==='th'?' ':', '); }
 function renderProvinces(){
   const m=new Map(),now=Date.now();
   for(const h of S.hots){if(!inRegion(h.lat,h.lon)) continue; if(h.prov===undefined)h.prov=provinceOf(h.lat,h.lon);const k=h.prov?h.prov.n+'|'+h.prov.c:'Outside mapped provinces|';
@@ -4087,7 +4149,7 @@ function trendBlock(H,v,opt={}){
 }
 const AREA_CACHE={key:null}, INC_FIELDS={sim:null,map:new Map()};
 function areaSeries(){
-  const k=$('region').value, key=k+'|'+(P.data?P.data.generated:'')+'|'+(S.simInc?S.assimApplied:0)+'|'+(useA()?'A':'-')+'|'+(T2D?T2D.key:'')+'|'+(RAINOBS?RAINOBS.key:'')+'|'+(MET?MET.fetched:'')+'|'+(WXML?WXML.t0:'')+'|'+Object.keys(RFAC).filter(k=>RFAC[k]).join(',');
+  const k=$('region').value, key=k+'|'+(ADM[2]?'D':'')+'|'+(P.data?P.data.generated:'')+'|'+(S.simInc?S.assimApplied:0)+'|'+(useA()?'A':'-')+'|'+(T2D?T2D.key:'')+'|'+(RAINOBS?RAINOBS.key:'')+'|'+(MET?MET.fetched:'')+'|'+(WXML?WXML.t0:'')+'|'+Object.keys(RFAC).filter(k=>RFAC[k]).join(',');
   if(AREA_CACHE.key===key) return AREA_CACHE;
   // provinces: 0.1° lattice inside Thai provinces. Area average: the same points, or on the whole-domain map a 0.25° lattice
   // over everything (so Thailand's denser lattice does not dominate the domain mean)
@@ -4096,17 +4158,23 @@ function areaSeries(){
   const addProv=(j,pv)=>{if(!pv||pv.c!=='THA') return; if(!groups.has(pv.n)) groups.set(pv.n,{name:pv.n,p:pv,idx:[]}); groups.get(pv.n).idx.push(j);};
   grid(R?R.bbox:REGIONS.thailand.bbox,0.1,(la,lo)=>{if(!inRegion(la,lo)) return; const pv=provinceOf(la,lo); if(!pv||pv.c!=='THA') return;
     const j=pts.push({la,lo})-1; addProv(j,pv); if(R) groups.get('__all').idx.push(j);});
+  // districts (when their boundaries are loaded): the same 0.1° points, and the centre of a district that no point falls in
+  let dgroups=null;
+  if(ADM[2]){ dgroups=new Map(); const addD=(j,dp)=>{ if(!dgroups.has(dp.c)) dgroups.set(dp.c,{p:dp,idx:[]}); dgroups.get(dp.c).idx.push(j); };
+    const n0=pts.length; for(let j=0;j<n0;j++){ const dp=admAt(2,pts[j].la,pts[j].lo); if(dp) addD(j,dp); }
+    for(const q of ADM[2].idx){ if(dgroups.has(q.p.c)) continue; const c=provCentroid(q.f), la=c.lat??c[0], lo=c.lng??c[1]; if(!inRegion(la,lo)) continue; addD(pts.push({la,lo})-1,q.p); } }
   if(!R) grid(REGIONS.msea.bbox,0.25,(la,lo)=>{groups.get('__all').idx.push(pts.push({la,lo})-1);});
   // value of every point at every hour (CAMS → bias-corrected map), then mean and 10th/90th percentile per area
   // same quantity as the map (assimilation increment and learned correction included); the increment is taken from a 0.25° field
   // per hour (one puffField per hour instead of a puff sum per point), which keeps this fast in the burning season
   const val=H.map(t=>pts.map(q=>totalAtFast(q.la,q.lo,t)));
-  for(const g of groups.values()){g.mean=[];g.lo=[];g.hi=[];
+  for(const g of [...groups.values(),...(dgroups?dgroups.values():[])]){g.mean=[];g.lo=[];g.hi=[];
     H.forEach((_,i)=>{const a=g.idx.map(j=>val[i][j]).filter(x=>x!=null).sort((x,y)=>x-y);
       if(a.length<Math.max(1,0.5*g.idx.length)){g.mean.push(null);g.lo.push(null);g.hi.push(null);return;}
       g.mean.push(a.reduce((s,x)=>s+x,0)/a.length); g.lo.push(a[Math.floor(0.1*(a.length-1))]); g.hi.push(a[Math.ceil(0.9*(a.length-1))]);});}
   for(const g of groups.values()) g.wx=wxSeries(H,g.idx.map(j=>pts[j]));
-  return Object.assign(AREA_CACHE,{key,groups,H});
+  if(dgroups) for(const g of dgroups.values()) g.wx=wxSeries(H,g.idx.map(j=>pts[j]));
+  return Object.assign(AREA_CACHE,{key,groups,dgroups,H});
 }
 let areaSel='__all';
 function renderAreaTrend(){
@@ -4123,7 +4191,7 @@ function renderAreaTrend(){
     <div><strong>${esc(areaSel==='__all'?($('region').selectedOptions[0]?.textContent||g.name):nm(g))}</strong></div>
     ${trendBlock(H,g.mean,{lo:g.lo,hi:g.hi,wx:g.wx,label:'PM2.5 trend, '+(g.p?g.p.n:g.name)})}`;
   const sel=$('areaSel'); if(sel){sel.value=areaSel; sel.onchange=()=>{areaSel=sel.value; renderAreaTrend();};}
-  renderProvList(A);
+  renderProvList(A); if(A.dgroups) renderDistList(A);
 }
 function hereTrend(lat,lon){
   if(!P.data) return '';
@@ -4335,7 +4403,7 @@ relabelPhone();
 $('btnLang').onclick=()=>{ LANG=LANG==='th'?'en':'th'; store.set('hsw.lang',LANG); applyStaticLang(); chatRelabel(); S.saveRelabel?.(); relabelPhone(); initLegToggle.relabel?.(); initSideToggle.relabel?.(); refreshClickInfo();
   {const lb=document.querySelector('.locate-btn'); if(lb){lb.title=T('Show PM2.5 at my location','ดูค่าฝุ่นที่ตำแหน่งของฉัน'); lb.setAttribute('aria-label',lb.title);}} if(S.mode) setMode(S.mode); else $('modeChip').textContent=T('No data','ไม่มีข้อมูล');
   renderLegend(); renderAll(); renderHereBox(); if(LOCPOP) renderLocPop(); drawStations?.(); redrawTime();
-  if(BANNER) banner(BANNER.f,BANNER.cls); if(LOADFAIL) loadFail(true); provLabels?.eachLayer(m=>m.setTooltipContent(provLabelText(m.feature))); declutterSoon(); };
+  if(BANNER) banner(BANNER.f,BANNER.cls); if(LOADFAIL) loadFail(true); provLabels?.eachLayer(m=>m.setTooltipContent(provLabelText(m.feature))); drawAdm.relabel?.(); declutterSoon(); };
 {const v=store.get('hsw.unitSel'); if(v) $('unitSel').value=v;}
 setWarnView(store.get('hsw.warnView')||'prov'); $('warnView').addEventListener('change',e=>setWarnView(e.target.value));
 $('unitSel').addEventListener('change',()=>{store.set('hsw.unitSel',$('unitSel').value); renderLegend(); renderAll(); redrawTime();});

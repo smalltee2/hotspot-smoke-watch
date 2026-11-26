@@ -1714,6 +1714,7 @@ header .status>.btn{--water-fill:.72}
 
     <section class="pane" id="pane-warn" role="tabpanel">
       <div id="banner"></div>
+      <div class="sum-cta"><button class="btn" id="btnSum2" type="button"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 3h9l4 4v14H6z"/><path d="M9 11h7M9 15h7M9 7h3"/></svg><span data-th="สรุปพยากรณ์ วันนี้ พรุ่งนี้ และอีก 2 วัน">Forecast summary: today, tomorrow and the next two days</span></button></div>
       <details id="accBox" class="accbox" hidden>
         <summary><span class="acct" data-th="แบบจำลองแม่นแค่ไหน">How right has the forecast been?</span><span id="accHead" class="acchead"></span></summary>
         <div class="accseg" role="group" aria-label="Area">
@@ -1732,7 +1733,6 @@ header .status>.btn{--water-fill:.72}
           <option value="station" data-th="สถานีตรวจวัด">Monitoring stations</option>
         </select></div>
       <div id="wv-prov" class="wv">
-        <div class="sum-cta"><button class="btn" id="btnSum2" type="button"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 3h9l4 4v14H6z"/><path d="M9 11h7M9 15h7M9 7h3"/></svg><span data-th="สรุปพยากรณ์ วันนี้ พรุ่งนี้ และอีก 2 วัน">Forecast summary: today, tomorrow and the next two days</span></button></div>
         <h3 data-th="แนวโน้ม PM&lt;sub&gt;2.5&lt;/sub&gt; รายพื้นที่">PM<sub>2.5</sub> trend by area</h3>
         <p class="note" id="areaNote"></p>
         <div id="areaTrend" class="note">–</div>
@@ -1756,12 +1756,13 @@ header .status>.btn{--water-fill:.72}
         <p class="note dev-only" data-th="PM&lt;sub&gt;2.5&lt;/sub&gt; ที่วัดได้ขณะนี้ และค่าพยากรณ์ CAMS ที่ปรับแก้ทุกชั่วโมงด้วยค่าตรวจวัดของสถานีนั้นเอง (PM&lt;sub&gt;2.5&lt;/sub&gt; รวมทุกแหล่ง)">Measured PM<sub>2.5</sub> now, and the CAMS forecast corrected hourly against each station's own readings (total PM<sub>2.5</sub>, all sources).</p>
         <div id="stList" class="note">Station data appear here when the page runs from the hosted site.</div>
       </div>
-      <h3 data-th="จุดความร้อนใกล้เมือง">Hotspots close to towns</h3>
-      <div id="nearList" class="note">–</div>
       <div id="townDetail"></div>
     </section>
 
     <section class="pane" id="pane-hot" role="tabpanel" hidden>
+      <h3 data-th="จุดความร้อนใกล้เมือง">Hotspots close to towns</h3>
+      <div class="field"><label for="warnkm" data-th="รัศมีเตือนจุดความร้อน (กม.)">Hotspot alert radius (km)</label><input id="warnkm" type="number" min="2" max="100" value="20"></div>
+      <div id="nearList" class="note">–</div>
       <h3 data-th="จุดความร้อนรายจังหวัด">Hotspots by province</h3>
       <div class="tablewrap"><table id="provTable"><thead><tr><th data-th="จังหวัด">Province</th><th class="num" data-th="จุด">Hotspots</th><th class="num dev-only">FRP MW</th><th class="num" data-th="12 ชม. ล่าสุด">Last 12 h</th></tr></thead><tbody></tbody></table></div>
       <h3 class="dev-only" data-th="กลุ่มไฟขนาดใหญ่ที่สุด">Largest fire clusters</h3>
@@ -1819,7 +1820,6 @@ header .status>.btn{--water-fill:.72}
       <div class="field"><label><input type="checkbox" id="plume" checked> <span data-th="คำนวณความสูงควันลอยตัว (Sofiev et al. 2012)">Plume rise (Sofiev et al. 2012)</span></label></div>
       </div>
       <div class="row">
-        <div class="field"><label for="warnkm" data-th="รัศมีเตือนจุดความร้อน (กม.)">Hotspot alert radius (km)</label><input id="warnkm" type="number" min="2" max="100" value="20"></div>
         <div class="field dev-only"><label for="proxy">CORS proxy prefix</label><input id="proxy" type="text" placeholder="optional"></div>
       </div>
       <div class="actions dev-only">
@@ -5064,7 +5064,9 @@ function renderProvList(A){
   box.innerHTML=rows.length?rows.map(r=>card2({attr:`data-area="${esc(r.id)}"`,name:nm(r.g),tag:CN[r.g.p?.c]||'',
       sub:iNow>=0&&r.g.mean[iNow]!=null?`${T('now','ขณะนี้')} ${fmtN(r.g.mean[iNow])}`:'',ws:r.ws,W,wx:W.map(([a,b])=>wxWinArea(H,r.g.wx,tNow,a,b))})).join('')
     :`<p class="note">${T('Pick a region with provinces in Settings to list them here.','เลือกพื้นที่ที่มีจังหวัดในแท็บตั้งค่าเพื่อแสดงรายการจังหวัด')}</p>`;
-  box.querySelectorAll('.alert[data-area]').forEach(el=>el.onclick=()=>{areaSel=el.dataset.area; renderAreaTrend(); $('areaTrend').scrollIntoView?.({behavior:'smooth',block:'start'});});
+  box.querySelectorAll('.alert[data-area]').forEach(el=>el.onclick=()=>{ const n=el.dataset.area; if(!GEO_P.features.some(f=>f.properties.c==='THA'&&f.properties.n===n)) return;
+    if($('region').value!=='thailand'){ $('region').value='thailand'; store.set('hsw.region','thailand'); }
+    $('provSel').value=n; store.set('hsw.prov',n); $('provSel').dispatchEvent(new Event('change')); $('areaTrend').scrollIntoView?.({behavior:'smooth',block:'start'}); });
 }
 function renderWarnings(){
   ensureT2(renderWarnings); ensureRainObs(renderWarnings); ensureRainFac(renderWarnings);
@@ -5363,7 +5365,7 @@ function trendBlock(H,v,opt={}){
     ${trendSvg(H,v,opt)}
     <div class="tlg"><span><i style="background:var(--ember)"></i>${T('hourly','รายชั่วโมง')}</span><span><i style="background:var(--focus);height:3px"></i>${T('24-h mean (Thai AQI basis)','เฉลี่ย 24 ชม. (ใช้คิด AQI ไทย)')}</span>${opt.lo?`<span><i class="band"></i>${T('range across the area','ช่วงค่าในพื้นที่')}</span>`:''}${opt.fire?`<span><i class="dash"></i>${T('fire smoke','ควันไฟ')}</span>`:''}</div>
     ${opt.wx?wxSvg(H,opt.wx):''}
-    ${days.length?`<div class="chips">${days.map(o=>{const w=dw.get(o.d), wi=wxDayIcon(w); return `<div class="chip"><div class="ci">${pmIcon(o.mean)}${wi||''}</div><div class="ct">${esc(dayLabel(o.t-HR))}<b>${fmtVal(o.mean)}</b>${pill(o.mean)}${w&&isFinite(w.tmin)?`<span class="cwx">${Math.round(w.tmin)}–${Math.round(w.tmax)} °C · ${w.rain<0.1?T('no rain','ไม่มีฝน'):(w.rain<10?w.rain.toFixed(1):Math.round(w.rain))+' '+T('mm','มม.')+' · '+rainDayCat(w.rain)}</span>`:''}</div></div>`;}).join('')}</div>`:''}`;
+    ${days.length&&opt.days!==false?`<div class="chips">${days.map(o=>{const w=dw.get(o.d), wi=wxDayIcon(w); return `<div class="chip"><div class="ci">${pmIcon(o.mean)}${wi||''}</div><div class="ct">${esc(dayLabel(o.t-HR))}<b>${fmtVal(o.mean)}</b>${pill(o.mean)}${w&&isFinite(w.tmin)?`<span class="cwx">${Math.round(w.tmin)}–${Math.round(w.tmax)} °C · ${w.rain<0.1?T('no rain','ไม่มีฝน'):(w.rain<10?w.rain.toFixed(1):Math.round(w.rain))+' '+T('mm','มม.')+' · '+rainDayCat(w.rain)}</span>`:''}</div></div>`;}).join('')}</div>`:''}`;
 }
 const AREA_CACHE={key:null}, INC_FIELDS={sim:null,map:new Map()};
 function areaSeries(){
@@ -5399,17 +5401,16 @@ let areaSel='__all';
 function renderAreaTrend(){
   const box=$('areaTrend'); ensureT2(renderAreaTrend); ensureRainObs(renderAreaTrend); ensureRainFac(renderAreaTrend);
   if(!P.data||!P.data.grid){box.innerHTML=PUBLIC?(LOADFAIL?failTxt():''):T('Area trends appear when the page runs from the hosted site.','แนวโน้มรายพื้นที่จะแสดงเมื่อเปิดหน้าเว็บจากเว็บไซต์ที่โฮสต์'); renderProvList(null); return;}
-  const A=areaSeries(), H=A.H, now=Date.now(); if(!A.groups.has(areaSel)) areaSel='__all';
+  const A=areaSeries(), H=A.H, now=Date.now(); areaSel='__all';   // the area set in Settings (Thailand, a region or a province)
   { const nd=Math.max(1,Math.floor((H[H.length-1]-now)/864e5));   // whole days of forecast left in the data
-    $('areaNote').innerHTML=T(`Forecast PM<sub>2.5</sub> (all sources) averaged over the area, hour by hour, from today to ${nd} days ahead. Pick a province, or tap one in the list below.`,`ค่าพยากรณ์ PM<sub>2.5</sub> (ทุกแหล่ง) เฉลี่ยทั้งพื้นที่ทุกชั่วโมง ตั้งแต่วันนี้ ล่วงหน้า ${nd} วัน เลือกจังหวัด หรือกดชื่อจังหวัดในรายการด้านล่าง`); }
+    $('areaNote').innerHTML=T(`Forecast PM<sub>2.5</sub> (all sources) averaged over the area set in Settings, hour by hour, from today to ${nd} days ahead. Tap a province in the list below to look at it.`,`ค่าพยากรณ์ PM<sub>2.5</sub> (ทุกแหล่ง) เฉลี่ยทั้งพื้นที่ที่ตั้งไว้ในหน้าตั้งค่า ทุกชั่วโมง ตั้งแต่วันนี้ ล่วงหน้า ${nd} วัน แตะชื่อจังหวัดในรายการด้านล่างเพื่อดูจังหวัดนั้น`); }
   const provs=[...A.groups.entries()].filter(([g])=>g!=='__all'), nm=g=>g.p?provName(g.p):g.name;
   provs.sort((a,b)=>nm(a[1]).localeCompare(nm(b[1]),LOC()));
   const g=A.groups.get(areaSel), multi=provs.length>1;
   box.className='trend';
-  box.innerHTML=`${multi?`<label class="note">${T('Area','พื้นที่')} <select id="areaSel"><option value="__all">${esc(T('Whole region','ทั้งภูมิภาค'))}: ${esc(regionLabel())}</option>${provs.map(([id,x])=>`<option value="${esc(id)}"${id===areaSel?' selected':''}>${esc(nm(x))}</option>`).join('')}</select></label>`:''}
+  box.innerHTML=`
     <div><strong>${esc(areaSel==='__all'?(regionLabel()||g.name):nm(g))}</strong></div>
-    ${trendBlock(H,g.mean,{lo:g.lo,hi:g.hi,wx:g.wx,label:'PM2.5 trend, '+(g.p?g.p.n:g.name)})}`;
-  const sel=$('areaSel'); if(sel){sel.value=areaSel; sel.onchange=()=>{areaSel=sel.value; renderAreaTrend();};}
+    ${trendBlock(H,g.mean,{lo:g.lo,hi:g.hi,days:false,label:'PM2.5 trend, '+(g.p?g.p.n:g.name)})}`;
   renderProvList(A); if(A.dgroups) renderDistList(A);
 }
 function hereTrend(lat,lon){

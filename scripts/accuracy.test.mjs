@@ -99,3 +99,9 @@ test('calendar-day means: rows valid at 17 UTC, leads 24 and 48, >= 18 measured 
   assert.equal(a.m2[0], 1); assert.equal(a.m2[2], 5);       // 25 vs 20
   assert.equal(m.get('b'), undefined);
 });
+test('NRMSE from the sums', async () => {
+  const { nrmseOf } = await import('./accuracy.mjs');
+  const a = NEW(); const P = [[10, 12], [22, 18], [30, 33], [41, 38]]; P.forEach(([f, o]) => addPair(a, f, o));
+  const rmse = Math.sqrt(P.reduce((s, [f, o]) => s + (f - o) ** 2, 0) / 4), mo = P.reduce((s, [, o]) => s + o, 0) / 4;
+  assert.ok(Math.abs(nrmseOf(a) - 100 * rmse / mo) < 1e-9); assert.ok(Math.abs(scores(a).nrmse - 100 * rmse / mo) < 1e-9);
+});

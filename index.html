@@ -2200,10 +2200,10 @@ function accLc(){ const list=(ACCD?.lowcost||[]).filter(s=>inRegion(s.lat,s.lon)
 // the area total under the map item, for the chosen comparison (each writes only while its comparison is chosen)
 function renderRefSum(){ const el=ACC_SRC==='ref'?$('accSum'):null; if(!el) return; if(!ACCD){ setDual(el,'',''); return; }
   const list=ACCD.stations.filter(s=>inRegion(s.lat,s.lon)), l=accSc(accSum(list,'l').a,ACC_MIN), y=accSc(accSum(list,'y1').a,Math.round(ACC_MIN/2)), n=accSum(list,'l').n;
-  if(!l){ setDual(el,'Label: R² (top) and MAPE (below), next-day forecast · not enough hours in this area (Thai monitors only)','ป้าย: R² (บน) และ MAPE (ล่าง) ของพยากรณ์วันพรุ่งนี้ · ข้อมูลในพื้นที่นี้ยังไม่พอ (เฉพาะสถานีในไทย)'); return; }
+  if(!l){ setDual(el,'Label: colour band right (top) and accuracy = 100 − NRMSE (below) · not enough data in this area yet (Thai monitors only)','ป้าย: ทายระดับสีถูก (บน) และความแม่นยำ = 100 − NRMSE (ล่าง) · ข้อมูลในพื้นที่นี้ยังไม่พอ (เฉพาะสถานีในไทย)'); return; }
   const mo=accSc(accSum(list,'m1').a,ACC_MON_DAYS,8), nm=accSum(list,'m1').n, D=accMonN();
-  if(mo?.r2!=null){ setDual(el,`Label: R² (top: how well the forecast follows the measured ups and downs, 1 = perfectly) and MAPE (below: typical error as a % of the measured value, days >= 10 µg/m³) of the daily mean (00–24 h, the Thai AQI basis) forecast 24 h ahead, last ${D} days · all ${nm} monitors here together: R² ${accR2T(mo.r2)}, MAPE ${accMapeT(mo.mape)}`,
-    `ป้าย: R² (บน: พยากรณ์ขึ้นลงตามค่าที่วัดได้แค่ไหน 1 = ตรงกันทั้งหมด) และ MAPE (ล่าง: คลาดเคลื่อนเป็น % ของค่าที่วัดได้ เฉพาะวันที่ ≥ 10 µg/m³) ของค่าเฉลี่ยรายวัน (00–24 น. ฐานของ AQI ไทย) ที่พยากรณ์ล่วงหน้า 24 ชม. ${D} วันล่าสุด · รวม ${nm} สถานีในพื้นที่: R² ${accR2T(mo.r2)} MAPE ${accMapeT(mo.mape)}`); return; }
+  if(mo?.nrmse!=null){ setDual(el,`Label, daily mean (00–24 h, the Thai AQI basis) forecast 24 h ahead, last ${D} days: top = days whose colour band (Thai PCD: 15 / 25 / 37.5 / 75 µg/m³) was forecast right; below = accuracy, 100 − NRMSE (RMSE as a % of the mean measured value) · all ${nm} monitors here together: colour band right ${accPct(mo.band)}, accuracy ${accAccT(mo.nrmse)} (NRMSE ${accMapeT(mo.nrmse)}, R² ${accR2T(mo.r2)}, MAPE ${accMapeT(mo.mape)})`,
+    `ป้าย ค่าเฉลี่ยรายวัน (00–24 น. ฐานของ AQI ไทย) ที่พยากรณ์ล่วงหน้า 24 ชม. ${D} วันล่าสุด: บน = ทายระดับสีถูก (เกณฑ์ คพ. 15 / 25 / 37.5 / 75 µg/m³) ล่าง = ความแม่นยำ 100 − NRMSE (RMSE เป็น % ของค่าเฉลี่ยที่วัดได้) · รวม ${nm} สถานีในพื้นที่: ทายระดับสีถูก ${accPct(mo.band)} ความแม่นยำ ${accAccT(mo.nrmse)} (NRMSE ${accMapeT(mo.nrmse)}, R² ${accR2T(mo.r2)}, MAPE ${accMapeT(mo.mape)})`); return; }
   const d=y?[` · daily mean ${accPct(y.band)}`,` · ค่าเฉลี่ยรายวัน ${accPct(y.band)}`]:['',''];
   setDual(el,`Label = % of hours in the right colour band (next day) · all ${n} monitors here: next day ${accPct(l.band)}${d[0]}`,`ป้าย = % ของชั่วโมงที่บอกระดับความเข้มข้นถูก (พรุ่งนี้) · รวม ${n} สถานีในพื้นที่: พรุ่งนี้ ${accPct(l.band)}${d[1]}`); }
 function renderLcSum(){ const el=ACC_SRC==='lc'?$('accSum'):null; if(!el) return; const g=ACCD?.lowcost?accLc():null;
@@ -2220,18 +2220,20 @@ function accSum(list,k){const a=[0,0,0,0,0,0,0,0]; let n=0; for(const s of list)
 // R² (square of Pearson's r of the paired hourly forecasts and measurements) and MAPE (mean |F − O| / O in %, hours measured
 // >= accuracy.json mapeMin, 10 µg/m³) from the summed columns 8–13 (accuracy.json from 26 Nov 2026; older files: none)
 function accR2(a){ if(!(a?.length>11)) return null; const n=a[0], sxx=n*a[9]-a[8]*a[8], syy=n*a[10]-a[3]*a[3], sxy=n*a[11]-a[8]*a[3]; return n>2&&sxx>0&&syy>0?sxy*sxy/(sxx*syy):null; }
-function accSc(a,minN,minMape=ACC_MIN_MAPE){ if(!a||a[0]<minN) return null; const n=a[0]; return {n,band:a[4]/n,mae:a[1]/n,bias:a[2]/n,obs:a[3]/n,high:a[5],caught:a[7],warned:a[6],fa:a[6]-a[7],r2:accR2(a),mape:a[12]>=minMape?100*a[13]/a[12]:null}; }
+// NRMSE (RMSE / mean measured, %) from the same sums; "accuracy" on the badges = 100 − NRMSE (owner, 26 Nov 2026)
+function accNrmse(a){ if(!(a?.length>11)||!(a[0]>0)||!(a[3]>0)) return null; const n=a[0]; return 100*Math.sqrt(Math.max(0,(a[9]-2*a[11]+a[10])/n))/(a[3]/n); }
+function accSc(a,minN,minMape=ACC_MIN_MAPE){ if(!a||a[0]<minN) return null; const n=a[0]; return {n,band:a[4]/n,mae:a[1]/n,bias:a[2]/n,obs:a[3]/n,high:a[5],caught:a[7],warned:a[6],fa:a[6]-a[7],r2:accR2(a),mape:a[12]>=minMape?100*a[13]/a[12]:null,nrmse:accNrmse(a)}; }
 const ACC_MIN_MAPE=24;   // hours measured >= 10 µg/m³ needed for a MAPE
-const accR2T=x=>x==null?'–':x.toFixed(2), accMapeT=x=>x==null?'–':Math.round(x)+'%';
+const accR2T=x=>x==null?'–':x.toFixed(2), accMapeT=x=>x==null?'–':Math.round(x)+'%', accAccT=x=>x==null?'–':Math.max(0,Math.round(100-x))+'%';
 // the hover line of a badge: the two main numbers, then the error in µg/m³ and the tendency
-const accStatLine=(x,t)=>x?`${t}: R² <b>${accR2T(x.r2)}</b> · MAPE <b>${accMapeT(x.mape)}</b> · ±${fmtN(x.mae)} µg/m³ · ${accTend(x)}`:'';
-// badge: R² on top (bar = R²), MAPE below; files without the new sums keep the old colour-band share
+const accStatLine=(x,t)=>x?`${t}: ${T('colour band right','ทายระดับสีถูก')} <b>${accPct(x.band)}</b> · ${T('accuracy','ความแม่นยำ')} <b>${accAccT(x.nrmse)}</b> <small>(NRMSE ${accMapeT(x.nrmse)})</small> · R² ${accR2T(x.r2)} · MAPE ${accMapeT(x.mape)} · ±${fmtN(x.mae)} µg/m³ · ${accTend(x)}`:'';
+// badge: colour band right on top (bar = the same share), accuracy = 100 − NRMSE below; files without the new sums: the band share only
 // daily means (24 h, the Thai AQI basis) forecast 24 h / 48 h before: the badges' basis since 26 Nov 2026
 const accDay=a=>accSc(a,Math.round(ACC_MIN_ST/2));
 // calendar-day means over the last 30 days (accuracy.json m1 / m2 from 26 Nov 2026): >= 15 days for a badge, >= 8 days >= 10 µg/m³ for MAPE
 const ACC_MON_DAYS=15, accMon=a=>accSc(a,ACC_MON_DAYS,8), accMonN=()=>ACCD?.month?.days||30;
-function accBadge(sc,lc){ if(sc.r2==null) return `<div class="accbadge${lc?' lc':''}"><b>${accPct(sc.band)}</b><i style="width:${Math.round(sc.band*100)}%"></i></div>`;
-  return `<div class="accbadge two${lc?' lc':''}"><b>${accR2T(sc.r2)}</b><small>${accMapeT(sc.mape)}</small><i style="width:${Math.round(Math.max(0,sc.r2)*100)}%"></i></div>`; }
+function accBadge(sc,lc){ if(sc.nrmse==null) return `<div class="accbadge${lc?' lc':''}"><b>${accPct(sc.band)}</b><i style="width:${Math.round(sc.band*100)}%"></i></div>`;
+  return `<div class="accbadge two${lc?' lc':''}"><b>${accPct(sc.band)}</b><small>${accAccT(sc.nrmse)}</small><i style="width:${Math.round(sc.band*100)}%"></i></div>`; }
 // the monitors of a level and their scores; 'here': the nearest monitor within ACC_NEAR_KM, else the Thai region (outside Thailand: none)
 function accGroup(level,lat,lon){ if(!ACCD) return null; const all=ACCD.stations; let g;
   if(level==='here'){ let best=null,dB=1e9; for(const s of all){ if(s.s[0]+s.l[0]<ACC_MIN_ST) continue; const d=haversineKm(lat,lon,s.lat,s.lon); if(d<dB){dB=d;best=s;} }
@@ -2294,10 +2296,10 @@ function drawAcc(){
   accLayer.clearLayers(); if(!ACCD) return;
   // the badges are thinned on screen: where two would touch, the monitor with more scored hours keeps its badge (zoom in for all)
   const placed=[], list=ACCD.stations.filter(s=>inRegion(s.lat,s.lon)).sort((a,b)=>(b.l[0]+b.s[0])-(a.l[0]+a.s[0]));
-  for(const s of list){ const l=accSc(s.l,ACC_MIN_ST), sh=accSc(s.s,ACC_MIN_ST), d1=accMon(s.m1), d2=accMon(s.m2), sc=(d1?.r2!=null?d1:null)||l||sh; if(!sc) continue;
+  for(const s of list){ const l=accSc(s.l,ACC_MIN_ST), sh=accSc(s.s,ACC_MIN_ST), d1=accMon(s.m1), d2=accMon(s.m2), sc=(d1?.nrmse!=null?d1:null)||l||sh; if(!sc) continue;
     const pt=map.latLngToLayerPoint([s.lat,s.lon]); if(placed.some(q=>Math.abs(q.x-pt.x)<38&&Math.abs(q.y-pt.y)<29)) continue; placed.push(pt);   // each badge sits just above its monitor, clear of the town names beside the dots
-    const two=sc.r2!=null, icon=L.divIcon({className:'',html:accBadge(sc,false),iconSize:two?[34,26]:[32,17],iconAnchor:two?[17,31]:[16,22]});
-    const line=(x,t)=>x?(x.r2!=null?accStatLine(x,t):`${t}: ${T('colour band right','บอกระดับความเข้มข้นถูก')} <b>${accPct(x.band)}</b> · ±${fmtN(x.mae)} µg/m³ · ${accTend(x)}`):'';
+    const two=sc.nrmse!=null, icon=L.divIcon({className:'',html:accBadge(sc,false),iconSize:two?[34,26]:[32,17],iconAnchor:two?[17,31]:[16,22]});
+    const line=(x,t)=>x?(x.nrmse!=null?accStatLine(x,t):`${t}: ${T('colour band right','บอกระดับความเข้มข้นถูก')} <b>${accPct(x.band)}</b> · ±${fmtN(x.mae)} µg/m³ · ${accTend(x)}`):'';
     L.marker([s.lat,s.lon],{icon,keyboard:false,zIndexOffset:500}).bindTooltip(()=>`<b>${esc(stName(s))}</b><br>${T(`Last ${accMonN()} days, daily means (00–24 h)`,`${accMonN()} วันล่าสุด ค่าเฉลี่ยรายวัน (00–24 น.)`)}${d1?T(`, ${d1.n} days`,` ${d1.n} วัน`):''}<br>`+
       [line(d1,T('Next day','วันพรุ่งนี้')),line(d2,T('Two days ahead','ล่วงหน้า 2 วัน'))].filter(Boolean).join('<br>')+
       (sh||l?`<br><span class="note">${T('Hourly values, last 7 days','ค่ารายชั่วโมง 7 วันล่าสุด')}: `+[sh?T(`next hours R² ${accR2T(sh.r2)}, MAPE ${accMapeT(sh.mape)}`,`ชั่วโมงข้างหน้า R² ${accR2T(sh.r2)} MAPE ${accMapeT(sh.mape)}`):'',l?T(`next day R² ${accR2T(l.r2)}, MAPE ${accMapeT(l.mape)}`,`วันพรุ่งนี้ R² ${accR2T(l.r2)} MAPE ${accMapeT(l.mape)}`):''].filter(Boolean).join(' · ')+'</span>':'')).on('click',()=>{ACC_AT={lat:s.lat,lon:s.lon}; openAcc('here');}).addTo(accLayer); }
@@ -2309,10 +2311,10 @@ function drawAcc(){
 function drawAccLc(){
   accLcLayer.clearLayers(); if(!ACCD?.lowcost) return;
   const placed=[], list=ACCD.lowcost.filter(s=>inRegion(s.lat,s.lon)).sort((a,b)=>(b.l[0]+b.s[0])-(a.l[0]+a.s[0]));
-  for(const s of list){ const l=accSc(s.l,ACC_MIN_ST), sh=accSc(s.s,ACC_MIN_ST), d1=accMon(s.m1), sc=(d1?.r2!=null?d1:null)||l||sh; if(!sc) continue;
+  for(const s of list){ const l=accSc(s.l,ACC_MIN_ST), sh=accSc(s.s,ACC_MIN_ST), d1=accMon(s.m1), sc=(d1?.nrmse!=null?d1:null)||l||sh; if(!sc) continue;
     const pt=map.latLngToLayerPoint([s.lat,s.lon]); if(placed.some(q=>Math.abs(q.x-pt.x)<38&&Math.abs(q.y-pt.y)<29)) continue; placed.push(pt);
-    const two=sc.r2!=null, icon=L.divIcon({className:'',html:accBadge(sc,true),iconSize:two?[34,26]:[32,17],iconAnchor:two?[17,31]:[16,22]});
-    const line=(x,t)=>x?(x.r2!=null?accStatLine(x,t):`${t}: ${T('colour band right','บอกระดับความเข้มข้นถูก')} <b>${accPct(x.band)}</b> · ±${fmtN(x.mae)} µg/m³ · ${accTend(x)}`):'';
+    const two=sc.nrmse!=null, icon=L.divIcon({className:'',html:accBadge(sc,true),iconSize:two?[34,26]:[32,17],iconAnchor:two?[17,31]:[16,22]});
+    const line=(x,t)=>x?(x.nrmse!=null?accStatLine(x,t):`${t}: ${T('colour band right','บอกระดับความเข้มข้นถูก')} <b>${accPct(x.band)}</b> · ±${fmtN(x.mae)} µg/m³ · ${accTend(x)}`):'';
     L.marker([s.lat,s.lon],{icon,keyboard:false,zIndexOffset:400}).bindTooltip(()=>`<b>${esc(s.name||s.id)}</b> · ${T('low-cost sensor (OpenAQ)','เซนเซอร์ราคาประหยัด (OpenAQ)')}<br><br>`+
       [line(d1,T(`Daily means, next day (${accMonN()} days)`,`ค่าเฉลี่ยรายวัน วันพรุ่งนี้ (${accMonN()} วัน)`)),line(sh,T('Hourly, next hours (7 days)','รายชั่วโมง ชั่วโมงข้างหน้า (7 วัน)')),line(l,T('Hourly, next day (7 days)','รายชั่วโมง วันพรุ่งนี้ (7 วัน)'))].filter(Boolean).join('<br>')+
       `<br><span class="note">${T('Compared with the sensor\'s own readings, which run high in humid air: closeness to the sensor, not to the true value.','เทียบกับค่าที่เซนเซอร์วัดได้ ซึ่งมักสูงเกินจริงเมื่ออากาศชื้น จึงบอกความใกล้กับค่าเซนเซอร์ ไม่ใช่ค่าจริง')}</span>`).addTo(accLcLayer); }
@@ -3069,7 +3071,7 @@ async function saveMapImage(kind,btn){
       }
       if(nHot) shownKeys.push(['hot',T(`Satellite hotspots (${nHot}, last 1–2 days)`,`จุดความร้อนจากดาวเทียม (${nHot} จุด, 1–2 วันล่าสุด)`)]);
       if(nSt) shownKeys.push(['st',T(`Stations (${nSt}): centre = measured, ring = forecast`,`สถานีตรวจวัด (${nSt}): สีด้านใน = ค่าตรวจวัด, วงนอก = ค่าพยากรณ์`)]);
-      if(nAcc) shownKeys.push(['acc',T('Badges: forecast accuracy at the station, daily mean 24 h ahead, last 30 days (R² on top, MAPE below)','ป้าย: ความแม่นยำของพยากรณ์ที่สถานี ค่าเฉลี่ยรายวันล่วงหน้า 24 ชม. 30 วันล่าสุด (R² บน, MAPE ล่าง)')]);
+      if(nAcc) shownKeys.push(['acc',T('Badges: forecast accuracy at the station, daily mean 24 h ahead, last 30 days (top: colour band right; below: accuracy = 100 − NRMSE)','ป้าย: ความแม่นยำของพยากรณ์ที่สถานี ค่าเฉลี่ยรายวันล่วงหน้า 24 ชม. 30 วันล่าสุด (บน: ทายระดับสีถูก, ล่าง: ความแม่นยำ = 100 − NRMSE)')]);
       if(nTown) shownKeys.push(['town',T('Towns','เมือง')]);
       if(nProv) shownKeys.push(['prov',T('Province names','ชื่อจังหวัด')]);
       if(nCont) shownKeys.push(['cont',T('Contour lines at the band edges','เส้นแบ่งระดับ')]);

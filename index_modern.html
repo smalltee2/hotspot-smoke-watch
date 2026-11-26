@@ -1660,6 +1660,7 @@ header .status>.btn{--water-fill:.72}
 @media (max-width:860px){.maplogo img{width:132px}}
 /* wide layout: the floating time bar can reach the left edge of the map, so the logo sits just above it (--scrubH: its measured height) */
 @media (min-width:861px){.leaflet-bottom.leaflet-left .maplogo{margin-bottom:calc(var(--scrubH,58px) + 34px)}}
+.summary div.tap{cursor:pointer}.summary div.tap:hover b,.summary div.tap:focus-visible b{text-decoration:underline}.alert.warned-hl{outline:2px solid var(--focus);outline-offset:2px;transition:outline-color .3s}
 </style>
 <script type="module" src="glass/boot.mjs"></script>
 </head>
@@ -1973,7 +1974,7 @@ header .status>.btn{--water-fill:.72}
         <div id="camsInfo" hidden><div class="note" data-th="&lt;b&gt;CAMS&lt;/b&gt; (Copernicus, ECMWF) พยากรณ์ฝุ่นทั่วโลก ราว 40 กม. ล่วงหน้าราว 3–4 วัน ผ่านกระบวนการของระบบครบทุกขั้น: เติมควันจากจุดความร้อน ปรับค่าที่สถานี ปรับแก้ด้วยการเรียนรู้ของระบบ และปรับเป็นแผนที่ละเอียด 0.025° เป็นชุดหลักของหน้านี้ และการ์ดความแม่นยำตรวจจากชุดนี้"><b>CAMS</b> (Copernicus, ECMWF) global forecast, about 40 km, about 3–4 days ahead, through every step of this system: smoke added from the hotspots, correction at the monitors, the self-learning correction and the 0.025° map correction. This is the page's main data set, and the accuracy card is checked on it.</div></div>
         <div id="silamInfo" hidden><div class="note" data-th="&lt;b&gt;SILAM&lt;/b&gt; (สถาบันอุตุนิยมวิทยาฟินแลนด์ FMI) พยากรณ์ฝุ่นทั่วโลก 0.2° (ราว 22 กม.) ออกวันละรอบ ล่วงหน้าราว 4–5 วัน&lt;br&gt;ผ่าน&lt;b&gt;กระบวนการเดียวกับ CAMS&lt;/b&gt; ด้วยโปรแกรมชุดเดียวกัน ยกเว้นการเติมควันจากจุดความร้อน เพราะ SILAM คำนวณควันไฟของตัวเองอยู่แล้ว: ปรับค่าที่สถานี การเรียนรู้ของระบบ (เริ่มเรียนรู้จากวันที่เปิดใช้ จึงต้องใช้เวลาสะสมข้อมูล) และแผนที่ปรับแก้ 0.025°&lt;br&gt;เมื่อเลือกชั้นนี้ ทั้งหน้า (แผนที่ คำเตือน สรุป ค่าที่ตำแหน่งของคุณ) จะเปลี่ยนเป็นชุด SILAM ผลการปรับลดลงเมื่อพยากรณ์ไกลออกไป วันที่ 4–5 ใช้ดูแนวโน้ม ยังเป็นชุดทดลอง"><b>SILAM</b> (Finnish Meteorological Institute) global forecast at 0.2° (about 22 km), issued once a day, about 4–5 days ahead.<br>It goes through <b>the same steps as CAMS</b>, in the same program, except the smoke added from the hotspots (SILAM already has its own fire smoke): correction at the monitors, the self-learning correction (it started learning the day this was switched on, so it needs time) and the 0.025° map correction.<br>With this layer chosen the whole page (map, warnings, summary, values at your location) shows the SILAM-based forecast. The corrections fade further ahead: use days 4–5 for the trend. Still a trial.</div></div>
         <label class="dev-only"><input type="radio" name="layer" id="lyFine" value="fine"> <span data-th="PM&lt;sub&gt;2.5&lt;/sub&gt; รวม + รายละเอียดไฟ (ทดลอง)">Total PM<sub>2.5</sub> + fire detail (experimental)</span></label>
-        <label><input type="radio" name="layer" id="lyFire" value="fire"> <span data-th="เฉพาะควันไฟ">Fire smoke only</span> <button type="button" class="lyinfo" data-info="legFire" aria-expanded="false"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v5.5M12 7.6v.2"/></svg><span class="vh" data-th="คำอธิบายชั้นข้อมูลนี้">About this layer</span></button></label>
+        <label class="dev-only"><input type="radio" name="layer" id="lyFire" value="fire"> <span data-th="เฉพาะควันไฟ">Fire smoke only</span> <button type="button" class="lyinfo" data-info="legFire" aria-expanded="false"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v5.5M12 7.6v.2"/></svg><span class="vh" data-th="คำอธิบายชั้นข้อมูลนี้">About this layer</span></button></label>
         <label class="dev-only"><input type="radio" name="layer" id="lyUnc" value="unc"> <span data-th="ความไม่แน่นอนของแผนที่ (±1σ)">Map uncertainty (±1σ)</span> <button type="button" class="lyinfo" data-info="legUnc" aria-expanded="false"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v5.5M12 7.6v.2"/></svg><span class="vh" data-th="คำอธิบายชั้นข้อมูลนี้">About this layer</span></button></label>
         <label><input type="radio" name="layer" id="lyRain" value="rain"> <span data-th="ฝน (มม./ชม.)">Rain, mm/h</span> <button type="button" class="lyinfo" data-info="legRain" aria-expanded="false"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v5.5M12 7.6v.2"/></svg><span class="vh" data-th="คำอธิบายชั้นข้อมูลนี้">About this layer</span></button></label>
         <label><input type="radio" name="layer" id="lyTemp" value="temp"> <span data-th="อุณหภูมิ (°C)">Temperature, °C</span> <button type="button" class="lyinfo" data-info="legTemp" aria-expanded="false"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v5.5M12 7.6v.2"/></svg><span class="vh" data-th="คำอธิบายชั้นข้อมูลนี้">About this layer</span></button></label>
@@ -3820,8 +3821,8 @@ for(const id of ['shContour','shObs','shAcc','shHot','shTown','shWind','shWindAr
   $(id).addEventListener('change',()=>{store.set('hsw.'+id,$(id).checked?'1':'0');applyVisibility();});
 }
 syncAccSrc(); syncObsSrc();
-// public pages, kept simple: the ventilation layer is admin-only (its control is .dev-only)
-if(PUBLIC&&$('lyVent').checked){ $('lyVent').checked=false; $('lyTotal').checked=true; }
+// public pages, kept simple: the ventilation and fire-smoke-only layers are admin-only (their controls are .dev-only)
+if(PUBLIC&&($('lyVent').checked||$('lyFire').checked)){ $('lyVent').checked=$('lyFire').checked=false; $('lyTotal').checked=true; }   // the fire-smoke-only layer is admin-only too (owner, 26 Nov 2026)
 $('windBar').innerHTML=WIND_BFT.map(([,c])=>`<i style="background:${c};box-shadow:inset 0 0 0 1px rgba(0,0,0,.25)"></i>`).join('');
 {const f=()=>{$('legWind').hidden=!$('shWind').checked;}; f(); $('shWind').addEventListener('change',f);}
 
@@ -4908,7 +4909,7 @@ function renderSummary(){
   const cells=new Map(); for(const c of sr){const k=Math.floor(c.lat/0.1)+':'+Math.floor(c.lon/0.1); cells.set(k,Math.max(cells.get(k)||0,c.frp));}
   $('sHot').textContent=hr.length.toLocaleString(); $('sSrc').textContent=cells.size.toLocaleString();
   $('sFrp').textContent=Math.round([...cells.values()].reduce((a,v)=>a+v,0)).toLocaleString();
-  $('sWarn').textContent=S.recep.some(r=>r.stT)?S.recep.filter(r=>r.stT&&(r.stT.mean24>37.5||r.stT.peak>75)).length:S.sim?S.recep.filter(r=>r.st.mean24>37.5||r.st.peak>75).length:'–';
+  $('sWarn').textContent=S.recep.some(r=>r.stT)||S.sim?warnedTowns().length:'–';
 }
 // ---- the next 24 h and 24–48 h side by side (provinces, towns, stations alike): highest 24-h mean PM2.5 whose 24 h end in the
 // period (a series that already holds 24-h means is used as it is), with the lowest–highest temperature and rain total of the period
@@ -4939,6 +4940,18 @@ function fc2(ws,wx,W=WIN){ const many=W.length>2;   // five columns on a phone: 
 function card2({attr,name,tag,sub,ws,wx,W}){ const worst=ws.reduce((m,w)=>w&&(m==null||w.v>m)?w.v:m,null);
   return `<div class="alert c2${ws.length>2?' many':''}" ${attr}><i class="sev" style="background:${worst!=null?bandFor(worst).color:'var(--line)'}"></i>
     <div style="min-width:0"><div class="name">${esc(name)} ${tag?`<span class="note">${esc(tag)}</span>`:''}</div><div class="sub">${worst!=null?pill(worst)+' ':''}${sub||''}</div></div>${fc2(ws,wx,W)}</div>`; }
+// towns with a warning (the number in the summary row): 24-h mean > 37.5 µg/m³ or an hour > 75 in the forecast at the town
+function warnedTowns(){ return S.recep.some(r=>r.stT)?S.recep.filter(r=>r.stT&&(r.stT.mean24>37.5||r.stT.peak>75)):S.sim?S.recep.filter(r=>r.st.mean24>37.5||r.st.peak>75):[]; }
+// tapping that number: the Warnings tab, the list by town, the warned towns highlighted for a few seconds and the first in view
+function openWarnTowns(){ setWarnView('town');
+  if(window.PHONEUI?.active()){ document.querySelector('#tabbar [data-go="warn"]')?.click(); PHONEUI.set('full'); } else $('tab-warn')?.click();
+  const names=new Set(warnedTowns().map(r=>r.name));
+  requestAnimationFrame(()=>{ let first=null; for(const el of $('warnList').querySelectorAll('.alert[data-name]')){ const on=names.has(el.dataset.name); el.classList.toggle('warned-hl',on); if(on&&!first) first=el; }
+    (first||$('wv-town'))?.scrollIntoView({behavior:'smooth',block:'center'});
+    clearTimeout(openWarnTowns.tm); openWarnTowns.tm=setTimeout(()=>{ for(const el of $('warnList').querySelectorAll('.warned-hl')) el.classList.remove('warned-hl'); },6000); }); }
+{ const d=$('sWarn')?.parentElement; if(d){ d.classList.add('tap'); d.setAttribute('role','button'); d.tabIndex=0;
+    const lab=()=>{ const t=T('Show the towns with a warning','ดูเมืองที่มีคำเตือน'); d.title=t; d.setAttribute('aria-label',t); }; lab(); d.addEventListener('focus',lab); d.addEventListener('mouseenter',lab);
+    d.addEventListener('click',openWarnTowns); d.addEventListener('keydown',e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); openWarnTowns(); } }); } }
 function setWarnView(v){ if(!['prov','town','station'].includes(v)) v='prov'; $('warnView').value=v; store.set('hsw.warnView',v);
   for(const k of ['prov','town','station']) $('wv-'+k).hidden=k!==v; }
 function renderProvList(A){

@@ -73,3 +73,16 @@ test('low-cost sensors are scored apart (want = false), never in the monitors\' 
   assert.deepEqual([...scoreRows(rows, obs, tEnd).keys()], ['m']);
   assert.deepEqual([...scoreRows(rows, obs, tEnd, () => true, new Map(), false).keys()], ['lc']);
 });
+test('R² and MAPE from the sums', () => {
+  const a = NEW(); const F = [10, 20, 30, 40, 50], O = [12, 18, 33, 38, 55];
+  F.forEach((f, i) => addPair(a, f, O[i]));
+  const mx = F.reduce((s, v) => s + v) / 5, my = O.reduce((s, v) => s + v) / 5;
+  const cov = F.reduce((s, f, i) => s + (f - mx) * (O[i] - my), 0), vx = F.reduce((s, f) => s + (f - mx) ** 2, 0), vy = O.reduce((s, o) => s + (o - my) ** 2, 0);
+  const S = scores(a);
+  assert.ok(Math.abs(S.r2 - cov * cov / (vx * vy)) < 1e-12);
+  assert.ok(Math.abs(S.mape - 100 * O.reduce((s, o, i) => s + Math.abs(F[i] - o) / o, 0) / 5) < 1e-9);   // all measured >= 10
+  const b = NEW(); addPair(b, 5, 4); addPair(b, 7, 6); addPair(b, 12, 20);
+  assert.equal(scores(b).mape, 100 * 8 / 20);                 // only the hour measured >= 10 counts
+  const c = NEW(); addPair(c, 10, 10); addPair(c, 20, 10); addPair(c, 30, 10);
+  assert.equal(scores(c).r2, null);                           // measurements do not vary: no R²
+});

@@ -1,5 +1,6 @@
 // Verification: match logged forecasts to later observations and score them by lead time.
 // Output: data/verify.json  { updated, window_days, leads: [{lead_h, n, raw:{mb,rmse,r}, corrected:{mb,rmse,r}}] }
+import { dropSpikesHourKeys } from './obsqc.mjs';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 
@@ -40,6 +41,7 @@ for (const f of files.filter(f => path.basename(f).startsWith('a4t-'))) for (con
   const t = Date.parse(r.hour_end_utc); if (!isFinite(t) || t < cutoff - 864e5 || r.pm25 === '' || r.pm25 == null || !isFinite(+r.pm25)) continue;
   const k = `${r.station_id}|${hk(t)}`; if (!obs.has(k)) obs.set(k, +r.pm25);
 }
+dropSpikesHourKeys(obs);   // instrument spikes kept in the logs (scripts/obsqc.mjs)
 // observed 24-h mean ending at an hour, from hourly values (≥ 18 of 24, the usual 75 % rule)
 function obs24From(id, hour) { const t1 = Date.parse(hour + ':00:00Z'); let s = 0, n = 0;
   for (let h = 0; h < 24; h++) { const v = obs.get(`${id}|${hk(t1 - h * 3600e3)}`); if (v != null) { s += v; n++; } } return n >= 18 ? s / n : null; }

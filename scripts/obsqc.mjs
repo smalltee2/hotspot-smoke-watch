@@ -18,3 +18,12 @@ export function dropSpikes(rows, par = SPIKE) {
   }
   return { kept, dropped };
 }
+
+/** The same check on a Map keyed "station_id|YYYY-MM-DDTHH" (UTC hour) -> µg/m³, as the scoring scripts (accuracy.mjs, perf.mjs,
+ *  verify.mjs) build it from the logs; removes the spikes in place and returns how many. */
+export function dropSpikesHourKeys(obs, par = SPIKE) {
+  const ser = new Map(); for (const [k, v] of obs) { const i = k.lastIndexOf('|'), t = Date.parse(k.slice(i + 1) + ':00:00Z'); if (!Number.isFinite(t)) continue;
+    const id = k.slice(0, i); if (!ser.has(id)) ser.set(id, []); ser.get(id).push([t, v, k]); }
+  let n = 0; for (const rows of ser.values()) for (const r of dropSpikes(rows.sort((a, b) => a[0] - b[0]), par).dropped) { obs.delete(r[2]); n++; }
+  return n;
+}

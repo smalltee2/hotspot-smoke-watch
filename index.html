@@ -527,6 +527,7 @@ td.num{text-align:right;font-family:var(--font-data);font-variant-numeric:tabula
 .summary div.tap{cursor:pointer}.summary div.tap:hover b,.summary div.tap:focus-visible b{text-decoration:underline}.alert.warned-hl{outline:2px solid var(--focus);outline-offset:2px;transition:outline-color .3s}
 .summary div.warnon b,.summary div.warnon span{color:#c62828}@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .summary div.warnon b,:root:not([data-theme="light"]) .summary div.warnon span{color:#ff6b6b}}:root[data-theme="dark"] .summary div.warnon b,:root[data-theme="dark"] .summary div.warnon span{color:#ff6b6b}.summary div.warnon b::before{content:"";display:inline-block;width:.95em;height:.95em;margin-right:.22em;vertical-align:-.1em;background:currentColor;-webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill-rule='evenodd' d='M12 1.6a1.6 1.6 0 0 1 1.6 1.6v.6a6.6 6.6 0 0 1 5 6.4v4.3l1.9 2.7a.9.9 0 0 1-.7 1.4H4.2a.9.9 0 0 1-.7-1.4l1.9-2.7v-4.3a6.6 6.6 0 0 1 5-6.4v-.6A1.6 1.6 0 0 1 12 1.6zM11 7.2h2l-.3 5.6h-1.4zM12 13.8a1.15 1.15 0 1 0 0 2.3a1.15 1.15 0 1 0 0-2.3zM9.6 19.9h4.8a2.4 2.4 0 0 1-4.8 0z'/%3E%3C/svg%3E") center/contain no-repeat;mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill-rule='evenodd' d='M12 1.6a1.6 1.6 0 0 1 1.6 1.6v.6a6.6 6.6 0 0 1 5 6.4v4.3l1.9 2.7a.9.9 0 0 1-.7 1.4H4.2a.9.9 0 0 1-.7-1.4l1.9-2.7v-4.3a6.6 6.6 0 0 1 5-6.4v-.6A1.6 1.6 0 0 1 12 1.6zM11 7.2h2l-.3 5.6h-1.4zM12 13.8a1.15 1.15 0 1 0 0 2.3a1.15 1.15 0 1 0 0-2.3zM9.6 19.9h4.8a2.4 2.4 0 0 1-4.8 0z'/%3E%3C/svg%3E") center/contain no-repeat;transform-origin:50% 8%;animation:bellring 3s ease-in-out infinite}@keyframes bellring{0%,40%,100%{transform:rotate(0)}5%{transform:rotate(18deg)}10%{transform:rotate(-16deg)}15%{transform:rotate(13deg)}20%{transform:rotate(-10deg)}25%{transform:rotate(7deg)}30%{transform:rotate(-4deg)}35%{transform:rotate(2deg)}}@media (prefers-reduced-motion: reduce){.summary div.warnon b::before{animation:none}}
 .leaflet-tooltip.dlabel,.leaflet-tooltip.slabel{background:none !important;border:0 !important;box-shadow:none !important;color:var(--muted) !important;padding:0 !important;text-shadow:0 0 3px var(--land,#fff),0 0 3px var(--land,#fff),0 0 2px var(--land,#fff) !important}.leaflet-tooltip.dlabel{font:700 13px/1.15 var(--font-body,system-ui) !important;color:var(--fg) !important}.leaflet-tooltip.slabel{font:500 11.5px/1.15 var(--font-body,system-ui) !important;opacity:1 !important}.leaflet-tooltip.dlabel::before,.leaflet-tooltip.slabel::before{display:none}
+.savepop{max-height:calc(100dvh - 240px);overflow:auto;overscroll-behavior:contain}.savepop .saverange{display:grid;gap:6px;margin:4px 0 6px 22px}.savepop .saverange label{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:.8rem}.savepop .saverange input[type=date]{font:inherit;padding:3px 6px;border:1px solid var(--line);border-radius:6px;background:var(--panel);color:var(--fg)}
 </style>
 </head>
 <body>
@@ -632,7 +633,7 @@ td.num{text-align:right;font-family:var(--font-data);font-variant-numeric:tabula
           <option value="thailand" data-th="ประเทศไทย">Thailand</option>
           <option value="msea" data-th="เอเชียตะวันออกเฉียงใต้ภาคพื้นทวีป">Mainland Southeast Asia</option>
         </select></div>
-      <div class="field"><label for="provSel" data-th="จังหวัด (ดูเขตอำเภอและตำบล)">Province (shows its districts and sub-districts)</label>
+      <div class="field"><label for="provSel" data-th="ภาคหรือจังหวัด (จังหวัดแสดงเขตอำเภอและตำบล)">Region or province (a province shows its districts and sub-districts)</label>
         <select id="provSel"></select></div>
       <div class="dev-only">
       <div class="field"><label for="mapkey">NASA FIRMS MAP_KEY</label>
@@ -1457,20 +1458,26 @@ const REGION_PROV={
 const REGION_CACHE={};
 // "Area shown" is Thailand or the whole map; under Thailand a second menu (#provSel) narrows it to one province, where the
 // districts and sub-districts are then drawn at every zoom (drawAdm). provKey(): the province's English name, '' for none
-const provKey=()=>$('region').value==='thailand'?($('provSel')?.value||''):'';
+// the second menu also offers the five Thai regions (value 'r:north' …), as before the province menu (owner, 27 Nov 2026)
+const SUB_REG=[['north','Northern Thailand','ภาคเหนือ'],['northeast','Northeastern Thailand (Isan)','ภาคตะวันออกเฉียงเหนือ (อีสาน)'],['central','Central Thailand','ภาคกลาง'],['east','Eastern Thailand','ภาคตะวันออก'],['south','Southern Thailand','ภาคใต้']];
+const subVal=()=>$('region').value==='thailand'?($('provSel')?.value||''):'';
+const regSub=()=>{ const v=subVal(); return v.startsWith('r:')?v.slice(2):''; };
+const provKey=()=>{ const v=subVal(); return v&&!v.startsWith('r:')?v:''; };
 const provSelP=()=>{ const n=provKey(); return n?GEO_P.features.find(f=>f.properties.c==='THA'&&f.properties.n===n)?.properties||null:null; };
-const regKey=()=>$('region').value+(provKey()?':'+provKey():'');
-const regionLabel=()=>{ const p=provSelP(); return p?provName(p):($('region').selectedOptions[0]?.textContent||'').trim(); };
+const regKey=()=>$('region').value+(subVal()?':'+subVal():'');
+const regionLabel=()=>{ const p=provSelP(); if(p) return provName(p); const r=SUB_REG.find(x=>x[0]===regSub()); return r?T(r[1],r[2]):($('region').selectedOptions[0]?.textContent||'').trim(); };
 function provSelFill(){ const el=$('provSel'); if(!el) return; const cur=el.value;
   const ps=GEO_P.features.filter(f=>f.properties.c==='THA').map(f=>f.properties).sort((a,b)=>provName(a).localeCompare(provName(b),LANG==='th'?'th':'en'));
-  el.textContent=''; el.add(new Option(T('All provinces (whole country)','ทุกจังหวัด (ทั้งประเทศ)'),'')); for(const q of ps) el.add(new Option(provName(q),q.n)); el.value=cur;
+  el.textContent=''; el.add(new Option(T('Whole country','ทั้งประเทศ'),''));
+  const gR=document.createElement('optgroup'); gR.label=T('Region','ภาค'); for(const [k,en,th] of SUB_REG) gR.appendChild(new Option(T(en,th),'r:'+k)); el.appendChild(gR);
+  const gP=document.createElement('optgroup'); gP.label=T('Province (districts and sub-districts)','จังหวัด (เขตอำเภอและตำบล)'); for(const q of ps) gP.appendChild(new Option(provName(q),q.n)); el.appendChild(gP); el.value=cur;
   if(el.value!==cur) el.value=''; }
 function provSelSync(){ const f=$('provSel')?.closest('.field'); if(f) f.hidden=$('region').value!=='thailand'; }
 { provSelFill(); const v=store.get('hsw.prov'); if(v&&[...$('provSel').options].some(o=>o.value===v)) $('provSel').value=v; provSelSync();
   $('provSel').addEventListener('change',()=>store.set('hsw.prov',$('provSel').value)); }
 function regionShape(){ // {polys:[[ring,...],...] in [lon,lat], bbox} or null for the whole domain
   if($('region').value==='msea') return null; const pk=provKey(), k=regKey(); if(REGION_CACHE[k]) return REGION_CACHE[k];
-  const feats=GEO_P.features.filter(f=>f.properties.c==='THA'&&(pk?f.properties.n===pk:true));
+  const rs=regSub(), feats=GEO_P.features.filter(f=>f.properties.c==='THA'&&(pk?f.properties.n===pk:rs?(REGION_PROV[rs]||[]).includes(f.properties.n):true));
   const polys=[]; let w=180,so=90,e=-180,n=-90;
   for(const f of feats){const ps=f.geometry.type==='Polygon'?[f.geometry.coordinates]:f.geometry.coordinates;
     for(const pg of ps){polys.push(pg); for(const [x,y] of pg[0]){w=Math.min(w,x);e=Math.max(e,x);so=Math.min(so,y);n=Math.max(n,y);}}}
@@ -2881,8 +2888,10 @@ const LogoCtl=L.Control.extend({onAdd(){ const d=L.DomUtil.create('div','maplogo
 if(PUBLIC){ const mc=map.getContainer(); mc.addEventListener('contextmenu',e=>e.preventDefault()); mc.addEventListener('dragstart',e=>e.preventDefault()); }
 // every page: save the map as a PNG with the logo, a title (SEA-HAF, what is shown, the forecast time) and the legend.
 // Hourly = the hour on the time bar; 24-h mean = yesterday (00–24 h), weekly = last week (Monday–Sunday), monthly = last calendar
-// month, from the stored hourly analysis (data/pm-mean.json from scripts/pmmean.mjs). Drawn from the data on a canvas (not a screen grab): the PM2.5 field
+// month, from the stored hourly analysis (data/pm-days, one mean map per day, from scripts/pmmean.mjs; the viewer picks the days on a calendar). Drawn from the data on a canvas (not a screen grab): the PM2.5 field
 // over the area on screen, countries and provinces on top, the Thai PM2.5 colours.
+// the days the calendar offers (data/pm-days/index.json), loaded when the save panel opens
+let PMDAYS=null; async function loadPmDays(){ if(PMDAYS) return PMDAYS; try{ const r=await fetch('data/pm-days/index.json?ts='+Date.now(),{cache:'no-store'}); PMDAYS=r.ok?await r.json():{days:[]}; }catch(e){ PMDAYS={days:[]}; } return PMDAYS; }
 async function saveMapImage(kind,btn){
   const G=P.data?.grid; if(!G){ alert(T('No forecast loaded yet.','ยังไม่มีข้อมูลพยากรณ์')); return; }
   const b0=btn.textContent; btn.disabled=true; btn.textContent=T('Making the image…','กำลังสร้างภาพ…'); await new Promise(r=>setTimeout(r,30));
@@ -2920,20 +2929,26 @@ async function saveMapImage(kind,btn){
       sub=(t>Date.now()?T('Forecast for ','พยากรณ์ ณ '):T('Map for ','แผนที่ ณ '))+dl(t)+T(' (Thai time)',' น. (เวลาไทย)');
       stamp=new Date(t+7*HR).toISOString().slice(0,13).replace(/[-T:]/g,'');
     } else {
-      // calendar periods from the pipeline's stored hourly analysis (data/pm-mean.json): yesterday 00–24 h, last week
-      // Monday–Sunday, last calendar month (Thai dates); a period the store does not cover yet is refused with when it will be
-      const r=await fetch('data/pm-mean.json?ts='+Date.now(),{cache:'no-store'}); const M=r.ok?await r.json():null, D=M?.version>=2?M[{d:'day',w:'week',m:'month'}[kind]]:null;
-      if(!D) throw new Error({d:T('there is no stored data for yesterday yet (the store began on 23 Nov 2026).','ยังไม่มีข้อมูลของเมื่อวาน (ระบบเริ่มเก็บข้อมูล 23 พ.ย. 2569)'),
-        w:T('there is no stored data for last week yet (the first week, 23–29 Nov 2026, can be saved from 30 Nov).','ยังไม่มีข้อมูลของสัปดาห์ที่แล้ว (สัปดาห์แรกคือ 23–29 พ.ย. 2569 บันทึกได้ตั้งแต่ 30 พ.ย.)'),
-        m:T('there is no stored data for last month yet (the first month, November 2026 from the 23rd, can be saved from 1 Dec).','ยังไม่มีข้อมูลของเดือนที่แล้ว (เดือนแรกคือ พ.ย. 2569 ตั้งแต่วันที่ 23 บันทึกได้ตั้งแต่ 1 ธ.ค.)')}[kind]);
+      // a range of Thai days chosen on the calendar (owner, 27 Nov 2026): the mean of the published day maps (data/pm-days from
+      // scripts/pmmean.mjs: each complete day's mean of the hourly analysis), averaged cell by cell over the days that have a value
+      const rng=S.saveRange||{}, from=rng.from, to=rng.to; if(!from||!to) throw new Error(T('choose the first and last day.','กรุณาเลือกวันเริ่มต้นและวันสุดท้าย'));
+      const IX=await loadPmDays(); const days=(IX?.days||[]).filter(x=>x.day>=from&&x.day<=to).map(x=>x.day);
+      const want=Math.round((Date.parse(to)-Date.parse(from))/864e5)+1;
+      if(!days.length) throw new Error(T(`there is no stored data between ${from} and ${to}.`,`ไม่มีข้อมูลที่เก็บไว้ระหว่าง ${from} ถึง ${to}`));
+      btn.textContent=T(`Reading ${days.length} day(s)…`,`กำลังอ่านข้อมูล ${days.length} วัน…`);
+      let D=null, acc=null, cnt=null;
+      for(const day of days){ const r=await fetch(`data/pm-days/${day.replace(/-/g,'')}.json`); if(!r.ok) continue; const f=await r.json(), a=await inflateB64(f.d);
+        if(!D){ D={lon0:f.lon0,lat0:f.lat0,step:f.step,nx:f.nx,ny:f.ny,scale:f.scale}; acc=new Float64Array(f.nx*f.ny); cnt=new Uint16Array(f.nx*f.ny); }
+        if(f.nx!==D.nx||f.ny!==D.ny) continue; for(let q=0;q<a.length;q++){ if(a[q]>=0){ acc[q]+=a[q]; cnt[q]++; } } }
+      if(!D) throw new Error(T('the stored days could not be read.','อ่านข้อมูลวันที่เก็บไว้ไม่ได้'));
       cell=D.step; const x0=Math.max(0,Math.floor((w-D.lon0)/cell)), x1=Math.min(D.nx-1,Math.ceil((e-D.lon0)/cell)), y0=Math.max(0,Math.floor((so-D.lat0)/cell)), y1=Math.min(D.ny-1,Math.ceil((n-D.lat0)/cell));
       w=D.lon0+x0*cell; e=D.lon0+x1*cell; so=D.lat0+y0*cell; n=D.lat0+y1*cell; fx=x1-x0+1; fy=y1-y0+1; F=new Float32Array(fx*fy);
-      for(let y=0;y<fy;y++) for(let x=0;x<fx;x++){ const v=D.values[(y0+y)*D.nx+x0+x]; F[y*fx+x]=v<0?NaN:v/D.scale; }
+      for(let y=0;y<fy;y++) for(let x=0;x<fx;x++){ const q=(y0+y)*D.nx+x0+x; F[y*fx+x]=cnt[q]?acc[q]/cnt[q]/D.scale:NaN; }
       const dLong=s_=>new Date(s_+'T12:00:00+07:00').toLocaleDateString(LOC(),{weekday:'long',day:'numeric',month:'long',year:'numeric',timeZone:'Asia/Bangkok'});
-      const cover=D.days<D.want?T(` (data on ${D.days} of ${D.want} days)`,` (มีข้อมูล ${D.days} จาก ${D.want} วัน)`):'';
-      if(kind==='d'){ title=T('PM2.5, 24-hour mean','PM2.5 ค่าเฉลี่ย 24 ชั่วโมง'); sub=dLong(D.from)+T(' (00:00–24:00 Thai time)',' (00:00–24:00 น.)'); stamp=D.from.replace(/-/g,''); }
-      else if(kind==='w'){ title=T('PM2.5, weekly mean','PM2.5 ค่าเฉลี่ยรายสัปดาห์'); sub=T('Week ','สัปดาห์ ')+`${dd(D.from)} – ${dd(D.to)}`+T(' (Mon–Sun)',' (จ.–อา.)')+cover; stamp=D.from.replace(/-/g,''); }
-      else { title=T('PM2.5, monthly mean','PM2.5 ค่าเฉลี่ยรายเดือน'); sub=new Date(D.month+'-15T12:00:00+07:00').toLocaleDateString(LOC(),{month:'long',year:'numeric',timeZone:'Asia/Bangkok'})+cover; stamp=D.month.replace('-',''); }
+      const cover=days.length<want?T(` (data on ${days.length} of ${want} days)`,` (มีข้อมูล ${days.length} จาก ${want} วัน)`):'';
+      if(want===1){ title=T('PM2.5, 24-hour mean','PM2.5 ค่าเฉลี่ย 24 ชั่วโมง'); sub=dLong(from)+T(' (00:00–24:00 Thai time)',' (00:00–24:00 น.)'); }
+      else { title=T(`PM2.5, ${want}-day mean`,`PM2.5 ค่าเฉลี่ย ${want} วัน`); sub=`${dd(from)} – ${dd(to)}`+T(' (Thai time, 00:00 of the first day to 24:00 of the last)',' (00:00 น. วันแรก ถึง 24:00 น. วันสุดท้าย)')+cover; }
+      stamp=from.replace(/-/g,'')+(want>1?'-'+to.replace(/-/g,''):'');
       meta=T('mean of the hourly analysis (model + monitors)','ค่าเฉลี่ยของค่าวิเคราะห์รายชั่วโมง (แบบจำลอง + ค่าตรวจวัด)')+` · SEA-HAF · ${T('made','สร้างภาพ')} ${dl(Date.now())}`; }
     // layout: header (logo, title, time), map, legend and credits; size from the area (equirectangular, x shrunk by cos lat)
     const W=1600, pad=36, asp=(n-so)/((e-w)*Math.cos((so+n)/2*Math.PI/180)), mapH=Math.round(Math.min(2000,(W-2*pad)*asp)), mapW=Math.round(Math.min(W-2*pad,mapH/asp)), mx=Math.round((W-mapW)/2), head=150, foot=130; let Hh=head+mapH+foot;
@@ -3152,7 +3167,7 @@ async function saveMapImage(kind,btn){
     g.font=font(400,15); g.fillStyle='#38423e'; klines.forEach((l,j)=>g.fillText(l,kx,k0+20*j,kw));
     g.font=font(400,16); g.fillStyle='#5d6763';
     g.fillText(T('Data: CAMS (Copernicus Atmosphere Monitoring Service), Air4Thai (PCD), OpenAQ, ECMWF, NASA FIRMS','ข้อมูล: CAMS (Copernicus Atmosphere Monitoring Service), Air4Thai (กรมควบคุมมลพิษ), OpenAQ, ECMWF, NASA FIRMS')+credits.map(c=>', '+c).join('')+T(' · Borders: World Bank',' · เส้นขอบ: World Bank'),pad,Hh-24,W-2*pad);
-    const name=`SEA-HAF_${{rain:'rain',temp:'temperature',vent:'ventilation',fire:'PM25-fire',silam:'PM25-SILAM',unc:'uncertainty',nasa:'NASA-truecolour'}[shownMode]||'PM25'}_${{h:'hourly',d:'24h',w:'weekly',m:'monthly'}[kind]}${RS?'_'+(provKey()?provKey().replace(/\s+/g,'-'):$('region').value):''}${stamp?'_'+stamp:''}.png`;
+    const name=`SEA-HAF_${{rain:'rain',temp:'temperature',vent:'ventilation',fire:'PM25-fire',silam:'PM25-SILAM',unc:'uncertainty',nasa:'NASA-truecolour'}[shownMode]||'PM25'}_${kind==='h'?'hourly':'mean'}${RS?'_'+(provKey()?provKey().replace(/\s+/g,'-'):regSub()||$('region').value):''}${stamp?'_'+stamp:''}.png`;
     await new Promise(res=>cv.toBlob(bl=>{ const a=document.createElement('a'); a.href=URL.createObjectURL(bl); a.download=name; document.body.appendChild(a); a.click(); setTimeout(()=>{URL.revokeObjectURL(a.href); a.remove();},1000); res(); },'image/png'));
   }catch(err){ alert(T('Could not make the image: ','สร้างภาพไม่ได้: ')+err.message); }
   finally{ btn.disabled=false; btn.textContent=b0; }
@@ -3162,12 +3177,25 @@ async function saveMapImage(kind,btn){
     const dl=(en,th)=>`<span data-en="${en.replace(/"/g,'&quot;')}" data-th="${th.replace(/"/g,'&quot;')}">${T(en,th)}</span>`;   // both languages: a language switch relabels the panel (applyStaticLang)
     d.innerHTML=`<div class="leaflet-bar"><a role="button" href="#"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg></a></div>`+
       `<div class="savepop" hidden><b>${dl('Save the map as an image','บันทึกแผนที่เป็นรูปภาพ')}</b>`+
-      [['h',dl('Hourly (the hour on the time bar)','รายชั่วโมง (เวลาบนแถบเวลา)')],['d',dl('24-hour mean (yesterday, 00–24 h)','เฉลี่ย 24 ชั่วโมง (เมื่อวาน 00–24 น.)')],['w',dl('Weekly mean (last week, Mon–Sun)','เฉลี่ยรายสัปดาห์ (สัปดาห์ที่แล้ว จ.–อา.)')],['m',dl('Monthly mean (last month)','เฉลี่ยรายเดือน (เดือนที่แล้ว)')]]
+      [['h',dl('Hourly (the hour on the time bar)','รายชั่วโมง (เวลาบนแถบเวลา)')],['r',dl('Mean over days I choose (calendar)','ค่าเฉลี่ยตามช่วงวันที่เลือก (ปฏิทิน)')]]
         .map(([k,l],j)=>`<label><input type="radio" name="saveKind" value="${k}"${j?'':' checked'}> ${l}</label>`).join('')+
-      `<div class="note" style="font-size:.7rem">${dl('Area: as set in "Area shown" (a region, Thailand or the whole map). Logo, title, time and legend are added. The hourly image shows the data layer chosen and everything switched on under "Show on map" (wind as arrows, radar, contours, stations, hotspots, accuracy badges, names).','พื้นที่: ตามที่ตั้งไว้ใน "พื้นที่แสดงผล" (ภาค ประเทศไทย หรือทั้งแผนที่) มีโลโก้ ชื่อ วันเวลา และคำอธิบายสีในภาพ ภาพรายชั่วโมงมีชั้นข้อมูลที่เลือกและทุกอย่างที่เปิดไว้ใน "แสดงบนแผนที่" (ลมแสดงเป็นลูกศร เรดาร์ เส้นแบ่งระดับ สถานี จุดความร้อน ป้ายความแม่นยำ ชื่อ)')}</div><button type="button" data-en="Save PNG" data-th="บันทึก PNG">${T('Save PNG','บันทึก PNG')}</button></div>`;
+      `<div class="saverange" hidden><label>${dl('From','ตั้งแต่วันที่')} <input type="date" class="sr-from"></label><label>${dl('To','ถึงวันที่')} <input type="date" class="sr-to"></label>`+
+      `<div class="note sr-days" style="font-size:.7rem"></div></div>`+
+      `<div class="note" style="font-size:.7rem">${dl('Area: as set in "Area shown" (the whole map, Thailand, a region or a province). Logo, title, time and legend are added. The hourly image shows the data layer chosen and everything switched on under "Show on map" (wind as arrows, radar, contours, stations, hotspots, accuracy badges, names).','พื้นที่: ตามที่ตั้งไว้ใน "พื้นที่แสดงผล" (ทั้งแผนที่ ประเทศไทย ภาค หรือจังหวัด) มีโลโก้ ชื่อ วันเวลา และคำอธิบายสีในภาพ ภาพรายชั่วโมงมีชั้นข้อมูลที่เลือกและทุกอย่างที่เปิดไว้ใน "แสดงบนแผนที่" (ลมแสดงเป็นลูกศร เรดาร์ เส้นแบ่งระดับ สถานี จุดความร้อน ป้ายความแม่นยำ ชื่อ)')}</div><button type="button" data-en="Save PNG" data-th="บันทึก PNG">${T('Save PNG','บันทึก PNG')}</button></div>`;
     (S.saveRelabel=()=>{ const a=d.querySelector('a'), t=T('Save the map as an image','บันทึกแผนที่เป็นรูปภาพ'); a.title=t; a.setAttribute('aria-label',t); })();
     L.DomEvent.disableClickPropagation(d); L.DomEvent.disableScrollPropagation(d);
     const pop=d.querySelector('.savepop');
+    const rg=d.querySelector('.saverange'), iF=d.querySelector('.sr-from'), iT=d.querySelector('.sr-to'), note=d.querySelector('.sr-days');
+    const fmtD=x=>new Date(x+'T12:00:00+07:00').toLocaleDateString(LOC(),{day:'numeric',month:'short',year:'numeric',timeZone:'Asia/Bangkok'});
+    // the calendar: only the stored days can be chosen (min / max); the default is the last 7 stored days
+    const fillRange=async()=>{ const IX=await loadPmDays(), ds=(IX.days||[]).map(x=>x.day);
+      if(!ds.length){ iF.disabled=iT.disabled=true; note.textContent=T('No stored days yet.','ยังไม่มีข้อมูลรายวันที่เก็บไว้'); return; }
+      const lo=ds[0], hi=ds.at(-1); for(const i of [iF,iT]){ i.min=lo; i.max=hi; }
+      if(!iT.value) iT.value=hi; if(!iF.value) iF.value=ds[Math.max(0,ds.length-7)];
+      const upd=()=>{ if(iF.value>iT.value) iT.value=iF.value; const n=ds.filter(x=>x>=iF.value&&x<=iT.value).length, want=Math.round((Date.parse(iT.value)-Date.parse(iF.value))/864e5)+1;
+        S.saveRange={from:iF.value,to:iT.value}; note.textContent=T(`Stored days: ${fmtD(lo)} – ${fmtD(hi)}. Chosen: ${want} day(s), ${n} with data.`,`มีข้อมูลวันที่ ${fmtD(lo)} – ${fmtD(hi)} · เลือก ${want} วัน มีข้อมูล ${n} วัน`); };
+      iF.onchange=iT.onchange=upd; upd(); };
+    for(const r_ of d.querySelectorAll('input[name=saveKind]')) r_.addEventListener('change',()=>{ rg.hidden=d.querySelector('input[name=saveKind]:checked').value!=='r'; if(!rg.hidden) fillRange(); });
     d.querySelector('a').addEventListener('click',ev=>{ ev.preventDefault(); pop.hidden=!pop.hidden; });
     d.querySelector('.savepop button').addEventListener('click',ev=>saveMapImage(d.querySelector('input[name=saveKind]:checked').value,ev.currentTarget));
     return d; }});

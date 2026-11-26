@@ -251,6 +251,7 @@ jobs:
           # the SILAM chain's page files (absent when its run failed: the page then hides the SILAM layer)
           if [ -f data/silam/latest.json ]; then mkdir -p _site/data/silam && cp data/silam/*.json _site/data/silam/; fi
           [ -d data/static/prclim ] && cp -r data/static/prclim _site/data/static/ || true
+          [ -d data/pm-days ] && cp -r data/pm-days _site/data/ || true   # the save-image calendar's day maps (scripts/pmmean.mjs)
           ls -la _site _site/data
 
       - uses: actions/configure-pages@v6

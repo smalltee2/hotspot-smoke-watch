@@ -39,3 +39,15 @@ test('update: yesterday, last week and last month from the day files; the finish
   assert.ok(fs.existsSync(path.join(hist, '2026-11', 'pmmonth-202611.json'))); assert.match(msg, /last month 2026-11: 8 of 30/);
   fs.rmSync(dir, { recursive: true, force: true });
 });
+test('calendar day maps: complete days before today, Int16 x10 deflated, index', async () => {
+  const { updatePmMean, dayFile } = await import('./pmmean.mjs'); const zlib = await import('node:zlib');
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'pmd-')), out = path.join(dir, 'pm-mean.json'), hist = path.join(dir, 'history'), H = 3600e3;
+  const g = { lon0: 100, lat0: 15, step: 0.05, nx: 2, ny: 1 }, t0 = Date.parse('2026-11-24T17:00:00Z');   // 25 Nov 00:00 Thai time
+  for (let h = 1; h <= 20; h++) await updatePmMean(hist, out, { ...g, t: t0 + h * H, values: [20, null] }, t0 + 3 * 864e5);
+  await updatePmMean(hist, out, null, t0 + 3 * 864e5);
+  const idx = JSON.parse(fs.readFileSync(path.join(dir, 'pm-days', 'index.json'), 'utf8'));
+  assert.deepEqual(idx.days.map(d => d.day), ['2026-11-25']);
+  const f = JSON.parse(fs.readFileSync(path.join(dir, 'pm-days', '20261125.json'), 'utf8'));
+  const a = new Int16Array(new Uint8Array(zlib.inflateSync(Buffer.from(f.d, 'base64'))).buffer);
+  assert.deepEqual([...a], [200, -1]); assert.equal(f.hours, 20); assert.equal(typeof dayFile, 'function');
+});

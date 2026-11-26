@@ -5,8 +5,13 @@
 // branch like the other logs). data/pm-mean.json (published) holds the mean of yesterday, of last week's days and of last month's days (days
 // with >= minHours analysed hours). A finished month is also written once to data/history/YYYY-MM/pmmonth-YYYYMM.json (no 8-digit
 // date in the name, so the 35-day pruning keeps it) while all its days are still stored; later runs read that file.
+// Since 27 Nov 2026 the page lets the viewer pick any range of days on a calendar: every complete day (>= minHours analysed hours,
+// before today) is also published as its own mean map, data/pm-days/YYYYMMDD.json ({ day, hours, grid, scale: 10,
+// enc: 'deflate-int16', d: base64 of the zlib-deflated Int16 values, -1 = none }), listed in data/pm-days/index.json; the page
+// averages the days chosen. Rebuilt every run from the stored day files, so the range reaches back as far as they do (35 days).
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import zlib from 'node:zlib';
 
 export const PMM = { minHours: 18, week: 7, month: 30 };
 const H = 3600e3;
@@ -30,6 +35,13 @@ export function meanOf(docs) {
   const values = new Array(n); for (let q = 0; q < n; q++) values[q] = cnt[q] ? Math.round(acc[q] / cnt[q] * 10) : -1;
   const days = use.map(d => d.day).sort();
   return { from: days[0], to: days.at(-1), days: days.length, lon0: g.lon0, lat0: g.lat0, step: g.step, nx: g.nx, ny: g.ny, scale: 10, values };
+}
+/** one day's mean map as published for the calendar: Int16 (µg/m³ × 10, −1 = none), zlib-deflated, base64 */
+export function dayFile(doc) {
+  const h = doc.hours.length, n = doc.nx * doc.ny, a = new Int16Array(n);
+  for (let q = 0; q < n; q++) { const s = doc.sum[q]; a[q] = s >= 0 ? Math.min(32767, Math.round(s / h * 10)) : -1; }
+  return { day: doc.day, hours: h, lon0: doc.lon0, lat0: doc.lat0, step: doc.step, nx: doc.nx, ny: doc.ny, scale: 10, enc: 'deflate-int16',
+    d: zlib.deflateSync(Buffer.from(a.buffer), { level: 9 }).toString('base64') };
 }
 const addDays = (d, n) => new Date(Date.parse(d + 'T12:00:00Z') + n * 864e5).toISOString().slice(0, 10);
 /** yesterday, last week (Monday–Sunday) and last calendar month, as Thai dates, for the Thai date of now */
@@ -58,7 +70,14 @@ export async function updatePmMean(histDir, outFile, ana, now = Date.now()) {
     let month = await readJ(mf);
     if (!month) { month = meanOf(await load(P.month.from, P.month.to)); if (month) { await fs.mkdir(path.dirname(mf), { recursive: true }); await fs.writeFile(mf, JSON.stringify(month)); } }
     const wrap = (m, p) => m ? { ...m, ...p, days: m.days, from: p.from, to: p.to, firstDay: m.from, lastDay: m.to } : null;
+    // the calendar's day maps (complete days before today), and their index
+    const dayDir = path.join(path.dirname(outFile), 'pm-days'), today = thaiDay(now), listed = [];
+    await fs.rm(dayDir, { recursive: true, force: true }); await fs.mkdir(dayDir, { recursive: true });
+    for (const x of files.filter(x => x.day < today).sort((a, b) => a.day.localeCompare(b.day))) { const d = await readJ(x.f);
+      if (!d?.hours || d.hours.length < PMM.minHours) continue;
+      await fs.writeFile(path.join(dayDir, `${x.day.replace(/-/g, '')}.json`), JSON.stringify(dayFile(d))); listed.push({ day: x.day, hours: d.hours.length }); }
+    await fs.writeFile(path.join(dayDir, 'index.json'), JSON.stringify({ version: 1, generated: now, minHours: PMM.minHours, days: listed }));
     await fs.writeFile(outFile, JSON.stringify({ version: 2, generated: now, basis: 'hourly analysis (CAMS x station bias field), 0.05 deg', day: wrap(day, P.day), week: wrap(week, P.week), month: wrap(month, P.month) }));
-    return `daily / weekly / monthly mean maps: ${files.length} day file(s); yesterday ${P.day.from}: ${day ? 'yes' : 'no data'}; last week ${P.week.from}..${P.week.to}: ${week ? week.days + ' of 7 days' : 'no data'}; last month ${P.month.month}: ${month ? month.days + ' of ' + P.month.want + ' days' : 'no data'}`;
+    return `daily / weekly / monthly mean maps: ${files.length} day file(s), ${listed.length} complete day(s) published for the calendar; yesterday ${P.day.from}: ${day ? 'yes' : 'no data'}; last week ${P.week.from}..${P.week.to}: ${week ? week.days + ' of 7 days' : 'no data'}; last month ${P.month.month}: ${month ? month.days + ' of ' + P.month.want + ' days' : 'no data'}`;
   } catch (e) { return `daily / weekly / monthly mean maps failed: ${e.message}`; }
 }

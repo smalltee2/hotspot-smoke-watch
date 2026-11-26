@@ -573,7 +573,6 @@ td.num{text-align:right;font-family:var(--font-data);font-variant-numeric:tabula
         <summary><span class="acct" data-th="แบบจำลองแม่นแค่ไหน">How right has the forecast been?</span><span id="accHead" class="acchead"></span></summary>
         <div class="accseg" role="group" aria-label="Area">
           <button type="button" data-acc="here" aria-pressed="true" data-th="ที่นี่">Here</button>
-          <button type="button" data-acc="region" aria-pressed="false" data-th="ภาค">Region</button>
           <button type="button" data-acc="th" aria-pressed="false" data-th="ไทย">Thailand</button>
         </div>
         <div id="accBody"></div>
@@ -2199,7 +2198,7 @@ async function loadVerify(){
 
 // ---- how right the forecast has been lately (data/accuracy.json from scripts/accuracy.mjs, rebuilt every run: the last 7 days
 // of hourly values at the hourly reference monitors, per station; summed here for the chosen area)
-let ACCD=null, ACC_AT=null, ACC_LEVEL=({here:1,region:1,th:1}[store.get('hsw.accLevel')]&&store.get('hsw.accLevel'))||'here', ACC_REG=store.get('hsw.accReg')||'';
+let ACCD=null, ACC_AT=null, ACC_LEVEL=({here:1,th:1}[store.get('hsw.accLevel')]&&store.get('hsw.accLevel'))||'here', ACC_REG=store.get('hsw.accReg')||'';
 const accLayer=L.layerGroup(), accLcLayer=L.layerGroup(), iqLayer=L.layerGroup();
 // one map item "Forecast accuracy", compared with: the reference monitors (ref, the headline score), the OpenAQ low-cost
 // sensors (lc, scored apart) or IQAir (iq, IQAir as the reference); one set of badges at a time, so they never pile up or get mixed
@@ -3012,12 +3011,32 @@ async function saveMapImage(kind,btn){
     if(RS){ regionPath(); g.strokeStyle='#1d2321'; g.lineWidth=2.2; g.stroke(); }
     // the layers switched on in the map at this moment (hourly image only: they belong to the hour on the time bar): drawn from the
     // map's own markers, so the image shows what the viewer sees: towns, hotspots, stations (Air4Thai / OpenAQ), accuracy badges
-    const shownKeys=[];
-    if(kind==='h'){ const sc=Math.max(1.3,mapW/1100), INK='#1d2321';
+    const shownKeys=[], imgLabels=[], scA=Math.max(1.3,mapW/1100);
+    // place names in every image (owner, 27 Nov 2026): a province chosen gets its sub-district and district borders and names
+    // (district names first, sub-district names where they fit), any other area its province names; names never overlap
+    const free=r_=>!imgLabels.some(q=>r_[0]<q[0]+q[2]&&q[0]<r_[0]+r_[2]&&r_[1]<q[1]+q[3]&&q[1]<r_[1]+r_[3]);
+    const nameAt=(tx_,x,y,px,wt,col,italic)=>{ g.font=(italic?'italic ':'')+font(wt,Math.round(px)); const tw_=g.measureText(tx_).width, r_=[x-tw_/2-2,y-px*0.75,tw_+4,px*1.3];
+      if(x<mx||x>mx+mapW||y<head||y>head+mapH||!free(r_)) return false; imgLabels.push(r_);
+      g.textAlign='center'; g.lineJoin='round'; g.strokeStyle='rgba(255,255,255,.88)'; g.lineWidth=Math.max(3,px*0.28); g.strokeText(tx_,x,y+px*0.35); g.fillStyle=col; g.fillText(tx_,x,y+px*0.35); g.textAlign='left'; return true; };
+    const cOf=f_=>{ const c_=provCentroid(f_); return [c_.lng??c_[1],c_.lat??c_[0]]; };
+    let nAdm=0;
+    if(provKey()){ const pv=provSelP(); await Promise.all([loadAdm(2),loadAdm(3)]);
+      const geomPath=gm=>{ g.beginPath(); for(const pg of (gm.type==='Polygon'?[gm.coordinates]:gm.coordinates)) for(const ring of pg){ ring.forEach(([lo,la],k)=>k?g.lineTo(X(lo),Y(la)):g.moveTo(X(lo),Y(la))); g.closePath(); } };
+      const t3=(ADM[3]?.features||[]).filter(f_=>f_.properties.pth===pv.th), t2=(ADM[2]?.features||[]).filter(f_=>f_.properties.pth===pv.th);
+      g.setLineDash([2*scA,3*scA]); g.strokeStyle='rgba(60,70,66,.55)'; g.lineWidth=0.8*scA; for(const f_ of t3){ geomPath(f_.geometry); g.stroke(); } g.setLineDash([]);
+      g.strokeStyle='rgba(29,35,33,.85)'; g.lineWidth=1.4*scA; for(const f_ of t2){ geomPath(f_.geometry); g.stroke(); }
+      if(RS){ regionPath(); g.strokeStyle='#1d2321'; g.lineWidth=2.2; g.stroke(); }
+      for(const f_ of t2){ const [lo,la]=cOf(f_); if(nameAt(admName(f_.properties,2),X(lo),Y(la),14*scA,700,'#1d2321')) nAdm++; }
+      for(const f_ of t3){ const [lo,la]=cOf(f_); nameAt(LANG==='th'?f_.properties.th:f_.properties.en,X(lo),Y(la),10.5*scA,500,'#38423e',true); }
+      shownKeys.push(['adm',T(`District (bold) and sub-district borders and names, ${provName(pv)}`,`เขตและชื่ออำเภอ (ตัวหนา) และตำบล จ.${provName(pv)}`)]);
+      credits.push(T('district and sub-district borders: Royal Thai Survey Department 2022 via OCHA','เขตอำเภอและตำบล: กรมแผนที่ทหาร 2565 ผ่าน OCHA')); }
+    else for(const f_ of GEO_P.features){ if(f_.properties.c!=='THA') continue; const [lo,la]=cOf(f_); if(RS&&!inRegion(la,lo)) continue;
+      if(nameAt(provLabelText(f_),X(lo),Y(la),(RS?12:10.5)*scA,600,'#38423e')) nAdm++; }
+    if(kind==='h'){ const sc=scA, INK='#1d2321';
       const each=(layer,fn)=>{ if(!map.hasLayer(layer)) return 0; let k=0; layer.eachLayer(m=>{ const ll=m.getLatLng?.(); if(ll&&ll.lng>=w&&ll.lng<=e&&ll.lat>=so&&ll.lat<=n){ if(fn(m,X(ll.lng),Y(ll.lat))!==false) k++; } }); return k; };
       const html=m=>m.options?.icon?.options?.html||'', css=(h,p)=>(new RegExp(p+':\\s*([^;"]+)').exec(h)||[])[1];
       const circ=(x,y,r,fill,stroke,lw,alpha=1)=>{ g.globalAlpha=alpha; g.beginPath(); g.arc(x,y,r,0,2*Math.PI); if(fill){ g.fillStyle=fill; g.fill(); } if(stroke){ g.strokeStyle=stroke; g.lineWidth=lw; g.stroke(); } g.globalAlpha=1; };
-      const labels=[];
+      const labels=imgLabels;   // town names avoid the place names already written
       // lines, areas and circles of the layers switched on (contour lines, back-trajectories, the fire-smoke paths, the NASA
       // assessment box, my location), drawn from the map's own shapes with their colours, widths and dashes
       const vec=layer=>{ if(!layer||!map.hasLayer(layer)) return 0; let k=0;
@@ -3056,12 +3075,7 @@ async function saveMapImage(kind,btn){
         const tx_=String(tt.getContent()).replace(/<[^>]+>/g,'').replace(/&amp;/g,'&'), r_=[x+8*sc,y-10*sc,g.measureText(tx_).width,16*sc];
         if(labels.some(q=>r_[0]<q[0]+q[2]&&q[0]<r_[0]+r_[2]&&r_[1]<q[1]+q[3]&&q[1]<r_[1]+r_[3])) return false;   // no name over another
         labels.push(r_); g.strokeText(tx_,x+8*sc,y+4*sc); g.fillText(tx_,x+8*sc,y+4*sc); return false; });
-      // province names (when "Province borders and names" is on): after the town names, left out where they would overlap one
-      let nProv=0;
-      if(shown('shProv')) for(const f_ of GEO_P.features){ const c_=provCentroid(f_), x=X(c_.lng), y=Y(c_.lat); if(c_.lng<w||c_.lng>e||c_.lat<so||c_.lat>n) continue;
-        const tx_=provLabelText(f_); g.font=font(500,Math.round(11*sc)); const tw_=g.measureText(tx_).width, r_=[x-tw_/2,y-8*sc,tw_,14*sc];
-        if(labels.some(q=>r_[0]<q[0]+q[2]&&q[0]<r_[0]+r_[2]&&r_[1]<q[1]+q[3]&&q[1]<r_[1]+r_[3])) continue; labels.push(r_);
-        g.textAlign='center'; g.fillStyle='#4a5450'; g.strokeStyle='rgba(255,255,255,.8)'; g.lineWidth=3; g.strokeText(tx_,x,y+4*sc); g.fillText(tx_,x,y+4*sc); g.textAlign='left'; nProv++; }
+      let nProv=0;   // province names: written above for every image
       const nHot=each(hotLayer,(m,x,y)=>{ if(!(m instanceof L.CircleMarker)) return false; const o=m.options; circ(x,y,o.radius*sc*0.85,o.fillColor,o.color,Math.max(1,(o.weight||1)*sc*0.7),o.fillOpacity??0.9); });
       // stations: OpenAQ / other monitors as squares (low-cost sensors faded), Air4Thai as a measured centre with the forecast ring
       const nSt=each(stationLayer,(m,x,y)=>{ const h=html(m), bg=css(h,'background'); if(!bg) return false; const a=/opacity:\s*\.6/.test(h)?0.6:1, d=12*sc;

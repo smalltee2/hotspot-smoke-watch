@@ -4164,19 +4164,30 @@ async function saveMapImage(kind,btn){
         const rows=tr.groups.map(g_=>[[`${g_.h} m`],[...(tr.hours>24?[frac(g_.a24,24)]:[]),frac(g_.aEnd,tr.hours)],g_.fires?[`${g_.fires}${g_.fTop?' · '+ctryName(g_.fTop):''}`,`${g_.hit}/${g_.n} ${T('paths','เส้น')}`]:['0']]);
         g.font=font(400,fs); const sw=Math.round(10*sc), cw=[0,1,2].map(c=>Math.max(g.measureText(cols[c]).width,...rows.flatMap(r=>r[c].map(x=>g.measureText(x).width)))+(c?0:sw+6*sc));
         const gap=Math.round(14*sc), bw=Math.min(mapW-20,Math.max(cw[0]+cw[1]+cw[2]+2*gap,(g.font=font(600,fs),g.measureText(head_).width),420*sc)+2*padB);
-        // the caption: where the air came from (the country under the paths at the start, by height) and the fires it passed,
-        // then how it was traced; wrapped to the box
-        const byC=new Map(); for(const g_ of tr.groups){ const k=g_.aEnd?g_.aEnd.iso:'?'; if(!byC.has(k)) byC.set(k,[]); byC.get(k).push(g_.h); }
-        const hTxt=hs=>hs.length>1?`${hs[0]}–${hs[hs.length-1]} ${T('m','ม.')}`:`${hs[0]} ${T('m','ม.')}`;
-        const src=[...byC].map(([k,hs])=>`${k==='?'?T('outside the map','นอกพื้นที่แผนที่'):ctryName(k)} (${hTxt(hs)})`).join(', ');
-        const gF=tr.groups.reduce((a,b)=>b.fires>(a?.fires||0)?b:a,null);
-        const cap1=T(`Source: ${tr.hours} h before arriving, the air was over ${src}. `,`แหล่งที่มา: ${tr.hours} ชม. ก่อนมาถึง อากาศอยู่เหนือ ${src} `)
-          +(gF?T(`On the way it passed up to ${gF.fires} fire hotspots${gF.fTop?', most in '+ctryName(gF.fTop):''} (at ${gF.h} m).`,`ระหว่างทางผ่านจุดความร้อนสูงสุด ${gF.fires} จุด${gF.fTop?' ส่วนใหญ่ใน'+ctryName(gF.fTop):''} (ที่ความสูง ${gF.h} ม.)`)
-            :T('It passed no fire hotspots on the way.','ระหว่างทางไม่ผ่านจุดความร้อน'));
+        // the caption, in plain words: where the air came from (near the ground and higher up), where the fires it passed were
+        // and what that means for the smoke here, which height matters most at the ground; then how it was traced
+        const cN=iso=>iso?ctryName(iso):T('outside the map','นอกพื้นที่แผนที่'), here=countryOf(CLICK.lat,CLICK.lon), mH=T(' m',' ม.');
+        const gN=tr.groups[0], up=tr.groups.slice(1), isoOf=g_=>g_.aEnd?g_.aEnd.iso:null;
+        const upC=[...new Set(up.map(isoOf))], unsure=g_=>g_.aEnd&&g_.aEnd.n/g_.aEnd.tot<=5/9;
+        const caps=[];
+        if(gN){ const nearTxt=isoOf(gN)&&isoOf(gN)===here?T(`stays over ${cN(here)}`,`วนอยู่ใน${cN(here)}`):T(`comes from ${cN(isoOf(gN))}`,`มาจาก${cN(isoOf(gN))}`);
+          const unsureTxt=unsure(gN)?T(' (the paths spread apart: its source is uncertain)',' (เส้นแตกกัน ที่มาไม่แน่นอน)'):'';
+          if(up.length&&upC.length===1&&upC[0]===isoOf(gN)) caps.push(T(`At every height the air was over ${cN(upC[0])} ${tr.hours} h before arriving${unsureTxt}.`,`อากาศทุกระดับความสูงอยู่เหนือ${cN(upC[0])} เมื่อ ${tr.hours} ชม. ก่อนมาถึง${unsureTxt}`));
+          else caps.push((up.length?T(`The air higher up (${up[0].h}–${up[up.length-1].h} m) comes from ${upC.map(cN).join(' and ')}, `,`อากาศชั้นบน (${up[0].h}–${up[up.length-1].h} ม.) มาจาก${upC.map(cN).join('และ')} `):'')
+            +T(`the air near the ground (${gN.h} m) ${nearTxt}${unsureTxt}.`,`ส่วนอากาศใกล้พื้น (${gN.h} ม.) ${nearTxt}${unsureTxt}`)); }
+        const fG=tr.groups.filter(g_=>g_.fires), fC=[...new Set(fG.map(g_=>g_.fTop).filter(Boolean))];
+        if(!fG.length) caps.push(T('It passed no fire hotspots on the way, so smoke from burning is unlikely to come along this path.','ระหว่างทางไม่ผ่านจุดความร้อน ควันจากการเผาจึงไม่น่ามาตามเส้นทางนี้'));
+        else { if(fC.length===1) caps.push(fC[0]===here?T(`Almost all the fires it passed are in ${cN(here)}, so the smoke here is more likely from burning inside the country than from neighbouring countries.`,`ไฟที่อากาศผ่านเกือบทั้งหมดอยู่ใน${cN(here)} ควันที่มาถึงจึงน่าจะมาจากการเผาในประเทศมากกว่าจากประเทศเพื่อนบ้าน`)
+            :T(`Most of the fires it passed are in ${cN(fC[0])}, so part of the smoke here is likely carried from there.`,`ไฟที่อากาศผ่านส่วนใหญ่อยู่ใน${cN(fC[0])} ควันส่วนหนึ่งจึงน่าจะพัดมาจากที่นั่น`));
+          else if(fC.length) caps.push(T(`The fires it passed are in ${fC.map(cN).join(', ')}.`,`ไฟที่อากาศผ่านอยู่ใน${fC.map(cN).join(', ')}`));
+          const gM=fG.reduce((a,b)=>b.fires>a.fires?b:a);
+          caps.push((gN&&gN.fires?T(`Near the ground (${gN.h} m, what matters most for PM2.5 at the ground) the air passed ${gN.fires} fires (${gN.hit}/${gN.n} paths).`,`ชั้นใกล้พื้น (${gN.h} ม. สำคัญที่สุดต่อ PM2.5 ที่พื้น) ผ่านไฟ ${gN.fires} จุด (${gN.hit}/${gN.n} เส้น)`)
+              :T(`Near the ground (${gN.h} m) the air passed no fires.`,`ชั้นใกล้พื้น (${gN.h} ม.) ไม่ผ่านไฟ`))
+            +(gM!==gN?T(` The ${gM.h} m layer passed the most (${gM.fires}); smoke at that height reaches the ground when the air mixes in the daytime.`,` ชั้น ${gM.h} ม. ผ่านไฟมากที่สุด (${gM.fires} จุด) ควันชั้นนี้ลงถึงพื้นได้เมื่ออากาศผสมตัวช่วงกลางวัน`):'')); }
         const cap2=T(`Backward trajectories: 9 paths per height above ground, ECMWF winds, height kept fixed; fires = hotspots within ${TRAJ_FIRE_KM} km of a path, detected within ${TRAJ_FIRE_H} h of the air passing. A guide, not a measurement.`,
           `ย้อนเส้นทางอากาศ: 9 เส้นต่อความสูงเหนือพื้น ลมจาก ECMWF ความสูงคงที่ ไฟ = จุดความร้อนห่างเส้นทางไม่เกิน ${TRAJ_FIRE_KM} กม. ตรวจพบภายใน ${TRAJ_FIRE_H} ชม. ของเวลาที่อากาศผ่าน ใช้เป็นแนวทาง ไม่ใช่ค่าตรวจวัด`);
         const wrap=(txt,px,wd)=>{ g.font=font(400,px); const out=[]; let cur=''; for(const wd_ of txt.split(' ')){ const t_=cur?cur+' '+wd_:wd_; if(cur&&g.measureText(t_).width>wd){ out.push(cur); cur=wd_; } else cur=t_; } if(cur) out.push(cur); return out; };
-        const fs2=Math.round(fs*0.88), lh2=Math.round(fs2*1.35), capW=bw-2*padB, c1=wrap(cap1,fs,capW), c2=wrap(cap2,fs2,capW);
+        const fs2=Math.round(fs*0.88), lh2=Math.round(fs2*1.35), capW=bw-2*padB, c1=[T('In short','สรุป'),...caps.flatMap(c=>wrap('• '+c,fs,capW-Math.round(12*sc)))], c2=wrap(cap2,fs2,capW);
         const rh=rows.map(r=>Math.max(...r.map(x=>x.length))*lh+Math.round(4*sc)), capH=Math.round(6*sc)+c1.length*lh+Math.round(3*sc)+c2.length*lh2;
         const bh=padB*2+lh*2+Math.round(6*sc)+rh.reduce((a,b)=>a+b,0)+capH;
         // corner with the fewest path points under the box
@@ -4191,7 +4202,7 @@ async function saveMapImage(kind,btn){
         rows.forEach((r,i_)=>{ const h_=tr.groups[i_].h; g.fillStyle=TRAJ_COL[h_]; g.fillRect(cx[0],y+lh-fs+1,sw,sw);
           g.font=font(400,fs); g.fillStyle=INK; r.forEach((ls,j)=>ls.forEach((x,k)=>g.fillText(x,cx[j]+(j?0:sw+6*sc),y+lh*(k+1)-Math.round(3*sc)))); y+=rh[i_]; });
         g.strokeStyle='#c9d0cd'; g.beginPath(); g.moveTo(bx+padB,y+Math.round(2*sc)); g.lineTo(bx+bw-padB,y+Math.round(2*sc)); g.stroke(); y+=Math.round(6*sc);
-        g.font=font(500,fs); g.fillStyle=INK; c1.forEach(l=>{ y+=lh; g.fillText(l,bx+padB,y-Math.round(3*sc)); }); y+=Math.round(3*sc);
+        c1.forEach((l,j)=>{ y+=lh; g.font=font(j?400:600,fs); g.fillStyle=INK; g.fillText(l,bx+padB+(j&&!l.startsWith('• ')?Math.round(12*sc):0),y-Math.round(3*sc)); }); y+=Math.round(3*sc);
         g.font=font(400,fs2); g.fillStyle='#5d6763'; c2.forEach(l=>{ y+=lh2; g.fillText(l,bx+padB,y-Math.round(3*sc)); });
         // the place the air arrives at
         const px=X(CLICK.lon), py=Y(CLICK.lat); if(px>=mx&&px<=mx+mapW&&py>=head&&py<=head+mapH){ circ(px,py,6*sc,'#ffffff',INK,2); circ(px,py,2.5*sc,INK,null,0); }

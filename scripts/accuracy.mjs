@@ -14,6 +14,7 @@
 //                       were not (false alarms)
 //   R²                  square of Pearson's r between the paired hourly forecasts and measurements (agreement of the ups and downs)
 //   MAPE                mean |F − O| / O, in %, over the hours measured >= ACC.mapeMin µg/m³ (below that a 1-µg/m³ miss is tens of %)
+//   NRMSE               RMSE / mean measured value, in %; the map badges show 100 − NRMSE as "accuracy" (owner, 26 Nov 2026)
 // Run: node scripts/accuracy.mjs   (after update.mjs; reads data/latest.json for the station names and places)
 import { dropSpikesHourKeys } from './obsqc.mjs';
 import fs from 'node:fs/promises';
@@ -43,6 +44,8 @@ export function addPair(a, f, o) {
   a[8] += f; a[9] += f * f; a[10] += o * o; a[11] += f * o;
   if (o >= ACC.mapeMin) { a[12]++; a[13] += Math.abs(f - o) / o; }
 }
+/** NRMSE in % (RMSE / mean measured) from the sums: sum (F − O)² = sum F² − 2 sum F·O + sum O² */
+export function nrmseOf(a) { const n = a[0]; if (!(n > 0) || !(a[3] > 0)) return null; return 100 * Math.sqrt(Math.max(0, (a[9] - 2 * a[11] + a[10]) / n)) / (a[3] / n); }
 /** R² (square of Pearson's r) from the sums; null when either series does not vary */
 export function r2Of(a) { const n = a[0], sxx = n * a[9] - a[8] * a[8], syy = n * a[10] - a[3] * a[3], sxy = n * a[11] - a[8] * a[3];
   return n > 2 && sxx > 0 && syy > 0 ? (sxy * sxy) / (sxx * syy) : null; }
@@ -51,7 +54,7 @@ export function r2Of(a) { const n = a[0], sxx = n * a[9] - a[8] * a[8], syy = n 
 export function scores(a, minN = 1) {
   if (!a || a[0] < minN) return null; const n = a[0];
   return { n, bandRight: a[4] / n, mae: a[1] / n, bias: a[2] / n, obsMean: a[3] / n, high: a[5], caught: a[7], warned: a[6], falseAlarms: a[6] - a[7],
-    r2: a.length > 11 ? r2Of(a) : null, mape: a[12] ? 100 * a[13] / a[12] : null };
+    r2: a.length > 11 ? r2Of(a) : null, mape: a[12] ? 100 * a[13] / a[12] : null, nrmse: a.length > 11 ? nrmseOf(a) : null };
 }
 
 /** Scores the forecast log rows against the measurements. rows: fcst CSV rows; obs: Map "id|YYYY-MM-DDTHH" -> µg/m³;
@@ -165,7 +168,7 @@ async function main() {
     mapeMin: ACC.mapeMin, cols: COLS, stations };
   await fs.writeFile(path.join(DATA, 'accuracy.json'), JSON.stringify(doc));
   const part = (k, list = stations) => { const a = NEW(); for (const s of list) s[k].forEach((v, i) => a[i] += v); const S = scores(a);
-    return S ? `${{ s: 'next hours', l: 'next day', d2: 'two days ahead', y1: 'daily mean 24 h ahead', y2: 'daily mean 48 h ahead', m1: `calendar days (${ACC.month.days} d) 24 h ahead`, m2: `calendar days (${ACC.month.days} d) 48 h ahead` }[k]} ${S.n} pairs, R² ${S.r2 == null ? '–' : S.r2.toFixed(2)}, MAPE ${S.mape == null ? '–' : S.mape.toFixed(0) + ' %'}, colour band right ${(S.bandRight * 100).toFixed(0)} %, typical error ${S.mae.toFixed(1)} µg/m³, bias ${S.bias.toFixed(1)}, hours >= ${ACC.thr} caught ${S.caught} of ${S.high}, false alarms ${S.falseAlarms} of ${S.warned}` : `${k}: none`; };
+    return S ? `${{ s: 'next hours', l: 'next day', d2: 'two days ahead', y1: 'daily mean 24 h ahead', y2: 'daily mean 48 h ahead', m1: `calendar days (${ACC.month.days} d) 24 h ahead`, m2: `calendar days (${ACC.month.days} d) 48 h ahead` }[k]} ${S.n} pairs, R² ${S.r2 == null ? '–' : S.r2.toFixed(2)}, NRMSE ${S.nrmse == null ? '–' : S.nrmse.toFixed(0) + ' %'}, MAPE ${S.mape == null ? '–' : S.mape.toFixed(0) + ' %'}, colour band right ${(S.bandRight * 100).toFixed(0)} %, typical error ${S.mae.toFixed(1)} µg/m³, bias ${S.bias.toFixed(1)}, hours >= ${ACC.thr} caught ${S.caught} of ${S.high}, false alarms ${S.falseAlarms} of ${S.warned}` : `${k}: none`; };
   const msg = `${stations.length} monitors, ${ACC.days} days to ${k13(tEnd)}Z; ${part('s')}; ${part('l')}; ${part('d2')}; ${part('y1')}; ${part('y2')}; ${part('m1')}; ${part('m2')} (${((Date.now() - t00) / 1e3).toFixed(1)} s)`;
   console.log('accuracy: ' + msg);
   console.log(`accuracy, low-cost sensors (apart): ${lowcost.length} sensors; ${part('s', lowcost)}; ${part('l', lowcost)}; ${part('y1', lowcost)}; ${part('m1', lowcost)}`);

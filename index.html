@@ -2994,6 +2994,48 @@ async function saveMapImage(kind,btn){
       const nAcc=[accLayer,accLcLayer,iqLayer].reduce((k,l)=>k+each(l,(m,x,y)=>{ const h=html(m), v=(/<b>([^<]*)<\/b>/.exec(h)||[])[1]; if(!v) return false;
         const bw=34*sc*0.8, bh=17*sc*0.8, x0=x-bw/2, y0=y-22*sc*0.8; g.fillStyle='#ffffff'; g.fillRect(x0,y0,bw,bh); g.strokeStyle=INK; g.lineWidth=1; g.setLineDash(/accbadge lc/.test(h)?[3,2]:[]); g.strokeRect(x0,y0,bw,bh); g.setLineDash([]);
         g.fillStyle=INK; g.font=font(700,Math.round(10*sc*0.8)); g.textAlign='center'; g.textBaseline='middle'; g.fillText(v,x,y0+bh/2); g.textAlign='left'; g.textBaseline='alphabetic'; }),0);
+      // the backward-trajectory table (as in the place's panel: height, where the air was, fires passed), as a box in the map
+      // corner that the paths cross least, so the image keeps the answer to "where is the air from?"
+      const tr=CLICK?.traj; if(nTraj&&tr?.groups?.length){
+        const fs=Math.round(12.5*sc), lh=Math.round(fs*1.35), padB=Math.round(9*sc), when=new Date(tr.t0).toLocaleString(LOC(),{weekday:'short',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit',timeZone:'Asia/Bangkok'});
+        const frac=(a,h)=>`−${h} h `+(a?`${ctryName(a.iso)} (${a.n}/${a.tot})`:T('outside the map','นอกพื้นที่แผนที่'));
+        const head_=T(`Air arriving ${when}, traced back ${tr.hours} h`,`อากาศที่มาถึง ${when} ย้อนหลัง ${tr.hours} ชม.`);
+        const cols=[T('Height','ความสูง'),T('Air was over','อากาศอยู่เหนือ'),T('Fires passed','ไฟที่ผ่าน')];
+        const rows=tr.groups.map(g_=>[[`${g_.h} m`],[...(tr.hours>24?[frac(g_.a24,24)]:[]),frac(g_.aEnd,tr.hours)],g_.fires?[`${g_.fires}${g_.fTop?' · '+ctryName(g_.fTop):''}`,`${g_.hit}/${g_.n} ${T('paths','เส้น')}`]:['0']]);
+        g.font=font(400,fs); const sw=Math.round(10*sc), cw=[0,1,2].map(c=>Math.max(g.measureText(cols[c]).width,...rows.flatMap(r=>r[c].map(x=>g.measureText(x).width)))+(c?0:sw+6*sc));
+        const gap=Math.round(14*sc), bw=Math.min(mapW-20,Math.max(cw[0]+cw[1]+cw[2]+2*gap,(g.font=font(600,fs),g.measureText(head_).width),420*sc)+2*padB);
+        // the caption: where the air came from (the country under the paths at the start, by height) and the fires it passed,
+        // then how it was traced; wrapped to the box
+        const byC=new Map(); for(const g_ of tr.groups){ const k=g_.aEnd?g_.aEnd.iso:'?'; if(!byC.has(k)) byC.set(k,[]); byC.get(k).push(g_.h); }
+        const hTxt=hs=>hs.length>1?`${hs[0]}–${hs[hs.length-1]} ${T('m','ม.')}`:`${hs[0]} ${T('m','ม.')}`;
+        const src=[...byC].map(([k,hs])=>`${k==='?'?T('outside the map','นอกพื้นที่แผนที่'):ctryName(k)} (${hTxt(hs)})`).join(', ');
+        const gF=tr.groups.reduce((a,b)=>b.fires>(a?.fires||0)?b:a,null);
+        const cap1=T(`Source: ${tr.hours} h before arriving, the air was over ${src}. `,`แหล่งที่มา: ${tr.hours} ชม. ก่อนมาถึง อากาศอยู่เหนือ ${src} `)
+          +(gF?T(`On the way it passed up to ${gF.fires} fire hotspots${gF.fTop?', most in '+ctryName(gF.fTop):''} (at ${gF.h} m).`,`ระหว่างทางผ่านจุดความร้อนสูงสุด ${gF.fires} จุด${gF.fTop?' ส่วนใหญ่ใน'+ctryName(gF.fTop):''} (ที่ความสูง ${gF.h} ม.)`)
+            :T('It passed no fire hotspots on the way.','ระหว่างทางไม่ผ่านจุดความร้อน'));
+        const cap2=T(`Backward trajectories: 9 paths per height above ground, ECMWF winds, height kept fixed; fires = hotspots within ${TRAJ_FIRE_KM} km of a path, detected within ${TRAJ_FIRE_H} h of the air passing. A guide, not a measurement.`,
+          `ย้อนเส้นทางอากาศ: 9 เส้นต่อความสูงเหนือพื้น ลมจาก ECMWF ความสูงคงที่ ไฟ = จุดความร้อนห่างเส้นทางไม่เกิน ${TRAJ_FIRE_KM} กม. ตรวจพบภายใน ${TRAJ_FIRE_H} ชม. ของเวลาที่อากาศผ่าน ใช้เป็นแนวทาง ไม่ใช่ค่าตรวจวัด`);
+        const wrap=(txt,px,wd)=>{ g.font=font(400,px); const out=[]; let cur=''; for(const wd_ of txt.split(' ')){ const t_=cur?cur+' '+wd_:wd_; if(cur&&g.measureText(t_).width>wd){ out.push(cur); cur=wd_; } else cur=t_; } if(cur) out.push(cur); return out; };
+        const fs2=Math.round(fs*0.88), lh2=Math.round(fs2*1.35), capW=bw-2*padB, c1=wrap(cap1,fs,capW), c2=wrap(cap2,fs2,capW);
+        const rh=rows.map(r=>Math.max(...r.map(x=>x.length))*lh+Math.round(4*sc)), capH=Math.round(6*sc)+c1.length*lh+Math.round(3*sc)+c2.length*lh2;
+        const bh=padB*2+lh*2+Math.round(6*sc)+rh.reduce((a,b)=>a+b,0)+capH;
+        // corner with the fewest path points under the box
+        const cand=[[mx+10,head+10],[mx+mapW-bw-10,head+10],[mx+10,head+mapH-bh-10],[mx+mapW-bw-10,head+mapH-bh-10]];
+        const under=([x0,y0])=>{ let k=0; for(const m of tr.mem) for(const q of m.pts){ const x=X(q[1]), y=Y(q[0]); if(x>=x0&&x<=x0+bw&&y>=y0&&y<=y0+bh) k++; } return k; };
+        const [bx,by]=cand.map(c=>[c,under(c)]).sort((p_,q_)=>p_[1]-q_[1])[0][0];
+        g.globalAlpha=0.93; g.fillStyle='#ffffff'; g.fillRect(bx,by,bw,bh); g.globalAlpha=1; g.strokeStyle='#5d6763'; g.lineWidth=1; g.strokeRect(bx,by,bw,bh);
+        let y=by+padB+fs; g.fillStyle=INK; g.font=font(600,fs); g.fillText(head_,bx+padB,y); y+=lh;
+        const cx=[bx+padB,bx+padB+cw[0]+gap,bx+padB+cw[0]+cw[1]+2*gap];
+        g.font=font(600,fs); g.fillStyle='#38423e'; cols.forEach((c,j)=>g.fillText(c,cx[j],y)); y+=Math.round(4*sc);
+        g.strokeStyle='#c9d0cd'; g.beginPath(); g.moveTo(bx+padB,y); g.lineTo(bx+bw-padB,y); g.stroke(); y+=Math.round(2*sc);
+        rows.forEach((r,i_)=>{ const h_=tr.groups[i_].h; g.fillStyle=TRAJ_COL[h_]; g.fillRect(cx[0],y+lh-fs+1,sw,sw);
+          g.font=font(400,fs); g.fillStyle=INK; r.forEach((ls,j)=>ls.forEach((x,k)=>g.fillText(x,cx[j]+(j?0:sw+6*sc),y+lh*(k+1)-Math.round(3*sc)))); y+=rh[i_]; });
+        g.strokeStyle='#c9d0cd'; g.beginPath(); g.moveTo(bx+padB,y+Math.round(2*sc)); g.lineTo(bx+bw-padB,y+Math.round(2*sc)); g.stroke(); y+=Math.round(6*sc);
+        g.font=font(500,fs); g.fillStyle=INK; c1.forEach(l=>{ y+=lh; g.fillText(l,bx+padB,y-Math.round(3*sc)); }); y+=Math.round(3*sc);
+        g.font=font(400,fs2); g.fillStyle='#5d6763'; c2.forEach(l=>{ y+=lh2; g.fillText(l,bx+padB,y-Math.round(3*sc)); });
+        // the place the air arrives at
+        const px=X(CLICK.lon), py=Y(CLICK.lat); if(px>=mx&&px<=mx+mapW&&py>=head&&py<=head+mapH){ circ(px,py,6*sc,'#ffffff',INK,2); circ(px,py,2.5*sc,INK,null,0); }
+      }
       if(nHot) shownKeys.push(['hot',T(`Satellite hotspots (${nHot}, last 1–2 days)`,`จุดความร้อนจากดาวเทียม (${nHot} จุด, 1–2 วันล่าสุด)`)]);
       if(nSt) shownKeys.push(['st',T(`Stations (${nSt}): centre = measured, ring = forecast`,`สถานีตรวจวัด (${nSt}): สีด้านใน = ค่าตรวจวัด, วงนอก = ค่าพยากรณ์`)]);
       if(nAcc) shownKeys.push(['acc',T('Badges: forecast accuracy at the station (7 days)','ป้าย: ความแม่นยำของพยากรณ์ที่สถานี (7 วัน)')]);

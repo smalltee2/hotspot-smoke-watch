@@ -12,12 +12,14 @@
 //   tendency            mean forecast − measured (bias), µg/m³, with the mean measured value to judge its size
 //   high hours          hours measured >= 37.5 µg/m³ that the forecast also put >= 37.5 (caught), and the forecasts >= 37.5 that
 //                       were not (false alarms)
+//   R²                  square of Pearson's r between the paired hourly forecasts and measurements (agreement of the ups and downs)
+//   MAPE                mean |F − O| / O, in %, over the hours measured >= ACC.mapeMin µg/m³ (below that a 1-µg/m³ miss is tens of %)
 // Run: node scripts/accuracy.mjs   (after update.mjs; reads data/latest.json for the station names and places)
 import { dropSpikesHourKeys } from './obsqc.mjs';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 
-export const ACC = { days: 7, horizons: { s: [1, 3, 6], l: [12, 24], d2: [48] }, daily: { y1: 24, y2: 48 }, minHours24: 18, bands: [15, 25, 37.5, 75], thr: 37.5 };
+export const ACC = { days: 7, horizons: { s: [1, 3, 6], l: [12, 24], d2: [48] }, daily: { y1: 24, y2: 48 }, minHours24: 18, bands: [15, 25, 37.5, 75], thr: 37.5, mapeMin: 10 };
 const DAILY = Object.fromEntries(Object.entries(ACC.daily).map(([k, L]) => [L, k]));
 const HZ = Object.fromEntries(Object.entries(ACC.horizons).flatMap(([k, ls]) => ls.map(L => [L, k])));
 const H = 3600e3;
@@ -28,17 +30,25 @@ const parse = txt => { const L = txt.trim().split('\n'); if (L.length < 2) retur
   return L.slice(1).map(l => { const v = l.split(','), o = {}; h.forEach((k, i) => o[k] = v[i]); return o; }); };
 export const band = v => { let i = 0; while (i < ACC.bands.length && v > ACC.bands[i]) i++; return i; };
 
-// sums kept per station and window: [n, sum |F − O|, sum (F − O), sum O, same band, O >= thr, F >= thr, both >= thr]
-export const NEW = () => [0, 0, 0, 0, 0, 0, 0, 0];
+// sums kept per station and window: [n, sum |F − O|, sum (F − O), sum O, same band, O >= thr, F >= thr, both >= thr,
+//   sum F, sum F², sum O², sum F·O (for r and R²), n with O >= mapeMin, sum |F − O| / O over those (for MAPE)]
+export const COLS = ['n', 'sumAbsErr', 'sumErr', 'sumObs', 'sameBand', 'obsHigh', 'fcHigh', 'caught', 'sumF', 'sumF2', 'sumO2', 'sumFO', 'nMape', 'sumApe'];
+export const NEW = () => COLS.map(() => 0);
 export function addPair(a, f, o) {
   a[0]++; a[1] += Math.abs(f - o); a[2] += f - o; a[3] += o; a[4] += band(f) === band(o);
   const oh = o >= ACC.thr, fh = f >= ACC.thr; a[5] += oh; a[6] += fh; a[7] += oh && fh;
+  a[8] += f; a[9] += f * f; a[10] += o * o; a[11] += f * o;
+  if (o >= ACC.mapeMin) { a[12]++; a[13] += Math.abs(f - o) / o; }
 }
+/** R² (square of Pearson's r) from the sums; null when either series does not vary */
+export function r2Of(a) { const n = a[0], sxx = n * a[9] - a[8] * a[8], syy = n * a[10] - a[3] * a[3], sxy = n * a[11] - a[8] * a[3];
+  return n > 2 && sxx > 0 && syy > 0 ? (sxy * sxy) / (sxx * syy) : null; }
 
 /** The scores from summed station sums (the page does the same in the browser). null below `minN` pairs. */
 export function scores(a, minN = 1) {
   if (!a || a[0] < minN) return null; const n = a[0];
-  return { n, bandRight: a[4] / n, mae: a[1] / n, bias: a[2] / n, obsMean: a[3] / n, high: a[5], caught: a[7], warned: a[6], falseAlarms: a[6] - a[7] };
+  return { n, bandRight: a[4] / n, mae: a[1] / n, bias: a[2] / n, obsMean: a[3] / n, high: a[5], caught: a[7], warned: a[6], falseAlarms: a[6] - a[7],
+    r2: a.length > 11 ? r2Of(a) : null, mape: a[12] ? 100 * a[13] / a[12] : null };
 }
 
 /** Scores the forecast log rows against the measurements. rows: fcst CSV rows; obs: Map "id|YYYY-MM-DDTHH" -> µg/m³;
@@ -114,7 +124,7 @@ async function main() {
   const iqRows = []; for (const f of files.filter(f => /iqair-\d{8}T\d{2}\.csv$/.test(f))) iqRows.push(...parse(await fs.readFile(f, 'utf8')));
   const points = (latest.stations || []).filter(s => s.lat != null).map(s => ({ id: String(s.id), lat: s.lat, lon: s.lon }));
   const iqCities = scoreIqair(iqRows, fc1, points, tEnd - ACC.days * 24 * H, tEnd);
-  const r1 = a => a.map((v, i) => (i === 1 || i === 2 || i === 3 ? +v.toFixed(1) : v)), stations = [];
+  const r1 = a => a.map((v, i) => (i === 13 ? +v.toFixed(3) : [1, 2, 3, 8, 9, 10, 11].includes(i) ? +v.toFixed(1) : v)), stations = [];
   for (const [id, s] of out) { const m = meta.get(id); if (!m || m.lat == null) continue;
     stations.push({ id, name: m.name || id, ...(m.nameTH ? { nameTH: m.nameTH } : {}), lat: m.lat, lon: m.lon, cc: m.cc || '', s: r1(s.s), l: r1(s.l), d2: r1(s.d2), y1: r1(s.y1), y2: r1(s.y2) }); }
   // low-cost sensors (OpenAQ: AirGradient, PurpleAir, …), scored apart and never mixed into the headline score: they read high in
@@ -124,13 +134,13 @@ async function main() {
   const lcOk = m => !m.qc || m.qc === 'pass' || m.qc === 'isolated', lowcost = [];
   for (const [id, s] of outLc) { const m = meta.get(id); if (!m || m.lat == null || m.monitor || !lcOk(m)) continue;
     lowcost.push({ id, name: m.name || id, lat: m.lat, lon: m.lon, cc: m.cc || '', s: r1(s.s), l: r1(s.l), d2: r1(s.d2), y1: r1(s.y1), y2: r1(s.y2) }); }
-  const r1i = a => a.map((v, i) => (i === 1 || i === 2 || i === 3 ? +v.toFixed(1) : v));
+  const r1i = r1;
   const doc = { version: 1, generated: Date.now(), tEnd, days: ACC.days, horizons: ACC.horizons, daily: ACC.daily, bands: ACC.bands, thr: ACC.thr,
     iqair: iqCities.map(c => ({ ...c, sea: r1i(c.sea) })), lowcost,
-    cols: ['n', 'sumAbsErr', 'sumErr', 'sumObs', 'sameBand', 'obsHigh', 'fcHigh', 'caught'], stations };
+    mapeMin: ACC.mapeMin, cols: COLS, stations };
   await fs.writeFile(path.join(DATA, 'accuracy.json'), JSON.stringify(doc));
   const part = (k, list = stations) => { const a = NEW(); for (const s of list) s[k].forEach((v, i) => a[i] += v); const S = scores(a);
-    return S ? `${{ s: 'next hours', l: 'next day', d2: 'two days ahead', y1: 'daily mean 24 h ahead', y2: 'daily mean 48 h ahead' }[k]} ${S.n} pairs, colour band right ${(S.bandRight * 100).toFixed(0)} %, typical error ${S.mae.toFixed(1)} µg/m³, bias ${S.bias.toFixed(1)}, hours >= ${ACC.thr} caught ${S.caught} of ${S.high}, false alarms ${S.falseAlarms} of ${S.warned}` : `${k}: none`; };
+    return S ? `${{ s: 'next hours', l: 'next day', d2: 'two days ahead', y1: 'daily mean 24 h ahead', y2: 'daily mean 48 h ahead' }[k]} ${S.n} pairs, R² ${S.r2 == null ? '–' : S.r2.toFixed(2)}, MAPE ${S.mape == null ? '–' : S.mape.toFixed(0) + ' %'}, colour band right ${(S.bandRight * 100).toFixed(0)} %, typical error ${S.mae.toFixed(1)} µg/m³, bias ${S.bias.toFixed(1)}, hours >= ${ACC.thr} caught ${S.caught} of ${S.high}, false alarms ${S.falseAlarms} of ${S.warned}` : `${k}: none`; };
   const msg = `${stations.length} monitors, ${ACC.days} days to ${k13(tEnd)}Z; ${part('s')}; ${part('l')}; ${part('d2')}; ${part('y1')}; ${part('y2')} (${((Date.now() - t00) / 1e3).toFixed(1)} s)`;
   console.log('accuracy: ' + msg);
   console.log(`accuracy, low-cost sensors (apart): ${lowcost.length} sensors; ${part('s', lowcost)}; ${part('l', lowcost)}; ${part('y1', lowcost)}`);

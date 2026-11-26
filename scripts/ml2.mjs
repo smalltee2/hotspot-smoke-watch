@@ -15,6 +15,7 @@
 //   inputs  the live correction's inputs + station history known at issue time (histFeatures below)
 // The replay used one boosted-tree model, not this ensemble, so the live log is the real test: pmHighCheck compares v2 with the
 // live correction on the last 14 days and v2 reaches the page only while it is at least as good on all three counts.
+import { dropSpikes } from './obsqc.mjs';
 import fs from 'node:fs/promises'; import path from 'node:path';
 import { makeEngine, CORECFG } from './mlcore.mjs';
 import { NAMES, featureVector } from './ml.mjs';
@@ -55,6 +56,9 @@ export async function loadObsHourly(histDir, from = 0, extra = null) {
   for (const f of files.filter(f => /obs-\d{8}T\d{2}\.csv$/.test(f))) for (const r of parseCSV(await fs.readFile(f, 'utf8'))) {
     const t = Math.round(Date.parse(r.time_utc) / HOUR) * HOUR, v = +r.obs_pm25, k = `${r.station_id}|${t}`; if (isFinite(t) && r.obs_pm25 !== '' && r.obs_pm25 != null && isFinite(v) && !obs.has(k)) obs.set(k, v); }
   if (extra) for (const [id, H] of Object.entries(extra)) for (const [t, v] of H || []) { const k = `${id}|${Math.round(t / HOUR) * HOUR}`; if (v != null && isFinite(v) && !obs.has(k)) obs.set(k, v); }
+  // the logs keep what was measured, instrument spikes included: the same spike check as at intake (scripts/obsqc.mjs)
+  const ser = new Map(); for (const [k, v] of obs) { const i = k.lastIndexOf('|'), id = k.slice(0, i); if (!ser.has(id)) ser.set(id, []); ser.get(id).push([+k.slice(i + 1), v]); }
+  for (const [id, rows] of ser) for (const [t] of dropSpikes(rows.sort((a, b) => a[0] - b[0])).dropped) obs.delete(`${id}|${t}`);
   return obs;
 }
 

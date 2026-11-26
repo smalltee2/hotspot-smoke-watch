@@ -17,6 +17,7 @@ import { updateRadar, scoreRadar, mergeRadarIntoMet, nowcast as radarNowcast, we
 import { updateGsmap, mergeIntoMet, webRain, GSCFG } from './gsmap.mjs';
 import { fetchGauges, scoreGauges, gsmapAt, rainFactor } from './thaiwater.mjs';
 import { updatePardig, obsRain } from './pardig.mjs';
+import { dropSpikes } from './obsqc.mjs';
 import { ENG2, ML2, NAMES2, loadObsHourly, rows2From, predict2, pmHighCheck, setClimatology, climFeatures } from './ml2.mjs';
 import { loadSilam, seriesAt } from './silam.mjs';
 import { WXML, T2_NAMES, PR_NAMES, T2ENG, PRENG, t2Features, prFeatures, loadWxDataset, storeWxDay, loadWxSeason } from './mlwx.mjs';
@@ -292,7 +293,9 @@ async function a4tHourly(codes, d0, d1) {
         const wsOK = isFinite(ws) && ws > 0 && ws < 40 && isFinite(wd) && wd >= 0 && wd <= 360, t2OK = isFinite(t2) && t2 > 5 && t2 < 50, rhOK = isFinite(rh) && rh >= 5 && rh <= 100;
         const w = wsOK || t2OK || rhOK ? { ws: wsOK ? ws : null, wd: wsOK ? wd : null, t2: t2OK ? t2 : null, rh: rhOK ? rh : null } : null;
         rows.push([t, v, w]); }
-      out.set(st.stationID, rows.sort((a, b) => a[0] - b[0]));
+      const qc = dropSpikes(rows.sort((a, b) => a[0] - b[0]));   // an instrument's isolated spike (scripts/obsqc.mjs)
+      for (const r of qc.dropped) (out.dropped ||= []).push(`${st.stationID} ${new Date(r[0]).toISOString().slice(0, 13)}Z ${r[1]}`);
+      out.set(st.stationID, qc.kept);
     }
     if (i + CFG.a4t.chunk < codes.length) await sleep(800);
   }
@@ -450,6 +453,7 @@ async function main() {
     try {
       const got = await a4tHourly(a4tSt.map(s => s.code), thaiDate(now - 48 * HOUR), thaiDate(now));   // ≥ 48 h for the assimilation window
       for (const s of a4tSt) { const rows = got.get(s.code) || []; a4tH.set(s.id, rows); const last = rows[rows.length - 1]; if (last) obs.set(s.id, { t: last[0], v: last[1] }); }
+      if (got.dropped) log(`Air4Thai hourly: spike check dropped ${got.dropped.length} value(s): ${got.dropped.join(', ')}`);
       log(`Air4Thai hourly: ${[...a4tH.values()].filter(r => r.length).length}/${a4tSt.length} stations, latest hour ${new Date(Math.max(0, ...[...obs.entries()].filter(([k]) => String(k).startsWith('a4t:')).map(([, o]) => o.t))).toISOString().slice(0, 16)}Z`);
       const yday = thaiDate(now - 24 * HOUR), arch = path.join(DATA, 'history', yday.slice(0, 7), `a4t-${yday.replace(/-/g, '')}.csv`);
       const dayRows = []; for (const s of a4tSt) for (const [t, v] of a4tH.get(s.id) || []) if (thaiDate(t - HOUR) === yday) dayRows.push([new Date(t).toISOString().slice(0, 16) + 'Z', s.id, v]);

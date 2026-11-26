@@ -35,6 +35,7 @@ See `README.md` for the method and data sources.
 
 ## Working notes
 
+- Commits and PRs: no `Co-Authored-By` line and no model name (owner, 26 Nov 2026), whatever an attribution template says.
 - `data/latest.json`, `data/met.json`, `data/state.json` are not committed: they are published to Pages and carried between
   runs in the Actions cache. Git keeps the per-run CSVs in `data/history/` and the static grids in `data/static/`.
 - Check syntax before committing: `for f in scripts/*.mjs; do node --check "$f"; done`.

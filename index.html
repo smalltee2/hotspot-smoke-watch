@@ -224,6 +224,8 @@ td.num{text-align:right;font-family:var(--font-data);font-variant-numeric:tabula
 .sum-cta .btn{display:inline-flex;align-items:center;gap:7px;width:100%;justify-content:center;text-align:left}
 /* area menus above the tabs (owner, 27 Nov 2026: the area drives the whole page, so it is not kept in Settings) */
 .areabar{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0;padding:0 16px}.areabar label{display:block;font-size:.78rem;color:var(--muted);margin-bottom:3px}.areabar .field{margin:0;min-width:0}.areabar select{width:100%;min-width:0}.areabar .field[hidden]{display:none}.areabar:has(.field[hidden]){grid-template-columns:1fr}
+/* My places tab: place search and the saved list */
+.plrow{display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--line)}.plrow .pn{flex:1;min-width:0;border:0;background:none;padding:0;text-align:left;font:inherit;color:inherit;cursor:pointer}.plrow .pn b{display:block;font-weight:600}.plrow .pn span{display:block;font-size:.76rem;color:var(--muted)}.plrow .btn{flex:none;padding:4px 10px;font-size:.78rem}.plrow .pn:hover b,.plrow .pn:focus-visible b{text-decoration:underline}
 .sumcard .sumctl{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:10px 0 4px;font-size:.8rem}
 .sumcard .sumctl select{font:inherit;max-width:100%}
 .sumcard .sumbody{margin-top:6px}
@@ -688,8 +690,13 @@ td.num{text-align:right;font-family:var(--font-data);font-variant-numeric:tabula
         <label class="btn" for="csvIn" data-th="อัปโหลดไฟล์ CSV ของ FIRMS">Upload FIRMS CSV</label>
         <input id="csvIn" type="file" accept=".csv,text/csv" hidden>
       </div>
-      <p class="note" data-th="คลิกบนแผนที่เพื่อเพิ่มจุดของคุณเอง เช่น โรงเรียน โรงพยาบาล หมู่บ้าน จุดเหล่านี้เก็บไว้ในเบราว์เซอร์นี้เท่านั้น">Click anywhere on the map to add your own receptor point (a school, a hospital, a village). Points are kept in this browser only.</p>
-      <div class="actions"><button class="btn" id="btnClearPts" type="button" data-th="ลบจุดของฉัน">Remove my points</button></div>
+      <div class="field"><label for="placeQ" data-th="ค้นหาสถานที่ (ตำบล อำเภอ จังหวัด หรือเมือง)">Find a place (sub-district, district, province or town)</label>
+        <input id="placeQ" type="search" autocomplete="off" enterkeyhint="search"></div>
+      <div id="placeRes" aria-live="polite"></div>
+      <h3 data-th="จุดที่บันทึกไว้">Saved places</h3>
+      <div id="myPtsList"></div>
+      <p class="note" data-th="หรือแตะบนแผนที่แล้วเลือก “เพิ่มเป็นจุดของฉัน” เช่น บ้าน โรงเรียน โรงพยาบาล จุดของฉันจะอยู่ในรายการพยากรณ์รายเมือง และเก็บไว้ในเบราว์เซอร์นี้เท่านั้น">Or tap the map and choose “Add to my points” (home, a school, a hospital). Your places join the forecast list by town and are kept in this browser only.</p>
+      <div class="actions"><button class="btn" id="btnClearPts" type="button" data-th="ลบจุดของฉันทั้งหมด">Remove all my places</button></div>
     </section>
 
     <section class="pane about pub-only" id="pane-about" role="tabpanel" hidden>
@@ -1391,7 +1398,10 @@ const hm=t=>new Date(t).toLocaleTimeString(LOC(),{hour:'2-digit',minute:'2-digit
 function applyStaticLang(){
   document.documentElement.lang=LANG;
   // public pages: one PM2.5 forecast (the SILAM layer is admin-only, dev.html), so its label drops the model name
-  if(PUBLIC){ const sp=document.getElementById('lyTotal')?.closest('label')?.querySelector('span[data-th]');
+  if(PUBLIC){ // the Settings tab holds only the user's places on the public pages: named for that, with a pin on the phone bar
+    for(const el of [document.getElementById('tab-set'),document.querySelector('#tabbar [data-go="set"] span')]) if(el&&!el.dataset.pub){ el.dataset.pub='1'; el.dataset.th='จุดของฉัน'; el.dataset.en='My places'; }
+    const ic=document.querySelector('#tabbar [data-go="set"] svg'); if(ic&&!ic.dataset.pub){ ic.dataset.pub='1'; ic.innerHTML='<path d="M12 21s-6.5-6.2-6.5-11a6.5 6.5 0 0 1 13 0c0 4.800-6.500 11-6.500 11z"/><circle cx="12" cy="10" r="2.400"/>'; }
+    const sp=document.getElementById('lyTotal')?.closest('label')?.querySelector('span[data-th]');
     if(sp&&!sp.dataset.pub){ sp.dataset.pub='1'; sp.dataset.th='PM<sub>2.5</sub> รวม (พยากรณ์ ~3 วัน)'; sp.dataset.en='Total PM<sub>2.5</sub> forecast (~3 days)'; } }
   document.querySelectorAll('[data-th]').forEach(el=>{ if(el.dataset.en==null) el.dataset.en=el.innerHTML; el.innerHTML=LANG==='th'?el.dataset.th:el.dataset.en; });
   const b=document.getElementById('btnLang'); if(b){ b.textContent=LANG==='th'?'EN':'ไทย'; b.lang=LANG==='th'?'en':'th'; b.setAttribute('aria-label',LANG==='th'?'Switch to English':'เปลี่ยนเป็นภาษาไทย'); }
@@ -1732,7 +1742,7 @@ matchMedia('(prefers-color-scheme: dark)').addEventListener('change',reTheme);
 new MutationObserver(reTheme).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
 const hotLayer=L.layerGroup().addTo(map), trajLayer=L.layerGroup().addTo(map), townLayer=L.layerGroup().addTo(map);
 let plume=null;
-function addMyPoint(lat,lon){ const name=`${T('My point','จุดของฉัน')} ${S.myPts.length+1}`; S.myPts.push({name,lat:+lat.toFixed(4),lon:+lon.toFixed(4),cc:'★'});
+function addMyPoint(lat,lon,nm){ const name=nm||`${T('My point','จุดของฉัน')} ${S.myPts.length+1}`; S.myPts.push({name,lat:+lat.toFixed(4),lon:+lon.toFixed(4),cc:'★'});
   store.set('hsw.points',JSON.stringify(S.myPts)); computeReceptors(); drawTowns(); renderWarnings(); }   // also without a fire simulation (no hotspots): the total-PM2.5 series is computed there too
 // the redesigned page (index_modern.html, <body data-click="info">): a click on the map shows a short summary of that place at the
 // slider time, with buttons for the full location window and for keeping the place as one of "my points"; the original page adds the point
@@ -3552,7 +3562,7 @@ function renderClickInfo(){ if(!CLICK) return; const {lat,lon}=CLICK, el=clickCa
   if(window.PHONEUI?.active()&&!CLICK.shown){ CLICK.shown=1; PHONEUI.set('half','map'); PHONEUI.top(); }
   el.querySelector('[data-a=x]')?.addEventListener('click',closeClickInfo);
   el.querySelector('[data-a=more]')?.addEventListener('click',()=>{ closeClickInfo(); openLocPop(lat,lon); });
-  el.querySelector('[data-a=pt]')?.addEventListener('click',()=>{ closeClickInfo(); addMyPoint(lat,lon); toast(T('Added to my points (Settings tab).','เพิ่มในจุดของฉันแล้ว (แท็บตั้งค่า)')); });
+  el.querySelector('[data-a=pt]')?.addEventListener('click',()=>{ closeClickInfo(); addMyPoint(lat,lon); toast(T(PUBLIC?'Added to my places.':'Added to my points (Settings tab).',PUBLIC?'เพิ่มในจุดของฉันแล้ว':'เพิ่มในจุดของฉันแล้ว (แท็บตั้งค่า)')); });
   el.querySelector('[data-a=traj]')?.addEventListener('click',()=>runTraj());
   el.querySelector('[data-a=trajH]')?.addEventListener('change',e=>{ store.set('hsw.trajH',e.target.value); runTraj(); });
   el.querySelector('[data-a=trajX]')?.addEventListener('click',()=>{ clearTraj(); renderClickInfo(); }); }
@@ -3937,7 +3947,42 @@ function renderProvList(A){
     if($('region').value!=='thailand'){ $('region').value='thailand'; store.set('hsw.region','thailand'); }
     $('provSel').value=n; store.set('hsw.prov',n); $('provSel').dispatchEvent(new Event('change')); $('areaTrend').scrollIntoView?.({behavior:'smooth',block:'start'}); });
 }
+// ---- "My places" tab (the Settings tab of the public pages; owner, 27 Nov 2026): the saved places with go-to and remove, and
+// a search over the names the page holds: Thai provinces, districts, sub-districts (OCHA boundaries) and the towns. Nothing is
+// sent to a search service. A result goes to the map on tap; "Add" saves it under its name at the area's centre.
+function myPtsSave(){ store.set('hsw.points',JSON.stringify(S.myPts)); computeReceptors(); drawTowns(); renderWarnings(); }
+function goPlace(lat,lon,b){ if(window.PHONEUI?.active()) PHONEUI.set('peek'); if(b) map.fitBounds([[b[1],b[0]],[b[3],b[2]]],{padding:[20,20],maxZoom:13}); else map.setView([lat,lon],Math.max(map.getZoom(),11)); }
+function renderMyPts(){ const box=$('myPtsList'); if(!box) return;
+  box.innerHTML=S.myPts.length?S.myPts.map((q,i)=>`<div class="plrow"><button type="button" class="pn" data-go="${i}"><b>★ ${esc(townName(q))}</b><span>${q.lat.toFixed(3)}, ${q.lon.toFixed(3)}</span></button><button type="button" class="btn" data-del="${i}" aria-label="${esc(T('Remove','ลบ')+' '+townName(q))}">${T('Remove','ลบ')}</button></div>`).join('')
+    :`<p class="note">${T('No saved places yet.','ยังไม่มีจุดที่บันทึกไว้')}</p>`;
+  box.querySelectorAll('[data-go]').forEach(el=>el.onclick=()=>{ const q=S.myPts[+el.dataset.go]; if(q) goPlace(q.lat,q.lon); });
+  box.querySelectorAll('[data-del]').forEach(el=>el.onclick=()=>{ S.myPts.splice(+el.dataset.del,1); myPtsSave(); });
+  const b=$('btnClearPts'); if(b) b.hidden=S.myPts.length<2; const q=$('placeQ'); if(q) q.placeholder=T('e.g. Mae Rim, Chiang Mai','เช่น แม่ริม เชียงใหม่'); }
+const plNorm=s=>String(s||'').toLowerCase().replace(/^(ตำบล|อำเภอ|จังหวัด|แขวง|เขต|ต\.|อ\.|จ\.)\s*/,'').replace(/[\s.\-]+/g,'');
+let PLACE_RES=[], placeTm=0, placeSeq=0;
+async function placeSearch(raw){ const box=$('placeRes'), seq=++placeSeq; if(!box) return; const words=String(raw||'').trim().split(/[\s,]+/).map(plNorm).filter(Boolean);
+  if(!words.length||words.join('').length<2){ box.innerHTML=''; PLACE_RES=[]; return; }
+  box.innerHTML=`<p class="note">${T('Searching…','กำลังค้นหา…')}</p>`; const [a2,a3]=await Promise.all([loadAdm(2),loadAdm(3)]); if(seq!==placeSeq) return;
+  // each word must be found in the place's own names or in its district / province names; a match at the start of the own name ranks first
+  const out=[], add=(rank,own,ctx,o)=>{ const O=own.map(plNorm), C=O.concat(ctx.map(plNorm)); if(!words.every(w=>C.some(x=>x.includes(w)))) return;
+    const J=words.join(''); out.push({...o,score:rank+(O.some(x=>x===J)?-20:O.some(x=>x.startsWith(J))?-10:0)+(O.some(x=>x===words[0])?0:O.some(x=>x.startsWith(words[0]))?10:O.some(x=>x.includes(words[0]))?20:30)}); };
+  const th=LANG==='th', cen=f=>{ const c=provCentroid(f); return [c.lat??c[0],c.lng??c[1]]; };
+  for(const f of GEO_P.features){ const q=f.properties; if(q.c!=='THA') continue; add(0,[q.n,q.th],[],{name:provName(q),sub:T('Province','จังหวัด'),f}); }
+  for(const t of TOWNS){ add(1,[t.name,townName(t)],[],{name:townName(t),sub:T('Town','เมือง')+(t.cc?' · '+t.cc:''),lat:t.lat,lon:t.lon}); }
+  for(const q of a2?.idx||[]){ const d=q.p; add(2,[d.en,d.th],[d.pen,d.pth],{name:admName(d,2),sub:th?(admBkk(d)?'กรุงเทพมหานคร':'จ.'+d.pth):d.pen,f:q.f,b:q.b}); }
+  for(const q of a3?.idx||[]){ const d=q.p; add(3,[d.en,d.th],[d.den,d.dth,d.pen,d.pth],{name:admName(d,3),sub:th?`${admBkk(d)?'เขต':'อ.'}${d.dth} ${admBkk(d)?'กรุงเทพมหานคร':'จ.'+d.pth}`:`${d.den} district, ${d.pen}`,f:q.f,b:q.b}); }
+  PLACE_RES=out.sort((x,y)=>x.score-y.score||x.name.localeCompare(y.name,LOC())).slice(0,12);
+  for(const r of PLACE_RES){ if(r.lat==null){ const c=cen(r.f); r.lat=c[0]; r.lon=c[1]; if(!r.b){ const B=L.geoJSON(r.f).getBounds(); r.b=[B.getWest(),B.getSouth(),B.getEast(),B.getNorth()]; } } }
+  box.innerHTML=PLACE_RES.length?PLACE_RES.map((r,i)=>`<div class="plrow"><button type="button" class="pn" data-go="${i}"><b>${esc(r.name)}</b><span>${esc(r.sub)}</span></button><button type="button" class="btn" data-add="${i}">＋ ${T('Add','เพิ่ม')}</button></div>`).join('')
+    :`<p class="note">${T('No place found. Try the name of a sub-district, district or province; you can also tap the map.','ไม่พบสถานที่ ลองพิมพ์ชื่อตำบล อำเภอ หรือจังหวัด หรือแตะบนแผนที่แทน')}</p>`;
+  box.querySelectorAll('[data-go]').forEach(el=>el.onclick=()=>{ const r=PLACE_RES[+el.dataset.go]; if(r) goPlace(r.lat,r.lon,r.b); });
+  box.querySelectorAll('[data-add]').forEach(el=>el.onclick=()=>{ const r=PLACE_RES[+el.dataset.add]; if(!r) return;
+    if(S.myPts.some(q=>Math.abs(q.lat-r.lat)<1e-3&&Math.abs(q.lon-r.lon)<1e-3)){ toast(T('Already in my places.','มีอยู่ในจุดของฉันแล้ว')); return; }
+    addMyPoint(r.lat,r.lon,r.name); toast(T(`Added: ${r.name}`,`เพิ่มแล้ว: ${r.name}`)); el.disabled=true; }); }
+$('placeQ')?.addEventListener('input',e=>{ clearTimeout(placeTm); const v=e.target.value; placeTm=setTimeout(()=>placeSearch(v),250); });
+$('placeQ')?.addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); clearTimeout(placeTm); placeSearch(e.target.value); } });
 function renderWarnings(){
+  renderMyPts();
   ensureT2(renderWarnings); ensureRainObs(renderWarnings); ensureRainFac(renderWarnings);
   if(!S.sim&&!S.hots.length&&!P.data){$('warnList').innerHTML=`<p class="note">${PUBLIC?(LOADFAIL?failTxt():T('Loading the latest data…','กำลังโหลดข้อมูลล่าสุด…')):T('No run yet. Press <b>Load live data</b>, or <b>Run demo</b> in Settings.','ยังไม่มีผล กด <b>โหลดข้อมูลล่าสุด</b> หรือ <b>ทดลองด้วยข้อมูลจำลอง</b> ในแท็บตั้งค่า')}</p>`;$('nearList').textContent='–';return;}
   const total=S.recep.some(r=>r.stT);   // live data: rank by total PM2.5; demo / no map data: fire smoke only (as before)

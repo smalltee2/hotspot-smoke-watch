@@ -5006,10 +5006,10 @@ function renderSummary(){
 // ---- the next 24 h and 24–48 h side by side (provinces, towns, stations alike): highest 24-h mean PM2.5 whose 24 h end in the
 // period (a series that already holds 24-h means is used as it is), with the lowest–highest temperature and rain total of the period
 const WIN=[[0,24],[24,48]];
-// periods of the forecast cards: one per day up to the end of the forecast (CAMS about 3 days, SILAM about 5; at most 6); a day
-// is shown when the forecast covers at least 18 h of it
-function wins(){ const H=P.data&&P.data.hours; if(!H?.length) return WIN;
-  const ahead=(H[H.length-1]-Math.floor(Date.now()/HR)*HR)/HR, out=[]; for(let a=0;a+18<=ahead&&out.length<6;a+=24) out.push([a,a+24]); return out.length>=2?out:WIN; }
+// periods of the forecast cards: one per day up to the end of the forecast, a day shown when the forecast covers at least 18 h of
+// it; CAMS 3 days (its data reach 4 days in the Bangkok morning, so it is capped to keep the cards the same all day), SILAM up to 6
+function wins(){ const H=P.data&&P.data.hours; if(!H?.length) return WIN; const max=P.data.isSilam?6:3;
+  const ahead=(H[H.length-1]-Math.floor(Date.now()/HR)*HR)/HR, out=[]; for(let a=0;a+18<=ahead&&out.length<max;a+=24) out.push([a,a+24]); return out.length>=2?out:WIN; }
 function winMax(H,ser,tNow,a,b,is24){ let best=null,tB=null;
   for(let i=0;i<H.length;i++){ const t=H[i]; if(t<=tNow+a*HR||t>tNow+b*HR) continue; let v=null;
     if(is24) v=ser[i]; else { let s=0,n=0; for(let j=Math.max(0,i-23);j<=i;j++){ const x=ser[j]; if(x!=null){s+=x;n++;} } v=n>=18?s/n:null; }

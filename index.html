@@ -525,6 +525,7 @@ td.num{text-align:right;font-family:var(--font-data);font-variant-numeric:tabula
 /* original layout: the time bar spans the bottom of the map, so the logo sits just above it (--scrubH: its measured height) */
 .leaflet-bottom.leaflet-left .maplogo{margin-bottom:calc(var(--scrubH,58px) + 20px)}
 .summary div.tap{cursor:pointer}.summary div.tap:hover b,.summary div.tap:focus-visible b{text-decoration:underline}.alert.warned-hl{outline:2px solid var(--focus);outline-offset:2px;transition:outline-color .3s}
+.summary div.warnon b,.summary div.warnon span{color:#c62828}@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .summary div.warnon b,:root:not([data-theme="light"]) .summary div.warnon span{color:#ff6b6b}}:root[data-theme="dark"] .summary div.warnon b,:root[data-theme="dark"] .summary div.warnon span{color:#ff6b6b}.summary div.warnon b::before{content:"";display:inline-block;width:.95em;height:.95em;margin-right:.22em;vertical-align:-.1em;background:currentColor;-webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill-rule='evenodd' d='M12 1.6a1.6 1.6 0 0 1 1.6 1.6v.6a6.6 6.6 0 0 1 5 6.4v4.3l1.9 2.7a.9.9 0 0 1-.7 1.4H4.2a.9.9 0 0 1-.7-1.4l1.9-2.7v-4.3a6.6 6.6 0 0 1 5-6.4v-.6A1.6 1.6 0 0 1 12 1.6zM11 7.2h2l-.3 5.6h-1.4zM12 13.8a1.15 1.15 0 1 0 0 2.3a1.15 1.15 0 1 0 0-2.3zM9.6 19.9h4.8a2.4 2.4 0 0 1-4.8 0z'/%3E%3C/svg%3E") center/contain no-repeat;mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill-rule='evenodd' d='M12 1.6a1.6 1.6 0 0 1 1.6 1.6v.6a6.6 6.6 0 0 1 5 6.4v4.3l1.9 2.7a.9.9 0 0 1-.7 1.4H4.2a.9.9 0 0 1-.7-1.4l1.9-2.7v-4.3a6.6 6.6 0 0 1 5-6.4v-.6A1.6 1.6 0 0 1 12 1.6zM11 7.2h2l-.3 5.6h-1.4zM12 13.8a1.15 1.15 0 1 0 0 2.3a1.15 1.15 0 1 0 0-2.3zM9.6 19.9h4.8a2.4 2.4 0 0 1-4.8 0z'/%3E%3C/svg%3E") center/contain no-repeat;transform-origin:50% 8%;animation:bellring 1.1s ease-in-out 2}@keyframes bellring{0%,100%{transform:rotate(0)}15%{transform:rotate(14deg)}30%{transform:rotate(-12deg)}45%{transform:rotate(9deg)}60%{transform:rotate(-6deg)}75%{transform:rotate(3deg)}}@media (prefers-reduced-motion: reduce){.summary div.warnon b::before{animation:none}}
 </style>
 </head>
 <body>
@@ -3749,6 +3750,7 @@ function renderSummary(){
   $('sHot').textContent=hr.length.toLocaleString(); $('sSrc').textContent=cells.size.toLocaleString();
   $('sFrp').textContent=Math.round([...cells.values()].reduce((a,v)=>a+v,0)).toLocaleString();
   $('sWarn').textContent=S.recep.some(r=>r.stT)||S.sim?warnedTowns().length:'–';
+  $('sWarn').parentElement.classList.toggle('warnon',+$('sWarn').textContent>0);   // red, with a bell, while any town has a warning
 }
 // ---- the next 24 h and 24–48 h side by side (provinces, towns, stations alike): highest 24-h mean PM2.5 whose 24 h end in the
 // period (a series that already holds 24-h means is used as it is), with the lowest–highest temperature and rain total of the period

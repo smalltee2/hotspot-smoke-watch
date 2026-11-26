@@ -1725,6 +1725,9 @@ header .status>.btn{--water-fill:.72}
         <details class="accmore"><summary data-th="ตัวเลขเหล่านี้คืออะไร">What these numbers mean</summary>
           <p class="note" data-th="เทียบค่าพยากรณ์รายชั่วโมงที่หน้านี้แสดง กับค่าที่สถานีตรวจวัดมาตรฐานในประเทศไทยวัดได้จริงในช่วง 7 วันล่าสุด คำนวณใหม่ทุกชั่วโมง&lt;br&gt;• &lt;b&gt;บอกระดับความเข้มข้นถูก&lt;/b&gt;: สัดส่วนชั่วโมงที่ค่าพยากรณ์อยู่ในระดับความเข้มข้นเดียวกับค่าที่วัดได้ ตามเกณฑ์ของกรมควบคุมมลพิษ (0–15, 15–25, 25–37.5, 37.5–75 และมากกว่า 75 µg/m³)&lt;br&gt;• &lt;b&gt;คลาดเคลื่อนโดยทั่วไป&lt;/b&gt;: ค่าต่างเฉลี่ยระหว่างพยากรณ์กับค่าที่วัดได้ ไม่ว่าสูงหรือต่ำ&lt;span class=&quot;dev-only&quot;&gt;&lt;br&gt;• &lt;b&gt;ชั่วโมงฝุ่นเกิน 37.5&lt;/b&gt;: จากชั่วโมงที่วัดได้เกิน 37.5 µg/m³ พยากรณ์เตือนไว้ได้กี่ชั่วโมง และจากที่เตือนไว้ มีกี่ครั้งที่ไม่เกินจริง (ใช้ค่ารายชั่วโมงเทียบกับระดับ 37.5)&lt;/span&gt;&lt;br&gt;• &lt;b&gt;ชั่วโมงข้างหน้า&lt;/b&gt; = พยากรณ์ที่ออกก่อน 1–6 ชม. &lt;b&gt;วันพรุ่งนี้&lt;/b&gt; = ออกก่อน 12–24 ชม. &lt;b&gt;ล่วงหน้า 2 วัน&lt;/b&gt; = ออกก่อน 48 ชม.&lt;br&gt;ที่ที่อากาศสะอาดเกือบตลอด บอกระดับความเข้มข้นถูกได้ง่าย จึงควรดูคู่กับค่าคลาดเคลื่อนและชั่วโมงฝุ่นเกิน 37.5&lt;br&gt;นอกประเทศไทยมีสถานีมาตรฐานรายชั่วโมงน้อยเกินไปจึงไม่แสดง ไม่นับเซนเซอร์ราคาประหยัด พื้นที่ที่อยู่ห่างจากสถานีตรวจสอบได้เพียงทางอ้อม จึงอาจคลาดเคลื่อนมากกว่าตัวเลขนี้">The hourly forecast this page shows, compared with what the hourly reference monitors in Thailand measured over the last 7 days; recomputed every hour.<br>• <b>Colour band right</b>: the share of hours whose forecast fell in the same Thai PCD colour band as the measurement (0–15, 15–25, 25–37.5, 37.5–75 and above 75 µg/m³).<br>• <b>Typical error</b>: the mean difference between forecast and measurement, either way.<span class="dev-only"><br>• <b>Hours above 37.5</b>: of the hours measured above 37.5 µg/m³, how many the forecast also put above it; and of the forecasts above it, how many did not happen (hourly values against the 37.5 level).</span><br>• <b>Next hours</b> = forecasts made 1–6 h before; <b>next day</b> = 12–24 h before; <b>two days ahead</b> = 48 h before.<br>Where the air is clean almost all the time the colour band is easy to get right, so read it with the typical error and the hours above 37.5.<br>Outside Thailand there are too few hourly reference monitors, so none is shown. Low-cost sensors are not counted. Places far from a monitor are checked only indirectly and may be less accurate than these numbers.</p></details>
       </details>
+      <h3 data-th="แนวโน้ม PM&lt;sub&gt;2.5&lt;/sub&gt; รายพื้นที่">PM<sub>2.5</sub> trend by area</h3>
+      <p class="note" id="areaNote"></p>
+      <div id="areaTrend" class="note">–</div>
       <div class="wview"><label for="warnView" data-th="แสดงพยากรณ์">Show forecast</label>
         <select id="warnView">
           <option value="prov" data-th="รายจังหวัด (เฉลี่ยทั้งจังหวัด)">By province (province average)</option>
@@ -1733,9 +1736,6 @@ header .status>.btn{--water-fill:.72}
           <option value="station" data-th="สถานีตรวจวัด">Monitoring stations</option>
         </select></div>
       <div id="wv-prov" class="wv">
-        <h3 data-th="แนวโน้ม PM&lt;sub&gt;2.5&lt;/sub&gt; รายพื้นที่">PM<sub>2.5</sub> trend by area</h3>
-        <p class="note" id="areaNote"></p>
-        <div id="areaTrend" class="note">–</div>
         <h3 data-th="พยากรณ์รายจังหวัด">Forecast by province</h3>
         <p class="note" data-th="ค่าเฉลี่ยของทุกจุด 0.1° ในจังหวัด เรียงจากค่าสูงสุด">Average over every 0.1° point in the province, highest first.</p>
         <div id="provList"></div>
@@ -3452,6 +3452,16 @@ function accGroup(level,lat,lon){ if(!ACCD) return null; const all=ACCD.stations
     else { const rg=regionAt(lat,lon); if(!rg) return {label:T('outside Thailand','นอกประเทศไทย'),list:[],s:null,l:null,nSt:0,out:true};
       g=accGroup('region:'+rg); g.label=T(`no monitor within ${ACC_NEAR_KM} km, so ${REG_N[rg][0]}`,`ไม่มีสถานีในรัศมี ${ACC_NEAR_KM} กม. จึงใช้ค่าของ${REG_N[rg][1]}`); return g; } }
   else if(level.startsWith('region:')){ const rg=level.slice(7); g={label:regName(rg),list:all.filter(s=>s.reg===rg)}; }
+  // the area set in Settings (owner, 27 Nov 2026): a province (its monitors; none with enough days: its region, said so), a
+  // region, or Thailand (also for the whole map: the monitors scored are Thai)
+  else if(level==='area'){ const pk=provKey(), rs=regSub();
+    if(pk){ const list=all.filter(s=>(s._pv??=(provinceOf(s.lat,s.lon)?.n||''))===pk), M=accSum(list,'m1'), nm=regionLabel();
+      if(accMon(M.a)) g={label:nm,head:nm,list};
+      else { const rg=PROV_REG[pk]; if(!rg) return {label:nm,head:nm,list:[],nSt:0};
+        g=accGroup('region:'+rg); g.label=T(`${nm}: no monitor with enough measured days, so ${REG_N[rg][0]}`,`${nm} ไม่มีสถานีที่มีวันตรวจวัดพอ จึงใช้ค่าของ${REG_N[rg][1]}`);
+        g.head=T(`${nm} (${REG_N[rg][0]})`,`${nm} (ค่าของ${REG_N[rg][1]})`); return g; } }
+    else if(rs) g={label:regName(rs),head:regName(rs),list:all.filter(s=>s.reg===rs)};
+    else g={label:T('Thailand','ประเทศไทย'),head:T('Thailand','ไทย'),list:all}; }
   else g={label:T('Thailand','ประเทศไทย'),list:all};
   // one accuracy everywhere (owner, 26 Nov 2026): 100 − NRMSE of the daily mean (00–24 h Thai time) forecast 24 h (m1) and 48 h
   // (m2) ahead, last 30 days; the monitors of the group summed (accuracy.json from 26 Nov 2026; older files: none)
@@ -3482,15 +3492,17 @@ function accTable(g){ if(g?.out) return `<p class="note">${T('The forecast is ch
 function accWhere(){ if(ACC_AT) return {...ACC_AT,mine:false,st:true}; if(hereLL) return {lat:hereLL.lat,lon:hereLL.lon,mine:true}; const c=map.getCenter(); return {lat:c.lat,lon:c.lng,mine:false}; }
 function renderAcc(){
   renderRefSum(); renderLcSum(); const box=$('accBox'); if(!box) return; box.hidden=!ACCD; if(!ACCD) return;
-  const th=accGroup('th');
-  $('accHead').textContent=th?.m1?T(`Thailand, next day: accuracy ${accAccT(th.m1.nrmse)}`,`ไทย พยากรณ์วันพรุ่งนี้ ความแม่นยำ ${accAccT(th.m1.nrmse)}`):'';
+  // the second button names the area set in Settings (both languages kept for the page's language switch)
+  const ar=accGroup('area'), pp=provSelP(), rs=regSub(), arEn=pp?pp.n:rs?REG_N[rs][0]:'Thailand', arTh=pp?(pp.th||pp.n):rs?REG_N[rs][1]:'ไทย';
+  $('accHead').textContent=ar?.m1?T(`${ar.head}, next day: accuracy ${accAccT(ar.m1.nrmse)}`,`${ar.head} พยากรณ์วันพรุ่งนี้ ความแม่นยำ ${accAccT(ar.m1.nrmse)}`):'';
+  { const b=box.querySelector('[data-acc="th"]'); if(b){ b.dataset.en=arEn; b.dataset.th=arTh; b.textContent=T(arEn,arTh); b.title=T('The area set in Settings','พื้นที่ที่ตั้งไว้ในหน้าตั้งค่า'); } }
   for(const b of box.querySelectorAll('[data-acc]')) b.setAttribute('aria-pressed',String(b.dataset.acc===ACC_LEVEL));
   let g, extra='';
   if(ACC_LEVEL==='here'){ const w=accWhere(); g=accGroup('here',w.lat,w.lon);
     extra=`<p class="note">${w.st?T('At the monitor you picked on the map','ที่สถานีที่เลือกบนแผนที่'):w.mine?T('At your location','ที่ตำแหน่งของคุณ'):T('At the centre of the map (tap ◎ on the map to use your location)','ที่กลางแผนที่ (แตะ ◎ บนแผนที่เพื่อใช้ตำแหน่งของคุณ)')}: ${esc(g?.label||'')}</p>`; }
   else if(ACC_LEVEL==='region'){ const w=accWhere(), rg=REG_N[ACC_REG]?ACC_REG:(regionAt(w.lat,w.lon)||'north'); g=accGroup('region:'+rg);
     extra=`<div class="field accreg"><label for="accReg">${T('Region','ภาค')}</label><select id="accReg">${Object.keys(REG_N).map(k=>`<option value="${k}"${k===rg?' selected':''}>${regName(k)}</option>`).join('')}</select></div>`; }
-  else g=accGroup('th');
+  else g=ar;
   if(P.data?.isSilam) extra=`<p class="note"><b>${T('These numbers are for the CAMS-based forecast.','ตัวเลขนี้เป็นของพยากรณ์ชุด CAMS')}</b> ${T('The SILAM-based forecast is not scored yet.','พยากรณ์ชุด SILAM ยังไม่มีผลตรวจ')}</p>`+extra;
   $('accBody').innerHTML=extra+(g&&g.nSt?`<p class="note acccap">${ACC_LEVEL==='here'?'':esc(g.label.charAt(0).toUpperCase()+g.label.slice(1))+' · '}${T(`${g.nSt} monitor${g.nSt>1?'s':''}`,`${g.nSt} สถานี`)} · ${T(`last ${accMonN()} days to`,`${accMonN()} วันล่าสุด ถึง`)} ${fmtT(ACCD.tEnd)}</p>`:'')+accTable(g)+accLcNote();
   const sel=$('accReg'); if(sel) sel.onchange=()=>{ACC_REG=sel.value; store.set('hsw.accReg',ACC_REG); renderAcc();};
@@ -5410,7 +5422,7 @@ function renderAreaTrend(){
   box.className='trend';
   box.innerHTML=`
     <div><strong>${esc(areaSel==='__all'?(regionLabel()||g.name):nm(g))}</strong></div>
-    ${trendBlock(H,g.mean,{lo:g.lo,hi:g.hi,days:false,label:'PM2.5 trend, '+(g.p?g.p.n:g.name)})}`;
+    ${trendBlock(H,g.mean,{lo:g.lo,hi:g.hi,wx:g.wx,days:false,label:'PM2.5 trend, '+(g.p?g.p.n:g.name)})}`;
   renderProvList(A); if(A.dgroups) renderDistList(A);
 }
 function hereTrend(lat,lon){

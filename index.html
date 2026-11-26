@@ -222,6 +222,8 @@ td.num{text-align:right;font-family:var(--font-data);font-variant-numeric:tabula
 .btn-sum svg,.sum-cta svg{flex:none}
 .sum-cta{margin:4px 0 12px}
 .sum-cta .btn{display:inline-flex;align-items:center;gap:7px;width:100%;justify-content:center;text-align:left}
+/* area menus above the tabs (owner, 27 Nov 2026: the area drives the whole page, so it is not kept in Settings) */
+.areabar{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0;padding:0 16px}.areabar label{display:block;font-size:.78rem;color:var(--muted);margin-bottom:3px}.areabar .field{margin:0;min-width:0}.areabar select{width:100%;min-width:0}.areabar .field[hidden]{display:none}.areabar:has(.field[hidden]){grid-template-columns:1fr}
 .sumcard .sumctl{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:10px 0 4px;font-size:.8rem}
 .sumcard .sumctl select{font:inherit;max-width:100%}
 .sumcard .sumbody{margin-top:6px}
@@ -561,6 +563,15 @@ td.num{text-align:right;font-family:var(--font-data);font-variant-numeric:tabula
     <section id="hereBox" class="herebox" hidden aria-live="polite"></section>
     <div id="sumPop" class="locpop" hidden role="dialog" aria-modal="true" aria-labelledby="sumT"><div class="lpcard sumcard" id="sumCard"></div></div>
 <div id="locPop" class="locpop" hidden role="dialog" aria-modal="true" aria-labelledby="locPopT"><div class="lpcard" id="locPopCard"></div></div>
+    <div class="areabar">
+      <div class="field"><label for="region" data-th="พื้นที่แสดงผล">Area shown</label>
+        <select id="region">
+          <option value="thailand" data-th="ประเทศไทย">Thailand</option>
+          <option value="msea" data-th="เอเชียตะวันออกเฉียงใต้ภาคพื้นทวีป">Mainland Southeast Asia</option>
+        </select></div>
+      <div class="field"><label for="provSel" data-th="ภาคหรือจังหวัด">Region or province</label>
+        <select id="provSel"></select></div>
+    </div>
     <div class="tabs" role="tablist">
       <button role="tab" aria-selected="true" data-tab="warn" id="tab-warn" data-th="คำเตือน">Warnings</button>
       <button role="tab" aria-selected="false" data-tab="hot" id="tab-hot" data-th="จุดความร้อน">Hotspots</button>
@@ -571,16 +582,15 @@ td.num{text-align:right;font-family:var(--font-data);font-variant-numeric:tabula
 
     <section class="pane" id="pane-warn" role="tabpanel">
       <div id="banner"></div>
-      <div class="sum-cta"><button class="btn" id="btnSum2" type="button"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 3h9l4 4v14H6z"/><path d="M9 11h7M9 15h7M9 7h3"/></svg><span data-th="สรุปพยากรณ์ วันนี้ พรุ่งนี้ และอีก 2 วัน">Forecast summary: today, tomorrow and the next two days</span></button></div>
       <details id="accBox" class="accbox" hidden>
         <summary><span class="acct" data-th="แบบจำลองแม่นแค่ไหน">How right has the forecast been?</span><span id="accHead" class="acchead"></span></summary>
         <div class="accseg" role="group" aria-label="Area">
-          <button type="button" data-acc="here" aria-pressed="true" data-th="ที่นี่">Here</button>
-          <button type="button" data-acc="th" aria-pressed="false" data-th="ไทย">Thailand</button>
+          <button type="button" data-acc="th" aria-pressed="true" data-th="ไทย">Thailand</button>
+          <button type="button" data-acc="here" aria-pressed="false" data-th="ใกล้ฉัน / กลางแผนที่">Near me / map centre</button>
         </div>
         <div id="accBody"></div>
         <details class="accmore"><summary data-th="ตัวเลขเหล่านี้คืออะไร">What these numbers mean</summary>
-          <p class="note" data-th="เทียบค่าพยากรณ์รายชั่วโมงที่หน้านี้แสดง กับค่าที่สถานีตรวจวัดมาตรฐานในประเทศไทยวัดได้จริงในช่วง 7 วันล่าสุด คำนวณใหม่ทุกชั่วโมง&lt;br&gt;• &lt;b&gt;บอกระดับความเข้มข้นถูก&lt;/b&gt;: สัดส่วนชั่วโมงที่ค่าพยากรณ์อยู่ในระดับความเข้มข้นเดียวกับค่าที่วัดได้ ตามเกณฑ์ของกรมควบคุมมลพิษ (0–15, 15–25, 25–37.5, 37.5–75 และมากกว่า 75 µg/m³)&lt;br&gt;• &lt;b&gt;คลาดเคลื่อนโดยทั่วไป&lt;/b&gt;: ค่าต่างเฉลี่ยระหว่างพยากรณ์กับค่าที่วัดได้ ไม่ว่าสูงหรือต่ำ&lt;span class=&quot;dev-only&quot;&gt;&lt;br&gt;• &lt;b&gt;ชั่วโมงฝุ่นเกิน 37.5&lt;/b&gt;: จากชั่วโมงที่วัดได้เกิน 37.5 µg/m³ พยากรณ์เตือนไว้ได้กี่ชั่วโมง และจากที่เตือนไว้ มีกี่ครั้งที่ไม่เกินจริง (ใช้ค่ารายชั่วโมงเทียบกับระดับ 37.5)&lt;/span&gt;&lt;br&gt;• &lt;b&gt;ชั่วโมงข้างหน้า&lt;/b&gt; = พยากรณ์ที่ออกก่อน 1–6 ชม. &lt;b&gt;วันพรุ่งนี้&lt;/b&gt; = ออกก่อน 12–24 ชม. &lt;b&gt;ล่วงหน้า 2 วัน&lt;/b&gt; = ออกก่อน 48 ชม.&lt;br&gt;ที่ที่อากาศสะอาดเกือบตลอด บอกระดับความเข้มข้นถูกได้ง่าย จึงควรดูคู่กับค่าคลาดเคลื่อนและชั่วโมงฝุ่นเกิน 37.5<br>นอกประเทศไทยมีสถานีมาตรฐานรายชั่วโมงน้อยเกินไปจึงไม่แสดง ไม่นับเซนเซอร์ราคาประหยัด พื้นที่ที่อยู่ห่างจากสถานีตรวจสอบได้เพียงทางอ้อม จึงอาจคลาดเคลื่อนมากกว่าตัวเลขนี้">The hourly forecast this page shows, compared with what the hourly reference monitors in Thailand measured over the last 7 days; recomputed every hour.<br>• <b>Colour band right</b>: the share of hours whose forecast fell in the same Thai PCD colour band as the measurement (0–15, 15–25, 25–37.5, 37.5–75 and above 75 µg/m³).<br>• <b>Typical error</b>: the mean difference between forecast and measurement, either way.<span class="dev-only"><br>• <b>Hours above 37.5</b>: of the hours measured above 37.5 µg/m³, how many the forecast also put above it; and of the forecasts above it, how many did not happen (hourly values against the 37.5 level).</span><br>• <b>Next hours</b> = forecasts made 1–6 h before; <b>next day</b> = 12–24 h before; <b>two days ahead</b> = 48 h before.<br>Where the air is clean almost all the time the colour band is easy to get right, so read it with the typical error and the hours above 37.5.<br>Outside Thailand there are too few hourly reference monitors, so none is shown. Low-cost sensors are not counted. Places far from a monitor are checked only indirectly and may be less accurate than these numbers.</p></details>
+          <p class="note" data-th="เทียบค่าเฉลี่ย PM&lt;sub&gt;2.5&lt;/sub&gt; รายวัน (00–24 น.) ที่หน้านี้พยากรณ์ไว้ กับค่าเฉลี่ยรายวันที่สถานีตรวจวัดมาตรฐานในประเทศไทยวัดได้จริง ย้อนหลัง 30 วัน คำนวณใหม่ทุกชั่วโมง&lt;br&gt;• &lt;b&gt;ความแม่นยำ&lt;/b&gt;: 100 − NRMSE (ค่าคลาดเคลื่อน RMSE เทียบกับค่าเฉลี่ยที่วัดได้) ยิ่งสูงยิ่งใกล้ค่าจริง วิธีคิดดูได้ในแท็บเกี่ยวกับ&lt;br&gt;• &lt;b&gt;คลาดเคลื่อนโดยเฉลี่ย&lt;/b&gt;: ค่าต่างเฉลี่ยระหว่างพยากรณ์กับค่าที่วัดได้ ไม่ว่าสูงหรือต่ำ&lt;br&gt;• &lt;b&gt;แนวโน้ม&lt;/b&gt;: พยากรณ์มักสูงหรือต่ำกว่าค่าจริง&lt;span class=&quot;dev-only&quot;&gt;&lt;br&gt;• &lt;b&gt;วันที่ฝุ่นเกิน 37.5&lt;/b&gt;: จากวันที่วัดได้เกิน 37.5 µg/m³ พยากรณ์เตือนไว้ได้กี่วัน และจากที่เตือนไว้ มีกี่วันที่ไม่เกินจริง&lt;/span&gt;&lt;br&gt;• &lt;b&gt;วันพรุ่งนี้&lt;/b&gt; = พยากรณ์ที่ออกล่วงหน้า 24 ชม. &lt;b&gt;ล่วงหน้า 2 วัน&lt;/b&gt; = ออกล่วงหน้า 48 ชม.&lt;br&gt;นอกประเทศไทยมีสถานีมาตรฐานน้อยเกินไปจึงไม่แสดง ไม่นับเซนเซอร์ราคาประหยัด พื้นที่ที่อยู่ห่างจากสถานีตรวจสอบได้เพียงทางอ้อม จึงอาจคลาดเคลื่อนมากกว่าตัวเลขนี้">The daily mean PM<sub>2.5</sub> (00–24 h) this page forecast, compared with the daily mean the reference monitors in Thailand measured, over the last 30 days; recomputed every hour.<br>• <b>Accuracy</b>: 100 − NRMSE (the RMSE error relative to the mean measured value); higher is closer to the measurements. The About tab shows how it is worked out.<br>• <b>Typical error</b>: the mean difference between forecast and measurement, either way.<br>• <b>Tendency</b>: whether the forecast runs high or low.<span class="dev-only"><br>• <b>Days above 37.5</b>: of the days measured above 37.5 µg/m³, how many the forecast warned of; and of its warnings, how many did not happen.</span><br>• <b>Next day</b> = forecasts made 24 h ahead; <b>two days ahead</b> = 48 h ahead.<br>Outside Thailand there are too few reference monitors, so none is shown. Low-cost sensors are not counted. Places far from a monitor are checked only indirectly and may be less accurate than these numbers.</p></details>
       </details>
       <h3 data-th="แนวโน้ม PM&lt;sub&gt;2.5&lt;/sub&gt; รายพื้นที่">PM<sub>2.5</sub> trend by area</h3>
       <p class="note" id="areaNote"></p>
@@ -629,14 +639,7 @@ td.num{text-align:right;font-family:var(--font-data);font-variant-numeric:tabula
 
     <section class="pane" id="pane-set" role="tabpanel" hidden>
       <h3 class="dev-only" data-th="พื้นที่และข้อมูลไฟ">Area and fire data</h3>
-      <h3 class="pub-only" data-th="พื้นที่และการแจ้งเตือน">Area and alerts</h3>
-      <div class="field"><label for="region" data-th="พื้นที่แสดงผล">Region</label>
-        <select id="region">
-          <option value="thailand" data-th="ประเทศไทย">Thailand</option>
-          <option value="msea" data-th="เอเชียตะวันออกเฉียงใต้ภาคพื้นทวีป">Mainland Southeast Asia</option>
-        </select></div>
-      <div class="field"><label for="provSel" data-th="ภาคหรือจังหวัด (จังหวัดแสดงเขตอำเภอและตำบล)">Region or province (a province shows its districts and sub-districts)</label>
-        <select id="provSel"></select></div>
+      <h3 class="pub-only" data-th="จุดของฉัน">My points</h3>
       <div class="dev-only">
       <div class="field"><label for="mapkey">NASA FIRMS MAP_KEY</label>
         <input id="mapkey" type="password" autocomplete="off" placeholder="32-character key from firms.modaps.eosdis.nasa.gov/api/map_key">
@@ -697,7 +700,7 @@ td.num{text-align:right;font-family:var(--font-data);font-variant-numeric:tabula
         <li data-th="กดปุ่มเป้าเล็งบนแผนที่ เพื่อดูค่าฝุ่นและไฟใกล้ตำแหน่งของคุณ">Tap the target button on the map to see PM<sub>2.5</sub> and nearby fires where you are.</li>
         <li data-th="เลื่อนแถบเวลาใต้แผนที่ หรือกด ▶ เพื่อดูการพยากรณ์ชั่วโมงถัดไป">Move the time bar under the map, or press ▶, to see the coming hours.</li>
         <li data-th="เลือก &quot;แสดงเป็น&quot; AQI ไทย หรือ AQI สหรัฐฯ ได้ในกล่องชั้นข้อมูล">Choose Thai or US AQI under “Show as” in the layers box.</li>
-        <li data-th="เปลี่ยนภาคได้ในแท็บตั้งค่า และคลิกบนแผนที่เพื่อเพิ่มจุดของคุณ เช่น บ้าน โรงเรียน">Change the region in Settings, and click the map to add your own places, such as home or a school.</li>
+        <li data-th="เลือกพื้นที่ (ประเทศ ภาค หรือจังหวัด) ได้จากเมนูเหนือแท็บ และคลิกบนแผนที่เพื่อเพิ่มจุดของคุณ เช่น บ้าน โรงเรียน">Pick the area (country, region or province) in the menus above the tabs, and click the map to add your own places, such as home or a school.</li>
       </ul>
       <h3 data-th="ระดับความเข้มข้นและคำแนะนำ">Colours and what to do</h3>
       <p class="note" data-th="ระดับตามเกณฑ์กรมควบคุมมลพิษ (ค่าเฉลี่ย 24 ชม.) คำแนะนำด้านล่างเป็นแนวทางทั่วไป">Levels follow Thailand's Pollution Control Department (24-hour average). The advice below is general guidance.</p>
@@ -2200,7 +2203,7 @@ async function loadVerify(){
 
 // ---- how right the forecast has been lately (data/accuracy.json from scripts/accuracy.mjs, rebuilt every run: the last 7 days
 // of hourly values at the hourly reference monitors, per station; summed here for the chosen area)
-let ACCD=null, ACC_AT=null, ACC_LEVEL=({here:1,th:1}[store.get('hsw.accLevel')]&&store.get('hsw.accLevel'))||'here', ACC_REG=store.get('hsw.accReg')||'';
+let ACCD=null, ACC_AT=null, ACC_LEVEL=({here:1,th:1}[store.get('hsw.accLevel2')]&&store.get('hsw.accLevel2'))||'th', ACC_REG=store.get('hsw.accReg')||'';
 const accLayer=L.layerGroup(), accLcLayer=L.layerGroup(), iqLayer=L.layerGroup();
 // one map item "Forecast accuracy", compared with: the reference monitors (ref, the headline score), the OpenAQ low-cost
 // sensors (lc, scored apart) or IQAir (iq, IQAir as the reference); one set of badges at a time, so they never pile up or get mixed
@@ -2336,7 +2339,7 @@ function renderAcc(){
   // the second button names the area set in Settings (both languages kept for the page's language switch)
   const ar=accGroup('area'), pp=provSelP(), rs=regSub(), arEn=pp?pp.n:rs?REG_N[rs][0]:'Thailand', arTh=pp?(pp.th||pp.n):rs?REG_N[rs][1]:'ไทย';
   $('accHead').textContent=ar?.m1?T(`${ar.head}, next day: accuracy ${accAccT(ar.m1.nrmse)}`,`${ar.head} พยากรณ์วันพรุ่งนี้ ความแม่นยำ ${accAccT(ar.m1.nrmse)}`):'';
-  { const b=box.querySelector('[data-acc="th"]'); if(b){ b.dataset.en=arEn; b.dataset.th=arTh; b.textContent=T(arEn,arTh); b.title=T('The area set in Settings','พื้นที่ที่ตั้งไว้ในหน้าตั้งค่า'); } }
+  { const b=box.querySelector('[data-acc="th"]'); if(b){ b.dataset.en=arEn; b.dataset.th=arTh; b.textContent=T(arEn,arTh); b.title=T('The area chosen above the tabs','พื้นที่ที่เลือกไว้เหนือแท็บ'); } }
   for(const b of box.querySelectorAll('[data-acc]')) b.setAttribute('aria-pressed',String(b.dataset.acc===ACC_LEVEL));
   let g, extra='';
   if(ACC_LEVEL==='here'){ const w=accWhere(); g=accGroup('here',w.lat,w.lon);
@@ -2348,7 +2351,8 @@ function renderAcc(){
   $('accBody').innerHTML=extra+(g&&g.nSt?`<p class="note acccap">${ACC_LEVEL==='here'?'':esc(g.label.charAt(0).toUpperCase()+g.label.slice(1))+' · '}${T(`${g.nSt} monitor${g.nSt>1?'s':''}`,`${g.nSt} สถานี`)} · ${T(`last ${accMonN()} days to`,`${accMonN()} วันล่าสุด ถึง`)} ${fmtT(ACCD.tEnd)}</p>`:'')+accTable(g)+accLcNote();
   const sel=$('accReg'); if(sel) sel.onchange=()=>{ACC_REG=sel.value; store.set('hsw.accReg',ACC_REG); renderAcc();};
 }
-function openAcc(level){ if(level){ACC_LEVEL=level; store.set('hsw.accLevel',level);}
+function openAcc(level){ if(level) ACC_LEVEL=level;   // a look from the map, not kept as the preference
+ 
   if(window.PHONEUI?.active()){ document.querySelector('#tabbar [data-go="warn"]')?.click(); PHONEUI.set('full'); } else $('tab-warn')?.click();   // phones: the card is in the bottom sheet
   const d=$('accBox'); if(!d) return; d.open=true; renderAcc(); d.scrollIntoView({behavior:'smooth',block:'start'}); }
 function accHereRow(lat,lon){ const g=accGroup('here',lat,lon); if(!g) return ''; const sc=g.m1; if(!sc) return '';
@@ -2389,7 +2393,7 @@ function syncAccSrc(){ document.querySelectorAll('[data-accsrc]').forEach(b=>b.s
 document.querySelectorAll('[data-accsrc]').forEach(b=>b.addEventListener('click',()=>{ ACC_SRC=b.dataset.accsrc; store.set('hsw.accSrc',ACC_SRC);
   if(!$('shAcc').checked){ $('shAcc').checked=true; store.set('hsw.shAcc','1'); }
   syncAccSrc(); drawAcc(); applyVisibility(); }));
-document.querySelectorAll('#accBox [data-acc]').forEach(b=>b.addEventListener('click',()=>{ACC_AT=null; ACC_LEVEL=b.dataset.acc; store.set('hsw.accLevel',ACC_LEVEL); renderAcc();}));
+document.querySelectorAll('#accBox [data-acc]').forEach(b=>b.addEventListener('click',()=>{ACC_AT=null; ACC_LEVEL=b.dataset.acc; store.set('hsw.accLevel2',ACC_LEVEL); renderAcc();}));
 {let tm=0; map.on('moveend',()=>{ if(ACC_LEVEL==='here'&&!hereLL&&$('accBox')?.open){clearTimeout(tm); tm=setTimeout(renderAcc,250);} });}
 $('accBox')?.addEventListener('toggle',()=>{ if($('accBox').open) renderAcc(); });
 
@@ -3785,7 +3789,8 @@ async function runModel(hotsRaw,mode,windOverride,quiet){
   S.sources=clusterSources(S.hots,0.1,+$('fuel').value,$('fuelLC').checked,$('fireProf').value!=='const');
   const now=Date.now(), horizon=+$('horizon').value;
   if(!S.sources.length){busy(null);setMode(mode);S.sim=null;S.simInc=null;S.assimApplied=0;clearPlume();setTimeline();drawHotspots();drawTraj();computeReceptors();renderAll();redrawTime();
-    if(!quiet) banner(()=>T(`No hotspots in ${esc(REGIONS[$('region').value].name)} right now. Outside the burning season (roughly January–April in the north) this is normal.${PUBLIC?'':' Try “Run demo” in Settings to see how the page works.'}`,`ขณะนี้ไม่มีจุดความร้อนในพื้นที่ที่เลือก นอกฤดูเผา (ภาคเหนือประมาณมกราคม–เมษายน) ถือเป็นเรื่องปกติ${PUBLIC?'':' ลองกด “ทดลองด้วยข้อมูลจำลอง” ในแท็บตั้งค่าเพื่อดูการทำงานของหน้าเว็บ'}`),'info');return;}
+    if(!quiet) banner('');   // the off-season note is in the Hotspots tab (renderSources)
+    return;}
   const reg=REGIONS.msea.bbox;
   const spec=windGridSpec(S.sources,reg);
   let W;
@@ -3927,7 +3932,7 @@ function renderProvList(A){
     .sort((x,y)=>(wb.has(pk(y.g.p))-wb.has(pk(x.g.p)))||top(y.ws)-top(x.ws));
   box.innerHTML=rows.length?bellNote(rows.some(r=>wb.has(pk(r.g.p))),T('a town in the province has a warning','มีเมืองในจังหวัดที่มีคำเตือน'))+rows.map(r=>card2({attr:`data-area="${esc(r.id)}"`,name:nm(r.g),tag:CN[r.g.p?.c]||'',bell:wb.get(pk(r.g.p)),
       sub:iNow>=0&&r.g.mean[iNow]!=null?`${T('now','ขณะนี้')} ${fmtN(r.g.mean[iNow])}`:'',ws:r.ws,W,wx:W.map(([a,b])=>wxWinArea(H,r.g.wx,tNow,a,b))})).join('')
-    :`<p class="note">${T('Pick a region with provinces in Settings to list them here.','เลือกพื้นที่ที่มีจังหวัดในแท็บตั้งค่าเพื่อแสดงรายการจังหวัด')}</p>`;
+    :`<p class="note">${T('Pick Thailand in the area menu above to list its provinces here.','เลือกประเทศไทยในเมนูพื้นที่ด้านบนเพื่อแสดงรายการจังหวัด')}</p>`;
   box.querySelectorAll('.alert[data-area]').forEach(el=>el.onclick=()=>{ const n=el.dataset.area; if(!GEO_P.features.some(f=>f.properties.c==='THA'&&f.properties.n===n)) return;
     if($('region').value!=='thailand'){ $('region').value='thailand'; store.set('hsw.region','thailand'); }
     $('provSel').value=n; store.set('hsw.prov',n); $('provSel').dispatchEvent(new Event('change')); $('areaTrend').scrollIntoView?.({behavior:'smooth',block:'start'}); });
@@ -3950,7 +3955,8 @@ function renderWarnings(){
   const near=S.recep.filter(r=>r.near>0).sort((a,b)=>b.near-a.near);
   $('nearList').innerHTML = near.length ? `<div class="tablewrap"><table><thead><tr><th>${T('Town','เมือง')}</th><th class="num">${T('Hotspots ≤','จุดความร้อน ≤')} ${km} ${T('km','กม.')}</th><th class="num dev-only">FRP MW</th><th class="num">${T('Closest km','ใกล้สุด กม.')}</th></tr></thead><tbody>`+
     near.map(r=>`<tr><td>${esc(townName(r))}</td><td class="num">${r.near}</td><td class="num dev-only">${fmtN(r.nearFrp)}</td><td class="num">${r.nearest.toFixed(1)}</td></tr>`).join('')+'</tbody></table></div>'
-    : T(`No hotspots within ${km} km of a town.`,`ไม่มีจุดความร้อนในรัศมี ${km} กม. จากเมือง`);
+    : S.hots.length?T(`No hotspots within ${km} km of a town.`,`ไม่มีจุดความร้อนในรัศมี ${km} กม. จากเมือง`)
+      : T('No hotspots in the chosen area right now. Outside the burning season (roughly January–April in the north) this is normal.','ขณะนี้ไม่มีจุดความร้อนในพื้นที่ที่เลือก นอกฤดูเผา (ภาคเหนือประมาณมกราคม–เมษายน) ถือเป็นเรื่องปกติ');
 }
 // point-in-province (ray casting), bboxes cached
 const PROV_IDX=GEO_P.features.map(f=>{const polys=f.geometry.type==='Polygon'?[f.geometry.coordinates]:f.geometry.coordinates;
@@ -3985,7 +3991,7 @@ function renderProvinces(){
     let o=m.get(k);if(!o){o={p:h.prov,n:0,f:0,r:0};m.set(k,o);}o.n++;o.f+=h.frp;if(now-h.t<12*36e5)o.r++;}
   const rows=[...m.values()].sort((a,b)=>b.n-a.n).slice(0,40);
   $('provTable').querySelector('tbody').innerHTML=rows.map(o=>`<tr><td>${o.p?esc(provName(o.p))+(LANG!=='th'&&o.p.th?` <span class="note">${esc(o.p.th)}</span>`:'')+` <span class="note">${CN[o.p.c]||''}</span>`:`<span class="note">${T('Outside mapped provinces','นอกเขตจังหวัดในแผนที่')}</span>`}</td><td class="num">${o.n}</td><td class="num dev-only">${fmtN(o.f)}</td><td class="num">${o.r}</td></tr>`).join('')
-    ||`<tr><td colspan="4" class="note">${T('No hotspots loaded.','ยังไม่มีจุดความร้อน')}</td></tr>`;
+    ||`<tr><td colspan="4" class="note">–</td></tr>`;
 }
 function renderSources(){renderProvinces();
   const tb=$('srcTable').querySelector('tbody'); const ef=+$('fuel').value;
@@ -4267,8 +4273,8 @@ function renderAreaTrend(){
   const box=$('areaTrend'); ensureT2(renderAreaTrend); ensureRainObs(renderAreaTrend); ensureRainFac(renderAreaTrend);
   if(!P.data||!P.data.grid){box.innerHTML=PUBLIC?(LOADFAIL?failTxt():''):T('Area trends appear when the page runs from the hosted site.','แนวโน้มรายพื้นที่จะแสดงเมื่อเปิดหน้าเว็บจากเว็บไซต์ที่โฮสต์'); renderProvList(null); return;}
   const A=areaSeries(), H=A.H, now=Date.now(); areaSel='__all';   // the area set in Settings (Thailand, a region or a province)
-  { const nd=Math.max(1,Math.floor((H[H.length-1]-now)/864e5));   // whole days of forecast left in the data
-    $('areaNote').innerHTML=T(`Forecast PM<sub>2.5</sub> (all sources) averaged over the area set in Settings, hour by hour, from today to ${nd} days ahead. Tap a province in the list below to look at it.`,`ค่าพยากรณ์ PM<sub>2.5</sub> (ทุกแหล่ง) เฉลี่ยทั้งพื้นที่ที่ตั้งไว้ในหน้าตั้งค่า ทุกชั่วโมง ตั้งแต่วันนี้ ล่วงหน้า ${nd} วัน แตะชื่อจังหวัดในรายการด้านล่างเพื่อดูจังหวัดนั้น`); }
+  { const nd=wins().length;   // the same number of days as the forecast cards
+    $('areaNote').innerHTML=T(`Forecast PM<sub>2.5</sub> (all sources) averaged over the area chosen above, hour by hour, from today to ${nd} days ahead. Tap a province in the list below to look at it.`,`ค่าพยากรณ์ PM<sub>2.5</sub> (ทุกแหล่ง) เฉลี่ยทั้งพื้นที่ที่เลือกไว้ด้านบน ทุกชั่วโมง ตั้งแต่วันนี้ ล่วงหน้า ${nd} วัน แตะชื่อจังหวัดในรายการด้านล่างเพื่อดูจังหวัดนั้น`); }
   const provs=[...A.groups.entries()].filter(([g])=>g!=='__all'), nm=g=>g.p?provName(g.p):g.name;
   provs.sort((a,b)=>nm(a[1]).localeCompare(nm(b[1]),LOC()));
   const g=A.groups.get(areaSel), multi=provs.length>1;
@@ -4427,7 +4433,7 @@ function renderFcSummary(){ const box=$('sumPop'), card=$('sumCard'); const S_=b
   const pillB=b=>b?`<span class="pill" style="background:var(--${b.key});color:#fff">${esc(b.name)}</span>`:'';
   const head=`<div class="lphead"><h2 id="sumT">${T('Forecast summary','สรุปพยากรณ์')}</h2><button class="x" type="button" id="sumX" aria-label="${T('Close','ปิด')}">×</button></div>`;
   if(!S_){ card.innerHTML=head+`<p class="note">${T('The summary needs the hourly forecast data; load the live data first.','ต้องมีข้อมูลพยากรณ์รายชั่วโมงก่อน กรุณาโหลดข้อมูลล่าสุด')}</p>`; }
-  else setCardHTML(card,head+`<div class="sumctl"><label>${T('Area','พื้นที่')} <select id="sumArea"><option value="__all">${esc(T('Whole region','ทั้งภูมิภาค'))}: ${esc(S_.regionName)}</option>${S_.provs.map(([k,n])=>`<option value="${esc(k)}"${k===SUMAREA?' selected':''}>${esc(n)}</option>`).join('')}</select></label></div>
+  else setCardHTML(card,head+`
     <div class="sumbody">${(S_.plain||[]).map(x=>`<p class="sumplain">${x}</p>`).join('')}
     <details class="sumdet"><summary>${T('More detail','รายละเอียดเพิ่มเติม')}</summary><p class="sumov">${esc(S_.ov)}</p>
     ${S_.secs.map(s=>s.sub?`<div class="sumsec"><h3>${esc(s.label)}</h3>${s.sub.map(x=>`<p><b>${esc(x.label)}</b> ${pillB(x.band)}<br>${x.text.map(esc).join(' ')}</p>`).join('')}</div>`
@@ -4441,7 +4447,8 @@ function renderFcSummary(){ const box=$('sumPop'), card=$('sumCard'); const S_=b
     try{ await navigator.clipboard.writeText(txt); toast(T('Summary copied.','คัดลอกสรุปแล้ว')); }
     catch(e){ const ta=document.createElement('textarea'); ta.value=txt; document.body.appendChild(ta); ta.select(); try{document.execCommand('copy'); toast(T('Summary copied.','คัดลอกสรุปแล้ว'));}catch(_){ } ta.remove(); } };
 }
-function openSummary(){ SUMAREA=areaSel||'__all'; renderFcSummary(); ensureT2(()=>{ if(!$('sumPop').hidden) renderFcSummary(); }); ensureRainObs(()=>{ if(!$('sumPop').hidden) renderFcSummary(); }); ensureRainFac(()=>{ if(!$('sumPop').hidden) renderFcSummary(); }); $('sumX')?.focus({preventScroll:true}); }
+function openSummary(){ SUMAREA='__all';   // the area chosen above the tabs
+  renderFcSummary(); ensureT2(()=>{ if(!$('sumPop').hidden) renderFcSummary(); }); ensureRainObs(()=>{ if(!$('sumPop').hidden) renderFcSummary(); }); ensureRainFac(()=>{ if(!$('sumPop').hidden) renderFcSummary(); }); $('sumX')?.focus({preventScroll:true}); }
 for(const id of ['btnSum','btnSum2']) $(id)?.addEventListener('click',openSummary);
 document.addEventListener('keydown',e=>{ if(e.key==='Escape'&&!$('sumPop').hidden) $('sumPop').hidden=true; });
 

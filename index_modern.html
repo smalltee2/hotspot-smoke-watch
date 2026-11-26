@@ -1662,6 +1662,8 @@ header .status>.btn{--water-fill:.72}
 @media (min-width:861px){.leaflet-bottom.leaflet-left .maplogo{margin-bottom:calc(var(--scrubH,58px) + 34px)}}
 .summary div.tap{cursor:pointer}.summary div.tap:hover b,.summary div.tap:focus-visible b{text-decoration:underline}.alert.warned-hl{outline:2px solid var(--focus);outline-offset:2px;transition:outline-color .3s}
 .summary div.warnon b,.summary div.warnon span{color:#c62828}@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .summary div.warnon b,:root:not([data-theme="light"]) .summary div.warnon span{color:#ff6b6b}}:root[data-theme="dark"] .summary div.warnon b,:root[data-theme="dark"] .summary div.warnon span{color:#ff6b6b}.summary div.warnon b::before{content:"";display:inline-block;width:.95em;height:.95em;margin-right:.22em;vertical-align:-.1em;background:currentColor;-webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill-rule='evenodd' d='M12 1.6a1.6 1.6 0 0 1 1.6 1.6v.6a6.6 6.6 0 0 1 5 6.4v4.3l1.9 2.7a.9.9 0 0 1-.7 1.4H4.2a.9.9 0 0 1-.7-1.4l1.9-2.7v-4.3a6.6 6.6 0 0 1 5-6.4v-.6A1.6 1.6 0 0 1 12 1.6zM11 7.2h2l-.3 5.6h-1.4zM12 13.8a1.15 1.15 0 1 0 0 2.3a1.15 1.15 0 1 0 0-2.3zM9.6 19.9h4.8a2.4 2.4 0 0 1-4.8 0z'/%3E%3C/svg%3E") center/contain no-repeat;mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill-rule='evenodd' d='M12 1.6a1.6 1.6 0 0 1 1.6 1.6v.6a6.6 6.6 0 0 1 5 6.4v4.3l1.9 2.7a.9.9 0 0 1-.7 1.4H4.2a.9.9 0 0 1-.7-1.4l1.9-2.7v-4.3a6.6 6.6 0 0 1 5-6.4v-.6A1.6 1.6 0 0 1 12 1.6zM11 7.2h2l-.3 5.6h-1.4zM12 13.8a1.15 1.15 0 1 0 0 2.3a1.15 1.15 0 1 0 0-2.3zM9.6 19.9h4.8a2.4 2.4 0 0 1-4.8 0z'/%3E%3C/svg%3E") center/contain no-repeat;transform-origin:50% 8%;animation:bellring 3s ease-in-out infinite}@keyframes bellring{0%,40%,100%{transform:rotate(0)}5%{transform:rotate(18deg)}10%{transform:rotate(-16deg)}15%{transform:rotate(13deg)}20%{transform:rotate(-10deg)}25%{transform:rotate(7deg)}30%{transform:rotate(-4deg)}35%{transform:rotate(2deg)}}@media (prefers-reduced-motion: reduce){.summary div.warnon b::before{animation:none}}
+:root{--bellmask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill-rule='evenodd' d='M12 1.6a1.6 1.6 0 0 1 1.6 1.6v.6a6.6 6.6 0 0 1 5 6.4v4.3l1.9 2.7a.9.9 0 0 1-.7 1.4H4.2a.9.9 0 0 1-.7-1.4l1.9-2.7v-4.3a6.6 6.6 0 0 1 5-6.4v-.6A1.6 1.6 0 0 1 12 1.6zM11 7.2h2l-.3 5.6h-1.4zM12 13.8a1.15 1.15 0 1 0 0 2.3a1.15 1.15 0 1 0 0-2.3zM9.6 19.9h4.8a2.4 2.4 0 0 1-4.8 0z'/%3E%3C/svg%3E")}
+.wbell{display:inline-block;width:1em;height:1em;margin-left:.3em;vertical-align:-.12em;background:#c62828;-webkit-mask:var(--bellmask) center/contain no-repeat;mask:var(--bellmask) center/contain no-repeat;transform-origin:50% 8%;animation:bellring 3s ease-in-out infinite}@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .wbell{background:#ff6b6b}}:root[data-theme="dark"] .wbell{background:#ff6b6b}@media (prefers-reduced-motion: reduce){.wbell{animation:none}}.wbell-note{color:#c62828}@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .wbell-note{color:#ff6b6b}}:root[data-theme="dark"] .wbell-note{color:#ff6b6b}
 .leaflet-tooltip.dlabel,.leaflet-tooltip.slabel{background:none !important;border:0 !important;box-shadow:none !important;color:var(--muted) !important;padding:0 !important;text-shadow:0 0 3px var(--land,#fff),0 0 3px var(--land,#fff),0 0 2px var(--land,#fff) !important}.leaflet-tooltip.dlabel{font:700 13px/1.15 var(--font-body,system-ui) !important;color:var(--fg) !important}.leaflet-tooltip.slabel{font:500 11.5px/1.15 var(--font-body,system-ui) !important;opacity:1 !important}.leaflet-tooltip.dlabel::before,.leaflet-tooltip.slabel::before{display:none}
 .savepop{max-height:calc(100dvh - 240px);overflow:auto;overscroll-behavior:contain}.savepop .saverange{display:grid;gap:6px;margin:4px 0 6px 22px}.savepop .saverange label{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:.8rem}.savepop .saverange input[type=date]{font:inherit;padding:3px 6px;border:1px solid var(--line);border-radius:6px;background:var(--panel);color:var(--fg)}
 </style>
@@ -5041,9 +5043,16 @@ function fc2(ws,wx,W=WIN){ const many=W.length>3;   // four or more columns on a
   const lab=W.map(([a,b],k)=>many?T(`Day ${k+1}`,`วันที่ ${k+1}`):k===0?T('Next 24 h','24 ชม. แรก'):T(`${a}–${b} h`,`${a}–${b} ชม.`)), tip=W.map(([a,b])=>T(`highest 24-h mean, ${a}–${b} h ahead`,`ค่าเฉลี่ย 24 ชม. สูงสุด ช่วง ${a}–${b} ชม. ข้างหน้า`));
   return `<div class="fc2${ws.length>2?' many':''}"${ws.length>2?` style="grid-template-columns:repeat(${ws.length},minmax(0,1fr))"`:''}>${ws.map((w,k)=>{ const x=wx?.[k];
     return `<div class="d"${many?` title="${tip[k]}"`:''}><span class="h">${lab[k]}</span><span class="ic">${w?pmIcon(w.v):''}${x?wxDayIcon(x)||'':''}</span>${w?`<b>${valNum(w.v)}</b><i class="bar" style="background:${bandFor(w.v).color}"></i>`:'<b>–</b><i class="bar"></i>'}${x?`${x.lo!=null?`<span class="w">${Math.round(x.lo)}–${Math.round(x.hi)} °C</span>`:''}<span class="w">${x.rain<0.1?T('no rain','ไม่มีฝน'):`${T('rain','ฝน')} ${x.rain<10?x.rain.toFixed(1):Math.round(x.rain)} ${T('mm','มม.')}`}</span>`:''}</div>`; }).join('')}</div>`; }
-function card2({attr,name,tag,sub,ws,wx,W}){ const worst=ws.reduce((m,w)=>w&&(m==null||w.v>m)?w.v:m,null);
+function card2({attr,name,tag,sub,ws,wx,W,bell}){ const worst=ws.reduce((m,w)=>w&&(m==null||w.v>m)?w.v:m,null);
   return `<div class="alert c2${ws.length>2?' many':''}" ${attr}><i class="sev" style="background:${worst!=null?bandFor(worst).color:'var(--line)'}"></i>
-    <div style="min-width:0"><div class="name">${esc(name)} ${tag?`<span class="note">${esc(tag)}</span>`:''}</div><div class="sub">${worst!=null?pill(worst)+' ':''}${sub||''}</div></div>${fc2(ws,wx,W)}</div>`; }
+    <div style="min-width:0"><div class="name">${esc(name)}${bell&&(bell===true||bell.length)?`<span class="wbell" role="img" aria-label="${esc(bellTip(bell))}" title="${esc(bellTip(bell))}"></span>`:''} ${tag?`<span class="note">${esc(tag)}</span>`:''}</div><div class="sub">${worst!=null?pill(worst)+' ':''}${sub||''}</div></div>${fc2(ws,wx,W)}</div>`; }
+// the warning criterion in words (summary-row hover / label, the legend above the lists) and the bell's hover text
+const WARN_RULE=()=>T('forecast 24-h mean above 37.5 µg/m³, or an hour above 75 µg/m³, at the town','พยากรณ์ที่ตัวเมือง ค่าเฉลี่ย 24 ชม. เกิน 37.5 µg/m³ หรือรายชั่วโมงเกิน 75 µg/m³');
+const bellTip=list=>list===true?T('Town with a warning','เมืองที่มีคำเตือน'):T(`Town${list.length>1?'s':''} with a warning: ${list.join(', ')}`,`เมืองที่มีคำเตือน: ${list.join(', ')}`);
+// warned towns by area: key(town) → [town names], e.g. key = province or district of the town (owner, 26 Nov 2026: a bell on the
+// provinces / districts that hold a warned town, so a province or district average does not hide a warning in its town)
+function warnedBy(key){ const m=new Map(); for(const r of warnedTowns()){ const k=key(r); if(k==null) continue; if(!m.has(k)) m.set(k,[]); m.get(k).push(townName(r)); } return m; }
+const bellNote=(any,what)=>any?`<p class="note wbell-note"><span class="wbell" aria-hidden="true"></span> ${what}: ${WARN_RULE()}</p>`:'';
 // towns with a warning (the number in the summary row): 24-h mean > 37.5 µg/m³ or an hour > 75 in the forecast at the town
 function warnedTowns(){ return S.recep.some(r=>r.stT)?S.recep.filter(r=>r.stT&&(r.stT.mean24>37.5||r.stT.peak>75)):S.sim?S.recep.filter(r=>r.st.mean24>37.5||r.st.peak>75):[]; }
 // tapping that number: the Warnings tab, the list by town, the warned towns highlighted for a few seconds and the first in view
@@ -5054,7 +5063,7 @@ function openWarnTowns(){ setWarnView('town');
     (first||$('wv-town'))?.scrollIntoView({behavior:'smooth',block:'center'});
     clearTimeout(openWarnTowns.tm); openWarnTowns.tm=setTimeout(()=>{ for(const el of $('warnList').querySelectorAll('.warned-hl')) el.classList.remove('warned-hl'); },6000); }); }
 { const d=$('sWarn')?.parentElement; if(d){ d.classList.add('tap'); d.setAttribute('role','button'); d.tabIndex=0;
-    const lab=()=>{ const t=T('Show the towns with a warning','ดูเมืองที่มีคำเตือน'); d.title=t; d.setAttribute('aria-label',t); }; lab(); d.addEventListener('focus',lab); d.addEventListener('mouseenter',lab);
+    const lab=()=>{ const t=T(`Towns with a warning (${WARN_RULE()}). Tap to show them.`,`เมืองที่มีคำเตือน (${WARN_RULE()}) แตะเพื่อดูรายชื่อ`); d.title=t; d.setAttribute('aria-label',t); }; lab(); d.addEventListener('focus',lab); d.addEventListener('mouseenter',lab);
     d.addEventListener('click',openWarnTowns); d.addEventListener('keydown',e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); openWarnTowns(); } }); } }
 function setWarnView(v){ if(!['prov','dist','town','station'].includes(v)) v='prov'; $('warnView').value=v; store.set('hsw.warnView',v);
   for(const k of ['prov','dist','town','station']) $('wv-'+k).hidden=k!==v;
@@ -5062,8 +5071,10 @@ function setWarnView(v){ if(!['prov','dist','town','station'].includes(v)) v='pr
 // the list by district: the same hourly series as the provinces (areaSeries dgroups), highest first; tap = zoom to the district
 function renderDistList(A){ const box=$('distList'); if(!box) return; if(!A?.dgroups){ if(!ADM[2]) return; box.innerHTML=''; return; }
   const H=A.H, tNow=Math.floor(Date.now()/HR)*HR, iNow=H.findIndex(t=>t>=tNow), W=wins(), top=ws=>Math.max(0,...ws.map(w=>w?.v??0));
-  const rows=[...A.dgroups.values()].map(g=>({g,ws:W.map(([a,b])=>winMax(H,g.mean,tNow,a,b,false))})).sort((x,y)=>top(y.ws)-top(x.ws)).slice(0,40);
-  box.innerHTML=rows.length?rows.map(r=>card2({attr:`data-dist="${esc(r.g.p.c)}"`,name:admName(r.g.p,2),tag:LANG==='th'?(admBkk(r.g.p)?'กรุงเทพฯ':'จ.'+r.g.p.pth):r.g.p.pen,
+  // districts holding a warned town come first (a district average must not push a warning off the list), then highest first
+  const wb=warnedBy(r=>admAt(2,r.lat,r.lon)?.c??null);
+  const rows=[...A.dgroups.values()].map(g=>({g,ws:W.map(([a,b])=>winMax(H,g.mean,tNow,a,b,false))})).sort((x,y)=>(wb.has(y.g.p.c)-wb.has(x.g.p.c))||top(y.ws)-top(x.ws)).slice(0,40);
+  box.innerHTML=rows.length?bellNote(rows.some(r=>wb.has(r.g.p.c)),T('a town in the district has a warning','มีเมืองในอำเภอที่มีคำเตือน'))+rows.map(r=>card2({attr:`data-dist="${esc(r.g.p.c)}"`,name:admName(r.g.p,2),tag:LANG==='th'?(admBkk(r.g.p)?'กรุงเทพฯ':'จ.'+r.g.p.pth):r.g.p.pen,bell:wb.get(r.g.p.c),
       sub:iNow>=0&&r.g.mean[iNow]!=null?`${T('now','ขณะนี้')} ${fmtN(r.g.mean[iNow])}`:'',ws:r.ws,W,wx:W.map(([a,b])=>wxWinArea(H,r.g.wx,tNow,a,b))})).join('')
     :`<p class="note">${T('No district of this area has forecast values yet.','ยังไม่มีค่าพยากรณ์ของอำเภอในพื้นที่นี้')}</p>`;
   box.querySelectorAll('[data-dist]').forEach(el=>el.onclick=()=>{ const q=ADM[2]?.byCode.get(el.dataset.dist); if(!q) return;
@@ -5071,9 +5082,10 @@ function renderDistList(A){ const box=$('distList'); if(!box) return; if(!A?.dgr
 function renderProvList(A){
   const box=$('provList'); if(!A){box.innerHTML='';return;} const H=A.H, tNow=Math.floor(Date.now()/HR)*HR, iNow=H.findIndex(t=>t>=tNow);
   const nm=g=>g.p?provName(g.p):g.name, W=wins(), top=ws=>Math.max(0,...ws.map(w=>w?.v??0));
+  const pk=p=>p?p.c+'|'+p.n:null, wb=warnedBy(r=>pk(provinceOf(r.lat,r.lon)));   // provinces holding a warned town first
   const rows=[...A.groups.entries()].filter(([id])=>id!=='__all').map(([id,g])=>({id,g,ws:W.map(([a,b])=>winMax(H,g.mean,tNow,a,b,false))}))
-    .sort((x,y)=>top(y.ws)-top(x.ws));
-  box.innerHTML=rows.length?rows.map(r=>card2({attr:`data-area="${esc(r.id)}"`,name:nm(r.g),tag:CN[r.g.p?.c]||'',
+    .sort((x,y)=>(wb.has(pk(y.g.p))-wb.has(pk(x.g.p)))||top(y.ws)-top(x.ws));
+  box.innerHTML=rows.length?bellNote(rows.some(r=>wb.has(pk(r.g.p))),T('a town in the province has a warning','มีเมืองในจังหวัดที่มีคำเตือน'))+rows.map(r=>card2({attr:`data-area="${esc(r.id)}"`,name:nm(r.g),tag:CN[r.g.p?.c]||'',bell:wb.get(pk(r.g.p)),
       sub:iNow>=0&&r.g.mean[iNow]!=null?`${T('now','ขณะนี้')} ${fmtN(r.g.mean[iNow])}`:'',ws:r.ws,W,wx:W.map(([a,b])=>wxWinArea(H,r.g.wx,tNow,a,b))})).join('')
     :`<p class="note">${T('Pick a region with provinces in Settings to list them here.','เลือกพื้นที่ที่มีจังหวัดในแท็บตั้งค่าเพื่อแสดงรายการจังหวัด')}</p>`;
   box.querySelectorAll('.alert[data-area]').forEach(el=>el.onclick=()=>{ const n=el.dataset.area; if(!GEO_P.features.some(f=>f.properties.c==='THA'&&f.properties.n===n)) return;
@@ -5086,10 +5098,11 @@ function renderWarnings(){
   const total=S.recep.some(r=>r.stT);   // live data: rank by total PM2.5; demo / no map data: fire smoke only (as before)
   const HT=total?P.data.hours:(S.sim?S.sim.hours:[]), tNow=Math.floor(Date.now()/HR)*HR, iNow=HT.findIndex(t=>t>=tNow);
   const W=total?wins():WIN, top=ws=>Math.max(0,...ws.map(w=>w?.v??0));
+  const wset=new Set(warnedTowns());   // warned towns first, then highest first
   const items=(total?S.recep.filter(r=>r.stT):S.recep.filter(r=>r.st.peak>=1)).map(r=>{const ser=total?r.tot:r.series; return {r,ws:W.map(([a,b])=>winMax(HT,ser,tNow,a,b,false))};})
-    .sort((x,y)=>top(y.ws)-top(x.ws)).slice(0,25);
-  $('warnList').innerHTML = items.length? items.map(({r,ws})=>{const fire=r.st.mean24, ser=total?r.tot:r.series, vn=iNow>=0?ser?.[iNow]:null;
-    return card2({attr:`data-name="${esc(r.name)}"`,name:townName(r),tag:r.cc,ws,W,wx:W.map(([a,b])=>wxWinPt(r.lat,r.lon,tNow,a,b)),
+    .sort((x,y)=>(wset.has(y.r)-wset.has(x.r))||top(y.ws)-top(x.ws)).slice(0,25);
+  $('warnList').innerHTML = items.length? bellNote(items.some(({r})=>wset.has(r)),T('town with a warning','เมืองที่มีคำเตือน'))+items.map(({r,ws})=>{const fire=r.st.mean24, ser=total?r.tot:r.series, vn=iNow>=0?ser?.[iNow]:null;
+    return card2({attr:`data-name="${esc(r.name)}"`,name:townName(r),tag:r.cc,ws,W,bell:wset.has(r)?true:null,wx:W.map(([a,b])=>wxWinPt(r.lat,r.lon,tNow,a,b)),
       sub:`${vn!=null?`${T('now','ขณะนี้')} ${fmtN(vn)}`:''}${total?`${vn!=null?' · ':''}${T('from fires','จากไฟ')} ${fire>=0.5?fmtN(fire):'< 0.5'}`:''}`});}).join('')
     : `<p class="note">${total?T('No forecast at the towns of this region yet.','ยังไม่มีค่าพยากรณ์ที่เมืองในพื้นที่นี้'):T('No town gets more than 1 µg/m³ of fire smoke in the forecast window (fire smoke only; for total PM₂.₅ see the map and the stations).','ไม่มีเมืองใดได้รับควันไฟเกิน 1 µg/m³ ในช่วงพยากรณ์ (เฉพาะควันไฟ ดูค่ารวมที่แผนที่และสถานีตรวจวัด)')}</p>`;
   $('warnList').querySelectorAll('.alert').forEach(el=>el.onclick=()=>focusTown(el.dataset.name));

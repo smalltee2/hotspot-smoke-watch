@@ -1118,6 +1118,9 @@ tbody tr:hover {
 .areabar{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0;padding:0 16px}.areabar label{display:block;font-size:.78rem;color:var(--muted);margin-bottom:3px}.areabar .field{margin:0;min-width:0}.areabar select{width:100%;min-width:0}.areabar .field[hidden]{display:none}.areabar:has(.field[hidden]){grid-template-columns:1fr}
 /* My places tab: place search and the saved list */
 .ptnew{border:1px solid var(--line);border-radius:8px;padding:10px;margin:8px 0 12px;background:var(--bg)}.ptnew input,.plrow input{width:100%;min-width:0;font:inherit;padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:var(--panel);color:inherit}.ptnew .actions{margin-top:8px}.plrow .ren{flex:1;min-width:0}
+/* my saved places on the map: a pin with the name, always shown */
+.mypin{filter:drop-shadow(0 1px 2px rgba(0,0,0,.45))}.mypin svg{display:block}
+.leaflet-tooltip.mylabel{background:var(--panel);border:1px solid var(--line);border-radius:6px;box-shadow:0 1px 3px rgba(0,0,0,.25);color:var(--fg);font:700 12px/1.2 var(--font-body);padding:2px 6px}.leaflet-tooltip.mylabel::before{display:none}
 .plrow{display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--line)}.plrow .pn{flex:1;min-width:0;border:0;background:none;padding:0;text-align:left;font:inherit;color:inherit;cursor:pointer}.plrow .pn b{display:block;font-weight:600}.plrow .pn span{display:block;font-size:.76rem;color:var(--muted)}.plrow .btn{flex:none;padding:4px 10px;font-size:.78rem}.plrow .pn:hover b,.plrow .pn:focus-visible b{text-decoration:underline}
 .sumcard .sumctl{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:10px 0 4px;font-size:var(--fs-md)}
 .sumcard .sumctl select{font:inherit;max-width:100%}
@@ -2904,7 +2907,7 @@ setTiles(); labelZoom();
 const reTheme=()=>{setTiles();drawRegionMask();if(S.hots.length){drawHotspots();drawTraj();}drawTowns();};
 matchMedia('(prefers-color-scheme: dark)').addEventListener('change',reTheme);
 new MutationObserver(reTheme).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
-const hotLayer=L.layerGroup().addTo(map), trajLayer=L.layerGroup().addTo(map), townLayer=L.layerGroup().addTo(map);
+const hotLayer=L.layerGroup().addTo(map), trajLayer=L.layerGroup().addTo(map), townLayer=L.layerGroup().addTo(map), myPtLayer=L.layerGroup().addTo(map);   // myPtLayer: the user's saved places, always shown
 let plume=null;
 function addMyPoint(lat,lon,nm){ const name=nm||`${T('My point','จุดของฉัน')} ${S.myPts.length+1}`; S.myPts.push({name,lat:+lat.toFixed(4),lon:+lon.toFixed(4),cc:'★'});
   store.set('hsw.points',JSON.stringify(S.myPts)); computeReceptors(); drawTowns(); renderWarnings(); }   // also without a fire simulation (no hotspots): the total-PM2.5 series is computed there too
@@ -5255,9 +5258,15 @@ function drawTraj(){
   S.sim.traj.slice(0,40).forEach(path=>{if(path.length>2) L.polyline(path.filter((_,i)=>i%3===0),{color:c,weight:1.2,opacity:.55,dashArray:'4 4'}).addTo(trajLayer);});
 }
 function drawTowns(){
-  townLayer.clearLayers(); const fg=cssVar('--fg'); S.townDots=[];
+  townLayer.clearLayers(); myPtLayer.clearLayers(); const fg=cssVar('--fg'); S.townDots=[];
   const recs=S.recep.length?S.recep:allReceptors().map(p=>({...p,st:{mean24:0,peak:0}}));
   for(const r of recs){const si=simIdx(curT()); const val=si>=0&&r.series?.length?r.series[si]||0:0; const b=bandFor(val);
+    // a saved place: a pin with its name on its own layer (stays when the towns are switched off); tap = its forecast, as for a town
+    if(r.cc==='★'){ S.townDots.push({lat:r.lat,lon:r.lon,r:10});
+      L.marker([r.lat,r.lon],{zIndexOffset:800,title:townName(r),icon:L.divIcon({className:'mypin',iconSize:[26,34],iconAnchor:[13,33],
+        html:'<svg width="26" height="34" viewBox="0 0 26 34" aria-hidden="true"><path d="M13 1C6.4 1 1 6.300 1 12.900 1 21.500 13 33 13 33s12-11.500 12-20.100C25 6.300 19.600 1 13 1z" fill="#e8590c" stroke="#fff" stroke-width="2"/><path d="M13 6.200l2 4.200 4.600.600-3.400 3.200.900 4.500L13 16.500l-4.100 2.200.900-4.500-3.400-3.200 4.600-.600z" fill="#fff"/></svg>'})})
+       .bindTooltip(esc(townName(r)),{permanent:true,direction:'top',offset:[0,-32],className:'mylabel'}).on('click',()=>focusTown(r.name)).addTo(myPtLayer);
+      continue; }
     const rad=r.cc==='★'?6:r.kind==='town'?3.5:5; S.townDots.push({lat:r.lat,lon:r.lon,r:rad+1});   // the names keep off these dots (declutterLabels)
     L.circleMarker([r.lat,r.lon],{radius:rad,weight:2,color:fg,fillColor:val>=1?b.color:cssVar('--panel'),fillOpacity:1})
      .bindTooltip(`${esc(townName(r))}: ${T('fire PM₂.₅ at this hour','PM₂.₅ จากไฟ ณ ชั่วโมงนี้')} ${fmtN(val)} µg/m³`).on('click',()=>focusTown(r.name)).addTo(townLayer);

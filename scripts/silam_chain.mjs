@@ -16,7 +16,7 @@ import { spawn } from 'node:child_process';
 const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..'), DATA = path.join(ROOT, 'data');
 const RUN = path.join(DATA, 'silam-run'), OUT = path.join(DATA, 'silam');
 // state of update.mjs that belongs to the PM2.5 model; all other keys are shared and come from the CAMS run each time
-export const MODEL_KEYS = ['kf', 'kfA', 'kfSlow', 'incFc', 'assimKappa', 'ml', 'ml2'];
+export const MODEL_KEYS = ['kf', 'kfA', 'kfSlow', 'incFc', 'assimKappa', 'ml', 'ml2', 'spikeSeen'];   // spikeSeen: which dropped spikes each model's filters were already reset for
 const readJSON = async (p, d) => { try { return JSON.parse(await fs.readFile(p, 'utf8')); } catch { return d; } };
 const writeJSON = async (p, o) => { await fs.mkdir(path.dirname(p), { recursive: true }); await fs.writeFile(p + '.tmp', JSON.stringify(o)); await fs.rename(p + '.tmp', p); };
 const warn = m => { console.log('SILAM chain: ' + m); if (process.env.GITHUB_ACTIONS) console.log(`::warning title=SILAM chain::${m}`); };

@@ -18,7 +18,7 @@ import { updateRadar, scoreRadar, mergeRadarIntoMet, nowcast as radarNowcast, we
 import { updateGsmap, mergeIntoMet, webRain, GSCFG } from './gsmap.mjs';
 import { fetchGauges, scoreGauges, gsmapAt, rainFactor } from './thaiwater.mjs';
 import { updatePardig, obsRain } from './pardig.mjs';
-import { dropSpikes } from './obsqc.mjs';
+import { dropSpikes, isSpike, resetAfterSpikes } from './obsqc.mjs';
 import { ENG2, ML2, NAMES2, loadObsHourly, rows2From, predict2, pmHighCheck, setClimatology, climFeatures } from './ml2.mjs';
 import { loadSilam, seriesAt } from './silam.mjs';
 import { WXML, T2_NAMES, PR_NAMES, T2ENG, PRENG, t2Features, prFeatures, loadWxDataset, storeWxDay, loadWxSeason } from './mlwx.mjs';
@@ -295,7 +295,7 @@ async function a4tHourly(codes, d0, d1) {
         const w = wsOK || t2OK || rhOK ? { ws: wsOK ? ws : null, wd: wsOK ? wd : null, t2: t2OK ? t2 : null, rh: rhOK ? rh : null } : null;
         rows.push([t, v, w]); }
       const qc = dropSpikes(rows.sort((a, b) => a[0] - b[0]));   // an instrument's isolated spike (scripts/obsqc.mjs)
-      for (const r of qc.dropped) (out.dropped ||= []).push(`${st.stationID} ${new Date(r[0]).toISOString().slice(0, 13)}Z ${r[1]}`);
+      for (const r of qc.dropped) { (out.dropped ||= []).push(`${st.stationID} ${new Date(r[0]).toISOString().slice(0, 13)}Z ${r[1]}`); (out.droppedAt ||= []).push({ id: 'a4t:' + st.stationID, t: r[0] }); }
       out.set(st.stationID, qc.kept);
     }
     if (i + CFG.a4t.chunk < codes.length) await sleep(800);
@@ -444,7 +444,7 @@ async function main() {
   // 3a. observations (no correction yet: the fire assimilation runs first, and the corrections are then fitted to what it leaves)
   const obs = await oaqLatest(stations.filter(s => !s.hourly && !s.feed24));
   // Air4Thai direct: the last ~2 days of hourly values in one or a few requests; also kept as a daily archive (one file per Thai day)
-  const a4tSt = stations.filter(s => s.hourly), a4tH = new Map();
+  const a4tSt = stations.filter(s => s.hourly), a4tH = new Map(), spikeDrops = [];   // spikeDrops: {id, t} of every value the spike check dropped this run
   if (stations.some(s => s.feed24)) {   // Bangkok (BMA) stations: latest 24-h mean from the live feed
     try { const cur = new Map((await a4tStations()).map(x => [x.id, x]));
       let n = 0; for (const s of stations) if (s.feed24) { const x = cur.get(s.id); if (x && x.pm != null && x.last) { obs.set(s.id, { t: x.last, v: x.pm }); n++; } }
@@ -455,6 +455,7 @@ async function main() {
       const got = await a4tHourly(a4tSt.map(s => s.code), thaiDate(now - 48 * HOUR), thaiDate(now));   // ≥ 48 h for the assimilation window
       for (const s of a4tSt) { const rows = got.get(s.code) || []; a4tH.set(s.id, rows); const last = rows[rows.length - 1]; if (last) obs.set(s.id, { t: last[0], v: last[1] }); }
       if (got.dropped) log(`Air4Thai hourly: spike check dropped ${got.dropped.length} value(s): ${got.dropped.join(', ')}`);
+      spikeDrops.push(...(got.droppedAt || []));
       log(`Air4Thai hourly: ${[...a4tH.values()].filter(r => r.length).length}/${a4tSt.length} stations, latest hour ${new Date(Math.max(0, ...[...obs.entries()].filter(([k]) => String(k).startsWith('a4t:')).map(([, o]) => o.t))).toISOString().slice(0, 16)}Z`);
       const yday = thaiDate(now - 24 * HOUR), arch = path.join(DATA, 'history', yday.slice(0, 7), `a4t-${yday.replace(/-/g, '')}.csv`);
       const dayRows = []; for (const s of a4tSt) for (const [t, v] of a4tH.get(s.id) || []) if (thaiDate(t - HOUR) === yday) dayRows.push([new Date(t).toISOString().slice(0, 16) + 'Z', s.id, v]);
@@ -473,13 +474,18 @@ async function main() {
   // IQAir real-time AQI at Thai and neighbouring cities (page layer "compared with IQAir"): CAMS run only, 9 cities each hour in
   // groups of 5 a minute apart (free plan), so it runs beside the next steps and is awaited before the outputs
   const iqairP = !SIL && process.env.IQAIR_API_KEY ? updateIqair(state, now, process.env.IQAIR_API_KEY, log).catch(() => 0) : Promise.resolve(0);
+  const spikeLatest = [];
   stations.forEach(s => {
     const o = obs.get(s.id); if (!o || now - o.t > CFG.obsMaxAgeH * HOUR || o.v < 0 || o.v > 1500) return;
+    // stations that give only their latest value (OpenAQ, the BMA feed): the same spike rule against their last hours (27 Nov 2026;
+    // on the Oct–Nov 2026 logs, 134,452 OpenAQ station-hours, it drops the 5 values above 300 µg/m³ and nothing else)
+    if (!s.hourly && isSpike(state.obsHist[s.id], Math.round(o.t / HOUR) * HOUR, o.v)) { spikeDrops.push({ id: s.id, t: o.t }); spikeLatest.push(`${s.id} ${new Date(o.t).toISOString().slice(0, 13)}Z ${o.v}`); return; }
     s.obs = o;
     if (s.hourly) { state.obsHist[s.id] = (a4tH.get(s.id) || []).filter(([t]) => t > now - 50 * HOUR).map(([t, v]) => [t, r1(v)]); return; }
     const hk = Math.round(o.t / HOUR) * HOUR, H = (state.obsHist[s.id] ||= []);
     if (!H.some(([t]) => t === hk)) H.push([hk, r1(o.v)]);
   });
+  if (spikeLatest.length) log(`latest values: spike check dropped ${spikeLatest.length} value(s): ${spikeLatest.join(', ')}`);
   for (const id of Object.keys(state.obsHist)) { state.obsHist[id] = state.obsHist[id].filter(([t]) => t > now - 50 * HOUR); if (!state.obsHist[id].length) delete state.obsHist[id]; }
   // 24-h mean of observations ending at the latest hour; valid with ≥ 18 of 24 hourly values (75 %) and a recent last value
   function obs24(id, s) {
@@ -827,6 +833,8 @@ async function main() {
   //     kfA  — bias of CAMS + assimilation increment (corrects only what the assimilation leaves; no double counting)
   //     kfSlow — slow bias of CAMS, updated only at hours with < 1 µg/m³ of modelled fire smoke
   state.kfA ||= {}; state.incFc ||= {};
+  // a spike whose hour the filters already took in (dropped only now): start that station's filters again, once (obsqc.mjs)
+  { const rs = resetAfterSpikes(spikeDrops, (state.spikeSeen ||= {}), [state.kf, state.kfA, state.kfSlow], now); if (rs.length) log(`Kalman filters reset after a dropped spike: ${rs.join(', ')}`); }
   // the increment used to update kfA is the one FORECAST for that hour by an earlier run (stored in state.incFc), not this
   // run's posterior, which was fitted to the same observations; this run's value is the fallback when none was stored
   const incPrev = (s, t, kind) => { const v = state.incFc[s.id]?.[kind === '24' ? 'm' : 'h']?.[t]; return v != null ? v : incAt(s, t, kind); };

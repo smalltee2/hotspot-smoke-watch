@@ -27,3 +27,23 @@ export function dropSpikesHourKeys(obs, par = SPIKE) {
   let n = 0; for (const rows of ser.values()) for (const r of dropSpikes(rows.sort((a, b) => a[0] - b[0]), par).dropped) { obs.delete(r[2]); n++; }
   return n;
 }
+
+/** One new value against the hours already kept (stations that give only their latest value, e.g. OpenAQ: the same rule as
+ *  dropSpikes, with the station's recent values [[t_ms, v], ...] as the "kept" rows). True = a spike, drop it. */
+export function isSpike(recent, t, v, par = SPIKE) {
+  let mx = -Infinity; for (const [tt, vv] of recent || []) if (tt < t && tt >= t - par.backH * HOUR) mx = Math.max(mx, vv);
+  return mx > -Infinity && v > par.min && v > par.ratio * mx;
+}
+
+/** Spikes whose hour a bias filter already took in: the filter holds the wrong value until it expires (a4t:19t, 25–27 Nov 2026:
+ *  about 46 h of forecasts at 30–87 µg/m³ against CAMS 5–13). dropped: [{id, t}], seen: state object (key -> time first seen,
+ *  so each spike is handled once), filters: [{id: {t, ...}}, ...]. Deletes the station's entry in every filter when any of them
+ *  was updated at or after the spike's hour the first time the spike is seen; returns the ids reset. Entries of `seen` older
+ *  than keepH are pruned (the fetch window that keeps reporting the same spike is 48 h). */
+export function resetAfterSpikes(dropped, seen, filters, now, keepH = 96) {
+  const out = [];
+  for (const { id, t } of dropped) { const k = id + '|' + t; if (seen[k]) continue; seen[k] = now;
+    if (filters.some(F => F?.[id] && F[id].t >= t)) { for (const F of filters) if (F) delete F[id]; out.push(id); } }
+  for (const k of Object.keys(seen)) if (now - seen[k] > keepH * HOUR) delete seen[k];
+  return [...new Set(out)];
+}

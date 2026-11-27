@@ -9,6 +9,7 @@
 //   data/history/YYYY-MM/obs-YYYYMMDDTHH.csv, fcst-YYYYMMDDTHH.csv – for verification (committed)
 //   latest/met/state/runlog/verify JSON are published to GitHub Pages and carried between runs in the Actions cache, not committed
 import fs from 'node:fs/promises';
+import { mergeStations } from './stationlist.mjs';
 import path from 'node:path';
 import { buildDEM, sampleGrid } from './dem.mjs';
 import { regressionKriging, krigeField, clampAux } from './rk.mjs';
@@ -218,7 +219,7 @@ async function oaqStations() {
       const s = (L.sensors || []).find(s => s.parameter?.id === PM25_ID || s.parameter?.name === 'pm25');
       if (!s || !L.coordinates) continue;
       out.push({ id: L.id, sensor: s.id, name: L.name || `OpenAQ ${L.id}`, lat: L.coordinates.latitude, lon: L.coordinates.longitude,
-        monitor: !!L.isMonitor, provider: L.provider?.name || '', country: L.country?.code || '',
+        monitor: !!L.isMonitor, provider: L.provider?.name || '', country: L.country?.code || '', area: L.locality || '',
         last: Date.parse(L.datetimeLast?.utc || '') || 0 });
     }
     if (res.length < 1000) break;
@@ -270,7 +271,7 @@ async function a4tStations() {
   const js = await (await get(CFG.a4t.list, {}, 3, 3000)).json();
   return (js.stations || []).filter(x => CFG.a4t.types.includes(x.stationType || 'GROUND')).map(x => {
     const L = x.AQILast || {}, pm = +(L.PM25?.value ?? -1), bkk = x.stationType === 'BKK', last = pm >= 0 && L.date ? thaiTime(`${L.date} ${L.time || '00:00'}:00`) : 0;
-    return { id: 'a4t:' + x.stationID, code: x.stationID, name: x.nameEN || x.nameTH || x.stationID, nameTH: x.nameTH || '', lat: +x.lat, lon: +x.long,
+    return { id: 'a4t:' + x.stationID, code: x.stationID, name: x.nameEN || x.nameTH || x.stationID, nameTH: x.nameTH || '', area: x.areaEN || '', areaTH: x.areaTH || '', lat: +x.lat, lon: +x.long,
       monitor: true, provider: bkk ? 'Air4Thai · Bangkok (BMA)' : 'Air4Thai', ...(bkk ? { feed24: true } : { hourly: true }), country: 'TH', last, pm: pm >= 0 ? pm : null };
   }).filter(s => isFinite(s.lat) && isFinite(s.lon) && inBox(s.lat, s.lon, CFG.bbox));
 }
@@ -1151,6 +1152,10 @@ async function main() {
   // history: one small new file per run (never rewritten), so git stores each row once
   const iso = new Date(now).toISOString(), ym = iso.slice(0, 7), stamp = iso.slice(0, 13).replace(/[-:]/g, '');
   const hdir = path.join(DATA, 'history', ym);
+  // who the ids in these logs are (name, area, position): data/history/stations.json, merged once per model run (CAMS run only)
+  if (!SIL) try { const sf = path.join(DATA, 'history', 'stations.json'), old = await readJSON(sf, null), nw = mergeStations(old, stations, thaiDate(now));
+    if (JSON.stringify(nw) !== JSON.stringify(old)) { await fs.mkdir(path.dirname(sf), { recursive: true }); await fs.writeFile(sf, JSON.stringify(nw, null, 1)); log(`station list for the logs: ${Object.keys(nw.stations).length} stations (data/history/stations.json)`); }
+  } catch (e) { log(`station list for the logs failed: ${e.message}`); }
   const newRun = await fs.access(path.join(hdir, `obs-${stamp}.csv`)).then(() => false, () => true);   // a second run in the same hour (backup cron, manual run) must not append the rows again
   if (newRun) await appendCSV(path.join(hdir, `obs-${stamp}.csv`), 'time_utc,station_id,obs_pm25,cams_raw,cams_plus_inc', obsRows);
   // IQAir readings of this run (scripts/iqair.mjs), for the 7-day comparison in accuracy.mjs

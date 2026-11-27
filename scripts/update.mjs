@@ -295,7 +295,7 @@ async function a4tHourly(codes, d0, d1) {
         const w = wsOK || t2OK || rhOK ? { ws: wsOK ? ws : null, wd: wsOK ? wd : null, t2: t2OK ? t2 : null, rh: rhOK ? rh : null } : null;
         rows.push([t, v, w]); }
       const qc = dropSpikes(rows.sort((a, b) => a[0] - b[0]));   // an instrument's isolated spike (scripts/obsqc.mjs)
-      for (const r of qc.dropped) { (out.dropped ||= []).push(`${st.stationID} ${new Date(r[0]).toISOString().slice(0, 13)}Z ${r[1]}`); (out.droppedAt ||= []).push({ id: 'a4t:' + st.stationID, t: r[0] }); }
+      for (const r of qc.dropped) { (out.dropped ||= []).push(`${st.stationID} ${new Date(r[0]).toISOString().slice(0, 13)}Z ${r[1]}`); (out.droppedAt ||= []).push({ id: 'a4t:' + st.stationID, t: r[0], v: r[1] }); }
       out.set(st.stationID, qc.kept);
     }
     if (i + CFG.a4t.chunk < codes.length) await sleep(800);
@@ -444,7 +444,7 @@ async function main() {
   // 3a. observations (no correction yet: the fire assimilation runs first, and the corrections are then fitted to what it leaves)
   const obs = await oaqLatest(stations.filter(s => !s.hourly && !s.feed24));
   // Air4Thai direct: the last ~2 days of hourly values in one or a few requests; also kept as a daily archive (one file per Thai day)
-  const a4tSt = stations.filter(s => s.hourly), a4tH = new Map(), spikeDrops = [];   // spikeDrops: {id, t} of every value the spike check dropped this run
+  const a4tSt = stations.filter(s => s.hourly), a4tH = new Map(), spikeDrops = [], held = new Map();   // spikeDrops: {id, t} of every value the spike check dropped this run; held: id -> {t, v}, a station's newest reading when the check dropped it (shown on the page as unconfirmed, not used for any correction)
   if (stations.some(s => s.feed24)) {   // Bangkok (BMA) stations: latest 24-h mean from the live feed
     try { const cur = new Map((await a4tStations()).map(x => [x.id, x]));
       let n = 0; for (const s of stations) if (s.feed24) { const x = cur.get(s.id); if (x && x.pm != null && x.last) { obs.set(s.id, { t: x.last, v: x.pm }); n++; } }
@@ -456,6 +456,8 @@ async function main() {
       for (const s of a4tSt) { const rows = got.get(s.code) || []; a4tH.set(s.id, rows); const last = rows[rows.length - 1]; if (last) obs.set(s.id, { t: last[0], v: last[1] }); }
       if (got.dropped) log(`Air4Thai hourly: spike check dropped ${got.dropped.length} value(s): ${got.dropped.join(', ')}`);
       spikeDrops.push(...(got.droppedAt || []));
+      for (const d of got.droppedAt || []) { const rows = a4tH.get(d.id) || [], lastKept = rows.length ? rows[rows.length - 1][0] : 0;   // only when nothing newer was kept
+        if (d.t > lastKept && now - d.t <= CFG.obsMaxAgeH * HOUR && !(held.get(d.id)?.t > d.t)) held.set(d.id, { t: d.t, v: d.v }); }
       log(`Air4Thai hourly: ${[...a4tH.values()].filter(r => r.length).length}/${a4tSt.length} stations, latest hour ${new Date(Math.max(0, ...[...obs.entries()].filter(([k]) => String(k).startsWith('a4t:')).map(([, o]) => o.t))).toISOString().slice(0, 16)}Z`);
       const yday = thaiDate(now - 24 * HOUR), arch = path.join(DATA, 'history', yday.slice(0, 7), `a4t-${yday.replace(/-/g, '')}.csv`);
       const dayRows = []; for (const s of a4tSt) for (const [t, v] of a4tH.get(s.id) || []) if (thaiDate(t - HOUR) === yday) dayRows.push([new Date(t).toISOString().slice(0, 16) + 'Z', s.id, v]);
@@ -479,7 +481,7 @@ async function main() {
     const o = obs.get(s.id); if (!o || now - o.t > CFG.obsMaxAgeH * HOUR || o.v < 0 || o.v > 1500) return;
     // stations that give only their latest value (OpenAQ, the BMA feed): the same spike rule against their last hours (27 Nov 2026;
     // on the Oct–Nov 2026 logs, 134,452 OpenAQ station-hours, it drops the 5 values above 300 µg/m³ and nothing else)
-    if (!s.hourly && isSpike(state.obsHist[s.id], Math.round(o.t / HOUR) * HOUR, o.v)) { spikeDrops.push({ id: s.id, t: o.t }); spikeLatest.push(`${s.id} ${new Date(o.t).toISOString().slice(0, 13)}Z ${o.v}`); return; }
+    if (!s.hourly && isSpike(state.obsHist[s.id], Math.round(o.t / HOUR) * HOUR, o.v)) { spikeDrops.push({ id: s.id, t: o.t }); held.set(s.id, { t: o.t, v: o.v }); spikeLatest.push(`${s.id} ${new Date(o.t).toISOString().slice(0, 13)}Z ${o.v}`); return; }
     s.obs = o;
     if (s.hourly) { state.obsHist[s.id] = (a4tH.get(s.id) || []).filter(([t]) => t > now - 50 * HOUR).map(([t, v]) => [t, r1(v)]); return; }
     const hk = Math.round(o.t / HOUR) * HOUR, H = (state.obsHist[s.id] ||= []);
@@ -914,7 +916,7 @@ async function main() {
       hours.forEach((t, j) => { if (j > jNow && j <= jNow + 12) { F_.h[t] = anyInc ? r1(incAt(s, t, s.hourly ? 'hm' : 'h')) : 0; F_.m[t] = anyInc ? r1(incAt(s, t, '24')) : 0; } }); }
     return { id: s.id, name: s.name, lat: s.lat, lon: s.lon, monitor: s.monitor, provider: s.provider, cc: s.country, avg24: isAvg24(s), hourly: !!s.hourly, ...(s.nameTH ? { nameTH: s.nameTH } : {}),
       ...(!s.monitor && LCc.use ? { qc: lcQC.get(s.id) || 'none' } : {}),   // low-cost sensor check (accuracy.mjs scores only 'pass' / 'isolated')
-      obs: s.obs ? { t: s.obs.t, v: r1(s.obs.v) } : null, obs24: obs24(s.id, s), bias: k ? +F.b.toFixed(3) : null, nUpd: k?.n || 0, raw, corr: F.corr, fc24: F.fc24,
+      obs: s.obs ? { t: s.obs.t, v: r1(s.obs.v) } : null, ...(held.has(s.id) ? { held: { t: held.get(s.id).t, v: r1(held.get(s.id).v) } } : {}), obs24: obs24(s.id, s), bias: k ? +F.b.toFixed(3) : null, nUpd: k?.n || 0, raw, corr: F.corr, fc24: F.fc24,
       corrA: A.corr, fc24A: A.fc24, ...(incS && incS.some(v => Math.abs(v) >= 0.1) ? { inc: incS } : {}),
       // measured values on the page's hour axis up to now (hourly values, or the reported 24-h means for 24-h stations), for the map comparison layer
       obsSeries: (() => { const h = new Map((state.obsHist[s.id] || []).map(([t, v]) => [t, v])); const a = hours.slice(0, jNow + 1).map(t => h.has(t) ? h.get(t) : null); return a.some(v => v != null) ? a : null; })() };

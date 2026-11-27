@@ -1121,6 +1121,8 @@ tbody tr:hover {
 /* my saved places on the map: a pin with the name, always shown */
 .mypin{filter:drop-shadow(0 1px 2px rgba(0,0,0,.45))}.mypin svg{display:block}
 .leaflet-tooltip.mylabel{background:var(--panel);border:1px solid var(--line);border-radius:6px;box-shadow:0 1px 3px rgba(0,0,0,.25);color:var(--fg);font:700 12px/1.2 var(--font-body);padding:2px 6px}.leaflet-tooltip.mylabel::before{display:none}
+/* a station's newest reading held by the spike check: shown at once, marked unconfirmed */
+.heldmark{width:18px;height:18px;border-radius:50%;border:2px solid #c62828;background:#fff;color:#c62828;font:700 12px/14px var(--font-body);text-align:center;box-shadow:0 0 0 2px rgba(198,40,40,.25)}.heldtxt{color:#c62828}@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .heldtxt{color:#ff6b6b}}:root[data-theme="dark"] .heldtxt{color:#ff6b6b}
 .plrow{display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--line)}.plrow .pn{flex:1;min-width:0;border:0;background:none;padding:0;text-align:left;font:inherit;color:inherit;cursor:pointer}.plrow .pn b{display:block;font-weight:600}.plrow .pn span{display:block;font-size:.76rem;color:var(--muted)}.plrow .btn{flex:none;padding:4px 10px;font-size:.78rem}.plrow .pn:hover b,.plrow .pn:focus-visible b{text-decoration:underline}
 .sumcard .sumctl{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:10px 0 4px;font-size:var(--fs-md)}
 .sumcard .sumctl select{font:inherit;max-width:100%}
@@ -4904,9 +4906,17 @@ async function autoLocPop(){
   try{ const st=await navigator.permissions?.query({name:'geolocation'}); if(st&&st.state==='denied') return; }catch(e){}
   navigator.geolocation.getCurrentPosition(pos=>openLocPop(pos.coords.latitude,pos.coords.longitude,pos.coords.accuracy),()=>{},{enableHighAccuracy:false,timeout:15000,maximumAge:10*60e3});
 }
+// a station's newest reading that the spike check held back (latest.json stations[].held, from 27 Nov 2026): a jump above
+// 300 µg/m³, more than 5 times the hours before. It may be a faulty instrument or real smoke right at the station, so the page
+// shows it at once, marked unconfirmed, while the forecast correction waits (owner: "the system should know without delay")
+const heldOf=s=>s.held&&Date.now()-s.held.t<6*HR?s.held:null;
+const heldTxt=s=>{ const h=heldOf(s); return h?`<span class="heldtxt"><b>${T('Unconfirmed reading','ค่ารอยืนยัน')} ${fmtN(h.v)} µg/m³</b> ${T('at','เมื่อ')} ${fmtT(h.t)}. ${T('A sudden jump: real smoke at the station, or a faulty instrument. Not used for the forecast until confirmed.','ค่าพุ่งขึ้นฉับพลัน อาจเป็นควันจริงใกล้สถานี หรือเครื่องวัดขัดข้อง ยังไม่นำไปปรับพยากรณ์จนกว่าจะยืนยันได้')}</span>`:''; };
 function drawStations(){
   stationLayer.clearLayers(); drawA4t(); if(!P.data) return; const t=curT(), live=Math.abs(t-Date.now())<HR;
-  for(const s of P.data.stations){ if(!inRegion(s.lat,s.lon)||isA4t(s)) continue;
+  for(const s of P.data.stations){ if(!inRegion(s.lat,s.lon)) continue;
+    if(live&&heldOf(s)) L.marker([s.lat,s.lon],{zIndexOffset:900,keyboard:false,icon:L.divIcon({className:'',html:'<div class="heldmark">!</div>',iconSize:[18,18],iconAnchor:[9,22]})})
+      .bindTooltip(()=>`<b>${esc(stName(s))}</b><br>${heldTxt(s)}`).on('click',()=>focusStation(s.id)).addTo(stationLayer);
+    if(isA4t(s)) continue;
     const f=stationNow(s,t);
     // Air4Thai stations report a 24-h running mean: in the hourly view they show the hourly forecast, in 24-h views the measured
     // 24-h mean now and the blended 24-h forecast later
@@ -4934,11 +4944,11 @@ function renderStations(){
     let best=0,tB=null; P.data.hours.forEach((t,i)=>{const v=F[i]; if(t>now&&v!=null&&v>best){best=v;tB=t;}}); return best>0?{...st,mean24:best,tMean:tB}:st;};
   const H=P.data.hours, tNow=Math.floor(now/HR)*HR;
   const W=wins(), top=ws=>Math.max(0,...ws.map(w=>w?.v??0));
-  const rows=(ref.length?ref:inReg).map(s=>{const F=sFc24(s), ws=W.map(([a,b])=>F?winMax(H,F,tNow,a,b,true):winMax(H,sCorr(s),tNow,a,b,false)); return {s,ws};})
-    .sort((x,y)=>top(y.ws)-top(x.ws)).slice(0,15);
+  const rows=(ref.length?ref.concat(inReg.filter(s=>!s.monitor&&heldOf(s))):inReg).map(s=>{const F=sFc24(s), ws=W.map(([a,b])=>F?winMax(H,F,tNow,a,b,true):winMax(H,sCorr(s),tNow,a,b,false)); return {s,ws};})
+    .sort((x,y)=>(!!heldOf(y.s)-!!heldOf(x.s))||top(y.ws)-top(x.ws)).slice(0,15);   // stations with an unconfirmed reading first
   $('stList').innerHTML=rows.length?rows.map(({s,ws})=>card2({attr:`data-sid="${s.id}"`,name:stName(s),tag:(s.cc||'')+(s.monitor?'':T(' · low-cost sensor',' · เซนเซอร์ราคาประหยัด')),ws,
       W,wx:W.map(([a,b])=>wxWinPt(s.lat,s.lon,tNow,a,b)),
-      sub:s.obs?`${s.avg24?T('measured now (24-h avg)','วัดได้ขณะนี้ (เฉลี่ย 24 ชม.)'):T('measured now','วัดได้ขณะนี้')} ${fmtN(s.obs.v)}`:T('no recent reading','ไม่มีค่าล่าสุด')})).join('')
+      sub:(s.obs?`${s.avg24?T('measured now (24-h avg)','วัดได้ขณะนี้ (เฉลี่ย 24 ชม.)'):T('measured now','วัดได้ขณะนี้')} ${fmtN(s.obs.v)}`:T('no recent reading','ไม่มีค่าล่าสุด'))+(heldOf(s)?`<br>${heldTxt(s)}`:'')})).join('')
     :T('No reporting stations in this region.','ไม่มีสถานีที่รายงานข้อมูลในพื้นที่นี้');
   if(ref.length&&lowN) $('stList').insertAdjacentHTML('beforeend',`<p class="note">${T(`Reference monitors only. ${lowN} low-cost sensors are on the map (faded) but not ranked here.`,`จัดอันดับเฉพาะสถานีมาตรฐาน มีเซนเซอร์ราคาประหยัด ${lowN} จุดแสดงบนแผนที่ (สีจาง) แต่ไม่นำมาจัดอันดับ`)}</p>`);
   $('stList').querySelectorAll('.alert').forEach(el=>el.onclick=()=>focusStation(el.dataset.sid));

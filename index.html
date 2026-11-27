@@ -1748,7 +1748,11 @@ matchMedia('(prefers-color-scheme: dark)').addEventListener('change',reTheme);
 new MutationObserver(reTheme).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
 const hotLayer=L.layerGroup().addTo(map), trajLayer=L.layerGroup().addTo(map), townLayer=L.layerGroup().addTo(map), myPtLayer=L.layerGroup().addTo(map);   // myPtLayer: the user's saved places, always shown
 let plume=null;
-function addMyPoint(lat,lon,nm){ const name=nm||`${T('My point','จุดของฉัน')} ${S.myPts.length+1}`; S.myPts.push({name,lat:+lat.toFixed(4),lon:+lon.toFixed(4),cc:'★'});
+// a saved place is found by its name (its pin, its card in the list by town: focusTown), so the name must be its own: one already
+// taken by a town or by another saved place gets a number (after a place was removed, "My point 3" was given out twice)
+function ptUniq(name,self){ const used=new Set(TOWNS.map(t=>t.name).concat(S.myPts.filter(q=>q!==self).map(q=>q.name))); if(!used.has(name)) return name;
+  const m=/^(.*) (\d+)$/.exec(name), base=m?m[1]:name; let k=m?+m[2]+1:2; while(used.has(`${base} ${k}`)) k++; return `${base} ${k}`; }
+function addMyPoint(lat,lon,nm){ const name=ptUniq(nm||`${T('My point','จุดของฉัน')} ${S.myPts.length+1}`); S.myPts.push({name,lat:+lat.toFixed(4),lon:+lon.toFixed(4),cc:'★'});
   store.set('hsw.points',JSON.stringify(S.myPts)); computeReceptors(); drawTowns(); renderWarnings(); }   // also without a fire simulation (no hotspots): the total-PM2.5 series is computed there too
 // the redesigned page (index_modern.html, <body data-click="info">): a click on the map shows a short summary of that place at the
 // slider time, with buttons for the full location window and for keeping the place as one of "my points"; the original page adds the point
@@ -3976,7 +3980,7 @@ function renderMyPts(){ const box=$('myPtsList'); if(!box) return;
   box.querySelectorAll('[data-ren]').forEach(el=>el.onclick=()=>{ const i=+el.dataset.ren, q=S.myPts[i], row=el.closest('.plrow'); if(!q) return;
     row.innerHTML=`<input class="ren" type="text" maxlength="40" aria-label="${T('Name of this place','ชื่อของจุดนี้')}"><button type="button" class="btn primary">${T('Save','บันทึก')}</button><button type="button" class="btn">${T('Cancel','ยกเลิก')}</button>`;
     const inp=row.querySelector('input'), [bS,bC]=row.querySelectorAll('button'); inp.value=townName(q); inp.focus(); inp.select();
-    const save=()=>{ const v=ptName(inp.value); if(v) q.name=v; myPtsSave(); };
+    const save=()=>{ const v=ptName(inp.value); if(v) q.name=ptUniq(v,q); myPtsSave(); };
     bS.onclick=save; bC.onclick=renderMyPts; inp.onkeydown=e=>{ if(e.key==='Enter'){e.preventDefault();save();} else if(e.key==='Escape') renderMyPts(); }; });
   const b=$('btnClearPts'); if(b) b.hidden=S.myPts.length<2; const q=$('placeQ'); if(q) q.placeholder=T('e.g. Mae Rim, Chiang Mai','เช่น แม่ริม เชียงใหม่'); }
 const ptName=s=>String(s||'').replace(/[<>]/g,'').replace(/\s+/g,' ').trim().slice(0,40);   // plain text only

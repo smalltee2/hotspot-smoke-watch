@@ -644,14 +644,22 @@ td.num{text-align:right;font-family:var(--font-data);font-variant-numeric:tabula
     </section>
 
     <section class="pane" id="pane-hot" role="tabpanel" hidden>
+      <div class="accseg hotseg" role="group" aria-label="Show">
+        <button type="button" data-hv="near" aria-pressed="true" data-th="ใกล้เมือง">Near towns</button>
+        <button type="button" data-hv="prov" aria-pressed="false" data-th="รายจังหวัด">By province</button>
+      </div>
+      <div id="hv-near">
       <h3 data-th="จุดความร้อนใกล้เมือง">Hotspots close to towns</h3>
       <div class="field"><label for="warnkm" data-th="รัศมีเตือนจุดความร้อน (กม.)">Hotspot alert radius (km)</label><input id="warnkm" type="number" min="2" max="100" value="20"></div>
       <div id="nearList" class="note">–</div>
+      </div>
+      <div id="hv-prov" hidden>
       <h3 data-th="จุดความร้อนรายจังหวัด">Hotspots by province</h3>
       <div class="tablewrap"><table id="provTable"><thead><tr><th data-th="จังหวัด">Province</th><th class="num" data-th="จุด">Hotspots</th><th class="num dev-only">FRP MW</th><th class="num" data-th="12 ชม. ล่าสุด">Last 12 h</th></tr></thead><tbody></tbody></table></div>
       <h3 class="dev-only" data-th="กลุ่มไฟขนาดใหญ่ที่สุด">Largest fire clusters</h3>
       <p class="note dev-only" data-th="รวมจุดตรวจพบเป็นกลุ่มตามช่อง 0.1° และวันตามเวลาท้องถิ่น ค่า FRP คือผลรวมสูงสุดจากการโคจรผ่านครั้งเดียวในกลุ่มนั้น ไฟเดียวกันที่ดาวเทียมสองดวงเห็นจึงไม่ถูกนับซ้ำ ช่องที่มีไฟหลายวันจะมีหลายแถว">Detections are grouped by 0.1° cell and local solar day. FRP is the largest single-overpass total in the group, so the same fire seen by two satellites is not counted twice. A cell that burned on several days has one row per day.</p>
       <div class="tablewrap dev-only"><table id="srcTable"><thead><tr><th data-th="ใกล้เมือง">Cluster near</th><th class="num" data-th="จุด">Det.</th><th class="num">FRP MW</th><th class="num">PM₂.₅ g/s</th><th data-th="ตรวจพบล่าสุด">Last seen</th></tr></thead><tbody></tbody></table></div>
+      </div>
     </section>
 
     <section class="pane" id="pane-set" role="tabpanel" hidden>
@@ -4095,11 +4103,18 @@ function renderWarnings(){
   $('warnList').querySelectorAll('.alert').forEach(el=>el.onclick=()=>focusTown(el.dataset.name));
   const km=+$('warnkm').value;
   const near=S.recep.filter(r=>r.near>0).sort((a,b)=>b.near-a.near);
-  $('nearList').innerHTML = near.length ? `<div class="tablewrap"><table><thead><tr><th>${T('Town','เมือง')}</th><th class="num">${T('Hotspots ≤','จุดความร้อน ≤')} ${km} ${T('km','กม.')}</th><th class="num dev-only">FRP MW</th><th class="num">${T('Closest km','ใกล้สุด กม.')}</th></tr></thead><tbody>`+
+  // owner, 28 Nov 2026: say in words what the columns are (count inside the radius; distance of the closest one)
+  $('nearList').innerHTML = near.length ? `<p class="note">${T(`Towns with satellite hotspots within ${km} km, most first. "Hotspots" = how many are within ${km} km of the town; "Closest" = how far the nearest one is.`,`เมืองที่มีจุดความร้อนจากดาวเทียมในรัศมี ${km} กม. เรียงจากมากไปน้อย "จำนวนจุด" คือจำนวนจุดความร้อนที่อยู่ห่างจากเมืองไม่เกิน ${km} กม. "จุดที่ใกล้ที่สุด" คือระยะจากเมืองถึงจุดความร้อนที่ใกล้ที่สุด`)}</p><div class="tablewrap"><table><thead><tr><th>${T('Town','เมือง')}</th><th class="num">${T(`Hotspots within ${km} km`,`จำนวนจุดในรัศมี ${km} กม.`)}</th><th class="num dev-only">FRP MW</th><th class="num">${T('Closest, km away','จุดที่ใกล้ที่สุด ห่าง (กม.)')}</th></tr></thead><tbody>`+
     near.map(r=>`<tr><td>${esc(townName(r))}</td><td class="num">${r.near}</td><td class="num dev-only">${fmtN(r.nearFrp)}</td><td class="num">${r.nearest.toFixed(1)}</td></tr>`).join('')+'</tbody></table></div>'
     : S.hots.length?T(`No hotspots within ${km} km of a town.`,`ไม่มีจุดความร้อนในรัศมี ${km} กม. จากเมือง`)
       : T('No hotspots in the chosen area right now. Outside the burning season (roughly January–April in the north) this is normal.','ขณะนี้ไม่มีจุดความร้อนในพื้นที่ที่เลือก นอกฤดูเผา (ภาคเหนือประมาณมกราคม–เมษายน) ถือเป็นเรื่องปกติ');
 }
+// Hotspots tab: "near towns" / "by province" (owner, 28 Nov 2026), remembered
+function setHotView(v){ if(!['near','prov'].includes(v)) v='near'; store.set('hsw.hotView',v);
+  for(const b of document.querySelectorAll('[data-hv]')) b.setAttribute('aria-pressed',String(b.dataset.hv===v));
+  for(const k of ['near','prov']){ const el=$('hv-'+k); if(el) el.hidden=k!==v; } }
+document.querySelectorAll('[data-hv]').forEach(b=>b.addEventListener('click',()=>setHotView(b.dataset.hv)));
+setHotView(store.get('hsw.hotView')||'near');
 // point-in-province (ray casting), bboxes cached
 const PROV_IDX=GEO_P.features.map(f=>{const polys=f.geometry.type==='Polygon'?[f.geometry.coordinates]:f.geometry.coordinates;
   let w=180,so=90,e=-180,n=-90;for(const pg of polys)for(const [x,y] of pg[0]){w=Math.min(w,x);e=Math.max(e,x);so=Math.min(so,y);n=Math.max(n,y);}

@@ -32,6 +32,8 @@ See `README.md` for the method and data sources.
    `scripts/update.mjs` (`cams`, `silam`: pull of long-lead PM2.5 forecasts toward the station climatology) stays all zero until
    the fit has been run on about 2 weeks of `climfc-*.csv` logs (`data/history` for CAMS, `data/history/silam` for SILAM). Only
    paste in weights the fit printed; it keeps a weight only where high hours caught and false alarms are no worse.
+   `scripts/climblend.mjs` applies the weights to the published series of the hourly reference monitors; the logs keep the
+   forecast before the blend, so the fit can be rerun at any time.
 
 ## Working notes
 
@@ -47,7 +49,9 @@ See `README.md` for the method and data sources.
 - Observed satellite rain: Google DeepMind PARDIG (`scripts/pardig.mjs`, public bucket, no key; its cache rides inside
   `gsmap-cache.json`) with GSMaP for the newest hours and as fallback; `obsRainCheck` in `scripts/update.mjs` scores both against the
   ThaiWater gauges daily (rainobs `pardig_cell`, `gsmap_cell`) and hands the page back to GSMaP if PARDIG falls behind. PARDIG uses
-  ECMWF fields among its inputs: don't use it as the truth for fitting or judging ECMWF rain corrections. Don't add files to the
+  ECMWF fields among its inputs: don't use it as the truth for fitting or judging ECMWF rain corrections. One exception (owner,
+  28 Nov 2026): the rain scores on the performance page (`scripts/perf.mjs`) use GSMaP as the observation and fall back to PARDIG on
+  days without GSMaP, with those days named in the note; the fits and the gates stay off PARDIG. Don't add files to the
   workflow's Actions-cache path list: it changes the cache key and the next run starts without its state.
 - PM2.5 correction v2 (`scripts/ml2.mjs`) is a candidate run beside the live correction (`scripts/ml.mjs`): station-history inputs
   and a µg/m³ target, logged as `correctedML2` (the live one as `correctedML1`; `correctedML` is whichever is published).

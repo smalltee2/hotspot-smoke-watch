@@ -11,7 +11,8 @@
 //   temperature: Air4Thai hourly mean ending at the valid hour vs the forecast at valid − 30 min; raw = ECMWF; published = after learning
 //          (t2_ml; equal to the 0.025° value until learning has weight); reference = same-hour persistence (the observation 24 h, or
 //          48 h for leads ≥ 24 h, before the valid hour — the newest same-hour value known at issue)
-//   rain: mm in the hour ending at the valid hour, observed = JAXA GSMaP gauge-calibrated at 0.025° at the station; raw = ECMWF;
+//   rain: mm in the hour ending at the valid hour, observed = JAXA GSMaP gauge-calibrated at 0.025° at the station (Google DeepMind
+//          PARDIG at 0.025° on days without GSMaP); raw = ECMWF;
 //          published = after learning (pr_ml); reference = same-hour persistence as for temperature; also daily totals per lead
 // Run: node scripts/perf.mjs [--force]   (skips when data/perf.json is younger than 3 h)
 import { dropSpikesHourKeys } from './obsqc.mjs';
@@ -129,13 +130,16 @@ async function main() {
   // ================================================================ temperature and rain (Air4Thai stations, from 7 Oct 2026)
   const tObs = new Map(), rObs = new Map();
   for (const f of files.filter(f => /a4tw-\d{8}\.csv$/.test(f))) for (const r of parse(await fs.readFile(f, 'utf8'))) { const v = num(r.temp_c); if (v != null && r.hour_end_utc) tObs.set(`${r.station_id}|${r.hour_end_utc.slice(0, 13)}`, v); }
-  const rainCheck = {};
+  const rainCheck = {}, rainTruth = {};
   for (const f of files.filter(f => /rainobs-\d{8}\.csv$/.test(f))) for (const r of parse(await fs.readFile(f, 'utf8'))) {
     if (!isFinite(Date.parse(r.hour_end_utc))) continue;   // cut-off or damaged row
     const day = thaiDay(Date.parse(r.hour_end_utc));
-    if (r.kind === 'a4t') { const v = num(r.gsmap_fine); if (v != null) rObs.set(`${r.station_id}|${r.hour_end_utc.slice(0, 13)}`, v); continue; }
+    // observed rain at the station: GSMaP while it is there, else PARDIG (owner, 28 Nov 2026: GSMaP has been offline since
+    // 18 Nov; with no fallback the rain scores stopped). PARDIG has ECMWF fields among its inputs, so ECMWF scores on PARDIG
+    // days read a little too well: the days are counted (rainTruth) and named in the note on the page.
+    if (r.kind === 'a4t') { const vg = num(r.gsmap_fine), v = vg ?? num(r.pardig_fine); if (v != null) { rObs.set(`${r.station_id}|${r.hour_end_utc.slice(0, 13)}`, v); (rainTruth[day] ||= { gsmap: 0, pardig: 0 })[vg != null ? 'gsmap' : 'pardig']++; } continue; }
     const g = num(r.gauge_mm); if (g == null) continue;
-    for (const m of ['gsmap_cell', 'gsmap_bil', 'gsmap_fine']) { const v = num(r[m]); if (v == null) continue; add(rainCheck[`${day}|hourly|${m}`] ||= agg(), v, g);
+    for (const m of ['gsmap_cell', 'gsmap_bil', 'gsmap_fine', 'pardig_cell', 'pardig_fine']) { const v = num(r[m]); if (v == null) continue; add(rainCheck[`${day}|hourly|${m}`] ||= agg(), v, g);
       const tk = `${day}|${r.lat},${r.lon}|${m}`; (rainCheck._tot ||= {})[tk] ||= [0, 0]; rainCheck._tot[tk][0] += v; rainCheck._tot[tk][1] += g; } }
   if (rainCheck._tot) { for (const [k, [f, o]] of Object.entries(rainCheck._tot)) { const [day, , m] = k.split('|'); add(rainCheck[`${day}|daytotal|${m}`] ||= agg(), f, o); } delete rainCheck._tot; }
   const wxGroup = id => (inNorth(id) ? 'north' : 'south');
@@ -165,7 +169,8 @@ async function main() {
   for (const [tk, t] of Object.entries(prTot)) { if (t.n < 20) continue; const [day, L, id] = tk.split('|'); const sc = 24 / t.n;   // scaled to 24 h when a few hours are missing
     const F = Object.fromEntries(Object.entries(t.F).map(([m, v]) => [m, v * sc])); for (const g of ['all', t.reg]) PR.pair(day, +L, g, 'day', F, t.o * sc, null); }
   const t2Out = T2.out(meta), prOut = PR.out(meta);
-  const rcheck = []; for (const [k, a] of Object.entries(rainCheck)) { const [day, kind, m] = k.split('|'), s = fin(a); if (s) { delete s.mse; rcheck.push({ day, kind, model: m.replace('gsmap_', ''), ...s }); } }
+  const pardigDays = Object.entries(rainTruth).filter(([, c]) => c.pardig > c.gsmap).map(([d]) => d).sort();
+  const rcheck = []; for (const [k, a] of Object.entries(rainCheck)) { const [day, kind, m] = k.split('|'), s = fin(a); if (s) { delete s.mse; rcheck.push({ day, kind, model: m.startsWith('pardig_') ? m.replace('_', ' ') : m.replace('gsmap_', ''), ...s }); } }
 
   // ================================================================ learning logs
   const ml = { pm25: [], t2: [], rain: [] };
@@ -201,9 +206,9 @@ async function main() {
       metrics: { '1h': 'hourly amount (mm in the hour)', day: 'daily total (mm per Thai day)' }, metricGroups: { day: ['all', 'north', 'south'] }, stationGroups: { all: 'Air4Thai' }, stationMetric: '1h',
       thresholds: [[0.5, '0.5 mm in an hour (wet hour)'], [5, '5 mm in an hour (heavy shower)']], thrMetric: '1h',
       steps: [['CHELSA rain-pattern factor (0.025°)', 'ecmwf', 'page'], ['self-learning correction', 'page', 'learned']],
-      refNote: 'observed = JAXA GSMaP gauge-calibrated rain at 0.025° at the station, which carries the same CHELSA pattern factor as the 0.025° forecast, so the factor step is not independently verified here (the gauge check below is); persistence = the rain at the same hour on the newest day known at issue time',
+      refNote: (pardigDays.length ? `observed = JAXA GSMaP gauge-calibrated rain at 0.025° at the station; on days without GSMaP (${pardigDays.length} day${pardigDays.length === 1 ? '' : 's'}, ${pardigDays[0]} to ${pardigDays[pardigDays.length - 1]}) Google DeepMind PARDIG at 0.025° instead, which has ECMWF fields among its inputs, so ECMWF scores on those days read a little too well. The observation` : 'observed = JAXA GSMaP gauge-calibrated rain at 0.025° at the station, which') + ' carries the same CHELSA pattern factor as the 0.025° forecast, so the factor step is not independently verified here (the gauge check below is); persistence = the rain at the same hour on the newest day known at issue time',
       series: { cols: { '1h': [1, 2, 3] } },
-      check: { title: 'GSMaP (the rain observation) against ThaiWater gauges', note: 'Independent check of the observed rain used above: GSMaP 0.1° cell, interpolated, and the 0.025° page value against rain gauges; hourly amounts and daily totals.', gauge: true, rows: rcheck },
+      check: { title: 'GSMaP and PARDIG (the rain observations) against ThaiWater gauges', note: 'Independent check of the observed rain used above: GSMaP 0.1° cell, interpolated, and the 0.025° page value, and PARDIG (cell, 0.025°), against rain gauges; hourly amounts and daily totals.', gauge: true, rows: rcheck },
       ml: ml.rain },
   };
   for (const k in params) params[k].days = params[k].days || [];

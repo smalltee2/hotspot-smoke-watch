@@ -90,6 +90,7 @@ def stations(root):
 def group_of(sid, st, monitor):
     """Station type for the tables: Air4Thai direct hourly (a4t:*), Air4Thai via OpenAQ, other reference monitors, low-cost."""
     sid = str(sid); s = st.get(sid, {}); prov = s.get('provider', '') or ''
+    if 'BMA' in prov: return 'Bangkok BMA (24-h)'
     if sid.startswith('a4t:'): return 'Air4Thai hourly'
     if monitor == 0 or s.get('monitor') is False: return 'Low-cost'
     if prov.startswith('Air4Thai'): return 'Air4Thai via OpenAQ'
@@ -146,3 +147,29 @@ def setup_mpl():
     plt.rcParams.update({'figure.dpi': 150, 'savefig.dpi': 150, 'font.size': 9, 'axes.grid': True, 'grid.alpha': 0.3,
                          'axes.spines.top': False, 'axes.spines.right': False})
     return plt
+
+
+def load_pairs(root, silam=False):
+    """Forecast rows paired with the measured hour, with the station type (grp) and the published value before the nowcast
+    (pub = correctedML, else correctedA, as analysis/highpm_replay.py 'page')."""
+    O, dropped = load_obs(root, silam=silam); F = load_fcst(root, silam=silam); st = stations(root)
+    F['grp'] = [group_of(s, st, m) for s, m in zip(F.station_id, F.monitor)]
+    F['pub'] = F.correctedML.fillna(F.correctedA)
+    return F, O, dropped, pair(F, O)
+
+
+def out_dirs(out):
+    os.makedirs(os.path.join(out, 'tables'), exist_ok=True)
+    return os.path.join(out, 'tables')
+
+
+def save_table(df, tdir, name, floatfmt=None, title=''):
+    df.to_csv(os.path.join(tdir, name + '.csv'), index=False)
+    md = (f'<!-- {title} -->\n' if title else '') + md_table(df, floatfmt)
+    open(os.path.join(tdir, name + '.md'), 'w').write(md + '\n')
+    print(f'\n### {name} {title}\n' + md)
+
+
+def period(ts):
+    ts = pd.to_datetime(ts)
+    return f'{ts.min():%Y-%m-%d %H:%M} – {ts.max():%Y-%m-%d %H:%M} UTC'

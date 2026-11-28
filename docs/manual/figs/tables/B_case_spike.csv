@@ -1,0 +1,4 @@
+window,forecasts,measured_hours,obs_mean,cams_raw_mean,kalman_mean,kalman_max,published_mean,published_max
+before (24 Nov 00 – 24 Nov 20 UTC),20,20,33.15,18.0275,26.775,52.2,27.5,47.4
+after the spike (24 Nov 22 – 27 Nov 01 UTC),50,0,,10.587,92.57800000000002,181.6,48.034,90.3
+after the filter reset (27 Nov 01 – 28 Nov 03 UTC),26,0,,14.334615384615384,14.365384615384617,21.9,11.888461538461538,15.9

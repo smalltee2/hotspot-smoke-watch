@@ -28,6 +28,7 @@ import { WXML, T2_NAMES, PR_NAMES, T2ENG, PRENG, t2Features, prFeatures, loadWxD
 import { downscaleT2, packDEM, T2CFG, t2SeaLevel, t2Bin, t2Down } from './t2down.mjs';
 import { buildLandcover, landcoverAt, packLandcover, unpackLandcover } from './landcover.mjs';
 import { loadModel } from './model.mjs';
+import { loadEcpr, ecprAt, logCols } from './ecpr.mjs';
 import { assimilateFires, assimSummary } from './assim.mjs';
 import { LOWCOST, scaleLowcost, updateDaily, lowcostQC } from './lowcost.mjs';
 import { loadDataset, dailyLearn, mlCorrection, mlActive, FEAT_COLS, storeDay, loadSeasonRows, MLCFG, setHindcastModel } from './ml.mjs';
@@ -679,16 +680,24 @@ async function main() {
       // earlier (found Nov 2026; the fitted 1-2 h weights were fitted and verified on exactly this member, so they stand).
       // ecmwf_shift_pure_mmh logs the same reading from the pure ECMWF fields (met.json), so a later fit can tell the two apart.
       const metPure = D && D.shiftH ? await readJSON(path.join(DATA, 'met.json'), null) : null;
+      // ecpr_mmh (last column): the ECMWF open-data rain the page uses as its base (data/ecmwf-pr.json, written by ecmwf_pr.py before
+      // this step and published with this run), read as the page's ecprAt reads it, before CHELSA and any blend; empty where the page
+      // falls back to the met rain. Logged only, so the blend can be refitted on the page's base (fit_rain_blend.py --base ecpr).
+      const ECPR = await loadEcpr(path.join(DATA, 'ecmwf-pr.json'));
       for (const L of CFG.rainLogLeads) { const H = H0 + (L - 1) * HOUR, ki = nc ? nc.hours.indexOf(H) : -1;
         for (const st of a4tSt) { const e = sampleMet(met, st.lat, st.lon, H + HOUR)?.pr; if (e == null) continue;
           const es = D ? sampleMet(met, st.lat, st.lon, H + HOUR + D.shiftH * HOUR)?.pr : null, fa = D ? diagFactorAt(D, st.lat, st.lon) : null, pe = persistAt(rcache, sc.factor, st.lat, st.lon, H, Hobs);
           const esP = !D ? null : D.shiftH ? (metPure ? sampleMet(metPure, st.lat, st.lon, H + HOUR + D.shiftH * HOUR)?.pr : null) : es;
           let nv = ''; if (ki >= 0 && H >= nc.t0) { const G = webR, ix = Math.round((st.lon - G.lon0) / G.step), iy = Math.round((st.lat - G.lat0) / G.step); if (ix >= 0 && iy >= 0 && ix < G.nx && iy < G.ny) { const q = nc.fields[ki][iy * G.nx + ix]; if (q >= 0) nv = +(q / 10 * sc.factor).toFixed(2); } }
-          rows.push([iss, new Date(H).toISOString().slice(0, 13) + ':00Z', L, st.id, st.lat, st.lon, +e.toFixed(2), es == null ? '' : +es.toFixed(2), fa == null ? '' : +(e * fa).toFixed(2), pe ?? '', nv, +(await rainFactor(DATA, st.lat, st.lon, H)).toFixed(3), esP == null ? '' : +esP.toFixed(2)]); } }
+          rows.push([iss, new Date(H).toISOString().slice(0, 13) + ':00Z', L, st.id, st.lat, st.lon, +e.toFixed(2), es == null ? '' : +es.toFixed(2), fa == null ? '' : +(e * fa).toFixed(2), pe ?? '', nv, +(await rainFactor(DATA, st.lat, st.lon, H)).toFixed(3), esP == null ? '' : +esP.toFixed(2), (v => v === undefined ? '' : +v.toFixed(3))(ecprAt(ECPR, st.lat, st.lon, H + HOUR))]); } }
       const d = thaiDate(now), rfc = path.join(DATA, 'history', d.slice(0, 7), `rainfc-${d.replace(/-/g, '')}.csv`);
-      if (await fs.readFile(rfc, 'utf8').then(s => s.includes('\n' + iss.slice(0, 13)), () => false)) log('rain forecast log: this issue hour is already logged (second run in the hour)');   // fit_rain_blend.py does not dedupe
-      else { await appendCSV(rfc,'issued_utc,hour_start_utc,lead_h,station_id,lat,lon,ecmwf_mmh,ecmwf_shift_mmh,ecmwf_amount_mmh,persist_mmh,nowcast_mmh,chelsa_factor,ecmwf_shift_pure_mmh', rows);
-      log(`rain forecast log: ${rows.length} station-leads`); } }
+      const rfcHdr = 'issued_utc,hour_start_utc,lead_h,station_id,lat,lon,ecmwf_mmh,ecmwf_shift_mmh,ecmwf_amount_mmh,persist_mmh,nowcast_mmh,chelsa_factor,ecmwf_shift_pure_mmh,ecpr_mmh';
+      const rfcText = await fs.readFile(rfc, 'utf8').catch(() => null);
+      if (rfcText != null && rfcText.includes('\n' + iss.slice(0, 13))) log('rain forecast log: this issue hour is already logged (second run in the hour)');   // fit_rain_blend.py does not dedupe
+      else { // a day's file begun before a column was added keeps its own header's columns (rows cut to that header: no column under
+        // a wrong name, as happened in rainfc-20261116.csv); a new file gets the full header, so ecpr_mmh starts with the next day's file
+        const nCol = logCols(rfcText, rfcHdr); await appendCSV(rfc, rfcHdr, nCol < rfcHdr.split(',').length ? rows.map(r => r.slice(0, nCol)) : rows);
+      log(`rain forecast log: ${rows.length} station-leads${nCol < rfcHdr.split(',').length ? ` (${nCol} columns, as the file's header)` : ''}`); } }
     if (D) rainInfo && (rainInfo.corr = { t: D.t, shiftH: D.shiftH, lon0: D.lon0, lat0: D.lat0, step: D.step, nx: D.nx, ny: D.ny, lnf100: D.lnf100, w: CFG.rainBlend, latestH: rcache.latest ? Math.floor(rcache.latest / HOUR) * HOUR - HOUR : null });
   } catch (e) { log(`radar scoring/nowcast failed: ${e.message}`); if (process.env.GITHUB_ACTIONS) console.log(`::warning title=radar::${e.message}`); }
 

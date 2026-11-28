@@ -35,18 +35,30 @@ export function storeForecast(store, id, base, hours, jNow, now, par = PMNOW) {
   for (const k of Object.keys(fc)) if (+k < now - par.keepH * HOUR) delete fc[k];
   store[id] = fc; return fc;
 }
-/** the daily check over the forecast log: columns correctedPre (without the nowcast) and correctedNC (with it), hourly reference
- *  monitors, leads <= maxLeadH, rows issued since `since` */
+/** the daily check over the forecast log: hourly reference monitors, leads <= maxLeadH, the series without (correctedPre) and with
+ *  (correctedNC) the nowcast. Logs written before 28 Nov 2026 have neither column: there the two are rebuilt from what was
+ *  logged, exactly as the pipeline would have computed them (owner: start the check without waiting 14 days): without = the
+ *  published correctedML, with = that value moved by the error of the newest measured hour (the hour ending one hour before the
+ *  issue time) against the previous run's 1-h forecast for that hour. */
 export async function pmNowCheck(histDir, dayEnd, obs, days = PMNOW.checkDays, since = 0, par = PMNOW) {
-  const from = Math.max(dayEnd - days * 864e5, since), pairs = [];
-  const files = (await listFiles(histDir)).filter(f => /fcst-\d{8}T\d{2}\.csv$/.test(f) && fileDay(f) >= from - 864e5 && fileDay(f) < dayEnd).sort();
-  for (const f of files) { const txt = await fs.readFile(f, 'utf8'); if (!txt.slice(0, 700).includes('correctedNC')) continue;
+  const from = dayEnd - days * 864e5, pairs = [], old = [], prev1 = new Map(); let tMin = Infinity;
+  const files = (await listFiles(histDir)).filter(f => /fcst-\d{8}T\d{2}\.csv$/.test(f) && fileDay(f) >= from - 2 * 864e5 && fileDay(f) < dayEnd).sort();
+  for (const f of files) { const txt = await fs.readFile(f, 'utf8'), hasNC = txt.slice(0, 700).includes('correctedNC');
     for (const r of parseCSV(txt)) {
-      if (r.obs_basis !== 'h' || r.monitor === '0' || !(+r.lead_h <= par.maxLeadH) || !r.correctedNC || !r.correctedPre) continue;
-      const tV = Date.parse(r.valid_utc); if (!(tV >= from && tV < dayEnd)) continue; if (since && Date.parse(r.issued_utc) < since) continue;
-      const o = obs.get(`${r.station_id}|${tV}`); if (o == null) continue; pairs.push([o, +r.correctedPre, +r.correctedNC]); } }
-  const k = highScore(pairs, ML2.thr), spanD = since ? (dayEnd - since) / 864e5 : days;
-  // decided only with the full 14 days of rows and enough of them (leads 1, 3 and 6 are logged: about 300 rows an hour)
-  const decided = spanD >= days && k.n >= 20000 && k.high >= 50;
-  return { days, ...k, decided, ok: decided && k.hit2 >= k.hit1 && k.fa2 <= k.fa1 && k.rmse2 <= k.rmse1 };
+      if (r.obs_basis !== 'h' || r.monitor === '0') continue;
+      const tI = Date.parse(r.issued_utc), tV = Date.parse(r.valid_utc), L = +r.lead_h, pub = r.correctedML !== '' && r.correctedML != null ? +r.correctedML : NaN;
+      if (L === 1 && isFinite(pub)) prev1.set(`${r.station_id}|${tV}`, pub);   // every run's 1-h forecast, for the rebuilt rows
+      if (!(L <= par.maxLeadH) || !(tV >= from && tV < dayEnd)) continue;
+      const o = obs.get(`${r.station_id}|${tV}`); if (o == null) continue;
+      if (hasNC && r.correctedNC && r.correctedPre) { pairs.push([o, +r.correctedPre, +r.correctedNC]); tMin = Math.min(tMin, tV); }
+      else if (!hasNC && isFinite(pub)) old.push({ id: r.station_id, tI, L, pub, o, tV }); } }
+  for (const x of old) {   // rebuilt rows: newest measured hour = the hour ending at issue − 1 h; its forecast = the run of issue − 2 h, lead 1
+    const tL = x.tI - HOUR, oL = obs.get(`${x.id}|${tL}`), f = prev1.get(`${x.id}|${tL}`);
+    const e = oL == null || f == null ? null : Math.max(-par.maxErr, Math.min(par.maxErr, ln1(oL) - ln1(f)));
+    const nc = e == null ? x.pub : Math.round(Math.max(0, (x.pub + 1) * Math.exp(Math.exp(-x.L / par.tauH) * e) - 1) * 10) / 10;
+    pairs.push([x.o, x.pub, nc]); tMin = Math.min(tMin, x.tV); }
+  const k = highScore(pairs, ML2.thr), spanD = isFinite(tMin) ? (dayEnd - tMin) / 864e5 : 0;
+  // decided only with (nearly) the full 14 days of rows and enough of them (leads 1, 3 and 6 are logged: about 300 rows an hour)
+  const decided = spanD >= days - 1 && k.n >= 20000 && k.high >= 50;
+  return { days, spanD: +spanD.toFixed(1), rebuilt: old.length, ...k, decided, ok: decided && k.hit2 >= k.hit1 && k.fa2 <= k.fa1 && k.rmse2 <= k.rmse1 };
 }

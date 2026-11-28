@@ -960,8 +960,8 @@ async function main() {
       try {
         state.pmNow ||= { since: now };
         const obsN = await loadObsHourly(path.join(DATA, 'history'), dayEnd - (PMNOW.checkDays + 2) * 864e5);
-        const k = state.pmNow.check = await pmNowCheck(path.join(DATA, 'history'), dayEnd, obsN, PMNOW.checkDays, state.pmNow.since || 0);
-        const m = `PM2.5 nowcast check (${k.days} d, ${k.n} station-hours at leads 1–${PMNOW.maxLeadH} h, ${k.high} at >= 37.5): caught ${k.hit2} with vs ${k.hit1} without, false alarms ${Math.round(k.fa2 * 100)} % vs ${Math.round(k.fa1 * 100)} %, RMSE ${k.rmse2} vs ${k.rmse1} -> ${!k.decided ? 'not enough days of rows yet, logged only' : k.ok ? 'published' : 'logged only'}`;
+        const k = state.pmNow.check = await pmNowCheck(path.join(DATA, 'history'), dayEnd, obsN, PMNOW.checkDays);
+        const m = `PM2.5 nowcast check (${k.days} d, ${k.n} station-hours at leads 1–${PMNOW.maxLeadH} h, ${k.high} at >= 37.5): ${k.rebuilt} of them rebuilt from older logs; caught ${k.hit2} with vs ${k.hit1} without, false alarms ${Math.round(k.fa2 * 100)} % vs ${Math.round(k.fa1 * 100)} %, RMSE ${k.rmse2} vs ${k.rmse1} -> ${!k.decided ? 'not enough days of rows yet, logged only' : k.ok ? 'published' : 'logged only'}`;
         log(m); if (process.env.GITHUB_ACTIONS) console.log(`::notice title=PM2.5 nowcast::${m}`);
         if (mlRec) { mlRec.nowcast = k; await writeJSON(path.join(DATA, 'history', yday.slice(0, 7), `ml-${yday.replace(/-/g, '')}.json`), mlRec); }
       } catch (e) { log(`PM2.5 nowcast check failed: ${e.message}`); }

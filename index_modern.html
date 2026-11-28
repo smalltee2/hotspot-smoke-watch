@@ -1125,6 +1125,12 @@ tbody tr:hover {
 .heldmark{width:18px;height:18px;border-radius:50%;border:2px solid #c62828;background:#fff;color:#c62828;font:700 12px/14px var(--font-body);text-align:center;box-shadow:0 0 0 2px rgba(198,40,40,.25)}.heldtxt{color:#c62828}@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .heldtxt{color:#ff6b6b}}:root[data-theme="dark"] .heldtxt{color:#ff6b6b}
 .wpinfo{display:inline-grid;place-items:center;width:20px;height:20px;margin-left:6px;padding:0;border:1.5px solid currentColor;border-radius:50%;background:none;color:var(--muted);font:italic 700 12px/1 Georgia,serif;cursor:pointer;vertical-align:1px}.wpinfo:hover,.wpinfo[aria-expanded="true"]{color:var(--fg)}.wpinfo:focus-visible{outline:2px solid var(--focus);outline-offset:1px}
 .plrow .pn b .wbell{display:inline-block}.warnplaces .plrow .note{flex:none;max-width:42%;text-align:right}
+/* warning marks on the map (drawWarnMarks): pulsing rings coloured by level; solid centre = measured above the standard */
+.wmark{position:relative;width:0;height:0;cursor:pointer}.wmark b{position:absolute;left:-10px;top:-10px;width:20px;height:20px;border-radius:50%;border:3px solid var(--wc);background:#fff;box-shadow:0 0 0 1.5px #fff,0 1px 3px rgba(0,0,0,.45)}
+.wmark.meas b{background:var(--wc)}.wmark i{position:absolute;left:-28px;top:-28px;width:56px;height:56px;border-radius:50%;background:var(--wc);opacity:0;animation:wpulse 2.2s ease-out infinite;pointer-events:none}
+.wmark.wl1{--wc:#f59f00}.wmark.wl2{--wc:#e8590c}.wmark.wl3{--wc:#c92a2a}.wmark.wl3 i{animation-duration:1.4s}
+@keyframes wpulse{0%{transform:scale(.3);opacity:.55}100%{transform:scale(1.5);opacity:0}}
+@media (prefers-reduced-motion: reduce){.wmark i{animation:none;opacity:.25;transform:scale(.9)}}
 /* spotlight on a place the user tapped (flashPlace): pulsing rings, a dot, the name; a district / province outline pulses too */
 .flashpt{position:relative;width:0;height:0}.flashpt b{position:absolute;left:-7px;top:-7px;width:14px;height:14px;border-radius:50%;background:#e8590c;border:3px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.35)}
 .flashpt i{position:absolute;left:-30px;top:-30px;width:60px;height:60px;border-radius:50%;border:3px solid #e8590c;opacity:0;animation:flashring 1.6s ease-out infinite}.flashpt i+i{animation-delay:.8s}
@@ -5076,7 +5082,7 @@ function renderSummary(){
   const cells=new Map(); for(const c of sr){const k=Math.floor(c.lat/0.1)+':'+Math.floor(c.lon/0.1); cells.set(k,Math.max(cells.get(k)||0,c.frp));}
   $('sHot').textContent=hr.length.toLocaleString(); $('sSrc').textContent=cells.size.toLocaleString();
   $('sFrp').textContent=Math.round([...cells.values()].reduce((a,v)=>a+v,0)).toLocaleString();
-  $('sWarn').textContent=S.recep.some(r=>r.stT)||S.sim?warnedPlaces().n:'–'; renderWarnPlaces();
+  $('sWarn').textContent=S.recep.some(r=>r.stT)||S.sim?warnedPlaces().n:'–'; renderWarnPlaces(); drawWarnMarks();
   $('sWarn').parentElement.classList.toggle('warnon',+$('sWarn').textContent>0);   // red, with a bell, while any town has a warning
 }
 // ---- the next 24 h and 24–48 h side by side (provinces, towns, stations alike): highest 24-h mean PM2.5 whose 24 h end in the
@@ -5133,6 +5139,21 @@ const WARN_MERGE_KM=10;
 function warnedPlaces(){ const towns=warnedTowns().map(r=>({r,lat:r.lat,lon:r.lon,name:townName(r),meas:false})), st=[];
   for(const w of warnedStations()){ const t=towns.find(x=>haversineKm(x.lat,x.lon,w.lat,w.lon)<=WARN_MERGE_KM); if(t){ if(w.meas) t.meas=true; } else st.push(w); }
   return {towns,stations:st,n:towns.length+st.length}; }
+// warning marks on the map (owner, 28 Nov 2026): every place with a warning is marked at once, pulsing, in the colour of how
+// dangerous it is — light orange 37.5–55 µg/m³ (unsafe for sensitive groups; 55 is the US EPA step to "unhealthy"), dark orange
+// 55–75, red above 75 (the Thai PCD "affects health" band). The level is the measured 24-h mean of a station, else the highest
+// forecast 24-h mean ahead; a town warned only for an hour above 75 shows light orange. A solid centre = already measured above
+// the standard; a ring = forecast. Tap = the place's forecast (the spotlight). The marks follow the area chosen above the tabs.
+const WARN_LV=[{min:75,cls:'wl3',en:'affects health (above 75 µg/m³)',th:'มีผลกระทบต่อสุขภาพ (เกิน 75 µg/m³)'},{min:55,cls:'wl2',en:'unhealthy (55–75 µg/m³)',th:'ไม่ดีต่อสุขภาพ (55–75 µg/m³)'},{min:0,cls:'wl1',en:'unhealthy for sensitive groups (37.5–55 µg/m³)',th:'เริ่มมีผลต่อกลุ่มเสี่ยง (37.5–55 µg/m³)'}];
+const warnLv=v=>WARN_LV.find(l=>v>l.min)||WARN_LV[2];
+const warnLayer=L.layerGroup().addTo(map);
+function drawWarnMarks(){ warnLayer.clearLayers(); if(!P.data) return; const W=warnedPlaces();
+  const mk=(lat,lon,v,meas,name,sub,go)=>{ const lv=warnLv(v);
+    L.marker([lat,lon],{keyboard:false,zIndexOffset:1100,title:name,icon:L.divIcon({className:'',html:`<div class="wmark ${lv.cls}${meas?' meas':''}"><i></i><b></b></div>`,iconSize:[0,0]})})
+      .bindTooltip(`<b>${esc(name)}</b><br>${T(lv.en,lv.th)}<br>${sub}<br><span class="note">${meas?T('measured above the standard now','วัดได้เกินมาตรฐานแล้ว'):T('forecast to exceed','พยากรณ์ว่าจะเกิน')}</span>`,{direction:'top',offset:[0,-12]})
+      .on('click',go).addTo(warnLayer); };
+  for(const t of W.towns){ const r=t.r, v=r.stT?.mean24??r.st?.mean24??0; mk(t.lat,t.lon,v,t.meas,t.name,`${T('highest 24-h mean ahead','ค่าเฉลี่ย 24 ชม. สูงสุดข้างหน้า')} ${fmtN(v)} µg/m³`,()=>focusTown(r.name)); }
+  for(const w of W.stations){ const v=w.meas?w.o24:w.m24; mk(w.lat,w.lon,v,w.meas,w.name,`${w.meas?T('24-h mean now','เฉลี่ย 24 ชม. ตอนนี้'):T('highest 24-h mean ahead','ค่าเฉลี่ย 24 ชม. สูงสุดข้างหน้า')} ${fmtN(v)} µg/m³`,()=>focusStation(w.s.id)); } }
 // the list behind the number: a collapsed box at the top of the Warnings tab, opened by a tap on the number
 function renderWarnPlaces(){ const pane=$('pane-warn'); if(!pane) return; let box=$('warnPlaces');
   const W=P.data?warnedPlaces():{towns:[],stations:[],n:0};
@@ -5143,7 +5164,7 @@ function renderWarnPlaces(){ const pane=$('pane-warn'); if(!pane) return; let bo
   box.hidden=false;
   const showRule=box.querySelector('.wprule')?.hidden===false;
   box.innerHTML=`<summary><span class="acct">${T(`Places with a warning: ${W.n}`,`พื้นที่ที่มีคำเตือน ${W.n} แห่ง`)}<button type="button" class="wpinfo" aria-expanded="${showRule}" aria-label="${T('How places are counted','เกณฑ์การนับพื้นที่')}" title="${T('How places are counted','เกณฑ์การนับพื้นที่')}">i</button></span><span class="acchead">${T(`${W.towns.length} town${W.towns.length===1?'':'s'}, ${W.stations.length} monitoring station${W.stations.length===1?'':'s'}`,`เมือง ${W.towns.length} แห่ง สถานีตรวจวัด ${W.stations.length} แห่ง`)}</span></summary>`+
-    `<p class="note wprule"${showRule?'':' hidden'}>${T(`A town: ${WARN_RULE()}. A monitoring station: its measured 24-h mean is above 37.5 µg/m³ now, or its own forecast passes the same rule. A station within ${WARN_MERGE_KM} km of a warned town counts with that town.`,`เมือง: ${WARN_RULE()} สถานีตรวจวัด: ค่าเฉลี่ย 24 ชม. ที่วัดได้ตอนนี้เกิน 37.5 µg/m³ หรือพยากรณ์ของสถานีเข้าเกณฑ์เดียวกัน สถานีที่อยู่ห่างจากเมืองที่มีคำเตือนไม่เกิน ${WARN_MERGE_KM} กม. นับรวมกับเมืองนั้น`)}</p>`+
+    `<p class="note wprule"${showRule?'':' hidden'}>${T(`A town: ${WARN_RULE()}. A monitoring station: its measured 24-h mean is above 37.5 µg/m³ now, or its own forecast passes the same rule. A station within ${WARN_MERGE_KM} km of a warned town counts with that town.`+` On the map each place is marked at once: light orange ${WARN_LV[2].en.replace(/^.*\(|\)$/g,'')}, dark orange 55–75, red above 75 µg/m³; a solid centre = measured above the standard now, a ring = forecast.`,`เมือง: ${WARN_RULE()} สถานีตรวจวัด: ค่าเฉลี่ย 24 ชม. ที่วัดได้ตอนนี้เกิน 37.5 µg/m³ หรือพยากรณ์ของสถานีเข้าเกณฑ์เดียวกัน สถานีที่อยู่ห่างจากเมืองที่มีคำเตือนไม่เกิน ${WARN_MERGE_KM} กม. นับรวมกับเมืองนั้น บนแผนที่ทุกพื้นที่มีจุดเตือนทันที: ส้มอ่อน 37.5–55 ส้มเข้ม 55–75 แดง เกิน 75 µg/m³ จุดทึบ = วัดได้เกินมาตรฐานแล้ว วงแหวน = พยากรณ์`)}</p>`+
     W.stations.filter(w=>w.meas).map(w=>row('',`data-sid="${esc(String(w.s.id))}"`,w.name,`${T('monitoring station','สถานีตรวจวัด')} · ${T('24-h mean now','เฉลี่ย 24 ชม. ตอนนี้')} ${fmtN(w.o24)} µg/m³`,`<b class="heldtxt">${mTag}</b>`)).join('')+
     W.towns.map(t=>row('',`data-town="${esc(t.r.name)}"`,t.name,`${T('town','เมือง')} · ${T('highest 24-h mean ahead','ค่าเฉลี่ย 24 ชม. สูงสุดข้างหน้า')} ${fmtN(t.r.stT?.mean24??t.r.st?.mean24??0)} µg/m³`,t.meas?`<b class="heldtxt">${mTag}</b>`:fTag)).join('')+
     W.stations.filter(w=>!w.meas).map(w=>row('',`data-sid="${esc(String(w.s.id))}"`,w.name,`${T('monitoring station','สถานีตรวจวัด')} · ${T('highest 24-h mean ahead','ค่าเฉลี่ย 24 ชม. สูงสุดข้างหน้า')} ${fmtN(w.m24)} µg/m³`,fTag)).join('');

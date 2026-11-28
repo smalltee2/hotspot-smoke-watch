@@ -975,7 +975,7 @@ async function main() {
       t2: m && m.t2 != null ? m.t2 : '', rh: m && m.rh != null ? m.rh : '', ws10: m && m.u10 != null ? Math.hypot(m.u10, m.v10) : '', wd: m ? (Math.atan2(-m.u, -m.v) * 180 / Math.PI + 360) % 360 : '',
       // measured weather at the station at issue time (Air4Thai, last valid hour ≤ 6 h old); empty elsewhere
       o_ws: state.obsWx?.[s.id]?.ws ?? '', o_wd: state.obsWx?.[s.id]?.wd ?? '', o_t2: state.obsWx?.[s.id]?.t2 ?? '', o_rh: state.obsWx?.[s.id]?.rh ?? '',
-      obs_last: s.obs && !isAvg24(s) ? s.obs.v : '', obs24_last: o24 && o24.valid ? o24.v : '', kfAb: state.kfA[s.id]?.b ?? 0,
+      obs_last: s.obs && !isAvg24(s) ? s.obs.v : '', obs24_last: o24 && o24.valid ? o24.v : '', kfAb: (kA => (kA && now - kA.t < CFG.kf.maxGapH * HOUR ? kA.b : 0))(state.kfA[s.id]),   // as stationForecast: a filter not updated for maxGapH no longer corrects, so its old bias is not an input either (a4t:19t, silent since 24 Nov 2026, kept 3.39)
       hloc: new Date(t + 7 * HOUR).getUTCHours(), doy: Math.floor((t - Date.UTC(new Date(t).getUTCFullYear(), 0, 1)) / 864e5) + 1 };
   };
   const featCache = new Map();

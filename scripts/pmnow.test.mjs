@@ -20,3 +20,20 @@ test('storeForecast keeps the next hours and drops old ones', () => {
   const st = { x: { [t0 - 20 * H]: 5 } }; storeForecast(st, 'x', hours.map((_, k) => k), hours, jNow, t0);
   assert.equal(st.x[t0 - 20 * H], undefined); assert.equal(st.x[t0 + H], 3); assert.equal(st.x[t0 + 6 * H], 8); assert.equal(st.x[t0 + 7 * H], undefined);
 });
+test('pmNowCheck rebuilds the nowcast in logs written before it existed', async () => {
+  const fs = await import('node:fs/promises'), os = await import('node:os'), path = await import('node:path');
+  const { pmNowCheck } = await import('./pmnow.mjs');
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'pmnow-')), m = path.join(dir, '2026-11'); await fs.mkdir(m);
+  const iso = t => new Date(t).toISOString().slice(0, 13) + ':00Z', t0 = Date.UTC(2026, 10, 20, 10);
+  // run at t0-1h: 1-h forecast 20 for the hour t0; run at t0: lead 1 and 3 forecasts 20; measured at t0-... see below
+  const head = 'issued_utc,valid_utc,station_id,lead_h,obs_basis,monitor,correctedML';
+  await fs.writeFile(path.join(m, 'fcst-20261120T09.csv'), `${head}\n${iso(t0 - H)},${iso(t0)},a4t:1t,1,h,1,20\n`);
+  await fs.writeFile(path.join(m, 'fcst-20261120T11.csv'), `${head}\n${iso(t0 + H)},${iso(t0 + 2 * H)},a4t:1t,1,h,1,20\n${iso(t0 + H)},${iso(t0 + 4 * H)},a4t:1t,3,h,1,20\n`);
+  const obs = new Map([[`a4t:1t|${t0}`, 99], [`a4t:1t|${t0 + 2 * H}`, 40], [`a4t:1t|${t0 + 4 * H}`, 38]]);   // newest hour 99 vs its forecast 20: error ln(100/21), clamped to 1.5
+  const k = await pmNowCheck(dir, Date.UTC(2026, 10, 21), obs, 14);
+  assert.equal(k.rebuilt, 3); assert.equal(k.n, 3); assert.equal(k.high, 3);   // the first run's row counts too (no newer hour to correct it: unchanged)
+  assert.equal(k.hit1, 0);                         // without: all 20
+  assert.equal(k.hit2, 1);                         // with: lead 1 → 21·e^(1.5·e^-0.5) − 1 ≈ 51; lead 3 → 21·e^(1.5·e^-1.5) − 1 ≈ 28
+  assert.equal(k.decided, false);                  // far too few rows
+  await fs.rm(dir, { recursive: true });
+});

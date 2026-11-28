@@ -112,7 +112,7 @@ $$
 (A.11)
 
 - $\text{FRP}_{\text{pix}}$ คือ FRP สูงสุดของพิกเซลในกลุ่ม ปรับตามสัดส่วน $\rho/\text{FRP}$
-- $N^2_{FT}$ คือ $N^2$ ระหว่าง 850–700 hPa จาก met.json (สมการ A.24)
+- $N^2_{FT}$ คือ $N^2$ ระหว่าง 850–700 hPa จาก met.json (สมการ A.25)
 - $H_{\text{abl}} = \max(100, \text{BLH})$
 
 มวลถูกกระจายสม่ำเสมอจากพื้นถึง $H_p$ เฉพาะส่วนในชั้นผสมถูกนำลงสู่พื้น ส่วนที่อยู่เหนือชั้นผสมไม่ถูกนำกลับลงมาในแบบจำลองนี้
@@ -718,7 +718,7 @@ $\sigma^2_{\text{res}} = \text{sill} - (2f - f^2)(\text{sill}-\sigma^2_{SK})$ �
 | `minStations` | 15 | ข้อมูลเข้าขั้นต่ำ |
 | `K` | 16 | จำนวนสถานีใกล้สุดใน kriging |
 | `declusterDeg` | 0.25° | ขนาดเซลล์ declustering |
-| `lowcost` | `LOWCOST` (ตาราง A2) | เซนเซอร์ราคาประหยัด |
+| `lowcost` | `LOWCOST` (หัวข้อ 2.4.4) | เซนเซอร์ราคาประหยัด |
 | `maxLogCorr` | ln 3 (ค่าตั้งต้น) | ขอบเขตของ $B$ |
 | `minPerPredictor` | 10 | จำนวนจุดต่อสัมประสิทธิ์ |
 | `KRIGE.kappa` | 1 | การดึง local mean |
@@ -1148,7 +1148,7 @@ $$
 (A.61)
 
 - $c^{wx}$ คือการปรับแก้ของ weather ML ซึ่งเป็น 0 เมื่อประตูไม่ผ่าน (หัวข้อ 3.5)
-- rainBlend คือ A.66
+- rainBlend คือ A.67
 
 <!-- src: index.html:2042-2061, 2071-2073 -->
 
@@ -1220,7 +1220,7 @@ $$
 $$
 s^* = \arg\max_{s\in[-6,6]} r\!\left(E(t+s),\,R(t)\right)
 $$
-(A.62b)
+(A.64)
 
 ใช้ $s^*$ เฉพาะเมื่อมี node-ชั่วโมงที่เปียก (เรดาร์ ≥ 0.5 mm/h) ≥ 200 และ $r(s^*) - r(0) \ge 0.02$ มิฉะนั้นใช้ 0
 <!-- src: scripts/radar.mjs:296-327 -->
@@ -1230,7 +1230,7 @@ $$
 $$
 \ell = \ln\frac{\sum R + 1}{\sum E + 1}\cdot\frac{n_w}{n_w + 10}
 $$
-(A.64)
+(A.65)
 
 - $n_w$ คือชั่วโมงที่ $R$ หรือ $E$ ≥ 0.2 mm
 - ต้องมี ≥ 24 คู่
@@ -1244,7 +1244,7 @@ $$
 $$
 R^{p}(H) = R\!\left(H - 24\,\text{h}\cdot\max\!\left(1,\left\lceil\frac{H-H_{\text{obs}}}{24\,\text{h}}\right\rceil\right)\right)
 $$
-(A.65)
+(A.66)
 
 <!-- src: scripts/radar.mjs:343-345 -->
 
@@ -1255,14 +1255,14 @@ $$
 $$
 \hat y = b + \sum_{m\in\{\text{shift},\text{amount},\text{persist},\text{nowcast}\}} w_m(L)\left(x_m - b\right),\qquad R^{\text{blend}} = \max(0, e^{\hat y} - 0.2)
 $$
-(A.66)
+(A.67)
 
 <!-- src: scripts/fit_rain_blend.py:8-13; index.html:2084-2108 -->
 
 สมาชิก
 - `shift` คือ ECMWF อ่านที่ $t + s^*$
 - `amount` คือ ECMWF × $e^{\ell}$ ใช้เฉพาะเซลล์ที่เรดาร์ครอบคลุม
-- `persist` คือ A.65
+- `persist` คือ A.66
 - `nowcast` คือ nowcast ของเรดาร์
 
 สมาชิกที่ไม่มีค่าในแถวใดนับว่าเท่ากับ $b$ ในแถวนั้น
@@ -1319,13 +1319,13 @@ lead หนึ่งจะเก็บน้ำหนักได้เฉพา
 $$
 \text{CSI}_j = \frac{\text{hit}_j}{n_{\text{wet}} + \#\{F_j\ge0.5\} - \text{hit}_j}
 $$
-(A.67)
+(A.68)
 
 $$
 \text{PARDIG บนหน้าเว็บ} \iff \neg\,\text{decided} \;\vee\; \left(\text{hit}_P \ge \text{hit}_G \wedge \text{FA}_P \le \text{FA}_G\right),\qquad
 \text{decided} = n_{\text{days}}\ge3 \wedge n\ge20\,000 \wedge n_{\text{wet}}\ge300
 $$
-(A.68)
+(A.69)
 
 <!-- src: scripts/update.mjs:157-175, 544-553 -->
 - ก่อนมีข้อมูลพอ ระบบใช้ PARDIG ตามผลประเมิน 9–15 พ.ย. 2026 ที่บันทึกในโค้ด (675,601 มาตรวัด-ชั่วโมง; PARDIG จับได้ 71 % มี false alarm 52 %, CSI 0.40; GSMaP 44 %, 68 %, CSI 0.23)
@@ -1347,7 +1347,7 @@ $$
 y^{T} = T_{\text{obs}} - T_{\text{down}}\ \ (\text{clip}\ \pm5\ ^\circ\text{C}),\qquad
 y^{R} = \ln(R_{\text{obs}}+0.2) - \ln(R^{E}\chi+0.2)\ \ (\text{clip}\ \pm\ln4)
 $$
-(A.69)
+(A.70)
 
 <!-- src: scripts/mlwx.mjs:1-8, 15-19 -->
 $R_{\text{obs}}$ คือเรดาร์ที่ปรับด้วยมาตรวัดเมื่อเรดาร์เห็นสถานี และคือ GSMaP 0.025° ในกรณีอื่น
@@ -1372,7 +1372,7 @@ $R_{\text{obs}}$ คือเรดาร์ที่ปรับด้วยม
 $$
 \text{ฝน ML เผยแพร่} \iff n\ge2000 \wedge n_{\text{wet}}\ge50 \wedge \text{hit}_{ML}\ge\text{hit}_{E} \wedge \text{FA}_{ML}\le\text{FA}_{E}
 $$
-(A.70)
+(A.71)
 
 <!-- src: scripts/update.mjs:138-156, 715-716, 724 -->
 - การปรับแก้ฝนคำนวณและ log ทุกชั่วโมง (`pr_ml`)
@@ -1404,7 +1404,7 @@ $$
 $$
 I = \frac{I_{hi}-I_{lo}}{C_{hi}-C_{lo}}\,(c - C_{lo}) + I_{lo};\qquad I = 201 + (c - 75.1)\frac{99}{37.4}\ \ (c > 75)
 $$
-(A.71)
+(A.72)
 
 จุดตัดคือ [0–15 → 0–25], [15.1–25 → 26–50], [25.1–37.5 → 51–100], [37.6–75 → 101–200]
 <!-- src: index.html:1002-1010 -->
@@ -1420,7 +1420,7 @@ $$
 $$
 \text{warn}_{\text{town}} \iff \max_{t\ge t_0}\bar c_{24}(t) > 37.5 \;\vee\; \max_{t \ge t_0-23\,\text{h}} c(t) > 75
 $$
-(A.72)
+(A.73)
 
 <!-- src: index.html:4007, 4014-4015, 1381-1388, 3957 -->
 ใน `seriesStats` ช่วงที่หาค่ารายชั่วโมงสูงสุดเริ่มที่ 23 ชั่วโมงก่อนชั่วโมงปัจจุบัน ไม่ได้เริ่มที่ปัจจุบัน (ดู ISSUES_A.md)
@@ -1472,7 +1472,7 @@ $$
 \text{NRMSE} = 100\,\frac{\sqrt{\frac1n\sum (F_d - O_d)^2}}{\frac1n\sum O_d},\qquad
 \text{accuracy} = \max\!\left(0,\ \operatorname{round}(100 - \text{NRMSE})\right)\ [\%]
 $$
-(A.73)
+(A.74)
 
 <!-- src: scripts/accuracy.mjs:16, 47-48; index.html:2323-2327 -->
 

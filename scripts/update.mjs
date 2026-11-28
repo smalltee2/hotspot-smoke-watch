@@ -1000,7 +1000,7 @@ async function main() {
         state.pmNow ||= { since: now };
         const obsN = await loadObsHourly(path.join(DATA, 'history'), dayEnd - (PMNOW.checkDays + 2) * 864e5);
         const k = state.pmNow.check = await pmNowCheck(path.join(DATA, 'history'), dayEnd, obsN, PMNOW.checkDays);
-        const m = `PM2.5 nowcast check (${k.days} d, ${k.n} station-hours at leads 1–${PMNOW.maxLeadH} h, ${k.high} at >= 37.5): ${k.rebuilt} of them rebuilt from older logs on the hours each run really had${k.ideal ? ` (idealised rebuild, not used: caught ${k.ideal.hit2}, false alarms ${Math.round(k.ideal.fa2 * 100)} %, RMSE ${k.ideal.rmse2})` : ''}; caught ${k.hit2} with vs ${k.hit1} without, false alarms ${Math.round(k.fa2 * 100)} % vs ${Math.round(k.fa1 * 100)} %, RMSE ${k.rmse2} vs ${k.rmse1} -> ${!k.decided ? 'not enough days of rows yet, logged only' : k.ok ? 'published' : 'logged only'}`;
+        const m = `PM2.5 nowcast check (${k.days} d, ${k.n} station-hours at leads 1–${PMNOW.maxLeadH} h, ${k.high} at >= 37.5): all rebuilt on the hours each run really had, with the current definition; caught ${k.hit2} with vs ${k.hit1} without, false alarms ${Math.round(k.fa2 * 100)} % vs ${Math.round(k.fa1 * 100)} %, RMSE ${k.rmse2} vs ${k.rmse1} -> ${!k.decided ? 'not enough days of rows yet, logged only' : k.ok ? 'published' : 'logged only'}`;
         log(m); if (process.env.GITHUB_ACTIONS) console.log(`::notice title=PM2.5 nowcast::${m}`);
         if (mlRec) { mlRec.nowcast = k; await writeJSON(path.join(DATA, 'history', yday.slice(0, 7), `ml-${yday.replace(/-/g, '')}.json`), mlRec); }
       } catch (e) { log(`PM2.5 nowcast check failed: ${e.message}`); }
@@ -1080,7 +1080,7 @@ async function main() {
   const ncOf = new Map(), preOf = new Map(); state.pmNow ||= { since: now }; state.pmNowFc ||= {};
   { const useNC = state.pmNow.check?.ok === true, ids = new Set(); let nE = 0;
     outStations.forEach((o, i) => { const s = stations[i]; if (!s.hourly) return; const base = o.corrM || o.corrA || o.corr; if (!base) return; ids.add(String(s.id));
-      const rows = a4tH.get(s.id) || [], e = errNow(stuck.has(String(s.id)) ? null : rows[rows.length - 1], state.pmNowFc[s.id], now), nc = nowcastSeries(base, hours, t0, jNow, e);
+      const rows = a4tH.get(s.id) || [], e = errNow(stuck.has(String(s.id)) ? null : rows[rows.length - 1], state.pmNowFc[s.id], now, PMNOW, s.id), nc = nowcastSeries(base, hours, t0, jNow, e);
       preOf.set(s.id, base); ncOf.set(s.id, nc); if (e != null) nE++;
       storeForecast(state.pmNowFc, s.id, base, hours, jNow, now);
       if (useNC && e != null) { if (o.corrM) o.corrM = nc; else if (o.corrA) o.corrA = nc; else o.corr = nc; } });

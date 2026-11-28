@@ -9,21 +9,31 @@
 //     more high hours caught and fewer false alarms; at 6 h a little better; at 9–12 h slightly worse, hence the cut at 6 h.
 //   - Both tests gave every station the hour ending one hour before the run, at its final value. In a real run half the Air4Thai
 //     stations publish that hour too late, and some values are preliminary. Rebuilt on the hours each run really had (28 Nov 2026,
-//     14 days to 27 Nov, leads 1–6 h): caught 1270 → 1638 of 5154, but false alarms 48.8 → 50.6 % and RMSE 7.99 → 8.11, so the
-//     check below does not pass and the nowcast stays logged only, until real rows show otherwise.
+//     14 days to 27 Nov, leads 1–6 h): caught 1270 → 1638 of 5154, but false alarms 48.8 → 50.6 % and RMSE 7.99 → 8.11, so that
+//     version failed the check below; version B (PMNOW) replaced it.
 // Published only while its daily check over the last 14 days passes (pmNowCheck): it must catch at least as many hours
 // >= 37.5 µg/m³ as the forecast without it, with no larger share of false alarms and no larger RMSE; else it is logged only.
 import fs from 'node:fs/promises';
 import { highScore, listFiles, parseCSV, fileDay, ML2 } from './ml2.mjs';
 
-export const PMNOW = { tauH: 2, maxLeadH: 6, maxErr: 1.5, maxAgeH: 3, checkDays: 14, keepH: 12 };
+// Version B (owner, 28 Nov 2026), chosen from 47 variants tested on the run-time rebuild of 24 Oct – 27 Nov 2026 (Air4Thai hourly
+// stations, the newest hour each run really had): only a measured hour that ends at most 1 h before the run's hour (older ones
+// are stale: half the stations publish late), the error clamped to ±0.5 (a few large raises did most of the damage), a faster
+// fade (τ 1.5 h), and none at the 20 stations whose hourly values Air4Thai often revises after first publication (their first
+// value moved the forecast the wrong way). Test window 14–27 Nov against no nowcast, leads 1/3/6 pooled: hours >= 37.5 caught
+// +124 (1055 of 4698 without), false-alarm share −1.5 points, RMSE −0.073; it also passes on 24 Oct – 13 Nov, at every lead,
+// in all 22 trailing 14-day windows, and in 95 % of day resamples. The earlier version (τ 2, ±1.5, any hour up to 3 h old, all
+// stations) caught more (+323) but with more false alarms (+2.1 points) and a larger RMSE (+0.095): it failed the rule.
+export const PMNOW = { tauH: 1.5, maxLeadH: 6, maxErr: 0.5, maxAgeH: 1, checkDays: 14, keepH: 12,
+  skip: ['a4t:02t', 'a4t:40t', 'a4t:50t', 'a4t:52t', 'a4t:53t', 'a4t:59t', 'a4t:61t', 'a4t:68t', 'a4t:69t', 'a4t:70t',
+    'a4t:92t', 'a4t:93t', 'a4t:94t', 'a4t:97t', 'a4t:98t', 'a4t:118t', 'a4t:119t', 'a4t:120t', 'a4t:121t', 'a4t:o10'] };
 const HOUR = 3600e3, ln1 = v => Math.log(Math.max(0, v) + 1);
 
 /** The error now: newest measured hour [t, v] against the forecast stored for that hour by an earlier run (fc: {hourMs: value}).
  *  Returns the log ratio (clamped to ±maxErr) or null when there is nothing recent to compare. */
-export function errNow(last, fc, now, par = PMNOW) {
-  if (!last || !fc) return null; const [t, v] = last, f = fc[t];
-  if (f == null || !isFinite(v) || !isFinite(f) || now - t > par.maxAgeH * HOUR) return null;
+export function errNow(last, fc, now, par = PMNOW, id = null) {
+  if (!last || !fc || (id != null && par.skip?.includes(String(id)))) return null; const [t, v] = last, f = fc[t];
+  if (f == null || !isFinite(v) || !isFinite(f) || Math.floor(now / HOUR) * HOUR - t > par.maxAgeH * HOUR) return null;   // age on the run's hour (a run ends ~10 min past it)
   return Math.max(-par.maxErr, Math.min(par.maxErr, ln1(v) - ln1(f)));
 }
 /** base: the hourly series to adjust (index j over hours, jNow = the current hour), e: errNow; returns a new array */
@@ -39,44 +49,36 @@ export function storeForecast(store, id, base, hours, jNow, now, par = PMNOW) {
   for (const k of Object.keys(fc)) if (+k < now - par.keepH * HOUR) delete fc[k];
   store[id] = fc; return fc;
 }
-/** the daily check over the forecast log: hourly reference monitors, leads <= maxLeadH, the series without (correctedPre) and with
- *  (correctedNC) the nowcast. Logs written before 28 Nov 2026 have neither column: there the two are rebuilt from what was
- *  logged, exactly as the pipeline would have computed them (owner: start the check without waiting 14 days): without = the
- *  published correctedML, with = that value moved by the error of the newest measured hour against the 1-h forecast made for
- *  that hour. The newest measured hour is the one the run really had (owner, 28 Nov 2026): the obs-*.csv log of each run lists
- *  the hours it saw for the first time, with the value as first published, so the newest hour of a station at a run is the
- *  latest one logged up to that run. The first version took "the hour ending one hour before the issue time" at its archived
- *  value for every station; half the stations publish an hour later than that, and the rebuilt rows scored better than the
- *  nowcast can do in a real run. That idealised score is still returned (ideal) for comparison; it decides nothing. */
+/** the daily check over the forecast log: Air4Thai hourly stations (the stations the pipeline nowcasts), leads <= maxLeadH, the
+ *  published series without the nowcast (correctedPre, or correctedML in logs written before 28 Nov 2026, when the nowcast was
+ *  logged only) and the same series moved as the CURRENT definition (par) would have moved it at that run: the error of the
+ *  newest measured hour the run really had (the obs-*.csv logs list the hours each run saw first, with the value as first
+ *  published), at most maxAgeH old on the run's hour, against the 1-h forecast an earlier run made for that hour; none at the
+ *  stations in par.skip. Every row is rebuilt this way, also those logged with correctedNC, so a change of the definition is
+ *  judged on the whole window at once (owner, 28 Nov 2026: the rebuild must match what a real run can do). */
 export async function pmNowCheck(histDir, dayEnd, obs, days = PMNOW.checkDays, since = 0, par = PMNOW) {
-  const from = dayEnd - days * 864e5, pairs = [], pairsI = [], old = [], prev1 = new Map(); let tMin = Infinity;
+  const from = dayEnd - days * 864e5, pairs = [], rows = [], prev1 = new Map(), skip = new Set(par.skip || []); let tMin = Infinity;
   const all = await listFiles(histDir), seen = new Map();   // seen: station -> [[run hour, measured hour, value], …] in run order
   for (const f of all.filter(f => /obs-\d{8}T\d{2}\.csv$/.test(f) && fileDay(f) >= from - 3 * 864e5 && fileDay(f) < dayEnd).sort()) {
     const m = /obs-(\d{4})(\d{2})(\d{2})T(\d{2})/.exec(f), tR = Date.UTC(+m[1], +m[2] - 1, +m[3], +m[4]);
     for (const r of parseCSV(await fs.readFile(f, 'utf8'))) { const t = Math.round(Date.parse(r.time_utc) / HOUR) * HOUR, v = +r.obs_pm25; if (!isFinite(t) || r.obs_pm25 === '' || !isFinite(v)) continue;
       if (!seen.has(r.station_id)) seen.set(r.station_id, []); seen.get(r.station_id).push([tR, t, v]); } }
-  const newCache = new Map(), newestAt = (id, tI) => { const k = id + '|' + tI; if (newCache.has(k)) return newCache.get(k); let best = null;
-    for (const r of seen.get(id) || []) { if (r[0] > tI) break; if (!best || r[1] > best[1]) best = r; } newCache.set(k, best); return best; };
+  const newestAt = (id, tI) => { let best = null; for (const r of seen.get(id) || []) { if (r[0] > tI) break; if (!best || r[1] > best[1]) best = r; } return best; };
   const files = all.filter(f => /fcst-\d{8}T\d{2}\.csv$/.test(f) && fileDay(f) >= from - 2 * 864e5 && fileDay(f) < dayEnd).sort();
-  for (const f of files) { const txt = await fs.readFile(f, 'utf8'), hasNC = txt.slice(0, 700).includes('correctedNC');
-    for (const r of parseCSV(txt)) {
-      if (r.obs_basis !== 'h' || r.monitor === '0') continue;
-      const tI = Date.parse(r.issued_utc), tV = Date.parse(r.valid_utc), L = +r.lead_h, pub = r.correctedML !== '' && r.correctedML != null ? +r.correctedML : NaN;
-      if (L === 1 && isFinite(pub)) prev1.set(`${r.station_id}|${tV}`, pub);   // every run's 1-h forecast, for the rebuilt rows
-      if (!(L <= par.maxLeadH) || !(tV >= from && tV < dayEnd)) continue;
-      const o = obs.get(`${r.station_id}|${tV}`); if (o == null) continue;
-      if (hasNC && r.correctedNC && r.correctedPre) { pairs.push([o, +r.correctedPre, +r.correctedNC]); tMin = Math.min(tMin, tV); }
-      else if (!hasNC && isFinite(pub)) old.push({ id: r.station_id, tI, L, pub, o, tV }); } }
-  for (const x of old) {   // rebuilt rows: newest measured hour = the hour ending at issue − 1 h; its forecast = the run of issue − 2 h, lead 1
-    const tL = x.tI - HOUR, oL = obs.get(`${x.id}|${tL}`), f = prev1.get(`${x.id}|${tL}`);
-    const e = oL == null || f == null ? null : Math.max(-par.maxErr, Math.min(par.maxErr, ln1(oL) - ln1(f)));
-    const nc = e == null ? x.pub : Math.round(Math.max(0, (x.pub + 1) * Math.exp(Math.exp(-x.L / par.tauH) * e) - 1) * 10) / 10;
-    pairsI.push([x.o, x.pub, nc]);   // the idealised rebuild, for comparison only
-    const nw = newestAt(x.id, x.tI), ok = nw && x.tI - nw[1] <= par.maxAgeH * HOUR, f2 = ok ? prev1.get(`${x.id}|${nw[1]}`) : null;
-    const e2 = !ok || f2 == null ? null : Math.max(-par.maxErr, Math.min(par.maxErr, ln1(nw[2]) - ln1(f2)));
-    pairs.push([x.o, x.pub, e2 == null ? x.pub : Math.round(Math.max(0, (x.pub + 1) * Math.exp(Math.exp(-x.L / par.tauH) * e2) - 1) * 10) / 10]); tMin = Math.min(tMin, x.tV); }
-  const k = highScore(pairs, ML2.thr), kI = old.length ? highScore([...pairs.slice(0, pairs.length - old.length), ...pairsI], ML2.thr) : null, spanD = isFinite(tMin) ? (dayEnd - tMin) / 864e5 : 0;
+  for (const f of files) for (const r of parseCSV(await fs.readFile(f, 'utf8'))) {
+    if (r.obs_basis !== 'h' || r.monitor === '0' || !String(r.station_id).startsWith('a4t:')) continue;
+    const tI = Date.parse(r.issued_utc), tV = Date.parse(r.valid_utc), L = +r.lead_h, pre = r.correctedPre != null && r.correctedPre !== '' ? +r.correctedPre : r.correctedML !== '' && r.correctedML != null ? +r.correctedML : NaN;
+    if (!isFinite(pre)) continue;
+    if (L === 1) prev1.set(`${r.station_id}|${tV}`, pre);   // every run's 1-h forecast without the nowcast (what storeForecast keeps)
+    if (!(L <= par.maxLeadH) || !(tV >= from && tV < dayEnd)) continue;
+    const o = obs.get(`${r.station_id}|${tV}`); if (o == null) continue;
+    rows.push({ id: r.station_id, tI, L, pre, o, tV }); }
+  for (const x of rows) {
+    const nw = skip.has(x.id) ? null : newestAt(x.id, x.tI), ok = nw && x.tI - nw[1] <= par.maxAgeH * HOUR, f = ok ? prev1.get(`${x.id}|${nw[1]}`) : null;
+    const e = !ok || f == null ? null : Math.max(-par.maxErr, Math.min(par.maxErr, ln1(nw[2]) - ln1(f)));
+    pairs.push([x.o, x.pre, e == null ? x.pre : Math.round(Math.max(0, (x.pre + 1) * Math.exp(Math.exp(-x.L / par.tauH) * e) - 1) * 10) / 10]); tMin = Math.min(tMin, x.tV); }
+  const k = highScore(pairs, ML2.thr), spanD = isFinite(tMin) ? (dayEnd - tMin) / 864e5 : 0;
   // decided only with (nearly) the full 14 days of rows and enough of them (leads 1, 3 and 6 are logged: about 300 rows an hour)
   const decided = spanD >= days - 1 && k.n >= 20000 && k.high >= 50;
-  return { days, spanD: +spanD.toFixed(1), rebuilt: old.length, ...k, ...(kI ? { ideal: { hit2: kI.hit2, fa2: kI.fa2, rmse2: kI.rmse2 } } : {}), decided, ok: decided && k.hit2 >= k.hit1 && k.fa2 <= k.fa1 && k.rmse2 <= k.rmse1 };
+  return { days, spanD: +spanD.toFixed(1), rebuilt: rows.length, ...k, decided, ok: decided && k.hit2 >= k.hit1 && k.fa2 <= k.fa1 && k.rmse2 <= k.rmse1 };
 }

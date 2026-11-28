@@ -10,10 +10,11 @@ obsRainCheck (scripts/update.mjs) do, not only by error on ln(R + 0.2).
     independent of it. PARDIG uses ECMWF among its inputs, so it is not used as truth here.
 
 usage: python3 -I b_rain.py <history dir> [output dir]
-Writes tables/B_rain_obs, B_rain_fc and fig_B8_rain.png.
+Writes tables/B_rain_obs, B_rain_fc and fig_B7_rain.png.
 """
 import csv, glob, math, os, sys
 from datetime import datetime, timedelta
+sys.dont_write_bytecode = True   # nothing written beside the scripts
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from b_common import *
 
@@ -94,4 +95,4 @@ for name, col in [('ECMWF (x CHELSA)', '#1f77b4'), ('blend (CFG.rainBlend)', '#2
 for a, lab in zip(ax, ['Rain hours caught (%)', 'False-alarm share (%)', 'CSI (%)']): a.set_xlabel('Lead (h)'); a.set_ylabel(lab)
 ax[0].legend(fontsize=7, frameon=False)
 fig.suptitle(f'Rain ≥ 0.5 mm/h at the hourly stations against the gauge-adjusted radar, issued 9 Nov – {R.ti.max():%d %b %Y}', fontsize=9)
-fig.tight_layout(); fig.savefig(os.path.join(out, 'fig_B8_rain.png')); plt.close(fig)
+fig.tight_layout(); fig.savefig(os.path.join(out, 'fig_B7_rain.png')); plt.close(fig)

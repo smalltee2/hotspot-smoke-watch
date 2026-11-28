@@ -3,9 +3,10 @@
 Air4Thai hourly stations (found from the data, not set by hand); (b) the instrument spike at a4t:19t (25 Nov 2026).
 
 usage: python3 -I b_case.py <history dir> [output dir]
-Writes tables/B_case_days, B_case_scores, B_case_spike and fig_B6_case.png, fig_B7_spike.png.
+Writes tables/B_case_days, B_case_scores, B_case_spike and fig_B8_case.png, fig_B9_spike.png.
 """
 import os, sys
+sys.dont_write_bytecode = True   # nothing written beside the scripts
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from b_common import *
 
@@ -56,7 +57,7 @@ ax[1].set_ylabel('PM2.5 (µg/m³)'); ax[1].set_title(f'(b) {top} {st.get(top, {}
 for q in ax: q.axvspan(t0, t1, color='orange', alpha=0.08)
 ax[0].legend(fontsize=7, ncol=3, frameon=False); ax[1].set_xlabel('Time (UTC)')
 ax[1].xaxis.set_major_formatter(__import__('matplotlib').dates.DateFormatter('%d %b'))
-fig.tight_layout(); fig.savefig(os.path.join(out, 'fig_B6_case.png')); plt.close(fig)
+fig.tight_layout(); fig.savefig(os.path.join(out, 'fig_B8_case.png')); plt.close(fig)
 
 # (b) the spike at a4t:19t: what was measured (spikes included), and what was published at lead 1 and 24 h
 sid = 'a4t:19t'; s0, s1 = pd.Timestamp('2026-11-23T17:00Z'), pd.Timestamp('2026-11-28T03:00Z')
@@ -80,4 +81,4 @@ if len(dd): ax.annotate('spikes ' + ', '.join(f'{v:.0f}' for v in dd.obs), (dd.t
 ax.set_ylim(0, 135); ax.set_ylabel('PM2.5 (µg/m³)'); ax.set_xlabel('Time (UTC)'); ax.legend(fontsize=7, ncol=3, frameon=False, loc='upper right')
 ax.xaxis.set_major_formatter(__import__('matplotlib').dates.DateFormatter('%d %b %H'))
 ax.set_title(f'{sid} {st.get(sid, {}).get("name", "").strip()}: instrument spike and the Kalman bias it left', fontsize=9, loc='left')
-fig.tight_layout(); fig.savefig(os.path.join(out, 'fig_B7_spike.png')); plt.close(fig)
+fig.tight_layout(); fig.savefig(os.path.join(out, 'fig_B9_spike.png')); plt.close(fig)

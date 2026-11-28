@@ -3,9 +3,10 @@
 
 usage: python3 -I b_silam.py <history dir> [output dir]
 SILAM's logs are in <history>/silam/YYYY-MM/ (same columns; cams_raw there holds raw SILAM). Both are scored against the same
-measurements (the CAMS run's logs and the Air4Thai archive). Writes tables/B_silam and fig_B5_silam.png.
+measurements (the CAMS run's logs and the Air4Thai archive). Writes tables/B_silam and fig_B3_silam.png.
 """
 import os, sys
+sys.dont_write_bytecode = True   # nothing written beside the scripts
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from b_common import *
 
@@ -38,4 +39,4 @@ for a, lab in zip(ax, ['RMSE (µg/m³)', 'Bias (µg/m³)', 'Pearson r']):
     a.set_xscale('log'); a.set_xticks([1, 3, 6, 12, 24, 48]); a.set_xticklabels([1, 3, 6, 12, 24, 48]); a.set_xlabel('Lead (h)'); a.set_ylabel(lab)
 ax[0].legend(fontsize=7, frameon=False)
 fig.suptitle(f'CAMS vs SILAM at Air4Thai hourly stations, identical rows, valid {J.tv.min():%Y-%m-%d} to {J.tv.max():%Y-%m-%d}', fontsize=9)
-fig.tight_layout(); fig.savefig(os.path.join(out, 'fig_B5_silam.png')); plt.close(fig)
+fig.tight_layout(); fig.savefig(os.path.join(out, 'fig_B3_silam.png')); plt.close(fig)

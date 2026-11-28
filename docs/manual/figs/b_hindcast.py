@@ -12,9 +12,10 @@ neighbour check (site_qc 'fail...') are left out.
 Nowcast at 3 h (scripts/pmnow.mjs rule, tau = 2 h, error clamped at +-1.5 on ln(PM + 1)), operational timing: at the issue hour
 t the newest run is the one with base <= t - 12 h (lead at t: 12-21 h), the error of the measured hour t against that run's
 value for t is carried to t + 3 h: nc = (C + 1) exp(exp(-3/2) e) - 1.
-Writes tables/B_hc_raw, B_hc_nowcast and fig_B9_hindcast.png.
+Writes tables/B_hc_raw, B_hc_nowcast and fig_B6_hindcast.png.
 """
 import os, sys
+sys.dont_write_bytecode = True   # nothing written beside the scripts
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from b_common import *
 
@@ -69,4 +70,4 @@ for a, g in zip(ax, ['Reference hourly', 'Low-cost hourly', 'Air4Thai (24-h mean
     a.set_title(g, fontsize=9); a.set_xlabel('Lead (h)'); a.set_xticks(LEADS)
 ax[0].set_ylabel('NRMSE of raw CAMS (%)'); ax[0].legend(fontsize=7, frameon=False, title='season', title_fontsize=7)
 fig.suptitle('Hindcast smoke seasons (18 Dec – 30 Apr): raw CAMS against stations', fontsize=9)
-fig.tight_layout(); fig.savefig(os.path.join(out, 'fig_B9_hindcast.png')); plt.close(fig)
+fig.tight_layout(); fig.savefig(os.path.join(out, 'fig_B6_hindcast.png')); plt.close(fig)

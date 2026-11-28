@@ -3,9 +3,10 @@
 (scripts/ml2.mjs): hourly reference monitors, leads <= 24 h, hours >= 37.5 ug/m3 caught, false-alarm share, RMSE.
 
 usage: python3 -I b_ml2.py <history dir> [output dir]
-Writes tables/B_ml2_lead, B_ml2_window, B_ml2_recorded and fig_B4_ml2.png.
+Writes tables/B_ml2_lead, B_ml2_window, B_ml2_recorded and fig_B5_ml2.png.
 """
 import glob, json, os, sys
+sys.dont_write_bytecode = True   # nothing written beside the scripts
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from b_common import *
 
@@ -55,4 +56,4 @@ for a, (k1, k2, lab) in zip(ax, [('caught_v1', 'caught_v2', 'Hours ≥ 37.5 caug
     a.xaxis.set_major_formatter(__import__('matplotlib').dates.DateFormatter('%d %b'))
 ax[0].legend(fontsize=7, frameon=False)
 fig.suptitle('pmHighCheck as recorded by the CAMS run (14-day window, hourly reference monitors, leads ≤ 24 h)', fontsize=9)
-fig.tight_layout(); fig.savefig(os.path.join(out, 'fig_B4_ml2.png')); plt.close(fig)
+fig.tight_layout(); fig.savefig(os.path.join(out, 'fig_B5_ml2.png')); plt.close(fig)

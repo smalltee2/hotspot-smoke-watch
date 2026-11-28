@@ -6,9 +6,10 @@ Rows logged with correctedPre / correctedNC are used as logged. Older rows (befo
 pmNowCheck in scripts/pmnow.mjs does: without = the published correctedML; with = that value moved by the error of the newest
 measured hour (the hour ending at issue - 1 h) against the 1-h forecast of the run issued 2 h before, e = clamp(ln(o+1) - ln(f+1),
 +-1.5), nc = (pub + 1) exp(exp(-L / 2 h) e) - 1.
-Writes tables/B_nowcast_lead, B_nowcast_gate, B_nowcast_prior and fig_B3_nowcast.png.
+Writes tables/B_nowcast_lead, B_nowcast_gate, B_nowcast_prior and fig_B4_nowcast.png.
 """
 import os, sys
+sys.dont_write_bytecode = True   # nothing written beside the scripts
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from b_common import *
 
@@ -73,4 +74,4 @@ for name, col in [('without (published)', '#1f77b4'), ('with nowcast', '#9467bd'
 for a, lab in zip(ax, ['RMSE (µg/m³)', 'Hours ≥ 37.5 caught (%)', 'False-alarm share (%)']): a.set_xticks([1, 3, 6]); a.set_xlabel('Lead (h)'); a.set_ylabel(lab)
 ax[0].legend(fontsize=7, frameon=False)
 fig.suptitle(f'Nowcast at Air4Thai hourly stations, valid {a4.tv.min():%Y-%m-%d} to {a4.tv.max():%Y-%m-%d} (n = {int(R.n.iloc[0]):,} at 1 h)', fontsize=9)
-fig.tight_layout(); fig.savefig(os.path.join(out, 'fig_B3_nowcast.png')); plt.close(fig)
+fig.tight_layout(); fig.savefig(os.path.join(out, 'fig_B4_nowcast.png')); plt.close(fig)

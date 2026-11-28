@@ -5,6 +5,7 @@ usage: python3 -I b_pm.py <history dir (the folder holding YYYY-MM/)> [output di
 Writes tables/B_inventory, B_incr_<group>, B_bma24, B_rk_map (.csv and .md) and fig_B1_incremental.png, fig_B2_lowcost.png.
 """
 import os, sys
+sys.dont_write_bytecode = True   # nothing written beside the scripts
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from b_common import *
 

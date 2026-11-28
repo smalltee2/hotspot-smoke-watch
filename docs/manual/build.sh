@@ -6,9 +6,9 @@ set -euo pipefail
 cd "$(dirname "$0")"
 mkdir -p out
 CH=(00_front.md 0[1-8]_*.md)
-pandoc "${CH[@]}" --resource-path=. --toc --toc-depth=2 -M toc-title="สารบัญ" \
+pandoc -f markdown-implicit_figures "${CH[@]}" --resource-path=. --toc --toc-depth=2 \
   --reference-doc=reference.docx -o out/SEA-HAF_manual.docx
-pandoc "${CH[@]}" --resource-path=. --toc --toc-depth=2 -M toc-title="สารบัญ" \
+pandoc -f markdown-implicit_figures "${CH[@]}" --resource-path=. --toc --toc-depth=2 \
   --standalone --embed-resources --mathml --css=manual.css -o out/SEA-HAF_manual.html
 node build_pdf.js
 ls -l out

@@ -4,6 +4,7 @@ subtitle: "Southeast Asia Haze and Air Forecast — วิธีการ กา
 author: "Assoc. Prof. Dr. Teerachai Amnuaylojaroen"
 date: "ฉบับร่าง พฤศจิกายน 2569 (November 2026)"
 lang: th
+toc-title: "สารบัญ"
 ---
 
 # เกี่ยวกับคู่มือนี้ {.unnumbered}

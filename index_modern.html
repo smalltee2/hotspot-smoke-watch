@@ -4315,6 +4315,13 @@ async function saveMapImage(kind,btn){
         g.globalAlpha=a; g.fillStyle=bg; g.fillRect(x-d/2,y-d/2,d,d); g.strokeStyle=INK; g.lineWidth=1.5; g.strokeRect(x-d/2,y-d/2,d,d); g.globalAlpha=1; })
         +each(a4tLayer,(m,x,y)=>{ const h=html(m), bg=css(h,'background'), ring=(/box-shadow:\s*0 0 0 3px ([^;"]+)/.exec(h)||[])[1]; if(!bg) return false;
           if(ring) circ(x,y,(6+3)*sc,ring,null,0); circ(x,y,6*sc,bg,INK,1.2); });
+      // warning marks (drawWarnMarks): a ring in the level's colour (solid = measured above the standard now) and the place's
+      // name, drawn above the other marks; the key line explains the colours (owner, 28 Nov 2026)
+      const WCOL={wl1:'#f59f00',wl2:'#e8590c',wl3:'#c92a2a'}, wLv=new Set(), wLab=[];   // warning names go over other names (only kept apart from each other)
+      const nWarn=each(warnLayer,(m,x,y)=>{ const h=html(m), lv=(/\b(wl[123])\b/.exec(h)||[])[1]; if(!lv) return false; const c=WCOL[lv], meas=/\bmeas\b/.test(h); wLv.add(lv);
+        circ(x,y,17*sc*0.8,c,null,0,0.22); circ(x,y,10*sc*0.8,meas?c:'#ffffff',c,3*sc*0.8); if(!meas) circ(x,y,3*sc*0.8,c,null,0);
+        const nm=m.options.title||''; if(nm){ g.font=font(700,Math.round(13*sc)); const r_=[x+14*sc,y-11*sc,g.measureText(nm).width,17*sc];
+          if(!wLab.some(q=>r_[0]<q[0]+q[2]&&q[0]<r_[0]+r_[2]&&r_[1]<q[1]+q[3]&&q[1]<r_[1]+r_[3])){ wLab.push(r_); labels.push(r_); g.lineWidth=3.5; g.strokeStyle='rgba(255,255,255,.92)'; g.fillStyle=c; g.strokeText(nm,x+14*sc,y+4*sc); g.fillText(nm,x+14*sc,y+4*sc); } } });
       // accuracy badges (share of hours in the right band): a small box with the number
       const nAcc=[accLayer,accLcLayer,iqLayer].reduce((k,l)=>k+each(l,(m,x,y)=>{ const h=html(m), v=(/<b>([^<]*)<\/b>/.exec(h)||[])[1], v2=(/<small>([^<]*)<\/small>/.exec(h)||[])[1]; if(!v) return false;
         const bw=34*sc*0.8, bh=(v2?26:17)*sc*0.8, x0=x-bw/2, y0=y-(v2?31:22)*sc*0.8; g.fillStyle='#ffffff'; g.fillRect(x0,y0,bw,bh); g.strokeStyle=INK; g.lineWidth=1; g.setLineDash(/accbadge[^"]* lc/.test(h)?[3,2]:[]); g.strokeRect(x0,y0,bw,bh); g.setLineDash([]);
@@ -4376,6 +4383,7 @@ async function saveMapImage(kind,btn){
       if(nHot) shownKeys.push(['hot',T(`Satellite hotspots (${nHot}, last 1–2 days)`,`จุดความร้อนจากดาวเทียม (${nHot} จุด, 1–2 วันล่าสุด)`)]);
       if(nSt) shownKeys.push(['st',T(`Stations (${nSt}): centre = measured, ring = forecast`,`สถานีตรวจวัด (${nSt}): สีด้านใน = ค่าตรวจวัด, วงนอก = ค่าพยากรณ์`)]);
       if(nAcc) shownKeys.push(['acc',T('Badges: forecast accuracy at the station, daily mean 24 h ahead, last 30 days','ป้าย: ความแม่นยำของพยากรณ์ที่สถานี ค่าเฉลี่ยรายวันล่วงหน้า 24 ชม. 30 วันล่าสุด')]);
+      if(nWarn) shownKeys.unshift(['warn',T(`Places with a warning (${nWarn}): ${[['wl1','light orange 37.5–55'],['wl2','dark orange 55–75'],['wl3','red above 75']].filter(([k])=>wLv.has(k)).map(([,t])=>t).join(', ')} µg/m³; solid = measured above the standard now, ring = forecast`,`พื้นที่ที่มีคำเตือน (${nWarn} แห่ง): ${[['wl1','ส้มอ่อน 37.5–55'],['wl2','ส้มเข้ม 55–75'],['wl3','แดง เกิน 75']].filter(([k])=>wLv.has(k)).map(([,t])=>t).join(' ')} µg/m³ จุดทึบ = วัดได้เกินมาตรฐานแล้ว วงแหวน = พยากรณ์`)]);
       if(nTown) shownKeys.push(['town',T('Towns','เมือง')]);
       if(nProv) shownKeys.push(['prov',T('Province names','ชื่อจังหวัด')]);
       if(nCont) shownKeys.push(['cont',T('Contour lines at the band edges','เส้นแบ่งระดับ')]);

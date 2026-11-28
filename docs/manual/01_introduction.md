@@ -80,67 +80,12 @@ SEA-HAF เป็นระบบพยากรณ์แบบลูกผสม
 
 แผนภาพด้านล่างแสดงเส้นทางของข้อมูลจากแหล่งต้นทางจนถึงหน้าเว็บ ลำดับขั้นใน `update.mjs` ตรงกับหมายเลขหัวข้อในโค้ด (1, 2, 3a–3e, 4, 4c, 5, 7)
 
-```mermaid
-flowchart TD
-  subgraph SRC[แหล่งข้อมูล]
-    A1[Air4Thai รายชั่วโมง]:::obs
-    A2[OpenAQ v3 + เซนเซอร์ราคาประหยัด]:::obs
-    A3[NASA FIRMS VIIRS NRT]:::obs
-    A4[CAMS ผ่าน Open-Meteo]:::mdl
-    A5[ECMWF IFS ผ่าน Open-Meteo]:::mdl
-    A6[SILAM FMI, S3]:::mdl
-    A7[เรดาร์ RainViewer / ThaiWater / GSMaP / PARDIG]:::obs
-    A8[ECMWF open data 0.25°]:::mdl
-    A9[IQAir]:::obs
-  end
-  A6 -->|silam.py| S1[(history: silam-YYYYMMDD.json)]
-  A8 -->|ecmwf_pr.py| E1[(ecmwf-pr.json)]
-  subgraph UPD[scripts/update.mjs รอบ CAMS]
-    U1[1 รายชื่อสถานี] --> U2[2 CAMS ที่สถานีและกริด]
-    U2 --> U3[3a ค่าวัด + spike check]
-    U3 --> U4[3b อุตุฯ, ฝน, เรดาร์, t2 downscaling, weather ML]
-    U4 --> U5[3c hotspot + land cover]
-    U5 --> U6[3d fire-group assimilation]
-    U6 --> U7[3e Kalman kf / kfA / kfSlow]
-    U7 --> U8[4 พยากรณ์ที่สถานี + blend ค่าเฉลี่ย 24 ชม.]
-    U8 --> U9[4c ML v1 / v2 + ML field + nowcast]
-    U9 --> U10[5 regression kriging แผนที่ 0.025°]
-    U10 --> U11[7 เขียน JSON และ log]
-  end
-  A1 & A2 & A3 & A4 & A5 & A7 & A9 --> UPD
-  UPD --> J1[(latest.json, met-web.json, rk-bias*.json, ml-field.json, rain-obs.json, ...)]
-  UPD --> H1[(history: fcst-/obs-/map-/rainfc-/climfc-*.csv)]
-  J1 --> SC[silam_chain.mjs: update.mjs HSW_MODEL=silam]
-  S1 --> SC
-  SC --> J2[(data/silam/latest.json)]
-  H1 --> ACC[accuracy.mjs, perf.mjs, verify.mjs]
-  J1 & J2 & E1 & ACC --> WEB[หน้าเว็บ index.html / index_modern.html]
-  classDef obs fill:#e7f5ff,stroke:#1971c2;
-  classDef mdl fill:#fff4e6,stroke:#e8590c;
-```
+![](figs/fig_A1_flow.png){width=100%}
 
 **รูปที่ A1.1** การไหลของข้อมูลรายชั่วโมงของ SEA-HAF
 <!-- src: scripts/update.mjs:384-1224, .github/workflows/update.yml:89-133, scripts/silam_chain.mjs:42-64 -->
 
-แผนภาพเดียวกันแบบข้อความ สำหรับฉบับพิมพ์ที่ไม่รองรับ mermaid
-
-```
- Air4Thai  OpenAQ  FIRMS   CAMS(Open-Meteo)  ECMWF IFS(Open-Meteo)  เรดาร์/ThaiWater/GSMaP/PARDIG  IQAir
-    \        |       |           |                 |                        |                     /
-     +-------+-------+-----------+-----------------+------------------------+--------------------+
-                                           |
-                     scripts/update.mjs (GitHub Actions, ทุกชั่วโมง)
-   สถานี -> CAMS -> ค่าวัด+QC -> อุตุฯ/ฝน -> hotspot -> assimilation -> Kalman -> พยากรณ์สถานี
-        -> ML v1/v2 -> nowcast -> regression kriging -> JSON + CSV logs
-                                           |
-            +------------------------------+---------------------------+
-            |                              |                           |
-   data/latest.json ฯลฯ          data/history/*.csv (branch history)   state.json (Actions cache)
-            |                              |
-   silam_chain.mjs (update.mjs ซ้ำ, HSW_MODEL=silam) -> data/silam/latest.json
-            |
-   accuracy.mjs / perf.mjs -> _site -> GitHub Pages -> Cloudflare Pages -> หน้าเว็บ
-```
+<!-- source of figure A1.1: figs/fig_A1_flow.mmd (mermaid) -->
 
 ### 1.4.3 รอบเวลาของ GitHub Actions
 

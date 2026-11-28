@@ -1,0 +1,15 @@
+@page { size: A4; margin: 20mm 18mm; }
+body { font-family: Sarabun, sans-serif; font-size: 11pt; line-height: 1.55; color: #111; max-width: none; }
+h1 { page-break-before: always; font-size: 20pt; border-bottom: 2px solid #1d4e89; color: #1d4e89; }
+h1.title { page-break-before: avoid; font-size: 26pt; border: 0; text-align: center; margin-top: 30%; }
+p.subtitle, p.author, p.date { text-align: center; font-size: 13pt; }
+#TOC { page-break-before: always; } #TOC ul { list-style: none; padding-left: 1.2em; } #TOC > ul { padding-left: 0; }
+h2 { font-size: 15pt; color: #1d4e89; } h3 { font-size: 12.5pt; }
+table { border-collapse: collapse; font-size: 9pt; margin: .6em 0; width: 100%; page-break-inside: auto; }
+th, td { border: 1px solid #aaa; padding: 2px 5px; vertical-align: top; } th { background: #e8eef6; }
+tr { page-break-inside: avoid; }
+code { font-size: 9pt; background: #f3f3f3; padding: 0 2px; word-break: break-word; }
+pre { font-size: 8.5pt; background: #f6f6f6; padding: 6px; white-space: pre-wrap; }
+img { max-width: 100%; display: block; margin: .6em auto .2em; page-break-inside: avoid; }
+p:has(> img) + p { text-align: center; font-size: 10pt; margin-top: 0; }
+math[display="block"] { margin: .5em 0; font-size: 110%; }

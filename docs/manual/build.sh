@@ -1,10 +1,14 @@
 #!/usr/bin/env bash
-# Build the SEA-HAF manual: Markdown chapters -> DOCX (pandoc) -> PDF (LibreOffice).
-# Needs pandoc, libreoffice and the Sarabun font. Run from docs/manual/.
+# Build the SEA-HAF manual from the Markdown chapters:
+#   DOCX (pandoc, Word equations)  and  PDF (pandoc HTML with MathML, printed by headless Chromium).
+# Needs pandoc, Node with playwright, and the Sarabun font. Run from anywhere.
 set -euo pipefail
 cd "$(dirname "$0")"
 mkdir -p out
-pandoc 00_front.md 0[1-8]_*.md --resource-path=.:figs --toc --toc-depth=2 -N \
+CH=(00_front.md 0[1-8]_*.md)
+pandoc "${CH[@]}" --resource-path=. --toc --toc-depth=2 -M toc-title="สารบัญ" \
   --reference-doc=reference.docx -o out/SEA-HAF_manual.docx
-soffice --headless --convert-to pdf --outdir out out/SEA-HAF_manual.docx >/dev/null
+pandoc "${CH[@]}" --resource-path=. --toc --toc-depth=2 -M toc-title="สารบัญ" \
+  --standalone --embed-resources --mathml --css=manual.css -o out/SEA-HAF_manual.html
+node build_pdf.js
 ls -l out

@@ -30,6 +30,13 @@ test('pmNowCheck rebuilds the nowcast in logs written before it existed', async 
   await fs.writeFile(path.join(m, 'fcst-20261120T09.csv'), `${head}\n${iso(t0 - H)},${iso(t0)},a4t:1t,1,h,1,20\n`);
   await fs.writeFile(path.join(m, 'fcst-20261120T11.csv'), `${head}\n${iso(t0 + H)},${iso(t0 + 2 * H)},a4t:1t,1,h,1,20\n${iso(t0 + H)},${iso(t0 + 4 * H)},a4t:1t,3,h,1,20\n`);
   const obs = new Map([[`a4t:1t|${t0}`, 99], [`a4t:1t|${t0 + 2 * H}`, 40], [`a4t:1t|${t0 + 4 * H}`, 38]]);   // newest hour 99 vs its forecast 20: error ln(100/21), clamped to 1.5
+  // without the run's own log of measured hours the newest hour is unknown: nothing is moved
+  const k0 = await pmNowCheck(dir, Date.UTC(2026, 10, 21), obs, 14); assert.equal(k0.hit2, 0); assert.equal(k0.ideal.hit2, 1);
+  // the hour t0 was first seen (value 99) by the run of t0 + 2 h: too late for the run of t0 + 1 h
+  await fs.writeFile(path.join(m, 'obs-20261120T12.csv'), `time_utc,station_id,obs_pm25,cams_raw,cams_plus_inc\n${new Date(t0).toISOString()},a4t:1t,99,10,10\n`);
+  assert.equal((await pmNowCheck(dir, Date.UTC(2026, 10, 21), obs, 14)).hit2, 0);
+  // seen by the run of t0 + 1 h itself: used
+  await fs.rm(path.join(m, 'obs-20261120T12.csv')); await fs.writeFile(path.join(m, 'obs-20261120T11.csv'), `time_utc,station_id,obs_pm25,cams_raw,cams_plus_inc\n${new Date(t0).toISOString()},a4t:1t,99,10,10\n`);
   const k = await pmNowCheck(dir, Date.UTC(2026, 10, 21), obs, 14);
   assert.equal(k.rebuilt, 3); assert.equal(k.n, 3); assert.equal(k.high, 3);   // the first run's row counts too (no newer hour to correct it: unchanged)
   assert.equal(k.hit1, 0);                         // without: all 20

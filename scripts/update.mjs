@@ -1,6 +1,7 @@
 // Hourly update for SEA-HAF, the Southeast Asia Hybrid Air-quality Forecast (formerly Hotspot Smoke Watch).
-// Runs in GitHub Actions (Node 20+, no dependencies). Reads keys from env:
-//   OPENAQ_API_KEY, FIRMS_MAP_KEY
+// Runs in GitHub Actions (Node 20+, no dependencies; the workflows run Node 22). Reads keys from env:
+//   OPENAQ_API_KEY (required), FIRMS_MAP_KEY, IQAIR_API_KEY (optional), GSMAP_USER / GSMAP_PASS (through gsmap.mjs, optional)
+// and the settings HSW_MODEL (=silam for the SILAM run), HSW_DATA (SILAM data folder), HSW_HTTP_CACHE (replies shared by the two runs)
 // Writes:
 //   data/latest.json   – what the web page reads
 //   data/state.json    – Kalman filter state, station list, cached CAMS forecast
@@ -61,8 +62,9 @@ const CFG = {
   biasLeadEfoldH: 48,            // bias correction fades with lead time
   // map: correction on a 0.025° grid from reference monitors + quality-checked low-cost sensors (2024–26 hindcast: leave-one-out RMSE
   // 10.9 → 10.6 µg/m³ at reference monitors, 23.5 → 19.3 at low-cost sensors vs reference monitors only on 0.1°; manuscript Section 5.6)
+  // regression kriging; residual grid and DEM resolution, cell declustering of the regression (0.25° ≈ 28 km cells)
   rk: { residStep: 0.025, coarseStep: 0.1, demStep: 0.05, minStations: 15, K: 16, declusterDeg: 0.25, lowcost: LOWCOST },
-  mlField: 0.1,                  // deg; grid of the learned map correction (kriged station corrections, every 3 h to 48 h)   // cell declustering of the regression (0.25° ≈ 28 km cells)  // regression kriging; residual grid and DEM resolution
+  mlField: 0.1,                  // deg; grid of the learned map correction (kriged station corrections, every 3 h to MLCFG.applyMaxLeadH = 24 h)
   logLeads: [1, 3, 6, 12, 24, 48],
   // Pull of long-lead forecasts toward the station climatology (data/static/pm-clim.json): ln(B+1) = (1−w)·ln(F+1) + w·ln(C+1),
   // w by lead, separately for CAMS and SILAM. Zero (no effect) until scripts/fit_clim_blend.mjs has been run on the climfc-*.csv
@@ -108,8 +110,9 @@ const blendW = (L, s = null) => { const T = s && inBelt(s.lat, s.lon) ? CFG.blen
   let k = 0; while (T[k + 1][0] < L) k++; const a = (Math.log(L) - Math.log(T[k][0])) / (Math.log(T[k + 1][0]) - Math.log(T[k][0])); return T[k][1] + a * (T[k + 1][1] - T[k][1]); };
 const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
 // SILAM mode (scripts/silam_chain.mjs runs this same program a second time): HSW_MODEL=silam takes the SILAM forecast in the place
-// of CAMS, so SILAM goes through every step CAMS does (fire assimilation, Kalman filters, station forecasts, self-learning
-// corrections, map correction, logs), with its own state, logs and outputs under HSW_DATA. Steps that do not depend on the PM2.5
+// of CAMS, so SILAM goes through every step CAMS does except the fire assimilation (switched off below: SILAM has its own fire
+// emissions): Kalman filters, station forecasts, self-learning corrections, map correction, logs, with its own state, logs and
+// outputs under HSW_DATA. Steps that do not depend on the PM2.5
 // model (radar, observed rain, temperature, weather learning) are left to the CAMS run.
 const SIL = process.env.HSW_MODEL === 'silam'; let SILRUN = null;
 const DATA = SIL && process.env.HSW_DATA ? path.resolve(process.env.HSW_DATA) : path.join(ROOT, 'data');
@@ -118,7 +121,10 @@ if (SIL) CFG.assimilate = false;   // no fire-emission assimilation for SILAM: i
 const now = Date.now();
 const HOUR = 3600e3;
 const RUNLOG = [];
-const SECRETS = [process.env.FIRMS_MAP_KEY, process.env.OPENAQ_API_KEY].map(k => (k || '').trim()).filter(k => k.length > 6);
+// values masked in the log: the API keys (longer than 6 characters, so a short common string is never masked by mistake) and the
+// GSMaP account and IQAir key whatever their length (a short user name must not reach the log either)
+const SECRETS = [...[process.env.FIRMS_MAP_KEY, process.env.OPENAQ_API_KEY].map(k => (k || '').trim()).filter(k => k.length > 6),
+  ...[process.env.GSMAP_USER, process.env.GSMAP_PASS, process.env.IQAIR_API_KEY].map(k => (k || '').trim()).filter(k => k.length > 0)];
 const log = (...a) => { let line = a.join(' '); for (const k of SECRETS) line = line.split(k).join('***'); RUNLOG.push(line); console.log(new Date().toISOString().slice(11, 19), line); };
 
 // ------------------------------------------------------------------ helpers
@@ -375,7 +381,7 @@ async function main() {
   if (!process.env.OPENAQ_API_KEY) throw new Error('OPENAQ_API_KEY is not set');
   const state = await readJSON(path.join(DATA, 'state.json'), {});
   state.kf ||= {}; state.kfSlow ||= {}; state.obsHist ||= {};
-  // multi-year background of the monitors for the correction v2 (scripts/climatology.mjs, rebuilt monthly); v2 learning
+  // multi-year background of the monitors for the correction v2 (scripts/climatology.mjs, built once by hand: climatology.yml is workflow_dispatch only); v2 learning
   // restarts when its inputs change (the stored experts were fitted to the old input list), and its check then counts only
   // rows logged since
   { const nC = setClimatology(await readJSON(path.join(DATA, 'static', 'pm-clim.json'), null)); if (nC) log(`station climatology: ${nC} monitors`); }
@@ -621,8 +627,9 @@ async function main() {
         log(`PARDIG vs ThaiWater gauges, ${R.length} hours, ${N} gauge-hours: RMSE ${rm} mm/h, mean hourly r ${mr}; rain hours >= 0.5 mm/h caught ${c[0]}/${c[0] + c[1]}, false ${Math.round(100 * c[2] / Math.max(1, c[0] + c[2]))} %`);
         rainInfo && (rainInfo.gaugesPardig = { hours: R.length, gaugeHours: N, rmse: rm, r: mr, caught: c[0], wet: c[0] + c[1], falseAlarms: c[2] }); }
     }
-    // daily observed-rain archive for the Mac evaluation (rainobs-YYYYMMDD.csv, Thai day, written once from 10:00 Thai time so the
-    // GSMaP NRT hours of the day have arrived; from 06:00): GSMaP (cell, bilinear, 0.025° value) at the Air4Thai stations and at the ThaiWater gauges
+    // daily observed-rain archive for the Mac evaluation (rainobs-YYYYMMDD.csv, Thai day, written once from 06:00 Thai time, when the
+    // GSMaP NRT hours of the day have arrived): GSMaP (cell, bilinear, 0.025° value), radar and PARDIG (cell, fine) at the Air4Thai
+    // stations and at the ThaiWater gauges
     try {
       const yday = thaiDate(now - 24 * HOUR), rf = path.join(DATA, 'history', yday.slice(0, 7), `rainobs-${yday.replace(/-/g, '')}.csv`);
       if (new Date(now + 7 * HOUR).getUTCHours() >= 6 && await fs.access(rf).then(() => false, () => true)) {   // from 06:00 Thai (GSMaP NRT for 24:00 arrives ~05:00; NOW fills any gap), before the Mac's 09:30 evaluation

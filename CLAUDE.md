@@ -1,7 +1,7 @@
 # SEA-HAF (hotspot-smoke-watch) — project rules
 
-Hourly PM2.5 and fire-smoke forecast page for mainland Southeast Asia. Vanilla JS + Leaflet page (`index.html`), Node 20 data
-pipeline (`scripts/*.mjs`, no dependencies) run by GitHub Actions (`.github/workflows/update.yml`) and published to GitHub Pages.
+Hourly PM2.5 and fire-smoke forecast page for mainland Southeast Asia. Vanilla JS + Leaflet page (`index.html`), Node 20+ data
+pipeline (`scripts/*.mjs`, no dependencies; the workflows run Node 22) run by GitHub Actions (`.github/workflows/update.yml`) and published to GitHub Pages.
 See `README.md` for the method and data sources.
 
 ## Rules
@@ -26,7 +26,8 @@ See `README.md` for the method and data sources.
 4. **Keep the rain and radar blend weights at zero until `scripts/fit_rain_blend.py` has been run.** `CFG.rainBlend` in
    `scripts/update.mjs` (`shift`, `amount`, `persist`) must stay `[[1, 0], [48, 0]]`, and `nowcast` keeps its provisional
    weights, until the fit has been run on enough radar history (`rainfc-*.csv` / `rainobs-*.csv` on the `history` branch).
-   Only paste in weights that the fit script produced; don't hand-tune them.
+   Only paste in weights that the fit script produced; don't hand-tune them. The first fit was run on 8 Nov 2026, and
+   `CFG.rainBlend` now holds its weights (leads 1–2 h; 3–48 h stay zero).
 
 5. **Keep the climatology-blend weights at zero until `scripts/fit_clim_blend.mjs` has been run.** `CFG.climBlend` in
    `scripts/update.mjs` (`cams`, `silam`: pull of long-lead PM2.5 forecasts toward the station climatology) stays all zero until

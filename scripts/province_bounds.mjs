@@ -1,10 +1,11 @@
-// Thai province borders of the page (the "geoProv" data block of index.html), built once by hand so that they coincide with the
+// Thai province borders of the page (the "geoProv" data block of index.html and of index_modern.html), built once by hand so that they coincide with the
 // district and sub-district borders (data/static/th-adm2.json, th-adm3.json; scripts/admin_bounds.mjs). Before 27 Nov 2026 the
 // Thai provinces came from the World Bank set like the neighbouring countries', and a chosen province's outline did not sit on
 // its districts' borders. The provinces are the districts dissolved, with no further simplification:
 //   mapshaper -i data/static/th-adm2.json -dissolve2 pen copy-fields=pth -o adm1.json format=geojson precision=0.0001
 //   node scripts/province_bounds.mjs adm1.json index.html
-//   node scripts/build_modern.mjs index.html index_modern.html index_modern.html
+//   node scripts/province_bounds.mjs adm1.json index_modern.html
+// Run it on both pages: the block sits in the markup part, before the page code, which build_modern.mjs does not copy over.
 // Only the geometry of the 77 Thai features changes; their names (n, th) and order stay, as the page's lists (REGION_PROV,
 // saved choices) use them. Other countries' provinces stay World Bank. Source and licence as for the districts (RTSD 2022 via
 // OCHA COD-AB, CC BY-IGO).

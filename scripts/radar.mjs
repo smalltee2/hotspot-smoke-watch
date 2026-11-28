@@ -336,7 +336,7 @@ export function rainDiag(metPure, cache, factor, now, sample) {
   const rByLate = Object.fromEntries(Object.entries(rBy).map(([k, v]) => [-k, v]));   // keyed by hours late
   return { t: now, hours: hours.length, shiftH, rByShift: rByLate, nWet, lon0: W, lat0: S, step: st, nx, ny, lnf100: Array.from(out), meanFactor: nNodes ? +Math.exp(sum / nNodes).toFixed(2) : 1, nNodes };
 }
-// ln-factor at a point (bilinear on the lattice; 0 outside)
+// radar/ECMWF factor at a point: exp of the ln-factor, bilinear on the lattice; 1 (ln-factor 0) outside it or without a diagnosis
 export function diagFactorAt(D, lat, lon) { if (!D) return 1; const fx = (lon - D.lon0) / D.step, fy = (lat - D.lat0) / D.step; if (fx < 0 || fy < 0 || fx > D.nx - 1 || fy > D.ny - 1) return 1;
   const x0 = Math.min(Math.floor(fx), D.nx - 2), y0 = Math.min(Math.floor(fy), D.ny - 2), ax = fx - x0, ay = fy - y0, a = D.lnf100, i = y0 * D.nx + x0;
   return Math.exp(((1 - ax) * (1 - ay) * a[i] + ax * (1 - ay) * a[i + 1] + (1 - ax) * ay * a[i + D.nx] + ax * ay * a[i + D.nx + 1]) / 100); }

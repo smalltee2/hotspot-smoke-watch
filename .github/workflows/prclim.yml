@@ -1,7 +1,7 @@
 # One-off: monthly rain-pattern factors at 0.025° for downscaling GSMaP rain (live forecast only).
 # Source: CHELSA V2.1 monthly precipitation climatology 1981-2010, 30 arc-s (Karger et al. 2017, Sci. Data 4:170122,
 # doi:10.1038/sdata.2017.122; data doi:10.16904/envidat.228), Cloud-Optimized GeoTIFFs read by window (no full download).
-# Writes data/static/prclim/RR_MM.bin (zlib, uint8, factor×50) + meta.json and commits them to main.
+# Writes data/static/prclim/factor_MM.bin (MM = 01..12; zlib, uint8, factor×50) + meta.json and commits them to main.
 # Also checks whether the ThaiWater (HAII) public rain API answers from GitHub, for a later gauge check.
 name: Rain climatology factors
 on:

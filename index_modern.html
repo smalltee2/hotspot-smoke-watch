@@ -4323,6 +4323,18 @@ async function saveMapImage(kind,btn){
         circ(x,y,17*sc*0.8,c,null,0,0.22); circ(x,y,10*sc*0.8,meas?c:'#ffffff',c,3*sc*0.8); if(!meas) circ(x,y,3*sc*0.8,c,null,0);
         const nm=m.options.title||''; if(nm){ g.font=font(700,Math.round(13*sc)); const r_=[x+14*sc,y-11*sc,g.measureText(nm).width,17*sc];
           if(!wLab.some(q=>r_[0]<q[0]+q[2]&&q[0]<r_[0]+r_[2]&&r_[1]<q[1]+q[3]&&q[1]<r_[1]+r_[3])){ wLab.push(r_); labels.push(r_); g.lineWidth=3.5; g.strokeStyle='rgba(255,255,255,.92)'; g.fillStyle=c; g.strokeText(nm,x+14*sc,y+4*sc); g.fillText(nm,x+14*sc,y+4*sc); } } });
+      // the warning marks' legend (owner, 28 Nov 2026): a box in the lower-right corner of the map with each level present, its
+      // colour and meaning, and what solid / ring mean
+      if(nWarn){ const fs=Math.round(13*sc), lh=Math.round(fs*1.6), pd=Math.round(10*sc), r0=7*sc*0.9;
+        const rows=[['wl3',T('above 75 µg/m³ · affects health','เกิน 75 µg/m³ · มีผลกระทบต่อสุขภาพ')],['wl2',T('55–75 µg/m³ · unhealthy','55–75 µg/m³ · ไม่ดีต่อสุขภาพ')],['wl1',T('37.5–55 µg/m³ · unhealthy for sensitive groups','37.5–55 µg/m³ · เริ่มมีผลต่อกลุ่มเสี่ยง')]].filter(([k])=>wLv.has(k));
+        const head_=T('Places with a warning','พื้นที่ที่มีคำเตือน'), kinds=[[true,T('measured above the standard now','วัดได้เกินมาตรฐานแล้ว')],[false,T('forecast to exceed','พยากรณ์ว่าจะเกิน')]];
+        g.font=font(700,fs); let bw=g.measureText(head_).width; g.font=font(400,fs);
+        for(const [,t_] of rows) bw=Math.max(bw,g.measureText(t_).width+r0*2+10*sc); for(const [,t_] of kinds) bw=Math.max(bw,g.measureText(t_).width+r0*2+10*sc);
+        bw+=2*pd; const bh=pd*2+lh*(1+rows.length+kinds.length)+Math.round(4*sc), bx=mx+mapW-bw-Math.round(12*sc), by=head+mapH-bh-Math.round(12*sc);
+        g.globalAlpha=.94; g.fillStyle='#ffffff'; g.fillRect(bx,by,bw,bh); g.globalAlpha=1; g.strokeStyle='#9aa5a0'; g.lineWidth=1; g.strokeRect(bx,by,bw,bh);
+        let y=by+pd+lh*0.75; g.font=font(700,fs); g.fillStyle=INK; g.fillText(head_,bx+pd,y);
+        g.font=font(400,fs); for(const [k,t_] of rows){ y+=lh; const cx=bx+pd+r0, cy=y-fs*0.35; circ(cx,cy,r0,'#ffffff',WCOL[k],3*sc*0.8); g.fillStyle=INK; g.fillText(t_,cx+r0+8*sc,y); }
+        y+=Math.round(4*sc); for(const [solid,t_] of kinds){ y+=lh; const cx=bx+pd+r0, cy=y-fs*0.35; circ(cx,cy,r0,solid?'#5d6763':'#ffffff','#5d6763',2.5*sc*0.8); if(!solid) circ(cx,cy,2.5*sc*0.8,'#5d6763',null,0); g.fillStyle='#38423e'; g.fillText(t_,cx+r0+8*sc,y); } }
       // accuracy badges (share of hours in the right band): a small box with the number
       const nAcc=[accLayer,accLcLayer,iqLayer].reduce((k,l)=>k+each(l,(m,x,y)=>{ const h=html(m), v=(/<b>([^<]*)<\/b>/.exec(h)||[])[1], v2=(/<small>([^<]*)<\/small>/.exec(h)||[])[1]; if(!v) return false;
         const bw=34*sc*0.8, bh=(v2?26:17)*sc*0.8, x0=x-bw/2, y0=y-(v2?31:22)*sc*0.8; g.fillStyle='#ffffff'; g.fillRect(x0,y0,bw,bh); g.strokeStyle=INK; g.lineWidth=1; g.setLineDash(/accbadge[^"]* lc/.test(h)?[3,2]:[]); g.strokeRect(x0,y0,bw,bh); g.setLineDash([]);

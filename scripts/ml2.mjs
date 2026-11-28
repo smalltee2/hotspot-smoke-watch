@@ -40,12 +40,12 @@ export const CFG2 = { ...CORECFG, minRowsDay: 300, minDays: { day: 1, week: 7, m
 export const ENG2 = makeEngine(NAMES2, ML2.clip, CFG2);
 
 const ln1 = v => Math.log(Math.max(0, v) + 1);
-const parseCSV = txt => { const [head, ...lines] = txt.trim().split('\n'); if (!head) return []; const h = head.split(',');
+export const parseCSV = txt => { const [head, ...lines] = txt.trim().split('\n'); if (!head) return []; const h = head.split(',');
   return lines.map(l => { const v = l.split(','); const o = {}; h.forEach((k, i) => o[k] = v[i]); return o; }); };
-async function listFiles(dir) { const out = [];
+export async function listFiles(dir) { const out = [];
   for (const e of await fs.readdir(dir, { withFileTypes: true }).catch(() => [])) if (e.isDirectory()) for (const f of await fs.readdir(path.join(dir, e.name)).catch(() => [])) out.push(path.join(dir, e.name, f));
   return out; }
-const fileDay = f => { const m = /-(\d{4})(\d{2})(\d{2})/.exec(path.basename(f)); return m ? Date.UTC(+m[1], +m[2] - 1, +m[3]) : NaN; };
+export const fileDay = f => { const m = /-(\d{4})(\d{2})(\d{2})/.exec(path.basename(f)); return m ? Date.UTC(+m[1], +m[2] - 1, +m[3]) : NaN; };
 
 /** Hourly measurements from the logs: Map "id|hourEndMs" -> µg/m³ (the Air4Thai daily archive first, then the run logs),
  *  from files dated `from` − 1 day or later. `extra`: { id: [[t, v], …] } (the run's own newest hours, state.obsHist). */

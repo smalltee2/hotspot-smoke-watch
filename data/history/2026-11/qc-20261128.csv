@@ -2,3 +2,4 @@ issued_utc,station_id,rule,decision,hour_utc,value,base,neighbours
 2026-11-28T09:57:30.047Z,a4t:72t,nspike,dropped,2026-11-26T21Z,104,19,2
 2026-11-28T09:57:30.047Z,6318469,stuck,stuck,2026-11-28T09Z,0,10.9,38
 2026-11-28T14:07:50.868Z,a4t:69t,nspike,pending,2026-11-28T13Z,134,17,1
+2026-11-28T17:08:02.228Z,3624137,stuck,stuck,2026-11-28T16Z,0,10.2,11

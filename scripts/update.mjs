@@ -19,7 +19,7 @@ import { updateRadar, scoreRadar, mergeRadarIntoMet, nowcast as radarNowcast, we
 import { updateGsmap, mergeIntoMet, webRain, GSCFG } from './gsmap.mjs';
 import { fetchGauges, scoreGauges, gsmapAt, rainFactor } from './thaiwater.mjs';
 import { updatePardig, obsRain } from './pardig.mjs';
-import { dropSpikes, isSpike, resetAfterSpikes } from './obsqc.mjs';
+import { dropSpikes, isSpike, resetAfterSpikes, neighbourSpikes, stuckNow, STUCK } from './obsqc.mjs';
 import { ENG2, ML2, NAMES2, loadObsHourly, rows2From, predict2, pmHighCheck, setClimatology, climFeatures } from './ml2.mjs';
 import { climActive, climBlendSeries } from './climblend.mjs';
 import { loadSilam, seriesAt } from './silam.mjs';
@@ -448,6 +448,7 @@ async function main() {
   const obs = await oaqLatest(stations.filter(s => !s.hourly && !s.feed24));
   // Air4Thai direct: the last ~2 days of hourly values in one or a few requests; also kept as a daily archive (one file per Thai day)
   const a4tSt = stations.filter(s => s.hourly), a4tH = new Map(), spikeDrops = [], held = new Map();   // spikeDrops: {id, t} of every value the spike check dropped this run; held: id -> {t, v}, a station's newest reading when the check dropped it (shown on the page as unconfirmed, not used for any correction)
+  const qcRows = [], hr = t => new Date(t).toISOString().slice(0, 13) + 'Z';   // qcRows: this run's new decisions of the neighbour spike and stuck-at-zero checks, for the log qc-YYYYMMDD.csv
   if (stations.some(s => s.feed24)) {   // Bangkok (BMA) stations: latest 24-h mean from the live feed
     try { const cur = new Map((await a4tStations()).map(x => [x.id, x]));
       let n = 0; for (const s of stations) if (s.feed24) { const x = cur.get(s.id); if (x && x.pm != null && x.last) { obs.set(s.id, { t: x.last, v: x.pm }); n++; } }
@@ -456,10 +457,30 @@ async function main() {
   if (a4tSt.length) {
     try {
       const got = await a4tHourly(a4tSt.map(s => s.code), thaiDate(now - 48 * HOUR), thaiDate(now));   // ≥ 48 h for the assimilation window
-      for (const s of a4tSt) { const rows = got.get(s.code) || []; a4tH.set(s.id, rows); const last = rows[rows.length - 1]; if (last) obs.set(s.id, { t: last[0], v: last[1] }); }
+      for (const s of a4tSt) a4tH.set(s.id, got.get(s.code) || []);
+      // neighbour spike test (scripts/obsqc.mjs, 28 Nov 2026): a jump the stations within 50 km do not share is held until the station's
+      // own next hours decide. The hours it drops or still holds leave a4tH here, so the filters, obsHist and the archive never see
+      // them. The other hourly stations (their last hours in state.obsHist and the value just fetched) are neighbours only. It does
+      // not feed spikeDrops: the restart of the Kalman filters stays with the 300 µg/m³ rule.
+      const nsOut = [];
+      try { const ser = new Map(a4tH), xy = new Map();   // a failure here must not cost the run its Air4Thai values: the check is skipped
+        for (const s of stations) { if (isAvg24(s)) continue; xy.set(s.id, s); if (s.hourly) continue;
+          const H = (state.obsHist[s.id] || []).slice(), o = obs.get(s.id), hk = o ? Math.round(o.t / HOUR) * HOUR : 0;
+          if (o && o.v >= 0 && o.v <= 1500 && !H.some(([t]) => t === hk)) H.push([hk, o.v]);
+          if (H.length) ser.set(s.id, H.sort((a, b) => a[0] - b[0])); }
+        const q = neighbourSpikes(ser, xy, undefined, new Set(a4tSt.map(s => s.id)));
+        nsOut.push(...q.dropped.map(d => ({ ...d, dec: 'dropped' })), ...q.pending.map(d => ({ ...d, dec: 'pending' })));
+        const out = new Map(); for (const d of nsOut) { if (!out.has(d.id)) out.set(d.id, new Set()); out.get(d.id).add(d.t); }
+        for (const [id, ts] of out) a4tH.set(id, a4tH.get(id).filter(r => !ts.has(r[0])));
+        log(`neighbour spike check: ${q.dropped.length} dropped, ${q.pending.length} unconfirmed${nsOut.length ? ` (${nsOut.map(d => `${d.id} ${hr(d.t)} ${d.v}${d.dec === 'pending' ? '?' : ''}`).join(', ')})` : ''}`);
+        if (!SIL) { const seen = (state.qcSeen ||= {});   // each decision logged once (the fetch window reports it for 2–3 days); the SILAM run sees the same measurements
+          for (const d of nsOut) { const k = `${d.id}|${d.t}|${d.dec}`; if (seen[k]) continue; seen[k] = now; qcRows.push([new Date(now).toISOString(), d.id, 'nspike', d.dec, hr(d.t), d.v, d.base, d.nNb]); }
+          for (const k of Object.keys(seen)) if (now - seen[k] > 96 * HOUR) delete seen[k]; } }
+      catch (e) { nsOut.length = 0; log(`neighbour spike check failed (skipped this run): ${e.message}`); }
+      for (const s of a4tSt) { const rows = a4tH.get(s.id), last = rows[rows.length - 1]; if (last) obs.set(s.id, { t: last[0], v: last[1] }); }
       if (got.dropped) log(`Air4Thai hourly: spike check dropped ${got.dropped.length} value(s): ${got.dropped.join(', ')}`);
       spikeDrops.push(...(got.droppedAt || []));
-      for (const d of got.droppedAt || []) { const rows = a4tH.get(d.id) || [], lastKept = rows.length ? rows[rows.length - 1][0] : 0;   // only when nothing newer was kept
+      for (const d of [...(got.droppedAt || []), ...nsOut]) { const rows = a4tH.get(d.id) || [], lastKept = rows.length ? rows[rows.length - 1][0] : 0;   // only when nothing newer was kept
         if (d.t > lastKept && now - d.t <= CFG.obsMaxAgeH * HOUR && !(held.get(d.id)?.t > d.t)) held.set(d.id, { t: d.t, v: d.v }); }
       log(`Air4Thai hourly: ${[...a4tH.values()].filter(r => r.length).length}/${a4tSt.length} stations, latest hour ${new Date(Math.max(0, ...[...obs.entries()].filter(([k]) => String(k).startsWith('a4t:')).map(([, o]) => o.t))).toISOString().slice(0, 16)}Z`);
       const yday = thaiDate(now - 24 * HOUR), arch = path.join(DATA, 'history', yday.slice(0, 7), `a4t-${yday.replace(/-/g, '')}.csv`);
@@ -492,10 +513,26 @@ async function main() {
   });
   if (spikeLatest.length) log(`latest values: spike check dropped ${spikeLatest.length} value(s): ${spikeLatest.join(', ')}`);
   for (const id of Object.keys(state.obsHist)) { state.obsHist[id] = state.obsHist[id].filter(([t]) => t > now - 50 * HOUR); if (!state.obsHist[id].length) delete state.obsHist[id]; }
+  // stuck-at-zero sensors (scripts/obsqc.mjs, 28 Nov 2026), on the raw values of every station with hourly values: the reading goes
+  // to `held` (the page shows it as unconfirmed) and s.obs is removed, so the Kalman filters, the map correction and the page's
+  // measured value skip the station. state.stuckT: the last hour each sensor was found stuck; obsH() leaves its zeros up to that
+  // hour out of the Kalman updates, the 24-h means, the fire assimilation and the page's measured series, also after it recovers.
+  // state.obsHist itself keeps them: the test needs them at the next run.
+  state.stuckT ||= {};
+  const stuck = (() => { try { const hs = stations.filter(s => !isAvg24(s)), prev = new Set((state.stuck || []).map(String));
+    const st = stuckNow(Object.fromEntries(hs.filter(s => state.obsHist[s.id]).map(s => [s.id, state.obsHist[s.id]])), new Map(hs.map(s => [String(s.id), s])), now, prev);
+    for (const [id, i] of st.info) { state.stuckT[id] = i.t; if (!prev.has(id)) qcRows.push([new Date(now).toISOString(), id, 'stuck', i.kind === 'isolated' ? 'stuck (isolated)' : 'stuck', hr(i.t), i.v, i.nbMed == null ? '' : r1(i.nbMed), i.nNb]); }
+    for (const id of prev) if (!st.has(id)) { const H = state.obsHist[id] || [], last = H[H.length - 1]; qcRows.push([new Date(now).toISOString(), id, 'stuck', 'cleared', last ? hr(last[0]) : '', last ? last[1] : '', '', '']); }
+    for (const id of Object.keys(state.stuckT)) if (now - state.stuckT[id] > 50 * HOUR) delete state.stuckT[id];
+    for (const s of stations) if (st.has(String(s.id)) && s.obs) { if (!(held.get(s.id)?.t > s.obs.t)) held.set(s.id, s.obs); delete s.obs; }
+    state.stuck = [...st]; log(`stuck sensors: ${st.size}${st.size ? ` (${state.stuck.join(', ')})` : ''}`);
+    return st; } catch (e) { log(`stuck-sensor check failed (skipped this run): ${e.message}`); return new Set(); } })();
+  const stuckZero = (id, t, v) => v <= STUCK.Z && t <= state.stuckT[id];
+  const obsH = id => { const H = state.obsHist[id] || []; return state.stuckT[id] == null ? H : H.filter(([t, v]) => !stuckZero(id, t, v)); };
   // 24-h mean of observations ending at the latest hour; valid with ≥ 18 of 24 hourly values (75 %) and a recent last value
   function obs24(id, s) {
     if (s && isAvg24(s)) return s.obs ? { v: r1(s.obs.v), n: 24, tEnd: s.obs.t, valid: now - s.obs.t <= CFG.obsMaxAgeH * HOUR, native: true } : null;   // already a 24-h mean
-    const H = state.obsHist[id] || []; if (!H.length) return null;
+    const H = obsH(id); if (!H.length) return null;
     const tEnd = Math.max(...H.map(([t]) => t)), w = H.filter(([t]) => t > tEnd - 24 * HOUR);
     return { v: r1(w.reduce((a, [, v]) => a + v, 0) / w.length), n: w.length, tEnd, valid: w.length >= 18 && now - tEnd <= CFG.obsMaxAgeH * HOUR };
   }
@@ -818,7 +855,7 @@ async function main() {
       const aobs = [];
       stations.forEach((s, i) => {
         if (!s.monitor) return;   // reference monitors only: uncorrected low-cost sensors (humidity growth of optical PM) would bias the emission factors
-        const kind = kindOf(s), bs = state.kfSlow[s.id]?.b || 0, H = state.obsHist[s.id] || [];
+        const kind = kindOf(s), bs = state.kfSlow[s.id]?.b || 0, H = obsH(s.id);
         // 24-h-mean stations: two non-overlapping values (latest and 24 h before) to limit correlated repeats
         const use = kind === '24' ? H.filter(([t]) => { const last = H[H.length - 1][0]; return t === last || Math.abs(t - (last - 24 * HOUR)) < HOUR / 2; }) : H;
         for (const [t, v] of use) {
@@ -856,7 +893,7 @@ async function main() {
   stations.forEach((s, i) => {
     if (!s.obs) return; const kind = kindOf(s);
     if (s.hourly) {   // every hour not yet used, in time order; the hour-ending mean is compared with CAMS at mid-hour
-      for (const [t, v] of (a4tH.get(s.id) || []).filter(([t]) => t > now - 12 * HOUR)) {
+      for (const [t, v] of (a4tH.get(s.id) || []).filter(([t, v]) => t > now - 12 * HOUR && !stuckZero(s.id, t, v))) {   // not the zeros of a sensor that was stuck (the hours before it recovered)
         if (state.kf[s.id] && t <= state.kf[s.id].t && state.kfA[s.id] && t <= state.kfA[s.id].t) continue;
         const raw = interpT(C.times, C.st[i], t - HOUR / 2); if (raw == null) continue;
         updateAll(s, t, v, raw, kind);
@@ -886,7 +923,7 @@ async function main() {
     if (!a24 && o24n && o24n.valid) {
       // hourly monitors: 24-h mean ending at each hour = observed hours up to now, corrected forecast after; future hours are
       // blended with persistence of the current observed 24-h mean (same weight as for the 24-h-mean stations)
-      const hist = new Map((state.obsHist[s.id] || []).map(([t, v]) => [t, v]));
+      const hist = new Map(obsH(s.id).map(([t, v]) => [t, v]));
       const val = hours.map((t, j) => j <= jNow ? (hist.has(t) ? hist.get(t) : null) : corr[j]);
       fc24 = hours.map((t, j) => {
         let su = 0, n = 0; for (let q = j - 23; q <= j; q++) { const v = q >= 0 ? val[q] : null; if (v != null) { su += v; n++; } }
@@ -922,7 +959,7 @@ async function main() {
       obs: s.obs ? { t: s.obs.t, v: r1(s.obs.v) } : null, ...(held.has(s.id) ? { held: { t: held.get(s.id).t, v: r1(held.get(s.id).v) } } : {}), obs24: obs24(s.id, s), bias: k ? +F.b.toFixed(3) : null, nUpd: k?.n || 0, raw, corr: F.corr, fc24: F.fc24,
       corrA: A.corr, fc24A: A.fc24, ...(incS && incS.some(v => Math.abs(v) >= 0.1) ? { inc: incS } : {}),
       // measured values on the page's hour axis up to now (hourly values, or the reported 24-h means for 24-h stations), for the map comparison layer
-      obsSeries: (() => { const h = new Map((state.obsHist[s.id] || []).map(([t, v]) => [t, v])); const a = hours.slice(0, jNow + 1).map(t => h.has(t) ? h.get(t) : null); return a.some(v => v != null) ? a : null; })() };
+      obsSeries: (() => { const h = new Map(obsH(s.id).map(([t, v]) => [t, v])); const a = hours.slice(0, jNow + 1).map(t => h.has(t) ? h.get(t) : null); return a.some(v => v != null) ? a : null; })() };
   });
 
   globalThis.TIMER('ml...');
@@ -1005,7 +1042,7 @@ async function main() {
       corr1Of.set(s.id, corrV1); const corrM = use2 && corr2Of.has(s.id) ? corr2Of.get(s.id) : corrV1;   // published: v2 while its check passes, else the live correction; both are logged
       // 24-h means for the AQI: measured hours up to now, ML-corrected forecast after, blended with persistence as before
       const o24n = obs24(s.id, s); let fc24M = o.fc24A;
-      if (o24n && o24n.valid) { const hist = new Map((state.obsHist[s.id] || []).map(([t, v]) => [t, v]));
+      if (o24n && o24n.valid) { const hist = new Map(obsH(s.id).map(([t, v]) => [t, v]));
         const val = hours.map((t, j) => j <= jNow ? (hist.has(t) ? hist.get(t) : null) : corrM[j]);
         fc24M = hours.map((t, j) => { let su = 0, n = 0; for (let q = j - 23; q <= j; q++) { const v = q >= 0 ? val[q] : null; if (v != null) { su += v; n++; } }
           if (n < 18) return null; const m = su / n, w = blendW(j - jNow, s); return r1(j <= jNow ? m : w * o24n.v + (1 - w) * m); }); }
@@ -1043,7 +1080,7 @@ async function main() {
   const ncOf = new Map(), preOf = new Map(); state.pmNow ||= { since: now }; state.pmNowFc ||= {};
   { const useNC = state.pmNow.check?.ok === true, ids = new Set(); let nE = 0;
     outStations.forEach((o, i) => { const s = stations[i]; if (!s.hourly) return; const base = o.corrM || o.corrA || o.corr; if (!base) return; ids.add(String(s.id));
-      const rows = a4tH.get(s.id) || [], e = errNow(rows[rows.length - 1], state.pmNowFc[s.id], now), nc = nowcastSeries(base, hours, t0, jNow, e);
+      const rows = a4tH.get(s.id) || [], e = errNow(stuck.has(String(s.id)) ? null : rows[rows.length - 1], state.pmNowFc[s.id], now), nc = nowcastSeries(base, hours, t0, jNow, e);
       preOf.set(s.id, base); ncOf.set(s.id, nc); if (e != null) nE++;
       storeForecast(state.pmNowFc, s.id, base, hours, jNow, now);
       if (useNC && e != null) { if (o.corrM) o.corrM = nc; else if (o.corrA) o.corrA = nc; else o.corr = nc; } });
@@ -1201,6 +1238,8 @@ async function main() {
   } catch (e) { log(`station list for the logs failed: ${e.message}`); }
   const newRun = await fs.access(path.join(hdir, `obs-${stamp}.csv`)).then(() => false, () => true);   // a second run in the same hour (backup cron, manual run) must not append the rows again
   if (newRun) await appendCSV(path.join(hdir, `obs-${stamp}.csv`), 'time_utc,station_id,obs_pm25,cams_raw,cams_plus_inc', obsRows);
+  // decisions of the neighbour spike and stuck-at-zero checks (scripts/obsqc.mjs), only the new ones of each run; CAMS run only (the SILAM run sees the same measurements)
+  if (!SIL) await appendCSV(path.join(hdir, `qc-${stamp.slice(0, 8)}.csv`), 'issued_utc,station_id,rule,decision,hour_utc,value,base,neighbours', qcRows);
   // IQAir readings of this run (scripts/iqair.mjs), for the 7-day comparison in accuracy.mjs
   if (newRun && !SIL) { const iqRows = Object.entries(state.iqair || {}).filter(([, v]) => v.asked === now && v.t).map(([id, v]) => [new Date(v.t).toISOString(), id, String(v.label || v.name).replace(/[,"]/g, ' '), v.lat, v.lon, v.aqius]);
     if (iqRows.length) await appendCSV(path.join(hdir, `iqair-${stamp}.csv`), 'time_utc,city_id,name,lat,lon,aqius', iqRows); }

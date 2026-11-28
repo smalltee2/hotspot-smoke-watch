@@ -5189,7 +5189,7 @@ function bellWhy({lv,wholeTxt,places=[],dists=[]}){ const parts=[]; if(wholeTxt)
   if(dists.length){ const more=dists.length-3; parts.push(T(`${lv==='part'?'only in ':''}${dists.length} district${dists.length===1?'':'s'}: `,`${lv==='part'?'เฉพาะ ':''}${dists.length} อำเภอ: `)+dists.slice(0,3).map(esc).join(', ')+(more>0?T(` and ${more} more`,` และอีก ${more}`):'')); }
   return parts.length?`<div class="wwhy">${parts.join(' · ')}</div>`:''; }
 const bellTipOf=(lv,places)=>T(WLV[lv].en,WLV[lv].th)+(places?.length?': '+places.map(w=>w.n).join(', '):'');
-document.addEventListener('click',e=>{ const b=e.target.closest?.('.wwhy-go'); if(!b) return; e.preventDefault(); e.stopPropagation();
+document.addEventListener('click',e=>{ const b=e.target.closest?.('.wwhy-go'); if(!b||b.dataset.wlist) return; e.preventDefault(); e.stopPropagation();
   if(b.dataset.wsid!=null) focusStation(b.dataset.wsid); else focusTown(b.dataset.wtown); },true);
 // the district borders are needed for the count: fetched once, after the first data; the page is then drawn again
 function needAdm2(){ if(ADM[2]||needAdm2.req||!P.data?.grid) return; needAdm2.req=true; loadAdm(2).then(j=>{ if(j&&P.data?.grid){ renderSummary(); renderAreaTrend(); renderWarnings(); } }); }
@@ -5264,7 +5264,7 @@ function renderWarnPlaces(){ const pane=$('pane-warn'); if(!pane) return; let bo
   const mTag=T('measured above the standard','วัดได้เกินมาตรฐานแล้ว'), fTag=T('forecast to exceed','พยากรณ์ว่าจะเกิน'), tagOf=lv=>lv==='meas'?`<b class="heldtxt">${T(WLV.meas.en,WLV.meas.th)}</b>`:T(WLV[lv].en,WLV[lv].th);
   box.hidden=false;
   const showRule=box.querySelector('.wprule')?.hidden===false;
-  const ds=[...WA.dist.values()].sort((a,b)=>(WLV_ORD[b.lv]-WLV_ORD[a.lv])||b.v-a.v), cnt=lv=>ds.filter(e=>e.lv===lv).length, MAXR=60, nOut=WA.outside.length;
+  const ds=[...WA.dist.values()].sort((a,b)=>(WLV_ORD[b.lv]-WLV_ORD[a.lv])||b.v-a.v), cnt=lv=>ds.filter(e=>e.lv===lv).length, MAXR=10, nOut=WA.outside.length;
   const head=ds.length?T(`Warnings: ${ds.length} district${ds.length===1?'':'s'} in ${WA.nProv} province${WA.nProv===1?'':'s'}`,`คำเตือน ${ds.length} อำเภอ ใน ${WA.nProv} จังหวัด`)+(nOut?T(`, and ${nOut} place${nOut===1?'':'s'} outside Thailand`,` และนอกประเทศไทย ${nOut} แห่ง`):'')
     :T(`Places with a warning: ${WA.n}`,`พื้นที่ที่มีคำเตือน ${WA.n} แห่ง`);
   const sub=ds.length?[['meas',cnt('meas')],['whole',cnt('whole')],['part',cnt('part')]].filter(x=>x[1]).map(([lv,k])=>`${bellHtml(lv,'')} ${T(WLV[lv].en,WLV[lv].th)} ${k}`).join(' · ')
@@ -5275,14 +5275,15 @@ function renderWarnPlaces(){ const pane=$('pane-warn'); if(!pane) return; let bo
   box.innerHTML=`<summary><span class="acct">${head}<button type="button" class="wpinfo" aria-expanded="${showRule}" aria-label="${T('How warnings are counted','เกณฑ์การนับคำเตือน')}" title="${T('How warnings are counted','เกณฑ์การนับคำเตือน')}">i</button></span><span class="acchead">${sub}</span></summary>`+
     `<p class="note wprule"${showRule?'':' hidden'}>${T(`One rule everywhere: ${WARN_RULE0()}. A district has a warning when a monitoring station in it has measured a 24-h mean above the standard (white bell on red), when the forecast averaged over the district passes the rule (red bell), or when the forecast at a town or station inside it does (orange bell: some places only). A station within ${WARN_MERGE_KM} km of a warned town counts with that town. Districts without a station rest on the forecast map alone. Outside Thailand, towns and stations are counted one by one.`+` On the map: a coloured border = the whole district is forecast to exceed; a point = a town or station (solid centre = measured, ring = forecast); light orange 37.5–55, dark orange 55–75, red above 75 µg/m³.`,
       `ใช้เกณฑ์เดียวทุกระดับ: ${WARN_RULE0()} อำเภอมีคำเตือนเมื่อ (1) สถานีตรวจวัดในอำเภอวัดค่าเฉลี่ย 24 ชม. ได้เกินมาตรฐานแล้ว (กระดิ่งขาวบนพื้นแดง) (2) พยากรณ์เฉลี่ยทั้งอำเภอเข้าเกณฑ์ (กระดิ่งแดง) หรือ (3) พยากรณ์ที่เมืองหรือสถานีในอำเภอเข้าเกณฑ์ (กระดิ่งส้ม: เฉพาะบางจุด) สถานีที่อยู่ห่างจากเมืองที่มีคำเตือนไม่เกิน ${WARN_MERGE_KM} กม. นับรวมกับเมืองนั้น อำเภอที่ไม่มีสถานีใช้ค่าจากแผนที่พยากรณ์อย่างเดียว นอกประเทศไทยนับเป็นเมืองและสถานีทีละแห่ง`+` บนแผนที่: เส้นขอบสี = พยากรณ์ว่าจะเกินทั้งอำเภอ จุด = เมืองหรือสถานี (จุดทึบ = วัดได้เกินแล้ว วงแหวน = พยากรณ์) ส้มอ่อน 37.5–55 ส้มเข้ม 55–75 แดง เกิน 75 µg/m³`)}</p>`+
-    ds.slice(0,MAXR).map(e=>row(`data-wdist="${esc(e.p.c)}"`,admName(e.p,2)+' '+provOf(e),dsub(e),tagOf(e.lv),e.lv,bellWhy({lv:e.lv,places:e.places}))).join('')+
-    (ds.length>MAXR?`<p class="note">${T(`… and ${ds.length-MAXR} more districts (see the list by district below).`,`… และอีก ${ds.length-MAXR} อำเภอ (ดูรายการรายอำเภอด้านล่าง)`)}</p>`:'')+
+    ds.slice(0,MAXR).map((e,k)=>row(`data-wdist="${esc(e.p.c)}"`,(k+1)+'. '+admName(e.p,2)+' '+provOf(e),dsub(e),tagOf(e.lv),e.lv,bellWhy({lv:e.lv,places:e.places}))).join('')+
+    (ds.length>MAXR?`<p class="note">${T(`The ${MAXR} most severe are shown (measured first, then the highest value). ${ds.length-MAXR} more districts: `,`แสดง ${MAXR} อันดับแรก (วัดได้เกินแล้วก่อน แล้วเรียงตามค่าสูงสุด) อีก ${ds.length-MAXR} อำเภอ: `)+`<button type="button" class="wwhy-go" data-wlist="1">${T('see the list by district','ดูในรายการรายอำเภอ')}</button>`}</p>`:'')+
     WA.outside.map(placeRow).join('');
   box.open=open;
   // the (i) after the heading shows / hides the counting rule; inside <summary>, so it must not fold the box
   { const ib=box.querySelector('.wpinfo'), rule=box.querySelector('.wprule');
     ib.onclick=e=>{ e.preventDefault(); e.stopPropagation(); const on=rule.hidden; rule.hidden=!on; ib.setAttribute('aria-expanded',String(on)); if(on) box.open=true; }; }
   box.querySelectorAll('[data-wdist]').forEach(el=>el.onclick=()=>focusDist(el.dataset.wdist));
+  box.querySelectorAll('[data-wlist]').forEach(el=>el.onclick=e=>{ e.stopPropagation(); setWarnView('dist'); $('distList')?.scrollIntoView({behavior:'smooth',block:'start'}); });
   box.querySelectorAll('[data-town]').forEach(el=>el.onclick=()=>focusTown(el.dataset.town));
   box.querySelectorAll('[data-sid]').forEach(el=>el.onclick=()=>focusStation(el.dataset.sid)); }
 // tapping that number: the Warnings tab with the list of places open and in view
@@ -5301,7 +5302,7 @@ function renderDistList(A){ const box=$('distList'); if(!box) return; if(!A?.dgr
   const H=A.H, tNow=Math.floor(Date.now()/HR)*HR, iNow=H.findIndex(t=>t>=tNow), W=wins(), top=ws=>Math.max(0,...ws.map(w=>w?.v??0));
   // districts holding a warned town come first (a district average must not push a warning off the list), then highest first
   const wb=warnedAreas().dist, ord=c=>WLV_ORD[wb.get(c)?.lv]||0;
-  const rows=[...A.dgroups.values()].map(g=>({g,ws:W.map(([a,b])=>winMax(H,g.mean,tNow,a,b,false))})).sort((x,y)=>(ord(y.g.p.c)-ord(x.g.p.c))||top(y.ws)-top(x.ws)).slice(0,40);
+  const rows=[...A.dgroups.values()].map(g=>({g,ws:W.map(([a,b])=>winMax(H,g.mean,tNow,a,b,false))})).sort((x,y)=>(ord(y.g.p.c)-ord(x.g.p.c))||top(y.ws)-top(x.ws)).filter((r,k)=>k<40||wb.has(r.g.p.c));   // the 40 highest, and every district with a warning (the box above lists only its first 10)
   box.innerHTML=rows.length?bellNote(rows.some(r=>wb.has(r.g.p.c)),'',true)+rows.map(r=>card2({attr:`data-dist="${esc(r.g.p.c)}"`,name:admName(r.g.p,2),tag:LANG==='th'?(admBkk(r.g.p)?'กรุงเทพฯ':'จ.'+r.g.p.pth):r.g.p.pen,bell:distBell(wb.get(r.g.p.c)),
       sub:iNow>=0&&r.g.mean[iNow]!=null?`${T('now','ขณะนี้')} ${fmtN(r.g.mean[iNow])}`:'',ws:r.ws,W,wx:W.map(([a,b])=>wxWinArea(H,r.g.wx,tNow,a,b))})).join('')
     :`<p class="note">${T('No district of this area has forecast values yet.','ยังไม่มีค่าพยากรณ์ของอำเภอในพื้นที่นี้')}</p>`;

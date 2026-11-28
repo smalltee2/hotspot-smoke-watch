@@ -1,6 +1,6 @@
 // How right the published PM2.5 forecast has been lately, for the public page (data/accuracy.json, rebuilt every run from the
 // logs in data/history). Scored at the hourly reference monitors (true 1-h values; low-cost sensors and the 24-h-mean feeds are
-// left out), hourly values (as the map shows them), over the measured hours of the last 7 days, in two horizons: the next hours
+// left out), hourly values (as the map shows them), over the measured hours of the last 7 days, in three horizons: the next hours
 // (forecasts issued 1, 3 and 6 h before), the next day (12 and 24 h before) and two days ahead (48 h before; the leads the log
 // keeps). Pooling all leads would flatter the score: the 1-h forecast is close to the latest measurement.
 // Daily means too (the basis of the Thai AQI and the health advice): the published 24-h mean (blend24) forecast 24 h and 48 h

@@ -1,6 +1,6 @@
-// SILAM through the whole chain CAMS goes through: runs scripts/update.mjs a second time with HSW_MODEL=silam, so the fire
-// assimilation, the Kalman filters, the station forecasts, the self-learning corrections, the 0.025° map correction and the logs
-// are the same program, fed with the SILAM forecast instead of CAMS. This wrapper only keeps the two runs apart:
+// SILAM through the whole chain CAMS goes through: runs scripts/update.mjs a second time with HSW_MODEL=silam, so the Kalman
+// filters, the station forecasts, the self-learning corrections, the 0.025° map correction and the logs are the same program,
+// fed with the SILAM forecast instead of CAMS (the fire assimilation is off for SILAM: it has its own fire emissions). This wrapper only keeps the two runs apart:
 //   work folder   data/silam-run/ (made new each time, removed afterwards)
 //   state         the model's own filter and learning state rides inside data/state.json as `silamState` (the Actions cache
 //                 list is not changed); everything else (station list, measurements history, …) is the CAMS run's, fresh

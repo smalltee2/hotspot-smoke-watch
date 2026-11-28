@@ -1318,7 +1318,8 @@ function simulate(sources, W, opts){
   const t0min=Math.min(...sources.map(s=>win(s)[0]));
   const tStart=Math.floor(Math.max(t0min, W.times[0])/3600e3)*3600e3;
   const tEnd=Math.min(opts.tEnd, W.times[W.times.length-1]);
-  // release schedule: a puff every 20 min carrying EF × 0.368 kg/MJ × FRP(t) × 20 min of PM2.5 (µg)
+  // release schedule: a puff every step (rel: 30 min, 20 min in constant mode; 3 × rel in the weak tail, below) carrying
+  // EF × 0.368 kg/MJ × FRP(t) × step of PM2.5 (µg)
   const queue=[];
   sources.forEach((s,si)=>{const efs=s.ef??ef; s.q=efs*KG_PER_MJ*s.frp; const [a,b]=win(s), fmax=Math.max(s.frp,1e-9);
     // puffs every 30 min while the fire is near its peak, every 90 min in the weak night-time tail (keeps the browser fast)

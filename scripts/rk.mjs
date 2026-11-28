@@ -1,4 +1,5 @@
-// Regression kriging (regression on CAMS + elevation, ordinary kriging of the residuals), in log space.
+// Regression kriging (regression on CAMS + elevation, then kriging of the residuals: a tapered local mean plus simple kriging of
+// the deviations from it, see krige below), in log space.
 // Same structure as the RIMM method used for the EEA European air quality maps (Horálek et al.)
 // and as kriging with an external chemistry-transport-model drift (Real et al., 2022, ESSD 14, 2419).
 
@@ -54,7 +55,7 @@ export function fitVariogram(pts, res, { binKm = 15, maxKm = 400, w = null } = {
 }
 const gam = (v, h) => h <= 0 ? 0 : v.c0 + v.c1 * (1 - Math.exp(-h / v.a));
 
-// ordinary kriging of residuals at (lat,lon) from the K nearest points within maxKm; skip = index to leave out (cross-validation)
+// kriging of residuals at (lat,lon) from the K nearest points within maxKm; skip = index to leave out (cross-validation)
 // Residual kriging without seams. Ordinary kriging with a hard "at least 3 monitors within maxKm" rule made the residual jump at
 // circles maxKm around sparse monitors (seen on the map as rings in southern Thailand and southern China, Nov 2026). Now, with the
 // Wendland taper T(h) = (1 − h/θ)⁴(1 + 4h/θ) for h < θ = maxKm (0 beyond), everything varies smoothly with position:
@@ -167,8 +168,9 @@ export function regressionKriging(obs, gridSpec, opt = {}) {
     resid: { lon0, lat0, step, nx, ny, values, sd } };
 }
 
-// Ordinary kriging of a station field (e.g. the learned log-correction) to a grid: variogram fitted to the values themselves,
-// kriged residual faded to 0 beyond the correlation range as in regressionKriging. obs: [{lat, lon, y}]
+// Kriging of a station field (e.g. the learned log-correction) to a grid: the (declustered) mean is removed, the deviations are
+// kriged with krige above (variogram fitted to them), and the field (mean + kriged deviation) is faded to 0 between maxKm/2 and
+// maxKm from the nearest monitor (maxKm = 3 × the variogram range, 150–400 km). obs: [{lat, lon, y}]
 export function krigeField(obs, gridSpec, { K = 16, declusterDeg = 0 } = {}) {
   if (obs.length < 5) return null;
   const pts = obs.map(o => [o.lat, o.lon]), W = declusterWeights(pts, declusterDeg);

@@ -11,13 +11,19 @@ week out at a time. A lead keeps its weights only if, over the left-out weeks, t
 (2) catches at least as many rain hours (>= 0.5 mm/h) and (3) has no larger share of false alarms among its rain forecasts.
 (2) and (3) guard against a blend that lowers the log error only by forecasting less rain everywhere: in the Oct-Nov 2026 data
 the MSE fit alone kept the 3-48 h leads while they caught a third fewer rain hours than ECMWF.
-usage: python3 fit_rain_blend.py <history dir>      (the folder holding the YYYY-MM/ subfolders)
+--base ecpr: b = ln(ECMWF open data x CHELSA + 0.2), from the column ecpr_mmh (the 0.25° open-data rain the page uses as its base,
+read as the page's ecprAt does; logged since Nov 2026), instead of the Open-Meteo ECMWF of ecmwf_mmh; rows without ecpr_mmh (older
+files, or hours where the page falls back to the met rain) are skipped. Everything else (members, left-out weeks, keep rule) is the same.
+usage: python3 fit_rain_blend.py [<history dir>] [--base ecmwf|ecpr]   (the folder holding the YYYY-MM/ subfolders; default base ecmwf)
 """
-import csv, glob, math, os, sys
+import argparse, csv, glob, math, os
 from datetime import datetime, timedelta
 import numpy as np
 
-hist = sys.argv[1] if len(sys.argv) > 1 else 'data/history'
+ap = argparse.ArgumentParser(description='Fit CFG.rainBlend from rainfc/rainobs logs')
+ap.add_argument('hist', nargs='?', default='data/history')
+ap.add_argument('--base', choices=['ecmwf', 'ecpr'], default='ecmwf', help='ecmwf: Open-Meteo ECMWF (ecmwf_mmh, default); ecpr: ECMWF open data (ecpr_mmh, the page base)')
+A = ap.parse_args(); hist, BASE = A.hist, A.base + '_mmh'
 EPS, MEMBERS = 0.2, ['shift', 'amount', 'persist', 'nowcast']
 BINS = [1, 2, 3, 6, 9, 12, 18, 24, 30, 36, 42, 48]
 truth = {}
@@ -30,7 +36,7 @@ for f in glob.glob(os.path.join(hist, '*', 'rainobs-*.csv')):
 ln = lambda x: math.log(max(0.0, x) + EPS)
 WET = math.log(0.5 + EPS)   # a forecast of >= 0.5 mm/h, on ln(R + 0.2)
 num = lambda v: float(v) if v not in ('', None) else None
-rows, seen, dup = [], set(), 0
+rows, seen, dup, nobase = [], set(), 0, 0
 for f in sorted(glob.glob(os.path.join(hist, '*', 'rainfc-*.csv'))):
     with open(f) as fh:
         for r in csv.DictReader(fh):
@@ -42,11 +48,14 @@ for f in sorted(glob.glob(os.path.join(hist, '*', 'rainfc-*.csv'))):
             y = truth.get((r['station_id'], he))
             if y is None: continue
             ch = num(r['chelsa_factor']) or 1.0
-            b = ln(num(r['ecmwf_mmh']) * ch)
+            e = num(r.get(BASE))
+            if e is None: nobase += 1; continue
+            b = ln(e * ch)
             xs = {'shift': num(r['ecmwf_shift_mmh']), 'amount': num(r['ecmwf_amount_mmh']), 'persist': num(r['persist_mmh']), 'nowcast': num(r['nowcast_mmh'])}
             d = [(ln(xs[m] * (ch if m in ('shift', 'amount') else 1.0)) - b) if xs[m] is not None else 0.0 for m in MEMBERS]
             rows.append((int(float(r['lead_h'])), r['issued_utc'][:10], ln(y) - b, d, y >= 0.5, b))
-print(f'{len(rows)} station-leads with a radar observation ({sum(r[4] for r in rows)} wet >= 0.5 mm); {dup} rows of repeated issue hours dropped')
+print(f'{len(rows)} station-leads with a radar observation ({sum(r[4] for r in rows)} wet >= 0.5 mm); {dup} rows of repeated issue hours dropped'
+      + (f'; base {BASE}: {nobase} rows without it skipped' if BASE != 'ecmwf_mmh' else ''))
 def nnls(X, y):
     act = list(range(X.shape[1]))
     while act:

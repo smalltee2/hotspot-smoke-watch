@@ -951,6 +951,7 @@ td.num{text-align:right;font-family:var(--font-data);font-variant-numeric:tabula
         <label><input type="checkbox" id="shAcc"> <span data-th="ความแม่นยำของพยากรณ์">Forecast accuracy</span></label>
         <div class="accsrc" role="group" aria-label="Compared with"><span data-th="เทียบกับ">Compared with</span><button type="button" data-accsrc="ref" aria-pressed="true" data-th="สถานีมาตรฐาน" title="Compared with what: the daily mean PM₂.₅ (00–24 h Thai time) this page forecast 24 h ahead, against the daily mean the reference monitors measured, day by day over the last 30 days; recomputed every hour. Monitors used: about 100 Thai Pollution Control Department stations (Air4Thai) and a few reference monitors in Thailand from OpenAQ. Low-cost sensors are not counted, nor the Bangkok (BMA) stations that report only 24-h means. Label: the accuracy, worked out as explained in the About tab; a longer bar is better. Where labels would overlap, the monitor with more data keeps its label; zoom in to see all. Tap a label for its numbers in the Warnings tab.">Reference monitors</button><button type="button" data-accsrc="lc" aria-pressed="false" data-th="เซนเซอร์ OpenAQ" title="Compared with what: the same daily mean forecast 24 h ahead, against the low-cost sensors on OpenAQ (AirGradient and others) in the area shown, neighbouring countries included, over the last 30 days. Only sensors that agreed with their neighbours over the last 30 days are counted. Label: the accuracy, worked out as in the About tab with the sensor in the place of the monitor; dashed rounded frame and grey bar, so they are not taken for the reference monitors. Kept apart: low-cost sensors read high in humid air, and the forecast at each sensor is corrected with that sensor&#x27;s own readings, so this number says how close the forecast is to the sensors, not to the true value. It is not mixed into the score at the reference monitors.">OpenAQ sensors</button><button type="button" data-accsrc="iq" aria-pressed="false" title="Compared with what: IQAir&#x27;s real-time US AQI as the reference, for 17 Thai cities and 10 in neighbouring countries (shown with &quot;Area shown&quot; = the whole map), against our forecast made 1 h before at our forecast point nearest the city (within 15 km). Label: the accuracy over the last 7 days of hourly values, worked out as in the About tab with IQAir (its AQI turned back into µg/m³) in the place of the monitors; a longer bar means closer. Until a city has 12 hours, the US AQI now (top IQAir, bottom SEA-HAF). Good to know: IQAir is not a measurement but its own blend of stations and model, so this says how close we are to IQAir, not which is more accurate. Each city is refreshed about every 3 h; readings older than 6 h are not shown. Data: IQAir (iqair.com)">IQAir</button></div>
         <div id="accSum" class="note" style="font-size:.68rem;margin:-2px 0 4px 22px"></div>
+        <label><input type="checkbox" id="shWarn" checked> <span data-th="จุดเตือน (สีตามระดับ: ส้มอ่อน ส้มเข้ม แดง)">Warning marks (colour by level: light orange, dark orange, red)</span></label>
         <label><input type="checkbox" id="shHot" checked> <span data-th="จุดความร้อน">Hotspots</span></label>
         <label class="dev-only"><input type="checkbox" id="shTown" checked> <span data-th="เมือง">Towns</span></label>
       </div></details>
@@ -1771,7 +1772,7 @@ setTiles(); labelZoom();
 const reTheme=()=>{setTiles();drawRegionMask();if(S.hots.length){drawHotspots();drawTraj();}drawTowns();};
 matchMedia('(prefers-color-scheme: dark)').addEventListener('change',reTheme);
 new MutationObserver(reTheme).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
-const hotLayer=L.layerGroup().addTo(map), trajLayer=L.layerGroup().addTo(map), townLayer=L.layerGroup().addTo(map), myPtLayer=L.layerGroup().addTo(map);   // myPtLayer: the user's saved places, always shown
+const hotLayer=L.layerGroup().addTo(map), trajLayer=L.layerGroup().addTo(map), townLayer=L.layerGroup().addTo(map), myPtLayer=L.layerGroup().addTo(map), warnLayer=L.layerGroup().addTo(map);   // myPtLayer: the user's saved places, always shown
 let plume=null;
 // a saved place is found by its name (its pin, its card in the list by town: focusTown), so the name must be its own: one already
 // taken by a town or by another saved place gets a number (after a place was removed, "My point 3" was given out twice)
@@ -2761,14 +2762,14 @@ function drawContours(){
   contourLayer.addTo(map);
 }
 function applyVisibility(){
-  for(const [id,layers] of [['shHot',[hotLayer,trajLayer]],['shTown',[townLayer]],])
+  for(const [id,layers] of [['shHot',[hotLayer,trajLayer]],['shTown',[townLayer]],['shWarn',[warnLayer]]])
     for(const l of layers){ if(shown(id)) map.addLayer(l); else map.removeLayer(l); }
   for(const [k,l] of [['ref',accLayer],['lc',accLcLayer],['iq',iqLayer]]){ if(accOn(k)) map.addLayer(l); else map.removeLayer(l); }
   for(const [k,l] of [['a4t',a4tLayer],['oaq',stationLayer]]){ if(obsOn(k)) map.addLayer(l); else map.removeLayer(l); }
   drawContours(); drawWind(); drawAdm();
 }
 document.getElementById('shProv').addEventListener('change',e=>{store.set('hsw.shProv',e.target.checked?'1':'0');styleBase();});
-for(const id of ['shContour','shObs','shAcc','shHot','shTown','shWind','shWindArr','shAdm']){
+for(const id of ['shContour','shObs','shAcc','shHot','shTown','shWind','shWindArr','shAdm','shWarn']){
   const v=store.get('hsw.'+id); if(v!=null) $(id).checked=v==='1';
   $(id).addEventListener('change',()=>{store.set('hsw.'+id,$(id).checked?'1':'0');applyVisibility();});
 }
@@ -3993,8 +3994,7 @@ function warnedPlaces(){ const towns=warnedTowns().map(r=>({r,lat:r.lat,lon:r.lo
 // the standard; a ring = forecast. Tap = the place's forecast (the spotlight). The marks follow the area chosen above the tabs.
 const WARN_LV=[{min:75,cls:'wl3',en:'affects health (above 75 µg/m³)',th:'มีผลกระทบต่อสุขภาพ (เกิน 75 µg/m³)'},{min:55,cls:'wl2',en:'unhealthy (55–75 µg/m³)',th:'ไม่ดีต่อสุขภาพ (55–75 µg/m³)'},{min:0,cls:'wl1',en:'unhealthy for sensitive groups (37.5–55 µg/m³)',th:'เริ่มมีผลต่อกลุ่มเสี่ยง (37.5–55 µg/m³)'}];
 const warnLv=v=>WARN_LV.find(l=>v>l.min)||WARN_LV[2];
-const warnLayer=L.layerGroup().addTo(map);
-function drawWarnMarks(){ warnLayer.clearLayers(); if(!P.data) return; const W=warnedPlaces();
+function drawWarnMarks(){ warnLayer.clearLayers(); if($('shWarn')){ if(shown('shWarn')) map.addLayer(warnLayer); else map.removeLayer(warnLayer); } if(!P.data) return; const W=warnedPlaces();
   const mk=(lat,lon,v,meas,name,sub,go)=>{ const lv=warnLv(v);
     L.marker([lat,lon],{keyboard:false,zIndexOffset:1100,title:name,icon:L.divIcon({className:'',html:`<div class="wmark ${lv.cls}${meas?' meas':''}"><i></i><b></b></div>`,iconSize:[0,0]})})
       .bindTooltip(`<b>${esc(name)}</b><br>${T(lv.en,lv.th)}<br>${sub}<br><span class="note">${meas?T('measured above the standard now','วัดได้เกินมาตรฐานแล้ว'):T('forecast to exceed','พยากรณ์ว่าจะเกิน')}</span>`,{direction:'top',offset:[0,-12]})

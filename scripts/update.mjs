@@ -21,6 +21,7 @@ import { fetchGauges, scoreGauges, gsmapAt, rainFactor } from './thaiwater.mjs';
 import { updatePardig, obsRain } from './pardig.mjs';
 import { dropSpikes, isSpike, resetAfterSpikes } from './obsqc.mjs';
 import { ENG2, ML2, NAMES2, loadObsHourly, rows2From, predict2, pmHighCheck, setClimatology, climFeatures } from './ml2.mjs';
+import { climActive, climBlendSeries } from './climblend.mjs';
 import { loadSilam, seriesAt } from './silam.mjs';
 import { WXML, T2_NAMES, PR_NAMES, T2ENG, PRENG, t2Features, prFeatures, loadWxDataset, storeWxDay, loadWxSeason } from './mlwx.mjs';
 import { downscaleT2, packDEM, T2CFG, t2SeaLevel, t2Bin, t2Down } from './t2down.mjs';
@@ -67,6 +68,7 @@ const CFG = {
   // w by lead, separately for CAMS and SILAM. Zero (no effect) until scripts/fit_clim_blend.mjs has been run on the climfc-*.csv
   // logs below (about 2 weeks; data/history for CAMS, data/history/silam for SILAM) and its weights pasted here unchanged. The
   // fit keeps a weight only where it catches at least as many hours >= 37.5 µg/m³ with no larger false-alarm share; don't hand-tune.
+  // Applied by scripts/climblend.mjs to the published series of the hourly reference monitors (not to the map, and not to the logs).
   climBlend: { cams: [[24, 0], [48, 0], [72, 0], [96, 0]], silam: [[24, 0], [48, 0], [72, 0], [96, 0], [120, 0]] },
   climLogLeads: [24, 36, 48, 60, 72, 84, 96, 108, 120],   // h; logged every 3 h at the hourly reference monitors (climfc-*.csv)
   // Air4Thai stations on OpenAQ report PM2.5 as a 24-h running mean, not hourly values (verified on Jan–Apr 2026: flat daily cycle,
@@ -1164,6 +1166,15 @@ async function main() {
   await iqairP;
   globalThis.TIMER('outputs');
   // 7. outputs
+  // climatology blend (CFG.climBlend): applied to the published copy of the monitors' series only; outStations itself (the logs,
+  // the fit and the daily checks read it below) keeps the forecast before the blend. No effect while every weight is zero.
+  let pubStations = outStations;
+  { const cTab = CFG.climBlend[SIL ? 'silam' : 'cams'];
+    if (climActive(cTab)) { let nSt = 0, nH = 0;
+      pubStations = outStations.map(o => { if (!o.monitor || o.avg24) return o; const k = o.corrM ? 'M' : o.corrA ? 'A' : '';
+        const r = climBlendSeries(o['corr' + k], o['fc24' + k], hours, jNow, cTab, t => climFeatures(String(o.id), t)[0]); if (!r) return o;
+        nSt++; nH += r.n; return { ...o, ['corr' + k]: r.corr, ...(r.fc24 ? { ['fc24' + k]: r.fc24 } : {}) }; });
+      log(`climatology blend: ${nSt} monitors, ${nH} forecast hours pulled toward the station climatology (weights ${JSON.stringify(cTab)})`); } }
   await writeJSON(path.join(DATA, 'latest.json'), {
     generated: now, camsIssued: C.at, bbox: CFG.bbox, runlog: RUNLOG,
     method: { kf: CFG.kf, biasLeadEfoldH: CFG.biasLeadEfoldH, rk: { ...CFG.rk, lowcost: { use: LCc.use, a: LCc.a, b: LCc.b, windowD: LCc.windowD, minDays: LCc.minDays } } },
@@ -1174,7 +1185,7 @@ async function main() {
     rainObs: rainInfo,
     met: met ? { file: 'data/met-web.json', model: met.model, fetched: met.fetched, grids: met.grids.map(g => ({ step: g.step, bbox: [g.lon0, g.lat0, g.lon0 + (g.nx - 1) * g.step, g.lat0 + (g.ny - 1) * g.step] })) } : null,
     metTraj: met && met.grids.every(g => g.up) ? { file: 'data/met-traj.json', fetched: met.fetched } : null,
-    hours, stations: outStations,
+    hours, stations: pubStations,
     // latest measured weather at the Air4Thai stations (hour-ending means; ≤ 6 h old): the page's "now" values at the viewer's location
     obsWx: a4tSt.filter(s => state.obsWx?.[s.id]).map(s => { const o = state.obsWx[s.id]; return { id: s.id, lat: s.lat, lon: s.lon, t: o.t, t2: o.t2 ?? null, rh: o.rh ?? null, ws: o.ws ?? null, wd: o.wd ?? null }; }),
     iqair: iqairForPage(state, now),   // IQAir real-time US AQI at Thai cities (≤ 6 h old), for the comparison layer

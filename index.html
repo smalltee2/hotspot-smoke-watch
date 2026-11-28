@@ -1377,15 +1377,16 @@ function concAt(s,lat,lon){
 function receptorSeries(sim,pts){
   return pts.map(p=>{const v=sim.snaps.map(s=>concAt(s,p.lat,p.lon));return {...p,series:v};});
 }
-// stats from a series aligned with sim.hours: value now, 1h peak, max running 24h mean
+// stats from a series aligned with sim.hours: value now, 1h peak (last 23 h and ahead), 1h peak ahead (peakF), max running 24h mean
 function seriesStats(series,hours,now){
   let iNow=hours.findIndex(h=>h>=now); if(iNow<0) iNow=hours.length-1;
   let peak=0,tPeak=null; for(let i=Math.max(0,iNow-23);i<series.length;i++) if(series[i]!=null&&series[i]>peak){peak=series[i];tPeak=hours[i];}
+  let peakF=0; for(let i=iNow;i<series.length;i++) if(series[i]!=null&&series[i]>peakF) peakF=series[i];   // from now on only: the warning rule's "an hour above 75" is about the forecast, not an hour already past
   // highest running 24-h mean from now on; missing hours (null) are skipped and a mean needs ≥ 18 of 24 values
   let best=0,tBest=null;
   for(let i=iNow;i<series.length;i++){let s=0,n=0;for(let j=Math.max(0,i-23);j<=i;j++){const v=series[j]; if(v!=null){s+=v;n++;}}
     if(n>=18&&s/n>best){best=s/n;tBest=hours[i];}}
-  return {now:series[iNow]??0,peak,tPeak,mean24:best,tMean:tBest};
+  return {now:series[iNow]??0,peak,tPeak,peakF,mean24:best,tMean:tBest};
 }
 
 // demo inputs (clearly synthetic)
@@ -4012,14 +4013,14 @@ function warnedBy(key){ const m=new Map(), W=warnedPlaces();
   for(const r of [...W.towns.map(t=>({...t.r,_n:t.name})),...W.stations.map(w=>({lat:w.lat,lon:w.lon,_n:w.name}))]){ const k=key(r); if(k==null) continue; if(!m.has(k)) m.set(k,[]); m.get(k).push(r._n); } return m; }
 const bellNote=(any,what)=>any?`<p class="note wbell-note"><span class="wbell" aria-hidden="true"></span> ${what}: ${WARN_RULE()}</p>`:'';
 // towns with a warning (the number in the summary row): 24-h mean > 37.5 µg/m³ or an hour > 75 in the forecast at the town
-function warnedTowns(){ return S.recep.some(r=>r.stT)?S.recep.filter(r=>r.stT&&(r.stT.mean24>37.5||r.stT.peak>75)):S.sim?S.recep.filter(r=>r.st.mean24>37.5||r.st.peak>75):[]; }
+function warnedTowns(){ return S.recep.some(r=>r.stT)?S.recep.filter(r=>r.stT&&(r.stT.mean24>37.5||r.stT.peakF>75)):S.sim?S.recep.filter(r=>r.st.mean24>37.5||r.st.peakF>75):[]; }
 // reference monitors with a warning (owner, 27 Nov 2026): measured 24-h mean above 37.5 µg/m³ now, or the station's own corrected
 // forecast past the towns' rule (24-h mean > 37.5 or an hour > 75). Low-cost sensors are left out (they read high in humid air).
 function warnedStations(){ if(!P.data?.stations||!P.data.hours) return []; const H=P.data.hours, now=Date.now(), out=[];
   for(const s of P.data.stations){ if(!s.monitor||!inRegion(s.lat,s.lon)) continue;
     const o24=s.obs24&&s.obs24.valid?s.obs24.v:(s.avg24&&s.obs&&now-s.obs.t<6*HR?s.obs.v:null), meas=o24!=null&&o24>37.5;
     const c=sCorr(s); let fc=false, m24=0;
-    if(c){ const st=seriesStats(c,H,now); m24=st.mean24; const F=sFc24(s); if(F) H.forEach((t,i)=>{ if(t>now&&F[i]!=null&&F[i]>m24) m24=F[i]; }); fc=m24>37.5||st.peak>75; }
+    if(c){ const st=seriesStats(c,H,now); m24=st.mean24; const F=sFc24(s); if(F) H.forEach((t,i)=>{ if(t>now&&F[i]!=null&&F[i]>m24) m24=F[i]; }); fc=m24>37.5||st.peakF>75; }
     if(meas||fc) out.push({s,lat:s.lat,lon:s.lon,name:stName(s),meas,fc,o24,m24}); }
   return out; }
 // places with a warning (the number in the summary row): the warned towns, plus the warned reference monitors that are not within

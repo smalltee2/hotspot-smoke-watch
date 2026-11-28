@@ -12,7 +12,7 @@ test('state: shared keys from the CAMS run, model keys from the last SILAM run, 
   assert.deepEqual(main.kf, { cams: 1 });   // the main state is not touched
   assert.deepEqual(stateFor({ stations: [] }), { stations: [] });   // first run: no model state at all
   const back = pickModel({ ...st, kfA: { x: 1 }, stations: [2], cams: {} });
-  assert.deepEqual(Object.keys(back).sort(), ['kf', 'kfA', 'ml']); assert.ok(MODEL_KEYS.includes('assimKappa'));
+  assert.deepEqual(Object.keys(back).sort(), ['kf', 'kfA', 'ml']); assert.ok(MODEL_KEYS.includes('assimKappa')); assert.ok(MODEL_KEYS.includes('stuck') && MODEL_KEYS.includes('stuckT'));
 });
 test('page file: own files under data/silam/, shared parts from the CAMS run', () => {
   const sil = { model: { name: 'SILAM' }, runlog: ['x'], hours: [1], rk: { biasFine: { file: 'data/rk-bias.json' } }, rkA: { biasFine: { file: 'data/rk-bias-A.json' } },

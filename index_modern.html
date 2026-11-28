@@ -4986,11 +4986,12 @@ async function autoLocPop(){
   try{ const st=await navigator.permissions?.query({name:'geolocation'}); if(st&&st.state==='denied') return; }catch(e){}
   navigator.geolocation.getCurrentPosition(pos=>openLocPop(pos.coords.latitude,pos.coords.longitude,pos.coords.accuracy),()=>{},{enableHighAccuracy:false,timeout:15000,maximumAge:10*60e3});
 }
-// a station's newest reading that the spike check held back (latest.json stations[].held, from 27 Nov 2026): a jump above
-// 300 µg/m³, more than 5 times the hours before. It may be a faulty instrument or real smoke right at the station, so the page
-// shows it at once, marked unconfirmed, while the forecast correction waits (owner: "the system should know without delay")
+// a station's newest reading that the measurement checks held back (latest.json stations[].held, from 27 Nov 2026): a sudden jump
+// (above 300 µg/m³ and 5 times the hours before, or one the neighbouring stations do not share), or a sensor stuck at zero while
+// its neighbours are not (from 28 Nov 2026). It may be a faulty instrument or real, so the page shows it at once, marked
+// unconfirmed, while the forecast correction waits (owner: "the system should know without delay")
 const heldOf=s=>s.held&&Date.now()-s.held.t<6*HR?s.held:null;
-const heldTxt=s=>{ const h=heldOf(s); return h?`<span class="heldtxt"><b>${T('Unconfirmed reading','ค่ารอยืนยัน')} ${fmtN(h.v)} µg/m³</b> ${T('at','เมื่อ')} ${fmtT(h.t)}. ${T('A sudden jump: real smoke at the station, or a faulty instrument. Not used for the forecast until confirmed.','ค่าพุ่งขึ้นฉับพลัน อาจเป็นควันจริงใกล้สถานี หรือเครื่องวัดขัดข้อง ยังไม่นำไปปรับพยากรณ์จนกว่าจะยืนยันได้')}</span>`:''; };
+const heldTxt=s=>{ const h=heldOf(s); return h?`<span class="heldtxt"><b>${T('Unconfirmed reading','ค่ารอยืนยัน')} ${fmtN(h.v)} µg/m³</b> ${T('at','เมื่อ')} ${fmtT(h.t)}. ${T('Held by the measurement check (a sudden jump, or a value stuck at zero): it may be real, or a faulty instrument. Not used for the forecast until confirmed.','ระบบตรวจสอบค่าวัดพักค่านี้ไว้ (ค่าพุ่งขึ้นฉับพลัน หรือค่าค้างที่ศูนย์) อาจเป็นค่าจริง หรือเครื่องวัดขัดข้อง ยังไม่นำไปปรับพยากรณ์จนกว่าจะยืนยันได้')}</span>`:''; };
 function drawStations(){
   stationLayer.clearLayers(); drawA4t(); if(!P.data) return; const t=curT(), live=Math.abs(t-Date.now())<HR;
   for(const s of P.data.stations){ if(!inRegion(s.lat,s.lon)) continue;

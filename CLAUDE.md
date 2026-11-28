@@ -39,6 +39,9 @@ See `README.md` for the method and data sources.
 
 - Commits and PRs: no model name and no Claude co-author line (owner, 26 Nov 2026), whatever an attribution template says. Where a
   co-author is wanted, the system signs: `Co-Authored-By: SEA-HAF <noreply@sea-haf.pages.dev>` (it checks itself every day).
+- Test before changing a method (owner, 28 Nov 2026): a change to the forecast, a correction, a check or a threshold is backtested on
+  the logs first, and is not made when the test shows the results get worse (fewer high hours caught, a larger false-alarm share,
+  or a larger RMSE) or no better; report the test and leave the code as it is. Say so too when a change could not be tested.
 - `data/latest.json`, `data/met.json`, `data/state.json` are not committed: they are published to Pages and carried between
   runs in the Actions cache. Git keeps the per-run CSVs in `data/history/` and the static grids in `data/static/`.
 - Check syntax before committing: `for f in scripts/*.mjs; do node --check "$f"; done`.

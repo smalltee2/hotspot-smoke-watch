@@ -12,6 +12,7 @@
   },
   "225576": {
    "name": "Khai Surasinghanat",
+   "area": "Rayong",
    "lat": 12.6486,
    "lon": 101.3225,
    "cc": "TH",
@@ -21,6 +22,7 @@
   },
   "351927": {
    "name": "Le Thai Community Park",
+   "area": "Sukhothai",
    "lat": 17.0061,
    "lon": 99.8193,
    "cc": "TH",
@@ -30,6 +32,7 @@
   },
   "387511": {
    "name": "Wiang Subdistrict Disaster Prevention and Mitigation Center",
+   "area": "Chiang Rai",
    "lat": 20.2575,
    "lon": 100.4025,
    "cc": "TH",
@@ -39,6 +42,7 @@
   },
   "387660": {
    "name": "Mueang Na Subdistrict Municipality Office",
+   "area": "Chiang Mai",
    "lat": 19.5939,
    "lon": 98.9617,
    "cc": "TH",
@@ -48,6 +52,7 @@
   },
   "388962": {
    "name": "Li District Office",
+   "area": "Lamphun",
    "lat": 17.8022,
    "lon": 98.9497,
    "cc": "TH",
@@ -192,6 +197,7 @@
   },
   "2161292": {
    "name": "Số 46, phố Lưu Quang Vũ",
+   "area": "Hanoi",
    "lat": 21.0152,
    "lon": 105.7999,
    "cc": "VN",
@@ -201,6 +207,7 @@
   },
   "2161306": {
    "name": "Minh Khai - Bắc Từ Liêm",
+   "area": "Hanoi",
    "lat": 21.05,
    "lon": 105.74,
    "cc": "VN",
@@ -1884,6 +1891,7 @@
   },
   "4946812": {
    "name": "Công viên Nhân Chính - Khuất Duy Tiến",
+   "area": "Hanoi",
    "lat": 21.0031,
    "lon": 105.7947,
    "cc": "VN",
@@ -2720,7 +2728,7 @@
    "seen": "2026-11-28"
   },
   "6551909": {
-   "name": "Phra Khanong",
+   "name": "Phra Khanong - 44/1",
    "lat": 13.7152,
    "lon": 100.5906,
    "cc": "TH",
@@ -2755,9 +2763,29 @@
    "monitor": false,
    "seen": "2026-11-28"
   },
+  "6552152": {
+   "name": "Ban ThaPaSak School",
+   "lat": 18.5446,
+   "lon": 99.2413,
+   "cc": "TH",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "6552247": {
+   "name": "PERSEC COMPANY LIMITED",
+   "lat": 13.2779,
+   "lon": 100.9551,
+   "cc": "TH",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
   "a4t:02t": {
    "name": "Bansomdejchaopraya Rajabhat University",
    "nameTH": "มหาวิทยาลัยราชภัฏบ้านสมเด็จเจ้าพระยา",
+   "area": "Hiran Ruchi, Khet Thon Buri, Bangkok",
+   "areaTH": "แขวงหิรัญรูจี เขตธนบุรี, กรุงเทพฯ",
    "lat": 13.7328,
    "lon": 100.4877,
    "cc": "TH",
@@ -2768,6 +2796,8 @@
   "a4t:03t": {
    "name": "Highway NO.3902 km.13 +600",
    "nameTH": "ริมถนนทางหลวงหมายเลข 3902 ",
+   "area": "Kanchanaphisek Rd, Bang Khun Thian, Bangkok",
+   "areaTH": "ริมถนนกาญจนาภิเษก เขตบางขุนเทียน, กรุงเทพฯ",
    "lat": 13.6365,
    "lon": 100.4143,
    "cc": "TH",
@@ -2778,6 +2808,8 @@
   "a4t:05t": {
    "name": "Thai Meteorological Department ",
    "nameTH": "กรมอุตุนิยมวิทยาบางนา",
+   "area": "Bang Na, Khet Bang Na, Bangkok",
+   "areaTH": "แขวงบางนา เขตบางนา, กรุงเทพฯ",
    "lat": 13.6662,
    "lon": 100.6057,
    "cc": "TH",
@@ -2788,6 +2820,8 @@
   "a4t:08t": {
    "name": "Prabadang Rehabiltation Center",
    "nameTH": "ศูนย์ฟื้นฟูอาชีพคนพิการและทุพลภาพ ",
+   "area": "Song Kanong, Phra Pradaeng, Samut Prakan",
+   "areaTH": "ต.ทรงคนอง อ.พระประแดง, สมุทรปราการ",
    "lat": 13.6641,
    "lon": 100.5434,
    "cc": "TH",
@@ -2798,6 +2832,8 @@
   "a4t:12t": {
    "name": "Nonsi Witthaya School",
    "nameTH": "โรงเรียนนนทรีวิทยา ",
+   "area": "Chong Nonsi, Khet Yannawa, Bangkok",
+   "areaTH": "แขวงช่องนนทรี เขตยานนาวา, กรุงเทพฯ",
    "lat": 13.7081,
    "lon": 100.5473,
    "cc": "TH",
@@ -2808,6 +2844,8 @@
   "a4t:13t": {
    "name": "Department of Disease Control",
    "nameTH": "กรมควบคุมโรค",
+   "area": "Talad Kwan, Muang, Nonthaburi",
+   "areaTH": "ต.ตลาดขวัญ อ.เมือง, นนทบุรี",
    "lat": 13.8528,
    "lon": 100.5294,
    "cc": "TH",
@@ -2818,6 +2856,8 @@
   "a4t:14t": {
    "name": "Highway District",
    "nameTH": "แขวงการทางสมุทรสาคร ",
+   "area": "Om Noi, Krathum Baen, Samut Sakhon",
+   "areaTH": "ต.อ้อมน้อย อ.กระทุ่มแบน, สมุทรสาคร",
    "lat": 13.7055,
    "lon": 100.3156,
    "cc": "TH",
@@ -2828,6 +2868,8 @@
   "a4t:16t": {
    "name": "South Bangkok Power Plant",
    "nameTH": "โรงไฟฟ้าพระนครใต้ ",
+   "area": "Bang Prong, Meuang, Samut Prakan",
+   "areaTH": "ต.บางโปรง อ.เมือง, สมุทรปราการ",
    "lat": 13.618,
    "lon": 100.5562,
    "cc": "TH",
@@ -2838,6 +2880,8 @@
   "a4t:17t": {
    "name": "Residence for Dept. of Mineral Resources",
    "nameTH": "บ้านพักกรมอุตสาหกรรมพื้นฐานและการเหมืองแร่",
+   "area": "Talat, Phra Pradaeng, Samut Prakan",
+   "areaTH": "ต.ตลาด อ.พระประแดง, สมุทรปราการ",
    "lat": 13.6521,
    "lon": 100.5318,
    "cc": "TH",
@@ -2848,6 +2892,8 @@
   "a4t:18t": {
    "name": "City Hall, Samut Prakan",
    "nameTH": "ศาลากลางจังหวัดสมุทรปราการ ",
+   "area": "Pak Nam, Meuang, Samut Prakan",
+   "areaTH": "ต.ปากน้ำ อ.เมือง, สมุทรปราการ",
    "lat": 13.5991,
    "lon": 100.5973,
    "cc": "TH",
@@ -2858,6 +2904,8 @@
   "a4t:19t": {
    "name": "National Housing Authority Bangplee",
    "nameTH": "การเคหะชุมชนเมืองใหม่บางพลี ",
+   "area": "Bang Sao Thong, Bang Sao Thong, Samut Prakan ",
+   "areaTH": "ต.บางเสาธง อ.บางเสาธง, สมุทรปราการ",
    "lat": 13.5705,
    "lon": 100.7863,
    "cc": "TH",
@@ -2868,6 +2916,8 @@
   "a4t:20t": {
    "name": "Bangkok University Rangsit Campus",
    "nameTH": "มหาวิทยาลัยกรุงเทพ วิทยาเขตรังสิต ",
+   "area": "Khlong Nueng, Khlong Luang, Pathum Thani",
+   "areaTH": "ต.คลองหนึ่ง อ.คลองหลวง, ปทุมธานี",
    "lat": 14.0374,
    "lon": 100.6052,
    "cc": "TH",
@@ -2878,6 +2928,8 @@
   "a4t:21t": {
    "name": "Ayutthaya Witthayalai School",
    "nameTH": "โรงเรียนอยุธยาวิทยาลัย",
+   "area": "Pratu Chai, Phra Nakhon Si Ayutthaya",
+   "areaTH": "ต.ประตูชัย อ.พระนครศรีอยุธยา, พระนครศรีอยุธยา",
    "lat": 14.3522,
    "lon": 100.5653,
    "cc": "TH",
@@ -2888,6 +2940,8 @@
   "a4t:22t": {
    "name": "Sukhothai Thammathirat Open University",
    "nameTH": "มหาวิทยาลัยสุโขทัยธรรมาธิราช ",
+   "area": "Bang Phut, Pak Kret, Nonthaburi",
+   "areaTH": "ต.บางพูด อ.ปากเกร็ด, นนทบุรี",
    "lat": 13.9079,
    "lon": 100.5356,
    "cc": "TH",
@@ -2898,6 +2952,8 @@
   "a4t:24t": {
    "name": "Na Phralan Police Station ",
    "nameTH": "สถานีตำรวจภูธรตำบลหน้าพระลาน ",
+   "area": "Na Phra Lan, Chaloem Phra Kiat, Saraburi",
+   "areaTH": "ต.หน้าพระลาน อ.เฉลิมพระเกียรติ, สระบุรี",
    "lat": 14.6858,
    "lon": 100.872,
    "cc": "TH",
@@ -2908,6 +2964,8 @@
   "a4t:25t": {
    "name": "Khao Noi Fire Station",
    "nameTH": "สถานีดับเพลิงพระลักษณ์",
+   "area": "Pak Phriao, Mueang Saraburi, Saraburi",
+   "areaTH": "ต.ปากเพรียว อ.เมือง, สระบุรี",
    "lat": 14.5263,
    "lon": 100.926,
    "cc": "TH",
@@ -2918,6 +2976,8 @@
   "a4t:26t": {
    "name": "Environmental Office 8 ratchaburi",
    "nameTH": "สำนักงานสิ่งแวดล้อมภาคที่8",
+   "area": "Na Mueang, Mueang, Ratchaburi",
+   "areaTH": "ต.หน้าเมือง อ.เมือง, ราชบุรี",
    "lat": 13.5234,
    "lon": 99.8141,
    "cc": "TH",
@@ -2928,6 +2988,8 @@
   "a4t:27t": {
    "name": "Samut Sakhon Wittayalai School",
    "nameTH": "โรงเรียนสมุทรสาครวิทยาลัย",
+   "area": "Maha Chai, Mueang, Samut Sakhon",
+   "areaTH": "ต.มหาชัย อ.เมือง, สมุทรสาคร",
    "lat": 13.5503,
    "lon": 100.2648,
    "cc": "TH",
@@ -2938,6 +3000,8 @@
   "a4t:28t": {
    "name": "Pluakdaeng District Health Office",
    "nameTH": "สำนักงานสาธารณสุขอำเภอปลวกแดง",
+   "area": "Pluak Daeng, Pluak Daeng, Rayong",
+   "areaTH": "ต.ปลวกแดง อ.ปลวกแดง, ระยอง",
    "lat": 12.9738,
    "lon": 101.2129,
    "cc": "TH",
@@ -2948,6 +3012,8 @@
   "a4t:29t": {
    "name": "Health Promotion Hospital Maptaput",
    "nameTH": "โรงพยาบาลส่งเสริมสุขภาพตำบลมาบตาพุด ",
+   "area": "Map Ta Phut, Meuang, Rayong",
+   "areaTH": "ต.มาบตาพุด อ.เมือง, ระยอง",
    "lat": 12.7087,
    "lon": 101.166,
    "cc": "TH",
@@ -2958,6 +3024,8 @@
   "a4t:30t": {
    "name": "Rayong Provincial Stadium",
    "nameTH": "สนามกีฬากลางจังหวัดระยอง",
+   "area": " Noen Phra, Muang Rayong, Rayong",
+   "areaTH": "สนามกีฬากลางจังหวัดระยอง ต.เนินพระ อ.เมือง, ระยอง",
    "lat": 12.6789,
    "lon": 101.2347,
    "cc": "TH",
@@ -2968,6 +3036,8 @@
   "a4t:31t": {
    "name": "Field Crop Research Center, Rayong",
    "nameTH": "ศูนย์วิจัยพืชไร่ระยอง ",
+   "area": "Huai Pong, Meuang, Rayong",
+   "areaTH": "ต.ห้วยโป่ง อ.เมือง, ระยอง",
    "lat": 12.7352,
    "lon": 101.1357,
    "cc": "TH",
@@ -2978,6 +3048,8 @@
   "a4t:33t": {
    "name": "Health Promotion Hospital Bankhaohin",
    "nameTH": "โรงพยาบาลส่งเสริมสุขภาพตำบลบ้านเขาหิน",
+   "area": "Bo Win, Si Racha, Chon buri",
+   "areaTH": "ต.บ่อวิน อ.ศรีราชา, ชลบุรี",
    "lat": 13.0546,
    "lon": 101.0981,
    "cc": "TH",
@@ -2988,6 +3060,8 @@
   "a4t:35t": {
    "name": "City Hall, Chiangmai",
    "nameTH": "ศูนย์ราชการจังหวัดเชียงใหม่ ",
+   "area": "Chang Phueak, Meuang, Chiang Mai",
+   "areaTH": "ต.ช้างเผือก อ.เมือง, เชียงใหม่",
    "lat": 18.8407,
    "lon": 98.9698,
    "cc": "TH",
@@ -2998,6 +3072,8 @@
   "a4t:36t": {
    "name": "Yupparaj Wittayalai School",
    "nameTH": "โรงเรียนยุพราชวิทยาลัย ",
+   "area": "Si Phum, Meuang, Chiang Mai",
+   "areaTH": "ต.ศรีภูมิ อ.เมือง, เชียงใหม่",
    "lat": 18.7909,
    "lon": 98.99,
    "cc": "TH",
@@ -3008,6 +3084,8 @@
   "a4t:37t": {
    "name": "Meteorological stations, Lampang",
    "nameTH": "สถานีอุตุนิยมวิทยาลำปาง",
+   "area": "Phra Bat, Meuang, Lampang",
+   "areaTH": "ต.พระบาท อ.เมือง, ลำปาง",
    "lat": 18.2783,
    "lon": 99.5065,
    "cc": "TH",
@@ -3018,6 +3096,8 @@
   "a4t:38t": {
    "name": "Health Promotion Hospital Sob Pad, Lampang",
    "nameTH": "โรงพยาบาลส่งเสริมสุขภาพตำบลบ้านสบป้าด ",
+   "area": "Sop Pat, Mae Mo, Lampang",
+   "areaTH": "ต.สบป้าด อ.แม่เมาะ, ลำปาง",
    "lat": 18.2508,
    "lon": 99.7639,
    "cc": "TH",
@@ -3028,6 +3108,8 @@
   "a4t:39t": {
    "name": "Health Promotion Hospital Banthasri",
    "nameTH": "โรงพยาบาลส่งเสริมสุขภาพตำบลท่าสี ",
+   "area": "Ban Dong, Mae Mo, Lampang",
+   "areaTH": "ต.บ้านดง อ.แม่เมาะ, ลำปาง",
    "lat": 18.4268,
    "lon": 99.7576,
    "cc": "TH",
@@ -3038,6 +3120,8 @@
   "a4t:40t": {
    "name": "Provincial Waterworks Authority Mae Moh",
    "nameTH": "การประปาส่วนภูมิภาคแม่เมาะ",
+   "area": "Mae Mo, Mae Mo, Lampang",
+   "areaTH": "ต.แม่เมาะ อ.แม่เมาะ, ลำปาง",
    "lat": 18.2826,
    "lon": 99.6598,
    "cc": "TH",
@@ -3048,6 +3132,8 @@
   "a4t:41t": {
    "name": "Nakhonsawan Irrigation Project ",
    "nameTH": "โครงการชลประทานนครสวรรค์",
+   "area": "Pak Nam Pho, Mueang, Nakhon Sawan",
+   "areaTH": "ต.ปากน้ำโพ อ.เมือง, นครสวรรค์",
    "lat": 15.6862,
    "lon": 100.1106,
    "cc": "TH",
@@ -3058,6 +3144,8 @@
   "a4t:42t": {
    "name": "Environment Agency Section 14, Surat Thani",
    "nameTH": "สำนักงานสิ่งแวดล้อมภาคที่ 14",
+   "area": "Makham Tia, Mueang, Surat Thani",
+   "areaTH": "ต.มะขามเตี้ย อ.เมือง, สุราษฎร์ธานี",
    "lat": 9.126,
    "lon": 99.3251,
    "cc": "TH",
@@ -3068,6 +3156,8 @@
   "a4t:43t": {
    "name": "Municipal Health Center",
    "nameTH": "ศูนย์บริการสาธารณสุขเทศบาลภูเก็ต",
+   "area": "Talat Yai, Mueang, Phuket",
+   "areaTH": "ต.ตลาดใหญ่ อ.เมือง, ภูเก็ต",
    "lat": 7.8845,
    "lon": 98.3913,
    "cc": "TH",
@@ -3078,6 +3168,8 @@
   "a4t:44t": {
    "name": "Hat Yai Municipality",
    "nameTH": "เทศบาลนครหาดใหญ่ ",
+   "area": "Hat Yai, Songkhla",
+   "areaTH": "ต.หาดใหญ่ อ.หาดใหญ่, สงขลา",
    "lat": 7.0204,
    "lon": 100.4841,
    "cc": "TH",
@@ -3088,6 +3180,8 @@
   "a4t:46t": {
    "name": "Hydrogeological Group Water Resources Regional Office4 khonkaen",
    "nameTH": "ส่วนอุทกวิทยา สำนักงานทรัพยากรน้ำภาคที่4 ขอนแก่น",
+   "area": "Nai Mueang, Mueang, Khon Kaen",
+   "areaTH": "ต.ในเมือง อ.เมือง, ขอนแก่น",
    "lat": 16.4454,
    "lon": 102.8353,
    "cc": "TH",
@@ -3098,6 +3192,8 @@
   "a4t:47t": {
    "name": "Municipal Waste Water Pumping Station",
    "nameTH": "สถานีสูบน้ำประตูพลแสน",
+   "area": "Nai Mueang, Mueang, Nakhon Ratchasima",
+   "areaTH": "ต.ในเมือง อ.เมือง, นครราชสีมา",
    "lat": 14.9795,
    "lon": 102.0983,
    "cc": "TH",
@@ -3108,6 +3204,8 @@
   "a4t:50t": {
    "name": "Chulalongkorn Hospital",
    "nameTH": "โรงพยาบาลจุฬาลงกรณ์",
+   "area": "Rama IV Rd. Khet Pathum Wan, Bangkok",
+   "areaTH": "ริมถนนพระราม 4 เขตปทุมวัน, กรุงเทพฯ",
    "lat": 13.7299,
    "lon": 100.5365,
    "cc": "TH",
@@ -3118,6 +3216,8 @@
   "a4t:52t": {
    "name": "Thonburi Power Sub-Station",
    "nameTH": "การไฟฟ้าย่อยธนบุรี ",
+   "area": "Intarapitak Rd. Khet Thon Buri, Bangkok",
+   "areaTH": "ริมถนนอินทรพิทักษ์ เขตธนบุรี, กรุงเทพฯ",
    "lat": 13.7276,
    "lon": 100.4866,
    "cc": "TH",
@@ -3128,6 +3228,8 @@
   "a4t:53t": {
    "name": "Chokchai Police Station",
    "nameTH": "สถานีตำรวจนครบาลโชคชัย ",
+   "area": "Lat Phrao Rd. Khet Wang Thonglang, Bangkok",
+   "areaTH": "ริมถนนลาดพร้าว เขตวังทองหลาง, กรุงเทพฯ",
    "lat": 13.7954,
    "lon": 100.593,
    "cc": "TH",
@@ -3138,6 +3240,8 @@
   "a4t:54t": {
    "name": "National Housing Authority Dindaeng",
    "nameTH": "การเคหะชุมชนดินแดง ",
+   "area": "Din Daeng Rd. Khet Din Daeng, Bangkok",
+   "areaTH": "ริมถนนดินแดง เขตดินแดง, กรุงเทพฯ",
    "lat": 13.7625,
    "lon": 100.5502,
    "cc": "TH",
@@ -3148,6 +3252,8 @@
   "a4t:57t": {
    "name": "Natural Resources and Environment Office, Chiangrai",
    "nameTH": "สำนักงานทรัพยากรธรรมชาติและสิ่งแวดล้อมจังหวัดเชียงราย",
+   "area": "Wiang, Meuang, Chiang Rai",
+   "areaTH": "ต.เวียง อ.เมือง, เชียงราย",
    "lat": 19.9092,
    "lon": 99.8235,
    "cc": "TH",
@@ -3158,6 +3264,8 @@
   "a4t:59t": {
    "name": "The Government Public Relations Department ",
    "nameTH": "กรมประชาสัมพันธ์",
+   "area": "Phaya Thai, Khet Phaya Thai, Bangkok",
+   "areaTH": "แขวงพญาไท เขตพญาไท, กรุงเทพฯ",
    "lat": 13.7832,
    "lon": 100.5405,
    "cc": "TH",
@@ -3168,6 +3276,8 @@
   "a4t:60t": {
    "name": "Municipality Office Tungsadao",
    "nameTH": "สำนักงานเทศบาลตำบลทุ่งสะเดา",
+   "area": "Wang Yen, Plaeng Yao, Chachoengsao",
+   "areaTH": "ต.วังเย็น อ.แปลงยาว, ฉะเชิงเทรา",
    "lat": 13.5885,
    "lon": 101.2863,
    "cc": "TH",
@@ -3178,6 +3288,8 @@
   "a4t:61t": {
    "name": "Bodindecha Sing Singhaseni School",
    "nameTH": "โรงเรียนบดินทรเดชา (สิงห์ สิงหเสนี) ",
+   "area": "Pubpla, Khet Wang Thonglang, Bangkok",
+   "areaTH": "แขวงพลับพลา เขตวังทองหลาง, กรุงเทพฯ",
    "lat": 13.7696,
    "lon": 100.6146,
    "cc": "TH",
@@ -3188,6 +3300,8 @@
   "a4t:62t": {
    "name": "City Hall, Narathiwat",
    "nameTH": "ศาลากลางจังหวัดนราธิวาส ",
+   "area": "Bang Nak, Mueang, Narathiwat",
+   "areaTH": "ต.บางนาค อ.เมือง, นราธิวาส",
    "lat": 6.4269,
    "lon": 101.8234,
    "cc": "TH",
@@ -3198,6 +3312,8 @@
   "a4t:63t": {
    "name": "White Elephant Park",
    "nameTH": "สนามโรงพิธีช้างเผือก ",
+   "area": "Sateng, Mueang, Yala",
+   "areaTH": "ต.สะเตง อ.เมือง, ยะลา",
    "lat": 6.5462,
    "lon": 101.2831,
    "cc": "TH",
@@ -3208,6 +3324,8 @@
   "a4t:67t": {
    "name": "Municipality Office, Nan",
    "nameTH": "สำนักงานเทศบาลเมืองน่าน",
+   "area": "Nai Wiang, Mueang, Nan",
+   "areaTH": "ต.ในเวียง อ.เมือง, น่าน",
    "lat": 18.7889,
    "lon": 100.7763,
    "cc": "TH",
@@ -3218,6 +3336,8 @@
   "a4t:68t": {
    "name": "Meteorological Staions, Lamphun",
    "nameTH": "อุตุนิยมวิทยาลำพูน",
+   "area": "ฺBan Klang, Mueang, Lamphun",
+   "areaTH": "ต.บ้านกลาง อ.เมือง, ลำพูน",
    "lat": 18.5672,
    "lon": 99.0386,
    "cc": "TH",
@@ -3228,6 +3348,8 @@
   "a4t:69t": {
    "name": "Meteorology Center, Phrae",
    "nameTH": "อุตุนิยมวิทยาจังหวัดแพร่",
+   "area": "Na Chak, Meuang, Phrae",
+   "areaTH": "ต.นาจักร อ.เมือง, แพร่",
    "lat": 18.1284,
    "lon": 100.1624,
    "cc": "TH",
@@ -3238,6 +3360,8 @@
   "a4t:70t": {
    "name": "Phayao Provincial, Phayao",
    "nameTH": "สนามกีฬาจังหวัดพะเยา",
+   "area": "Bantom, Meuang, Phayao",
+   "areaTH": "ต.บ้านต๋อม อ.เมือง, พะเยา",
    "lat": 19.2002,
    "lon": 99.893,
    "cc": "TH",
@@ -3248,6 +3372,8 @@
   "a4t:71t": {
    "name": "Kanjanapisek Park",
    "nameTH": "สวนกาญจนาภิเษก ร.9 (ฝั่งสวนหิน)",
+   "area": "Aranyaprathet, Aranyaprathet, Sa Kaeo",
+   "areaTH": "ต.อรัญประเทศ อ.อรัญประเทศ, สระแก้ว",
    "lat": 13.691,
    "lon": 102.5104,
    "cc": "TH",
@@ -3258,6 +3384,8 @@
   "a4t:72t": {
    "name": "60th Anniversary Queen Sirikit Public Park, Loei",
    "nameTH": "สวนสาธารณะเฉลิมพระเกียรติ 60 พรรษามหาราชินี จังหวัดเลย",
+   "area": "Kut Pong Subdistrict, Mueang District, Loei",
+   "areaTH": "ต.กุดป่อง อ.เมือง, เลย",
    "lat": 17.4846,
    "lon": 101.7327,
    "cc": "TH",
@@ -3268,6 +3396,8 @@
   "a4t:73t": {
    "name": "Maesai Health Office",
    "nameTH": "สำนักงานสาธารณสุขแม่สาย",
+   "area": "Wiang Phang Kham, Mae Sai, Chiang Rai",
+   "areaTH": "ต.เวียงพางคำ อ.แม่สาย, เชียงราย",
    "lat": 20.4273,
    "lon": 99.8838,
    "cc": "TH",
@@ -3278,6 +3408,8 @@
   "a4t:75t": {
    "name": "Chalermprakiet Hospital",
    "nameTH": "โรงพยาบาลเฉลิมพระเกียรติ ",
+   "area": "Huai Kon, Chaloem Phra Kiat, Nan",
+   "areaTH": "ต.ห้วยโก๋น อ.เฉลิมพระเกียรติ, น่าน",
    "lat": 19.576,
    "lon": 101.0815,
    "cc": "TH",
@@ -3288,6 +3420,8 @@
   "a4t:76t": {
    "name": "Non-Formal Education Centre, Mea Sot",
    "nameTH": "ศูนย์การศึกษานอกโรงเรียน",
+   "area": "MaePa, MaeSot, Tak",
+   "areaTH": "ต.แม่ปะ อ.แม่สอด, ตาก",
    "lat": 16.7344,
    "lon": 98.567,
    "cc": "TH",
@@ -3298,6 +3432,8 @@
   "a4t:77t": {
    "name": "Bu Yai Bai Hall Station",
    "nameTH": "ศาลาประชาคมบ้านบุยายใบ",
+   "area": "Tha Tum, SiMahaPhot, Prachin Buri",
+   "areaTH": "ต.ท่าตูม อ.ศรีมหาโพธิ, ปราจีนบุรี",
    "lat": 13.9176,
    "lon": 101.5905,
    "cc": "TH",
@@ -3308,6 +3444,8 @@
   "a4t:78t": {
    "name": "child development centers, Betong",
    "nameTH": "ศูนย์พัฒนาเด็กเล็กเทศบาลเมืองเบตง",
+   "area": "Betong, Yala",
+   "areaTH": "ต.เบตง อ.เบตง, ยะลา",
    "lat": 5.7639,
    "lon": 101.0679,
    "cc": "TH",
@@ -3318,6 +3456,8 @@
   "a4t:80t": {
    "name": "City Hall, Satun",
    "nameTH": "ศาลากลาง จ.สตูล",
+   "area": "Phiman, Mueang, Satun",
+   "areaTH": "ต.พิมาน อ.เมือง, สตูล",
    "lat": 6.6247,
    "lon": 100.0662,
    "cc": "TH",
@@ -3328,6 +3468,8 @@
   "a4t:82t": {
    "name": "Nong Thin Public Park, Nong Khai",
    "nameTH": "สวนสาธารณะหนองถิ่น",
+   "area": "Meechai, Meuang, Nong Khai",
+   "areaTH": " ต.มีชัย อ.เมือง, หนองคาย",
    "lat": 17.8775,
    "lon": 102.7289,
    "cc": "TH",
@@ -3338,6 +3480,8 @@
   "a4t:83t": {
    "name": "OTOP Center, Ubon Ratchathani",
    "nameTH": "ศูนย์แสดงและจำหน่ายสินค้า OTOP จังหวัดอุบลราชธานี",
+   "area": "Mueang, Ubon Ratchathani",
+   "areaTH": "ต.ในเมือง อ.เมือง, อุบลราชธานี",
    "lat": 15.2454,
    "lon": 104.8462,
    "cc": "TH",
@@ -3348,6 +3492,8 @@
   "a4t:84t": {
    "name": "Samut Songkhram Health Office",
    "nameTH": "สำนักงานสาธารณสุขจังหวัดสมุทรสงคราม",
+   "area": "Mueang, Samut Songkhram",
+   "areaTH": " ต.ลาดใหญ่ อ.เมือง, สมุทรสงคราม",
    "lat": 13.4286,
    "lon": 100.0247,
    "cc": "TH",
@@ -3358,6 +3504,8 @@
   "a4t:85t": {
    "name": "Suphan Buri Provincial Central Stadium",
    "nameTH": "สนามกีฬากลางจังหวัดสุพรรณบุรี",
+   "area": "Don Kamyan, Mueang, Suphun Buri",
+   "areaTH": "ต.ดอนกำยาน อ.เมือง, สุพรรณบุรี",
    "lat": 14.4762,
    "lon": 100.0861,
    "cc": "TH",
@@ -3368,6 +3516,8 @@
   "a4t:86t": {
    "name": "Chom Nan Chaloem Phrakiat Public Park",
    "nameTH": "สวนชมน่านเฉลิมพระเกียรติ",
+   "area": "Nai Mueang, Mueang, Phitsanulok",
+   "areaTH": "ต.ในเมือง อ.เมือง, พิษณุโลก",
    "lat": 16.8208,
    "lon": 100.2581,
    "cc": "TH",
@@ -3378,6 +3528,8 @@
   "a4t:87t": {
    "name": "Trat Provincial Central Stadium",
    "nameTH": "สนามกีฬากลางจังหวัดตราด",
+   "area": "Bang Phra, Mueang, Trat",
+   "areaTH": "ต.บางพระ อ.เมือง, ตราด",
    "lat": 12.2349,
    "lon": 102.5237,
    "cc": "TH",
@@ -3388,6 +3540,8 @@
   "a4t:88t": {
    "name": "Meteorological stations, Nakhon Phanom",
    "nameTH": "สถานีอุตุนิยมวิทยานครพนม",
+   "area": "Nai Mueang, Meuang, Nakhon Phanom",
+   "areaTH": "ต.ในเมือง อ.เมือง, นครพนม",
    "lat": 17.4123,
    "lon": 104.7786,
    "cc": "TH",
@@ -3398,6 +3552,8 @@
   "a4t:89t": {
    "name": "Elderly Health Rehabilitation Center",
    "nameTH": "ศูนย์ฟื้นฟูสุขภาพผู้สูงอายุ",
+   "area": "Khlang, Mueang, Nakhon Si Thammarat",
+   "areaTH": "ต.คลัง อ.เมือง, นครศรีธรรมราช",
    "lat": 8.4269,
    "lon": 99.9615,
    "cc": "TH",
@@ -3408,6 +3564,8 @@
   "a4t:90t": {
    "name": "Meteorological stations, Sakon Nakhon",
    "nameTH": "สถานีอุตุนิยมวิทยาสกลนคร",
+   "area": "That Naweng, Mueang, Sakon Nakhon",
+   "areaTH": "ต.ธาตุนาเวง อ.เมือง, สกลนคร",
    "lat": 17.1566,
    "lon": 104.1332,
    "cc": "TH",
@@ -3418,6 +3576,8 @@
   "a4t:91t": {
    "name": "Nong Prajak Public Park, Udon Thani",
    "nameTH": "สวนสาธารณะหนองประจักษ์ อุดรธานี",
+   "area": "Mak Khaeng, Mueang, Udon Thani",
+   "areaTH": "ต.หมากแข้ง อ.เมือง, อุดรธานี",
    "lat": 17.4142,
    "lon": 102.7809,
    "cc": "TH",
@@ -3428,6 +3588,8 @@
   "a4t:92t": {
    "name": "72nd Anniversary King Bhumibol Public Park, Uttaradit",
    "nameTH": "สวนมหามงคลเฉลิมพระชนมพรรษา 6 รอบ 5 ธันวาคม 2552 อุตรดิตถ์",
+   "area": "Tha It, Mueang, Uttaradit",
+   "areaTH": "ต.ท่าอิฐ อ.เมือง, อุตรดิตถ์",
    "lat": 17.6314,
    "lon": 100.099,
    "cc": "TH",
@@ -3438,6 +3600,8 @@
   "a4t:93t": {
    "name": "Polytechnic College, Trang ",
    "nameTH": "วิทยาลัยสารพัดช่างตรัง",
+   "area": "Na Ta Luang Subdistrict, Mueang District, Trang",
+   "areaTH": "ต.นาตาล่วง อ.เมือง, ตรัง",
    "lat": 7.5702,
    "lon": 99.5887,
    "cc": "TH",
@@ -3448,6 +3612,8 @@
   "a4t:94t": {
    "name": "Sirichit Thai Cultural Conservation Ground",
    "nameTH": "ลานอนุรักษ์วัฒนธรรมไทยสิริจิตอุทยาน",
+   "area": "Nai Mueang Subdistrict, Mueang District, Kamphaeng Phet",
+   "areaTH": "ต.ในเมือง อ.เมือง, กำแพงเพชร",
    "lat": 16.4754,
    "lon": 99.5254,
    "cc": "TH",
@@ -3458,6 +3624,8 @@
   "a4t:95t": {
    "name": " Phichit Provincial , Phichit",
    "nameTH": "สนามกีฬาจังหวัดพิจิตร",
+   "area": "Nai Mueang Subdistrict, Mueang District, Phichit",
+   "areaTH": "ต.ในเมือง อ.เมือง, พิจิตร",
    "lat": 16.4426,
    "lon": 100.3228,
    "cc": "TH",
@@ -3468,6 +3636,8 @@
   "a4t:97t": {
    "name": "Phetbura garden",
    "nameTH": "สวนเพชบุระ",
+   "area": " Nai Mueang Subdistrict, Mueang District, Phetchabun",
+   "areaTH": "ต.ในเมือง อ.เมือง, เพชรบูรณ์",
    "lat": 16.4184,
    "lon": 101.1566,
    "cc": "TH",
@@ -3478,6 +3648,8 @@
   "a4t:98t": {
    "name": "Chaloem Phrakiat Park Station 80th birthday celebration",
    "nameTH": "สถานีสวนเฉลิมพระเกียรติพระบาทสมเด็จพระเจ้าอยู่หัว เฉลิมพระชนมพรรษา 80 พรรษา",
+   "area": "Mueang, Uthai Thani",
+   "areaTH": "ต.อุทัยใหม่ อ.เมือง, อุทัยธานี",
    "lat": 15.3847,
    "lon": 100.025,
    "cc": "TH",
@@ -3488,6 +3660,8 @@
   "a4t:99t": {
    "name": " Meteorological Station Lopburi",
    "nameTH": "สถานีอุตุนิยมวิทยาลพบุรี",
+   "area": " Talay Chupson Subdistrict, Mueang District, Lopburi",
+   "areaTH": "ต.ทะเลชุบศร อ.เมือง, ลพบุรี",
    "lat": 14.8,
    "lon": 100.6285,
    "cc": "TH",
@@ -3498,6 +3672,8 @@
   "a4t:100t": {
    "name": "Chanthaburi Meteorological Station",
    "nameTH": "สถานีอุตุนิยมวิทยาจันทบุรี",
+   "area": "Wat Mai Subdistrict, Mueang District, Chanthaburi",
+   "areaTH": "ต.วัดใหม่ อ.เมือง, จันทบุรี",
    "lat": 12.6096,
    "lon": 102.1041,
    "cc": "TH",
@@ -3508,6 +3684,8 @@
   "a4t:101t": {
    "name": "Buriram City Hall",
    "nameTH": "ศาลากลางจังหวัดบุรีรัมย์",
+   "area": "Samed Subdistrict, Mueang District, Buriram",
+   "areaTH": "ต.เสม็ด อ.เมือง, บุรีรัมย์",
    "lat": 14.9455,
    "lon": 103.1059,
    "cc": "TH",
@@ -3518,6 +3696,8 @@
   "a4t:102t": {
    "name": "Mukdahan Provincial Stadium",
    "nameTH": "สนามกีฬากลางจังหวัดมุกดาหาร",
+   "area": "Mukdaman Subdistrict, Mueang District, Mukdahan",
+   "areaTH": "ต.มุกดาหาร อ.เมือง, มุกดาหาร",
    "lat": 16.5426,
    "lon": 104.7192,
    "cc": "TH",
@@ -3528,6 +3708,8 @@
   "a4t:103t": {
    "name": "Hua Hin Weather Station Prachuap Khiri Khan Meteorological Station",
    "nameTH": " สถานีตรวจอากาศหัวหิน สถานีอุตุนิยมวิทยาประจวบคีรีขันธ์",
+   "area": "Hua Hin Subdistrict, Hua Hin District, Prachuap Khiri Khan",
+   "areaTH": "ต.หัวหิน อ.หัวหิน, ประจวบคิรีขันธ์",
    "lat": 12.5778,
    "lon": 99.9537,
    "cc": "TH",
@@ -3538,6 +3720,8 @@
   "a4t:104t": {
    "name": "SINGBURI SCHOOL",
    "nameTH": "โรงเรียนสิงห์บุรี",
+   "area": " Bang Man Subdistrict, Mueang District, Sing Buri",
+   "areaTH": "ต.บางมัญ อ.เมือง, สิงห์บุรี",
    "lat": 14.8934,
    "lon": 100.4131,
    "cc": "TH",
@@ -3548,6 +3732,8 @@
   "a4t:105t": {
    "name": "Nakhon Nayok Municipality Public Health Service Center",
    "nameTH": "ศูนย์บริการสาธารณสุขเทศบาลเมืองนครนายก",
+   "area": "Ban Yai Subdistrict, Mueang District, Nakhon Nayok",
+   "areaTH": "ต.บ้านใหญ่ อ.เมือง, นครนายก",
    "lat": 14.2042,
    "lon": 101.2151,
    "cc": "TH",
@@ -3558,6 +3744,8 @@
   "a4t:106t": {
    "name": "Nong Bueng Kan Park",
    "nameTH": "สวนสาธารณะหนองบึงกาฬ",
+   "area": "Mueang, Bueng Kan",
+   "areaTH": "ต.บึงกาฬ อ.เมือง, จ.บึงกาฬ ",
    "lat": 18.362,
    "lon": 103.6598,
    "cc": "TH",
@@ -3568,6 +3756,8 @@
   "a4t:107t": {
    "name": "KAENG DON KLANG PARK",
    "nameTH": "สวนสาธารณะแก่งดอนกลาง",
+   "area": "Kalasin Subdistrict, Mueang Kalasin District, Kalasin",
+   "areaTH": "ต.กาฬสินธุ์ อ.เมือง, กาฬสินธ์ุ",
    "lat": 16.4436,
    "lon": 103.513,
    "cc": "TH",
@@ -3578,6 +3768,8 @@
   "a4t:108t": {
    "name": "Mueang Chaiyaphum Municipality Stadium",
    "nameTH": "สนามกีฬาเทศบาลเมืองชัยภูมิ",
+   "area": " Nai Mueang Subdistrict, Mueang Chaiyaphum District, Chaiyaphum",
+   "areaTH": " ต.ในเมือง อ.เมืองชัยภูมิ, ชัยภูมิ",
    "lat": 15.8115,
    "lon": 102.0228,
    "cc": "TH",
@@ -3588,6 +3780,8 @@
   "a4t:109t": {
    "name": "Phaya Thaen Public Park",
    "nameTH": "สวนสาธารณะพญาแถน",
+   "area": "Mueang, Yasothon",
+   "areaTH": "ต.ในเมือง อ.เมือง, ยโสธร",
    "lat": 15.7839,
    "lon": 104.1546,
    "cc": "TH",
@@ -3598,6 +3792,8 @@
   "a4t:110t": {
    "name": "Amnat Charoen Municipality",
    "nameTH": "สำนักงานเทศบาลเมืองอำนาจเจริญ",
+   "area": "Bung, Mueang, Amnat Charoen",
+   "areaTH": "ต.บุ่ง อ.เมือง, จ.อำนาจเจริญ",
    "lat": 15.8758,
    "lon": 104.6223,
    "cc": "TH",
@@ -3608,6 +3804,8 @@
   "a4t:111t": {
    "name": "Surin Meteorological Center",
    "nameTH": "สถานีอุตุนิยมวิทยาสุรินทร์",
+   "area": "Nok Mueang, Mueang, Surin",
+   "areaTH": "ต.นอกเมือง อ.เมือง, จ.สุรินทร์",
    "lat": 14.8762,
    "lon": 103.4966,
    "cc": "TH",
@@ -3618,6 +3816,8 @@
   "a4t:112t": {
    "name": "Sisaket Meteorological Center",
    "nameTH": "สถานีอุตุนิยมวิทยาศรีสะเกษ",
+   "area": "Nongkrog Subdistrict, Mueang District, Sisaket",
+   "areaTH": "ต.หนองครก อ.เมือง, ศรีสะเกษ",
    "lat": 15.0871,
    "lon": 104.3268,
    "cc": "TH",
@@ -3628,6 +3828,8 @@
   "a4t:113t": {
    "name": "Bueng Planchai",
    "nameTH": "บึงพลาญชัย",
+   "area": " Nai Mueang Subdistrict, Mueang District, Roi Et",
+   "areaTH": "ต.ในเมือง อ.เมือง, ร้อยเอ็ด",
    "lat": 16.0574,
    "lon": 103.6511,
    "cc": "TH",
@@ -3638,6 +3840,8 @@
   "a4t:114t": {
    "name": "Pramuan Suk Health Park",
    "nameTH": "สวนสุขภาพประมวลสุข",
+   "area": "Talat, Muang Mahasarakham, Maha Sarakham",
+   "areaTH": "ต.ตลาด อ.เมือง, มหาสารคาม",
    "lat": 16.1773,
    "lon": 103.2998,
    "cc": "TH",
@@ -3648,6 +3852,8 @@
   "a4t:115t": {
    "name": "Nong Bua Lamphu Provincial Administrative Organization ",
    "nameTH": "องค์การริหารส่วนจังหวัดหนองบัวลำภู",
+   "area": "Nong Bua Subdistrict, Mueang District, Nong Bua Lamphu",
+   "areaTH": "ต.หนองบัว อ.เมือง, หนองบัวลำภู",
    "lat": 17.1938,
    "lon": 102.4585,
    "cc": "TH",
@@ -3658,6 +3864,8 @@
   "a4t:116t": {
    "name": "Chaloem Phra Kiat Water Park",
    "nameTH": " สวนน้ำเฉลิมพระเกียรติ ",
+   "area": "Yan Sue Subdistrict, Mueang Ang Thong District Ang Thong Province",
+   "areaTH": "ต.ย่านซื่อ อ.เมือง, อ่างทอง",
    "lat": 14.6063,
    "lon": 100.4536,
    "cc": "TH",
@@ -3668,6 +3876,8 @@
   "a4t:117t": {
    "name": "Chalermprakiat Rama IX Park",
    "nameTH": "สวนสาธารณะเฉลิมพระเกียรติ ร. 9",
+   "area": "Ban Kluai Subdistrict, Mueang District, Chai Nat",
+   "areaTH": "ต.บ้านกล้วย อ.เมือง, ชัยนาท",
    "lat": 15.1735,
    "lon": 100.1321,
    "cc": "TH",
@@ -3678,6 +3888,8 @@
   "a4t:118t": {
    "name": "Sports Stadium, Chumphon Province",
    "nameTH": "สนามกีฬา จ.ชุมพร",
+   "area": "Tha Taphao, Mueang, Chumphon",
+   "areaTH": "ต.ท่าตะเภา อ.เมือง, จ.ชุมพร",
    "lat": 10.4951,
    "lon": 99.1894,
    "cc": "TH",
@@ -3688,6 +3900,8 @@
   "a4t:119t": {
    "name": "Thara Public Park",
    "nameTH": "สวนสาธารณะธารา",
+   "area": "Pak Nam Subdistrict, Mueang District, Krabi",
+   "areaTH": "ต.ปากน้ำ อ.เมือง, กระบี่",
    "lat": 8.0506,
    "lon": 98.918,
    "cc": "TH",
@@ -3698,6 +3912,8 @@
   "a4t:120t": {
    "name": "Phatthalung Provincial Stadium",
    "nameTH": "สนามกีฬากลางจังหวัดพัทลุง",
+   "area": "Khao Chiak Subdistrict, Mueang District, Phatthalung",
+   "areaTH": "ต.เขาเจียก อ.เมือง, พัทลุง",
    "lat": 7.6157,
    "lon": 100.048,
    "cc": "TH",
@@ -3708,6 +3924,8 @@
   "a4t:121t": {
    "name": "Pattani Provincial Forestry Center",
    "nameTH": "ศูนย์ป่าไม้จังหวัดปัตตานี",
+   "area": "Mueang, Pattanee",
+   "areaTH": "ต.รูสะมิแล อ.เมือง, ปัตตานี",
    "lat": 6.8906,
    "lon": 101.2509,
    "cc": "TH",
@@ -3718,6 +3936,8 @@
   "a4t:bkp56t": {
    "name": "Din Dang, Bangkok",
    "nameTH": "สำนักงานเขตดินแดง กรุงเทพฯ",
+   "area": "Din Dang, Bangkok",
+   "areaTH": "ริมถนนวิภาวดีรังสิต, เขตดินแดง, กรุงเทพฯ",
    "lat": 13.7619,
    "lon": 100.5586,
    "cc": "TH",
@@ -3728,6 +3948,8 @@
   "a4t:bkp57t": {
    "name": "Phra Kanong District Office,  Bangkok",
    "nameTH": "สำนักงานเขตพระโขนง กรุงเทพฯ",
+   "area": "Phra Kanong, Bangkok",
+   "areaTH": "ริมถนนสุขุมวิท เขตพระโขนง, กรุงเทพฯ",
    "lat": 13.6915,
    "lon": 100.6146,
    "cc": "TH",
@@ -3738,6 +3960,8 @@
   "a4t:bkp58t": {
    "name": "Rat Burana District Office,  Bangkok",
    "nameTH": "สำนักงานเขตราษฎร์บูรณะ กรุงเทพฯ",
+   "area": "Rat Burana, Bangkok",
+   "areaTH": "ริมถนนราษฎร์บูรณะ, เขตราษฎร์บูรณะ, กรุงเทพฯ",
    "lat": 13.6821,
    "lon": 100.5061,
    "cc": "TH",
@@ -3748,6 +3972,8 @@
   "a4t:bkp59t": {
    "name": "Ratchathewi District Office, Bangkok",
    "nameTH": "สำนักงานเขตราชเทวี กรุงเทพฯ",
+   "area": "Phayathai Roadside, Ratchathewi, Bangkok",
+   "areaTH": "ริมถนนพญาไท เขตราชเทวี, กรุงเทพฯ",
    "lat": 13.7591,
    "lon": 100.5346,
    "cc": "TH",
@@ -3758,6 +3984,8 @@
   "a4t:bkp60t": {
    "name": "Dusit District Office, Bangkok",
    "nameTH": "ริมสวนหย่อมตรงข้ามสำนักงานเขตดุสิต",
+   "area": "RamaV Roadside, Dusit, Bangkok",
+   "areaTH": "ริมถนนพระราม 5 เขตดุสิต, กรุงเทพฯ",
    "lat": 13.7767,
    "lon": 100.521,
    "cc": "TH",
@@ -3768,6 +3996,8 @@
   "a4t:bkp61t": {
    "name": "National Economic and Social Development Council Office",
    "nameTH": "สำนักงานคณะกรรมการพัฒนาเศรษฐกิจและสังคมแห่งชาติ",
+   "area": "Krung Kasem Roadside, Pom Prap Sattru Phai, Bangkok",
+   "areaTH": "ริมถนนกรุงเกษม เขตป้อมปราบศัตรูพ่าย, กรุงเทพฯ",
    "lat": 13.7563,
    "lon": 100.5143,
    "cc": "TH",
@@ -3778,6 +4008,8 @@
   "a4t:bkp62t": {
    "name": "Odeon Circus",
    "nameTH": "วงเวียนโอเดียน",
+   "area": "TheeMitr Roadside, Samphanthawong, Bangkok",
+   "areaTH": "ริมถนนตรีมิตร วงเวียนโอเดียน์ เขตสัมพันธวงศ์, กรุงเทพฯ",
    "lat": 13.7371,
    "lon": 100.5127,
    "cc": "TH",
@@ -3788,6 +4020,8 @@
   "a4t:bkp63t": {
    "name": "Army Apartment Sam Sen",
    "nameTH": "แฟลตทหารบก สามเสน",
+   "area": "RamaVI Roadside, Phaya Thai, Bangkok",
+   "areaTH": "ริมถนนพระราม 6 เขตพญาไท, กรุงเทพฯ",
    "lat": 13.7836,
    "lon": 100.5345,
    "cc": "TH",
@@ -3798,6 +4032,8 @@
   "a4t:bkp64t": {
    "name": "Wang Thonglang District Office, Bangkok",
    "nameTH": "สำนักงานเขตวังทองหลาง",
+   "area": "Lat Phrao Rd Soi 95, Wang Thonglang, Bangkok",
+   "areaTH": "ริมถนนลาดพร้าว ซอยลาดพร้าว 95 เขตวังทองหลาง, กรุงเทพฯ",
    "lat": 13.779,
    "lon": 100.6223,
    "cc": "TH",
@@ -3808,6 +4044,8 @@
   "a4t:bkp65t": {
    "name": "Samyan Mitrtown",
    "nameTH": "สามย่านมิตรทาวน์",
+   "area": "RamaIV Roadside, Pathum Wan, Bangkok",
+   "areaTH": "ริมถนนพระรามที่ 4 หน้าสามย่านมิตรทาวน์ เขตปทุมวัน, กรุงเทพฯ",
    "lat": 13.7331,
    "lon": 100.5283,
    "cc": "TH",
@@ -3818,6 +4056,8 @@
   "a4t:bkp66t": {
    "name": "Bangrak Lovely Plaza",
    "nameTH": "ลานบางรักเลิฟลี่ พลาซ่า",
+   "area": "Narathiwat Roadside, Bang Rak, Bangkok",
+   "areaTH": "ริมถนนนราธิวาส เขตบางรัก, กรุงเทพฯ",
    "lat": 13.7261,
    "lon": 100.5281,
    "cc": "TH",
@@ -3828,6 +4068,8 @@
   "a4t:bkp67t": {
    "name": "Sathon District Office, Bangkok",
    "nameTH": "สำนักงานเขตสาทร",
+   "area": "Thung Wat Don, Sathon, Bangkok",
+   "areaTH": "แขวงทุ่งวัดดอน เขตสาทร, กรุงเทพฯ",
    "lat": 13.7078,
    "lon": 100.5268,
    "cc": "TH",
@@ -3838,6 +4080,8 @@
   "a4t:bkp69t": {
    "name": "Bank of Ayuthaya Head Office Yan Nawa, Bangkok",
    "nameTH": "ธนาคารกรุงศรีอยุธยา สำนักงานใหญ่",
+   "area": "RamaIII Roadside, Yan Nawa, Bangkok",
+   "areaTH": "ริมถนนพระราม 3 เขตยานนาวา, กรุงเทพฯ",
    "lat": 13.6792,
    "lon": 100.5469,
    "cc": "TH",
@@ -3848,6 +4092,8 @@
   "a4t:bkp70t": {
    "name": "Soi Sukhumwit 63 Roadside Wattana, Bangkok",
    "nameTH": "ริมถนนซอยสุขุมวิท 63",
+   "area": "Soi Sukhumwit 63 Roadside, Wattana, Bangkok",
+   "areaTH": "ริมถนนซอยสุขุมวิท 63 เขตวัฒนา, กรุงเทพฯ",
    "lat": 13.7221,
    "lon": 100.5846,
    "cc": "TH",
@@ -3858,6 +4104,8 @@
   "a4t:bkp71t": {
    "name": "Suan Luang District Office, Bangkok",
    "nameTH": "สำนักงานเขตสวนหลวง",
+   "area": "Suan Luang, Bangkok",
+   "areaTH": "ริมถนนพัฒนาการ เขตสวนหลวง, กรุงเทพฯ",
    "lat": 13.7311,
    "lon": 100.6517,
    "cc": "TH",
@@ -3868,6 +4116,8 @@
   "a4t:bkp72t": {
    "name": "Big C Supercenter Bang Na",
    "nameTH": "บิ๊กซี ซุปเปอร์เซ็นเตอร์ บางนา",
+   "area": "Bang Na-Trat Roadside, Bang na, Bangkok",
+   "areaTH": "ริมถนนบางนา-ตราด เขตบางนา, กรุงเทพฯ",
    "lat": 13.668,
    "lon": 100.6353,
    "cc": "TH",
@@ -3878,6 +4128,8 @@
   "a4t:bkp73t": {
    "name": "Kasertsart University",
    "nameTH": "มหาวิทยาลัยเกษตรศาสตร์",
+   "area": "Kasertsart Intersection, Chatuchak, Bangkok",
+   "areaTH": "ริมถนนพหลโยธิน แยก ม.เกษตรศาสตร์ เขตจตุจักร, กรุงเทพฯ",
    "lat": 13.8399,
    "lon": 100.5756,
    "cc": "TH",
@@ -3888,6 +4140,8 @@
   "a4t:bkp74t": {
    "name": "Don Mueng District Office, Bangkok",
    "nameTH": "สำนักงานเขตดอนเมือง",
+   "area": "Don Mueng, Bangkok",
+   "areaTH": "เขตดอนเมือง, กรุงเทพฯ",
    "lat": 13.911,
    "lon": 100.5949,
    "cc": "TH",
@@ -3898,6 +4152,8 @@
   "a4t:bkp75t": {
    "name": "Sai Mai District Office, Bangkok",
    "nameTH": "สำนักงานเขตสายไหม",
+   "area": "Sukhaphiban 5 Roadside, Sai Mai, Bangkok",
+   "areaTH": "ริมถนนสุขาภิบาล5 เขตสายไหม, กรุงเทพฯ",
    "lat": 13.896,
    "lon": 100.6606,
    "cc": "TH",
@@ -3908,6 +4164,8 @@
   "a4t:bkp76t": {
    "name": "Bang Kapi District Office, Bangkok",
    "nameTH": "สำนักงานเขตบางกะปิ",
+   "area": "Navamin Roadside, Bang Kapi, Bangkok",
+   "areaTH": "ริมถนนนวมินทร์ แยกบางกะปิ เขตบางกะปิ, กรุงเทพฯ",
    "lat": 13.7665,
    "lon": 100.6478,
    "cc": "TH",
@@ -3918,6 +4176,8 @@
   "a4t:bkp77t": {
    "name": "Suan Sayam-Ram Intra Intersection",
    "nameTH": "แยกสวนสยาม-รามอินทรา",
+   "area": "Suan Sayam-Ram Intra Intersection Khan Na Yao, Bangkok",
+   "areaTH": "แยกสวนสยาม-รามอินทรา เขตคันนายาว, กรุงเทพฯ",
    "lat": 13.8138,
    "lon": 100.6866,
    "cc": "TH",
@@ -3928,6 +4188,8 @@
   "a4t:bkp78t": {
    "name": "Lat Krabang Hospital",
    "nameTH": "โรงพยาบาลลาดกระบัง",
+   "area": "Lat Krabang Roadside, Lat Krabang, Bangkok",
+   "areaTH": "ริมถนนลาดกระบัง เขตลาดกระบัง, กรุงเทพฯ",
    "lat": 13.7221,
    "lon": 100.7841,
    "cc": "TH",
@@ -3938,6 +4200,8 @@
   "a4t:bkp79t": {
    "name": "Chaloem Phrakiat Rama 9 Park Min buri, Bangkok",
    "nameTH": "สวนเฉลิมพระเกียรติ ร.9",
+   "area": "Sihaburanukit Roadside, Meenburi, Bangkok",
+   "areaTH": "ริมถนนสีหบุรานุกิจ เขตมีนบุรี, กรุงเทพฯ",
    "lat": 13.8136,
    "lon": 100.7321,
    "cc": "TH",
@@ -3948,6 +4212,8 @@
   "a4t:bkp80t": {
    "name": "Nong Chok District Office, Bangkok",
    "nameTH": "สำนักงานเขตหนองจอก",
+   "area": "Liap Wari Roadsire, Nong Chok, Bangkok",
+   "areaTH": "ริมถนนเลียบวารี เขตหนองจอก, กรุงเทพฯ",
    "lat": 13.8554,
    "lon": 100.8627,
    "cc": "TH",
@@ -3958,6 +4224,8 @@
   "a4t:bkp81t": {
    "name": "Seacon Square",
    "nameTH": "ซีคอน สแควร์",
+   "area": "Srinakarin Roadside, Prawet, Bangkok",
+   "areaTH": "ริมถนนศรีนครินทร์ เขตประเวศ, กรุงเทพฯ",
    "lat": 13.6956,
    "lon": 100.6476,
    "cc": "TH",
@@ -3968,6 +4236,8 @@
   "a4t:bkp82t": {
    "name": "Mahaisawan Intersection",
    "nameTH": "แยกมไหศวรรย์",
+   "area": "Ratchadaphisek Roadside, Thon Buri, Bangkok",
+   "areaTH": "ริมถนนรัชดาภิเษก-ท่าพระ เขตธนบุรี, กรุงเทพฯ",
    "lat": 13.7052,
    "lon": 100.4847,
    "cc": "TH",
@@ -3978,6 +4248,8 @@
   "a4t:bkp83t": {
    "name": "Library under King Taksin Bridge",
    "nameTH": "ห้องสมุดใต้สะพานสมเด็จพระเจ้าตากสิน",
+   "area": "Charoen Nakorn Roadside, Klong San, Bangkok",
+   "areaTH": "ริมถนนเจริญนคร เขตคลองสาน, กรุงเทพฯ",
    "lat": 13.7197,
    "lon": 100.5088,
    "cc": "TH",
@@ -3988,6 +4260,8 @@
   "a4t:bkp84t": {
    "name": "Tha phra Intersection",
    "nameTH": "สี่แยกท่าพระ",
+   "area": "Tha phra Intersection, Bangkok Yai, Bangkok",
+   "areaTH": "ริมถนนแยกท่าพระ เขตบางกอกใหญ่, กรุงเทพฯ",
    "lat": 13.7294,
    "lon": 100.4744,
    "cc": "TH",
@@ -3998,6 +4272,8 @@
   "a4t:bkp85t": {
    "name": "Bangkok Noi Train Police Station",
    "nameTH": "สถานีตำรวจรถไฟบางกอกน้อย",
+   "area": "Soi Nikhom Banphak Rodfai Thonburi5, Bangkok Noi, Bangkok",
+   "areaTH": "ริมถนนซอยนิคมบ้านพักรถไฟธนบุรี 5 เขตบางกอกน้อย, กรุงเทพฯ",
    "lat": 13.7596,
    "lon": 100.4811,
    "cc": "TH",
@@ -4008,6 +4284,8 @@
   "a4t:bkp86t": {
    "name": "Phutthamonthon 1 - Borommaratchachonnani Intersection",
    "nameTH": "ถนนพุทธมณฑลสาย 1 ตัดกับถนนบรมราชชนนี",
+   "area": "Phutthamonthon 1 Roadside, Taling Chan, Bangkok",
+   "areaTH": "ริมถนนพุทธมณฑล 1 เขตตลิ่งชัน, กรุงเทพฯ",
    "lat": 13.7808,
    "lon": 100.4267,
    "cc": "TH",
@@ -4018,6 +4296,8 @@
   "a4t:bkp87t": {
    "name": "Thon Buri Market Sanam Luang 2",
    "nameTH": "ตลาดธนบุรีสนามหลวง 2",
+   "area": "Klong Thawi Watthana Roadside, Thawi Watthana, Bangkok",
+   "areaTH": "ริมถนนคลองทวีวัฒนา เขตทวีวัฒนา, กรุงเทพฯ",
    "lat": 13.7463,
    "lon": 100.3551,
    "cc": "TH",
@@ -4028,6 +4308,8 @@
   "a4t:bkp88t": {
    "name": "Siam University",
    "nameTH": "มหาวิทยาลัยสยาม",
+   "area": "Petchkasem Roadside, Phasi Charoen, Bangkok",
+   "areaTH": "ริมถนนเพชรเกษม เขตภาษีเจริญ, กรุงเทพฯ",
    "lat": 13.7187,
    "lon": 100.4539,
    "cc": "TH",
@@ -4038,6 +4320,8 @@
   "a4t:bkp89t": {
    "name": "Ma Charean Roadside, Petcha Kasem 8, Nong Khaem",
    "nameTH": "ริมถนนมาเจริญ เพชรเกษม 8, เขตหนองแขม",
+   "area": "Ma Charean Roadside Nong Khaem, Bangkok",
+   "areaTH": "ริมถนนมาเจริญ เพชรเกษม 81 เขตหนองแขม, กรุงเทพฯ",
    "lat": 13.7056,
    "lon": 100.3432,
    "cc": "TH",
@@ -4048,6 +4332,8 @@
   "a4t:bkp90t": {
    "name": "Bang Bon 5 Market",
    "nameTH": "ตลาดบางบอน 5",
+   "area": "Ekkachai Roadside, Bang Bon, Bangkok",
+   "areaTH": "ริมถนนเอกชัย เขตบางบอน, กรุงเทพฯ",
    "lat": 13.6392,
    "lon": 100.373,
    "cc": "TH",
@@ -4058,6 +4344,8 @@
   "a4t:bkp91t": {
    "name": "King Mongkut's University of Technology Thonburi ",
    "nameTH": "มหาวิทยาลัยเทคโนโลยีพระจอมเกล้าธนบุรี",
+   "area": "Pracha Uthit Roadside, Thung Khru, Bangkok",
+   "areaTH": "ริมถนนประชาอุทิศ เขตทุ่งครุ, กรุงเทพฯ",
    "lat": 13.651,
    "lon": 100.4967,
    "cc": "TH",
@@ -4068,6 +4356,8 @@
   "a4t:bkp92t": {
    "name": "Phra Nakhon District Office, Bangkok",
    "nameTH": "สำนักงานเขตพระนคร",
+   "area": "Samsen Roadside, Phra Nakhon, Bangkok",
+   "areaTH": "ริมถนนสามเสน เขตพระนคร, กรุงเทพฯ",
    "lat": 13.7642,
    "lon": 100.4991,
    "cc": "TH",
@@ -4078,6 +4368,8 @@
   "a4t:bkp93t": {
    "name": "Huai Khwang District Office, Bangkok",
    "nameTH": "สำนักงานเขตห้วยขวาง",
+   "area": "Huai Khwang, Bangkok",
+   "areaTH": "เขตห้วยขวาง, กรุงเทพฯ",
    "lat": 13.7768,
    "lon": 100.5795,
    "cc": "TH",
@@ -4088,6 +4380,8 @@
   "a4t:bkp94t": {
    "name": "Khlong Toei District Office, Bangkok",
    "nameTH": "สำนักงานเขตคลองเตย",
+   "area": "Khlong Toei, Bangkok",
+   "areaTH": "แขวงคลองเตย เขตคลองเตย, กรุงเทพฯ",
    "lat": 13.7085,
    "lon": 100.5837,
    "cc": "TH",
@@ -4098,6 +4392,8 @@
   "a4t:bkp95t": {
    "name": "Bang Sue District Office, Bangkok",
    "nameTH": "สำนักงานเขตบางซื่อ",
+   "area": "Bang Sue, Bangkok",
+   "areaTH": "แขวงบางซื่อ เขตบางซื่อ, กรุงเทพฯ",
    "lat": 13.8096,
    "lon": 100.5379,
    "cc": "TH",
@@ -4108,6 +4404,8 @@
   "a4t:bkp96t": {
    "name": "Ladphrao District Office, Bangkok",
    "nameTH": "สำนักงานเขตลาดพร้าว",
+   "area": "Ladphrao, Bangkok",
+   "areaTH": "เขตลาดพร้าว, กรุงเทพฯ",
    "lat": 13.8036,
    "lon": 100.6075,
    "cc": "TH",
@@ -4118,6 +4416,8 @@
   "a4t:bkp97t": {
    "name": "Lak Si District Office, Bangkok",
    "nameTH": "สำนักงานเขตหลักสี่",
+   "area": "Thung Song Hong, Lak Si, Bangkok",
+   "areaTH": "แขวงทุ่งสองห้อง เขตหลักสี่, กรุงเทพฯ",
    "lat": 13.8874,
    "lon": 100.5792,
    "cc": "TH",
@@ -4128,6 +4428,8 @@
   "a4t:bkp98t": {
    "name": "Bang Khen District Office, Bangkok",
    "nameTH": "สำนักงานเขตบางเขน",
+   "area": "Phahon Yothin Roadside, Bang Khen, Bangkok",
+   "areaTH": "ริมถนนพหลโยธิน เขตบางเขน, กรุงเทพฯ",
    "lat": 13.8736,
    "lon": 100.5958,
    "cc": "TH",
@@ -4138,6 +4440,8 @@
   "a4t:bkp99t": {
    "name": "Saphan Sung District Office, Bangkok",
    "nameTH": "สำนักงานเขตสะพานสูง",
+   "area": "Saphan Sung, Bangkok",
+   "areaTH": "เขตสะพานสูง, กรุงเทพฯ",
    "lat": 13.7689,
    "lon": 100.6857,
    "cc": "TH",
@@ -4148,6 +4452,8 @@
   "a4t:bkp100t": {
    "name": "Bueng Kum District Office, Bangkok",
    "nameTH": "สำนักงานเขตบึงกุ่ม",
+   "area": "Khlong Kum, Bueng Kum, Bangkok",
+   "areaTH": "แขวงคลองกุ่ม เขตบึงกุ่ม",
    "lat": 13.7852,
    "lon": 100.6692,
    "cc": "TH",
@@ -4158,6 +4464,8 @@
   "a4t:bkp101t": {
    "name": "Khlong Sam Wa District Office, Bangkok",
    "nameTH": "สำนักงานเขตคลองสามวา",
+   "area": "Khlong Sam Wa, Bangkok",
+   "areaTH": "เขตคลองสามวา, กรุงเทพฯ",
    "lat": 13.8599,
    "lon": 100.704,
    "cc": "TH",
@@ -4168,6 +4476,8 @@
   "a4t:bkp102t": {
    "name": "Chomthong District Office, Bangkok",
    "nameTH": "สำนักงานเขตจอมทอง",
+   "area": "Chomthong, Bangkok",
+   "areaTH": "เขตจอมทอง, กรุงเทพฯ",
    "lat": 13.6778,
    "lon": 100.4839,
    "cc": "TH",
@@ -4178,6 +4488,8 @@
   "a4t:bkp103t": {
    "name": "Bang Phlat District Office, Bangkok",
    "nameTH": "สำนักงานเขตบางพลัด",
+   "area": "Charansanitwong Roadside, Bangkok",
+   "areaTH": "ริมถนนจรัญสนิทวงศ์ เขตบางพลัด, กรุงเทพฯ",
    "lat": 13.794,
    "lon": 100.505,
    "cc": "TH",
@@ -4188,6 +4500,8 @@
   "a4t:bkp104t": {
    "name": "Bang Khae District Office, Bangkok",
    "nameTH": "สำนักงานเขตบางแค",
+   "area": "Bang Khae, Bangkok",
+   "areaTH": "เขตบางแค, กรุงเทพฯ",
    "lat": 13.6963,
    "lon": 100.409,
    "cc": "TH",
@@ -4198,6 +4512,8 @@
   "a4t:bkp105t": {
    "name": "Bang Khun Thian District Office, Bangkok",
    "nameTH": "สำนักงานเขตบางขุนเทียน",
+   "area": "RamaII Roadside,  Bang Khun Thian, Bangkok",
+   "areaTH": "ริมถนนพระราม 2 เขตบางขุนเทียน, กรุงเทพฯ",
    "lat": 13.6599,
    "lon": 100.4359,
    "cc": "TH",
@@ -4208,6 +4524,8 @@
   "a4t:bkp114t": {
    "name": "Lumpini park",
    "nameTH": "สวนลุมพินี ถนนพระราม 4 แขวงวังใหม่ เขตปทุมวัน",
+   "area": "Lumpini park, Pathum Wan, Bangkok",
+   "areaTH": "สวนลุมพินี เขตปทุมวัน",
    "lat": 13.7322,
    "lon": 100.5448,
    "cc": "TH",
@@ -4218,6 +4536,8 @@
   "a4t:bkp115t": {
    "name": "Wacchirabenchatat Park",
    "nameTH": "สวนวชิรเบญจทัศ ถนนกำแพงเพชร 3 แขวงลาดยาว เขตจตุจักร",
+   "area": "Wacchirabenchatat Park, Chatuchak, Bangkok",
+   "areaTH": "สวนวชิรเบญจทัศ เขตจตุจักร",
    "lat": 13.8119,
    "lon": 100.5536,
    "cc": "TH",
@@ -4228,6 +4548,8 @@
   "a4t:bkp116t": {
    "name": "Chatuchak Park",
    "nameTH": "สวนจตุจักร ถนนพหลโยธิน แขวงจตุจักร เขตจตุจักร",
+   "area": "Chatuchak Park, Chatuchak, Bangkok",
+   "areaTH": "สวนจตุจักร เขตจตุจักร",
    "lat": 13.8025,
    "lon": 100.5509,
    "cc": "TH",
@@ -4238,6 +4560,8 @@
   "a4t:bkp117t": {
    "name": "Suan Luang Rama IX",
    "nameTH": "สวนหลวง ร.9 ถนนเฉลิมพระเกียรติ ร.9 แขวงหนองบอน เขตประเวศ",
+   "area": "Suan Luang Rama IX, Pravet, Bangkok",
+   "areaTH": "สวนหลวง ร.9 เขตประเวศ",
    "lat": 13.6881,
    "lon": 100.658,
    "cc": "TH",
@@ -4248,6 +4572,8 @@
   "a4t:bkp118t": {
    "name": "60th Anniversary of Queen Sirikit Park ,Kheha Romklao Road, Lat Krabang, Bangkok",
    "nameTH": "สวน 60 พรรษาสมเด็จพระนางเจ้าพระบรมราชินีนาถ ถนนเคหะร่มเกล้า เขตลาดกระบัง",
+   "area": "60th Anniversary of Queen Sirikit Park, Lat Krabang, Bangkok",
+   "areaTH": "สวน 60 พรรษาสมเด็จพระนางเจ้าพระบรมราชินีนาถ เขตลาดกระบัง",
    "lat": 13.7631,
    "lon": 100.7302,
    "cc": "TH",
@@ -4258,6 +4584,8 @@
   "a4t:bkp119t": {
    "name": "Benchasiri Park",
    "nameTH": "อุทยานเบญจสิริ",
+   "area": "Benchasiri Park, Klong Toei, Bangkok",
+   "areaTH": "อุทยานเบญจสิริ เขตคลองเตย",
    "lat": 13.7305,
    "lon": 100.5685,
    "cc": "TH",
@@ -4268,6 +4596,8 @@
   "a4t:bkp120t": {
    "name": "Rommani Thungsikan Park",
    "nameTH": "สวนรมณีย์ทุ่งสีกัน",
+   "area": "Rommani Thungsikan Park, Don Mueang, Bangkok",
+   "areaTH": "สวนรมณีย์ทุ่งสีกัน เขตดอนเมือง",
    "lat": 13.9289,
    "lon": 100.5685,
    "cc": "TH",
@@ -4278,6 +4608,8 @@
   "a4t:bkp121t": {
    "name": "Thonburirom Park",
    "nameTH": "สวนธนบุรีรมย์",
+   "area": "Thonburirom Park, Thung Khru, Bangkok",
+   "areaTH": "สวนธนบุรีรมย์ เขตทุ่งครุ",
    "lat": 13.6502,
    "lon": 100.491,
    "cc": "TH",
@@ -4288,6 +4620,8 @@
   "a4t:bkp122t": {
    "name": "Benjakitti Park",
    "nameTH": "สวนเบญจกิติ",
+   "area": "Benjakitti Park, Khlong Toei, Bangkok",
+   "areaTH": "สวนเบญจกิติ เขตคลองเตย",
    "lat": 13.7329,
    "lon": 100.56,
    "cc": "TH",
@@ -4298,6 +4632,8 @@
   "a4t:bkp123t": {
    "name": "Queen Sirikit Park",
    "nameTH": "สวนสมเด็จพระนางเจ้าสิริกิติ์ฯ",
+   "area": "Queen Sirikit Park, Chatuchak, Bangkok",
+   "areaTH": "สวนสมเด็จพระนางเจ้าสิริกิติ์ฯ เขตจตุจักร",
    "lat": 13.8055,
    "lon": 100.5488,
    "cc": "TH",
@@ -4308,6 +4644,8 @@
   "a4t:bkp124t": {
    "name": "80th Anniversary Commemoration Park",
    "nameTH": "สวนเฉลิมพระเกียรติ 80 พรรษา",
+   "area": "80th Anniversary Commemoration Park, Bangkok Noi, Bangkok",
+   "areaTH": "สวนเฉลิมพระเกียรติ 80 พรรษา เขตบางกอกน้อย",
    "lat": 13.7716,
    "lon": 100.4681,
    "cc": "TH",
@@ -4318,6 +4656,8 @@
   "a4t:bkp125t": {
    "name": "Serithai Park",
    "nameTH": "สวนเสรีไทย",
+   "area": "Serithai Park, Bueng Kum, Bangkok",
+   "areaTH": "สวนเสรีไทย เขตบึงกุ่ม",
    "lat": 13.7856,
    "lon": 100.6733,
    "cc": "TH",
@@ -4328,6 +4668,8 @@
   "a4t:bkp126t": {
    "name": "Bang Khae Phirom Park",
    "nameTH": "สวนบางแคภิรมย์",
+   "area": "Bang Khae Phirom Park, Bang Khae, Bangkok",
+   "areaTH": "สวนบางแคภิรมย์ เขตบางแค",
    "lat": 13.6863,
    "lon": 100.3844,
    "cc": "TH",
@@ -4338,6 +4680,8 @@
   "a4t:bkp127t": {
    "name": "Thawee Wanarom Park",
    "nameTH": "สวนทวีวนารมย์",
+   "area": "Thawee Wanarom Park, Thawi Watthana, Bangkok",
+   "areaTH": "สวนทวีวนารมย์ เขตทวีวัฒนา",
    "lat": 13.7435,
    "lon": 100.3527,
    "cc": "TH",
@@ -4348,6 +4692,8 @@
   "a4t:bkp128t": {
    "name": "Phra Nakhon Park",
    "nameTH": "สวนพระนคร",
+   "area": "Phra Nakhon Park, Lat Krabang, Bangkok",
+   "areaTH": "สวนพระนคร เขตลาดกระบัง",
    "lat": 13.7201,
    "lon": 100.7807,
    "cc": "TH",
@@ -4358,6 +4704,8 @@
   "a4t:bkp129t": {
    "name": "Nong Chok Park",
    "nameTH": "สวนหนองจอก",
+   "area": "Nong Chok Park, Nong Chok, Bangkok",
+   "areaTH": "สวนหนองจอก เขตหนองจอก",
    "lat": 13.8557,
    "lon": 100.8586,
    "cc": "TH",
@@ -4368,6 +4716,8 @@
   "a4t:bkp130t": {
    "name": "Ramintra Sports Park",
    "nameTH": "สวนกีฬารามอินทรา",
+   "area": "Ramintra Sports Park, Bang Khen, Bangkok",
+   "areaTH": "สวนกีฬารามอินทรา เขตบางเขน",
    "lat": 13.8779,
    "lon": 100.6207,
    "cc": "TH",
@@ -4378,6 +4728,8 @@
   "a4t:bkp131t": {
    "name": "Public Park to commemorate the sixth anniversary of His Majesty the King",
    "nameTH": "สวนสาธารณะเฉลิมพระเกียรติ 6 รอบพระชนมพรรษา",
+   "area": "Public Park to commemorate the sixth anniversary of His Majesty the King, Bang Kho Laem, Bangkok",
+   "areaTH": "สวนสาธารณะเฉลิมพระเกียรติ 6 รอบพระชนมพรรษา เขตบางคอแหลม",
    "lat": 13.6855,
    "lon": 100.5183,
    "cc": "TH",
@@ -4388,6 +4740,8 @@
   "a4t:bkp133t": {
    "name": "Rama VIII Park",
    "nameTH": "สวนหลวงพระราม 8",
+   "area": "Rama VIII Park, Bang Plad, Bangkok",
+   "areaTH": "สวนหลวงพระราม 8 เขตบางพลัด",
    "lat": 13.7693,
    "lon": 100.4945,
    "cc": "TH",
@@ -4398,6 +4752,8 @@
   "a4t:o10": {
    "name": "National Housing Authority Klongchan",
    "nameTH": "เคหะชุมชนคลองจั่น",
+   "area": "Klong Chan, Khet Bang Kapi, Bangkok",
+   "areaTH": "แขวงคลองจั่น, เขตบางกะปิ,กรุงเทพฯ",
    "lat": 13.7799,
    "lon": 100.646,
    "cc": "TH",
@@ -4408,6 +4764,8 @@
   "a4t:o61": {
    "name": "Laem Chabang Municipal Stadium",
    "nameTH": "สนามกีฬาเทศบาลแหลมฉบัง ",
+   "area": "Thung Sukhla, Si Racha, Chon buri",
+   "areaTH": "ต.ทุ่งสุขลา อ.ศรีราชา, ชลบุรี",
    "lat": 13.1192,
    "lon": 100.9186,
    "cc": "TH",
@@ -4418,6 +4776,8 @@
   "a4t:o69": {
    "name": "Water reservoir",
    "nameTH": "อ่างเก็บน้ำประปา",
+   "area": "Mueang, Nakhon Pathom",
+   "areaTH": "ต.นครปฐม อ.เมือง, นครปฐม",
    "lat": 13.8321,
    "lon": 100.058,
    "cc": "TH",

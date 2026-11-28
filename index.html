@@ -3023,7 +3023,7 @@ async function saveMapImage(kind,btn){
       stamp=from.replace(/-/g,'')+(want>1?'-'+to.replace(/-/g,''):'');
       meta=T('mean of the hourly analysis (model + monitors)','ค่าเฉลี่ยของค่าวิเคราะห์รายชั่วโมง (แบบจำลอง + ค่าตรวจวัด)')+` · SEA-HAF · ${T('made','สร้างภาพ')} ${dl(Date.now())}`; }
     // layout: header (logo, title, time), map, legend and credits; size from the area (equirectangular, x shrunk by cos lat)
-    const W=1600, pad=36, asp=(n-so)/((e-w)*Math.cos((so+n)/2*Math.PI/180)), mapH=Math.round(Math.min(2000,(W-2*pad)*asp)), mapW=Math.round(Math.min(W-2*pad,mapH/asp)), mx=Math.round((W-mapW)/2), head=150, foot=130; let Hh=head+mapH+foot;
+    const W=1600, pad=36, asp=(n-so)/((e-w)*Math.cos((so+n)/2*Math.PI/180)), mapH=Math.round(Math.min(2000,(W-2*pad)*asp)), mapW=Math.round(Math.min(W-2*pad,mapH/asp)), mx=Math.round((W-mapW)/2), head=150, foot=150; let Hh=head+mapH+foot;
     let cv=document.createElement('canvas'); cv.width=W; cv.height=Hh; let g=cv.getContext('2d');
     g.fillStyle='#ffffff'; g.fillRect(0,0,W,Hh);
     const logo=await new Promise(res=>{ const im=new Image(); im.onload=()=>res(im); im.onerror=()=>res(null); im.src='assets/sea-haf-logo-light.svg'; });
@@ -3031,7 +3031,7 @@ async function saveMapImage(kind,btn){
     const font=(wt,px)=>`${wt} ${px}px "Noto Sans Thai","Sarabun",system-ui,sans-serif`, tx=logo?pad+330:pad;
     g.fillStyle='#1d2321'; g.font=font(700,40); g.fillText(title+(regName_?' · '+regName_:''),tx,66,W-tx-pad);
     g.font=font(500,24); g.fillStyle='#38423e'; g.fillText(sub,tx,104,W-tx-pad);
-    g.font=font(400,18); g.fillStyle='#5d6763'; g.fillText(meta||`SEA-HAF · Southeast Asia Hybrid Air Quality Forecast · ${T('issued','ออกพยากรณ์')} ${dl(P.data.generated)}`,tx,134,W-tx-pad);
+    g.font=font(400,20); g.fillStyle='#5d6763'; g.fillText(meta||`SEA-HAF · Southeast Asia Hybrid Air Quality Forecast · ${T('issued','ออกพยากรณ์')} ${dl(P.data.generated)}`,tx,134,W-tx-pad);
     const X=lon=>mx+(lon-w)/(e-w)*mapW, Y=lat=>head+(n-lat)/(n-so)*mapH;
     g.save(); g.beginPath(); g.rect(mx,head,mapW,mapH); g.clip();
     g.fillStyle='#dfe9f1'; g.fillRect(mx,head,mapW,mapH);
@@ -3099,12 +3099,12 @@ async function saveMapImage(kind,btn){
       g.setLineDash([2*scA,3*scA]); g.strokeStyle='rgba(60,70,66,.55)'; g.lineWidth=0.8*scA; for(const f_ of t3){ geomPath(f_.geometry); g.stroke(); } g.setLineDash([]);
       g.strokeStyle='rgba(29,35,33,.85)'; g.lineWidth=1.4*scA; for(const f_ of t2){ geomPath(f_.geometry); g.stroke(); }
       if(RS){ regionPath(); g.strokeStyle='#1d2321'; g.lineWidth=2.2; g.stroke(); }
-      for(const f_ of t2){ const [lo,la]=cOf(f_); if(nameAt(admName(f_.properties,2),X(lo),Y(la),14*scA,700,'#1d2321')) nAdm++; }
-      for(const f_ of t3){ const [lo,la]=cOf(f_); nameAt(LANG==='th'?f_.properties.th:f_.properties.en,X(lo),Y(la),10.5*scA,500,'#38423e',true); }
+      for(const f_ of t2){ const [lo,la]=cOf(f_); if(nameAt(admName(f_.properties,2),X(lo),Y(la),18*scA,700,'#1d2321')) nAdm++; }
+      for(const f_ of t3){ const [lo,la]=cOf(f_); nameAt(LANG==='th'?f_.properties.th:f_.properties.en,X(lo),Y(la),13.5*scA,500,'#38423e',true); }
       shownKeys.push(['adm',T(`District (bold) and sub-district borders and names, ${provName(pv)}`,`เขตและชื่ออำเภอ (ตัวหนา) และตำบล จ.${provName(pv)}`)]);
       credits.push(T('district and sub-district borders: Royal Thai Survey Department 2022 via OCHA','เขตอำเภอและตำบล: กรมแผนที่ทหาร 2565 ผ่าน OCHA')); }
     else for(const f_ of GEO_P.features){ if(f_.properties.c!=='THA') continue; const [lo,la]=cOf(f_); if(RS&&!inRegion(la,lo)) continue;
-      if(nameAt(provLabelText(f_),X(lo),Y(la),(RS?12:10.5)*scA,600,'#38423e')) nAdm++; }
+      if(nameAt(provLabelText(f_),X(lo),Y(la),(RS?15.5:13.5)*scA,600,'#38423e')) nAdm++; }
     if(kind==='h'){ const sc=scA, INK='#1d2321';
       const each=(layer,fn)=>{ if(!map.hasLayer(layer)) return 0; let k=0; layer.eachLayer(m=>{ const ll=m.getLatLng?.(); if(ll&&ll.lng>=w&&ll.lng<=e&&ll.lat>=so&&ll.lat<=n){ if(fn(m,X(ll.lng),Y(ll.lat))!==false) k++; } }); return k; };
       const html=m=>m.options?.icon?.options?.html||'', css=(h,p)=>(new RegExp(p+':\\s*([^;"]+)').exec(h)||[])[1];
@@ -3144,7 +3144,7 @@ async function saveMapImage(kind,btn){
       // towns: their dots, and the names of the main ones (the minor town names would crowd the image; a name that would
       // overlap one already written is left out)
       const nTown=each(townLayer,(m,x,y)=>{ if(m instanceof L.CircleMarker){ const o=m.options; circ(x,y,o.radius*sc*0.8,o.fillColor,INK,1.5); return; }
-        const tt=m.getTooltip?.(); if(!tt||/minor/.test(tt.options.className||'')) return false; g.font=font(600,Math.round(13*sc)); g.fillStyle=INK; g.strokeStyle='rgba(255,255,255,.85)'; g.lineWidth=3;
+        const tt=m.getTooltip?.(); if(!tt||/minor/.test(tt.options.className||'')) return false; g.font=font(600,Math.round(17*sc)); g.fillStyle=INK; g.strokeStyle='rgba(255,255,255,.85)'; g.lineWidth=3;
         const tx_=String(tt.getContent()).replace(/<[^>]+>/g,'').replace(/&amp;/g,'&'), r_=[x+8*sc,y-10*sc,g.measureText(tx_).width,16*sc];
         if(labels.some(q=>r_[0]<q[0]+q[2]&&q[0]<r_[0]+r_[2]&&r_[1]<q[1]+q[3]&&q[1]<r_[1]+r_[3])) return false;   // no name over another
         labels.push(r_); g.strokeText(tx_,x+8*sc,y+4*sc); g.fillText(tx_,x+8*sc,y+4*sc); return false; });
@@ -3158,31 +3158,41 @@ async function saveMapImage(kind,btn){
       // warning marks (drawWarnMarks): a ring in the level's colour (solid = measured above the standard now) and the place's
       // name, drawn above the other marks; the key line explains the colours (owner, 28 Nov 2026)
       const WCOL={wl1:'#f59f00',wl2:'#e8590c',wl3:'#c92a2a'}, wLv=new Set(), wLab=[];   // warning names go over other names (only kept apart from each other)
-      const nWarn=each(warnLayer,(m,x,y)=>{ const h=html(m), lv=(/\b(wl[123])\b/.exec(h)||[])[1]; if(!lv) return false; const c=WCOL[lv], meas=/\bmeas\b/.test(h); wLv.add(lv);
+      const wPts=[]; each(warnLayer,(m,x,y)=>{ const h=html(m), lv=(/\b(wl[123])\b/.exec(h)||[])[1]; if(lv) wPts.push({m,x,y,lv,meas:/\bmeas\b/.test(h)}); return false; });
+      wPts.sort((a,b)=>b.lv.localeCompare(a.lv)||b.meas-a.meas); const wGroups=[]; for(const p_ of wPts){ const gq=wGroups.find(q=>Math.hypot(q.x-p_.x,q.y-p_.y)<28*sc); if(gq) gq.n++; else wGroups.push({...p_,n:1}); }
+      const nWarn=wPts.length; for(const q of wGroups){ const {m,x,y,lv,meas}=q, c=WCOL[lv]; wLv.add(lv); (()=>{
         circ(x,y,17*sc*0.8,c,null,0,0.22); circ(x,y,10*sc*0.8,meas?c:'#ffffff',c,3*sc*0.8); if(!meas) circ(x,y,3*sc*0.8,c,null,0);
-        const nm=m.options.title||''; if(nm){ g.font=font(700,Math.round(13*sc)); const r_=[x+14*sc,y-11*sc,g.measureText(nm).width,17*sc];
-          if(!wLab.some(q=>r_[0]<q[0]+q[2]&&q[0]<r_[0]+r_[2]&&r_[1]<q[1]+q[3]&&q[1]<r_[1]+r_[3])){ wLab.push(r_); labels.push(r_); g.lineWidth=3.5; g.strokeStyle='rgba(255,255,255,.92)'; g.fillStyle=c; g.strokeText(nm,x+14*sc,y+4*sc); g.fillText(nm,x+14*sc,y+4*sc); } } });
-      // the warning marks' legend (owner, 28 Nov 2026): a box in the lower-right corner of the map with each level present, its
-      // colour and meaning, and what solid / ring mean
-      if(nWarn){ const fs=Math.round(13*sc), lh=Math.round(fs*1.6), pd=Math.round(10*sc), r0=7*sc*0.9;
-        const rows=[['wl3',T('above 75 µg/m³ · affects health','เกิน 75 µg/m³ · มีผลกระทบต่อสุขภาพ')],['wl2',T('55–75 µg/m³ · unhealthy','55–75 µg/m³ · ไม่ดีต่อสุขภาพ')],['wl1',T('37.5–55 µg/m³ · unhealthy for sensitive groups','37.5–55 µg/m³ · เริ่มมีผลต่อกลุ่มเสี่ยง')]].filter(([k])=>wLv.has(k));
-        const head_=T('Places with a warning','พื้นที่ที่มีคำเตือน'), kinds=[[true,T('measured above the standard now','วัดได้เกินมาตรฐานแล้ว')],[false,T('forecast to exceed','พยากรณ์ว่าจะเกิน')]];
-        g.font=font(700,fs); let bw=g.measureText(head_).width; g.font=font(400,fs);
-        for(const [,t_] of rows) bw=Math.max(bw,g.measureText(t_).width+r0*2+10*sc); for(const [,t_] of kinds) bw=Math.max(bw,g.measureText(t_).width+r0*2+10*sc);
-        bw+=2*pd; const bh=pd*2+lh*(1+rows.length+kinds.length)+Math.round(4*sc), bx=mx+mapW-bw-Math.round(12*sc), by=head+mapH-bh-Math.round(12*sc);
-        g.globalAlpha=.94; g.fillStyle='#ffffff'; g.fillRect(bx,by,bw,bh); g.globalAlpha=1; g.strokeStyle='#9aa5a0'; g.lineWidth=1; g.strokeRect(bx,by,bw,bh);
-        let y=by+pd+lh*0.75; g.font=font(700,fs); g.fillStyle=INK; g.fillText(head_,bx+pd,y);
-        g.font=font(400,fs); for(const [k,t_] of rows){ y+=lh; const cx=bx+pd+r0, cy=y-fs*0.35; circ(cx,cy,r0,'#ffffff',WCOL[k],3*sc*0.8); g.fillStyle=INK; g.fillText(t_,cx+r0+8*sc,y); }
-        y+=Math.round(4*sc); for(const [solid,t_] of kinds){ y+=lh; const cx=bx+pd+r0, cy=y-fs*0.35; circ(cx,cy,r0,solid?'#5d6763':'#ffffff','#5d6763',2.5*sc*0.8); if(!solid) circ(cx,cy,2.5*sc*0.8,'#5d6763',null,0); g.fillStyle='#38423e'; g.fillText(t_,cx+r0+8*sc,y); } }
+        const nm=(m.options.title||'')+(q.n>1?T(` and ${q.n-1} more`,` และอีก ${q.n-1} แห่ง`):''); if(nm){ g.font=font(700,Math.round(17*sc)); const r_=[x+15*sc,y-14*sc,g.measureText(nm).width,22*sc];
+          if(!wLab.some(q=>r_[0]<q[0]+q[2]&&q[0]<r_[0]+r_[2]&&r_[1]<q[1]+q[3]&&q[1]<r_[1]+r_[3])){ wLab.push(r_); labels.push(r_); g.lineWidth=3.5; g.strokeStyle='rgba(255,255,255,.92)'; g.fillStyle=c; g.strokeText(nm,x+15*sc,y+6*sc); g.fillText(nm,x+15*sc,y+6*sc); } }
+        if(q.n>1){ const bx_=x+7*sc, by_=y-16*sc, t_='+'+(q.n-1); g.font=font(700,Math.round(11*sc)); const tw=g.measureText(t_).width+8*sc; g.fillStyle=c; g.beginPath(); g.roundRect?g.roundRect(bx_,by_,tw,15*sc,7*sc):g.rect(bx_,by_,tw,15*sc); g.fill(); g.fillStyle='#fff'; g.fillText(t_,bx_+4*sc,by_+11.5*sc); } })(); }
       // accuracy badges (share of hours in the right band): a small box with the number
       const nAcc=[accLayer,accLcLayer,iqLayer].reduce((k,l)=>k+each(l,(m,x,y)=>{ const h=html(m), v=(/<b>([^<]*)<\/b>/.exec(h)||[])[1], v2=(/<small>([^<]*)<\/small>/.exec(h)||[])[1]; if(!v) return false;
-        const bw=34*sc*0.8, bh=(v2?26:17)*sc*0.8, x0=x-bw/2, y0=y-(v2?31:22)*sc*0.8; g.fillStyle='#ffffff'; g.fillRect(x0,y0,bw,bh); g.strokeStyle=INK; g.lineWidth=1; g.setLineDash(/accbadge[^"]* lc/.test(h)?[3,2]:[]); g.strokeRect(x0,y0,bw,bh); g.setLineDash([]);
-        g.fillStyle=INK; g.font=font(700,Math.round(10*sc*0.8)); g.textAlign='center'; g.textBaseline='middle'; g.fillText(v,x,y0+(v2?bh*0.33:bh/2));
-        if(v2){ g.font=font(500,Math.round(9*sc*0.8)); g.fillText(v2,x,y0+bh*0.72); } g.textAlign='left'; g.textBaseline='alphabetic'; }),0);
+        const bw=44*sc*0.8, bh=(v2?32:21)*sc*0.8, x0=x-bw/2, y0=y-(v2?31:22)*sc*0.8; g.fillStyle='#ffffff'; g.fillRect(x0,y0,bw,bh); g.strokeStyle=INK; g.lineWidth=1; g.setLineDash(/accbadge[^"]* lc/.test(h)?[3,2]:[]); g.strokeRect(x0,y0,bw,bh); g.setLineDash([]);
+        g.fillStyle=INK; g.font=font(700,Math.round(13*sc*0.8)); g.textAlign='center'; g.textBaseline='middle'; g.fillText(v,x,y0+(v2?bh*0.33:bh/2));
+        if(v2){ g.font=font(500,Math.round(11.5*sc*0.8)); g.fillText(v2,x,y0+bh*0.72); } g.textAlign='left'; g.textBaseline='alphabetic'; }),0);
+      // one legend box for everything drawn on the map (owner, 28 Nov 2026), lower-right corner: a heading per layer present,
+      // each row with its symbol; the bottom key stays as the short list
+      { const fs=Math.round(17*sc), lh=Math.round(fs*1.5), pd=Math.round(12*sc), r0=9*sc*0.9, IW=r0*2+12*sc, secs=[];
+        const ring=(c,solid)=>(x,y)=>{ circ(x,y,r0,solid?c:'#ffffff',c,3*sc*0.8); if(!solid) circ(x,y,2.5*sc*0.8,c,null,0); };
+        if(nWarn) secs.push([T('Places with a warning','พื้นที่ที่มีคำเตือน'),[...[['wl3',T('above 75 µg/m³ · affects health','เกิน 75 µg/m³ · มีผลกระทบต่อสุขภาพ')],['wl2',T('55–75 µg/m³ · unhealthy','55–75 µg/m³ · ไม่ดีต่อสุขภาพ')],['wl1',T('37.5–55 µg/m³ · sensitive groups','37.5–55 µg/m³ · เริ่มมีผลต่อกลุ่มเสี่ยง')]].filter(([k])=>wLv.has(k)).map(([k,t_])=>[(x,y)=>circ(x,y,r0,'#ffffff',WCOL[k],3*sc*0.8),t_]),
+          [ring('#5d6763',true),T('solid = measured above the standard now','จุดทึบ = วัดได้เกินมาตรฐานแล้ว')],[ring('#5d6763',false),T('ring = forecast to exceed','วงแหวน = พยากรณ์ว่าจะเกิน')],[(x,y)=>{ g.fillStyle='#e8590c'; g.beginPath(); g.roundRect?g.roundRect(x-r0,y-7*sc*0.9,r0*2,14*sc*0.9,6):g.rect(x-r0,y-7,r0*2,14); g.fill(); g.fillStyle='#fff'; g.font=font(700,Math.round(10*sc)); g.textAlign='center'; g.fillText('+2',x,y+4*sc); g.textAlign='left'; },T('+n = more places close by','+n = มีพื้นที่ใกล้กันอีก n แห่ง')]]]);
+        if(nSt) secs.push([T('Monitoring stations','สถานีตรวจวัด'),[[(x,y)=>{ circ(x,y,r0+2*sc,'#f59f00',null,0); circ(x,y,r0-1*sc,'#74c69d',INK,1.2); },T('inside = measured, ring = forecast','สีด้านใน = ค่าที่วัดได้ วงนอก = ค่าพยากรณ์')],[(x,y)=>{ g.fillStyle='#74c69d'; g.fillRect(x-r0,y-r0,2*r0,2*r0); g.strokeStyle=INK; g.lineWidth=1.2; g.strokeRect(x-r0,y-r0,2*r0,2*r0); },T('other monitors: colour = measured','สถานีอื่น: สี = ค่าที่วัดได้')]]]);
+        if(nHot) secs.push([T('Satellite hotspots, last 1–2 days','จุดความร้อนจากดาวเทียม 1–2 วันล่าสุด'),[[(x,y)=>{ circ(x-4*sc,y,3*sc,'#e8590c','#7a1f00',1); circ(x+4*sc,y,6*sc,'#e8590c','#7a1f00',1); },T('larger = stronger fire (FRP)','จุดใหญ่ = ไฟแรง (FRP สูง)')]]]);
+        if(nAcc) secs.push([T('Forecast accuracy','ความแม่นยำของพยากรณ์'),[[(x,y)=>{ g.fillStyle='#fff'; g.fillRect(x-r0-3,y-8,2*r0+6,16); g.strokeStyle=INK; g.lineWidth=1; g.strokeRect(x-r0-3,y-8,2*r0+6,16); g.fillStyle=INK; g.font=font(700,Math.round(9*sc)); g.textAlign='center'; g.fillText('87%',x,y+4); g.textAlign='left'; },T('at the station, daily mean 24 h ahead, last 30 days','ที่สถานี ค่าเฉลี่ยรายวัน ล่วงหน้า 24 ชม. 30 วันล่าสุด')]]]);
+        if(nWind) secs.push([T('Wind at 10 m (Beaufort)','ลม 10 ม. (ระดับโบฟอร์ต)'),WIND_BFT.map(([mx_,c],i)=>[(x,y)=>{ g.strokeStyle=c; g.lineWidth=3; g.lineCap='round'; g.beginPath(); g.moveTo(x-r0,y); g.lineTo(x+r0,y); g.stroke(); },i===0?T(`below ${mx_} m/s`,`ต่ำกว่า ${mx_} ม./วินาที`):isFinite(mx_)?`${WIND_BFT[i-1][0]}–${mx_} ${T('m/s','ม./วินาที')}`:T(`above ${WIND_BFT[i-1][0]} m/s`,`เกิน ${WIND_BFT[i-1][0]} ม./วินาที`)])]);
+        if(nTraj) secs.push([T('Air-mass paths, height above ground','เส้นทางมวลอากาศ ความสูงจากพื้น'),[100,500,1500].map(h_=>[(x,y)=>{ g.strokeStyle=TRAJ_COL[h_]; g.lineWidth=3; g.beginPath(); g.moveTo(x-r0,y); g.lineTo(x+r0,y); g.stroke(); },`${h_} ${T('m','ม.')}`])]);
+        if(nTown) secs.push([T('Towns','เมือง'),[[(x,y)=>circ(x,y,5*sc*0.9,'#fff',INK,2),T('dot = town (colour = fire PM₂.₅)','จุด = เมือง (สี = PM₂.₅ จากไฟ)')]]]);
+        if(nHere) secs.push([T('My location','ตำแหน่งของฉัน'),[[(x,y)=>circ(x,y,r0,'#1971c2','#fff',2),T('where you are (accuracy circle)','ตำแหน่งของคุณ (วงความคลาดเคลื่อน)')]]]);
+        if(secs.length){ let bw=0; for(const [h_,rows] of secs){ g.font=font(700,fs); bw=Math.max(bw,g.measureText(h_).width); g.font=font(400,fs); for(const [,t_] of rows) bw=Math.max(bw,IW+g.measureText(t_).width); }
+          bw+=2*pd; const nl=secs.reduce((a,[,r])=>a+1+r.length,0), bh=pd*2+lh*nl+Math.round(6*sc)*(secs.length-1), bx=mx+mapW-bw-Math.round(12*sc), by=head+mapH-bh-Math.round(12*sc);
+          g.globalAlpha=.95; g.fillStyle='#ffffff'; g.fillRect(bx,by,bw,bh); g.globalAlpha=1; g.strokeStyle='#9aa5a0'; g.lineWidth=1; g.strokeRect(bx,by,bw,bh);
+          let y=by+pd; secs.forEach(([h_,rows],i)=>{ if(i){ y+=Math.round(3*sc); g.strokeStyle='#dde2df'; g.beginPath(); g.moveTo(bx+pd,y); g.lineTo(bx+bw-pd,y); g.stroke(); y+=Math.round(3*sc); }
+            y+=lh; g.font=font(700,fs); g.fillStyle=INK; g.fillText(h_,bx+pd,y-lh*0.3);
+            for(const [ic,t_] of rows){ y+=lh; g.save(); ic(bx+pd+r0,y-lh*0.3-fs*0.3); g.restore(); g.font=font(400,fs); g.fillStyle='#38423e'; g.fillText(t_,bx+pd+IW,y-lh*0.3); } }); } }
       // the backward-trajectory table (as in the place's panel: height, where the air was, fires passed), as a box in the map
       // corner that the paths cross least, so the image keeps the answer to "where is the air from?"
       const tr=CLICK?.traj; if(nTraj&&tr?.groups?.length){
-        const fs=Math.round(12.5*sc), lh=Math.round(fs*1.35), padB=Math.round(9*sc), when=new Date(tr.t0).toLocaleString(LOC(),{weekday:'short',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit',timeZone:'Asia/Bangkok'});
+        const fs=Math.round(16*sc), lh=Math.round(fs*1.35), padB=Math.round(9*sc), when=new Date(tr.t0).toLocaleString(LOC(),{weekday:'short',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit',timeZone:'Asia/Bangkok'});
         const frac=(a,h)=>`−${h} h `+(a?`${ctryName(a.iso)} (${a.n}/${a.tot})`:T('outside the map','นอกพื้นที่แผนที่'));
         const head_=T(`Air arriving ${when}, traced back ${tr.hours} h`,`อากาศที่มาถึง ${when} ย้อนหลัง ${tr.hours} ชม.`);
         const cols=[T('Height','ความสูง'),T('Air was over','อากาศอยู่เหนือ'),T('Fires passed','ไฟที่ผ่าน')];
@@ -3262,15 +3272,15 @@ async function saveMapImage(kind,btn){
     const ly=head+mapH+34, lw=LEG?Math.min(760,mapW*0.55):0;
     // what else is in the image (the layers that were switched on), in as many lines as they need (the image grows to fit)
     // each item with its symbol (owner, 28 Nov 2026: a legend for everything in the image), flowing over as many rows as needed
-    const kx=LEG?pad+lw+24:pad, kw=W-kx-pad, KI=26, KH=24, krows=[[]]; let kcur=0; g.font=font(400,15);
+    const kx=LEG?pad+lw+44:pad, kw=W-kx-pad, KI=30, KH=30, krows=[[]]; let kcur=0; g.font=font(400,19);
     for(const [key,txt] of shownKeys){ const w_=Math.min(kw,KI+g.measureText(txt).width+18); if(kcur&&kcur+w_>kw){ krows.push([]); kcur=0; } krows[krows.length-1].push([key,txt,w_]); kcur+=w_; }
-    const k0=LEG?ly+46:ly+18, extra=Math.max(0,k0+KH*(krows.length-1)-(ly+46));
+    const k0=LEG?ly+52:ly+22, extra=Math.max(0,k0+KH*(krows.length-1)-(ly+52));
     if(extra){ const c2=document.createElement('canvas'); c2.width=W; c2.height=Hh+extra; const g2=c2.getContext('2d'); g2.fillStyle='#ffffff'; g2.fillRect(0,0,W,Hh+extra); g2.drawImage(cv,0,0); cv=c2; g=g2; Hh+=extra; }
     if(LEG){ const ticks=LEG.ticks, pos=v=>{ for(let k=1;k<ticks.length;k++) if(v<=ticks[k]) return (k-1+(v-ticks[k-1])/(ticks[k]-ticks[k-1]))/(ticks.length-1); return 1; };
     for(let px=0;px<lw;px++){ const fr=px/lw, k=Math.min(ticks.length-2,Math.floor(fr*(ticks.length-1))), v=ticks[k]+(fr*(ticks.length-1)-k)*(ticks[k+1]-ticks[k])+1e-6, c=LEG.col(v);
       g.fillStyle=c?`rgb(${c[0]},${c[1]},${c[2]})`:'#eee'; g.fillRect(pad+px,ly,1,22); }
-    g.strokeStyle='#5d6763'; g.strokeRect(pad,ly,lw,22); g.fillStyle='#1d2321'; g.font=font(500,18);
-    for(const v of ticks){ const x=pad+pos(v)*lw; g.fillRect(x,ly+22,1,6); g.textAlign='center'; g.fillText(v>=1000?(v/1000)+'k':String(v),x,ly+48); g.textAlign='left'; }
+    g.strokeStyle='#5d6763'; g.strokeRect(pad,ly,lw,22); g.fillStyle='#1d2321'; g.font=font(500,22);
+    for(const v of ticks){ const x=pad+pos(v)*lw; g.fillRect(x,ly+22,1,6); g.textAlign='center'; g.fillText(v>=1000?(v/1000)+'k':String(v),x,ly+52); g.textAlign='left'; }
     g.fillText(LEG.lab,pad+lw+24,ly+18); }
     const kc=(x,y,r,f,s_,lw)=>{ g.beginPath(); g.arc(x,y,r,0,2*Math.PI); if(f){ g.fillStyle=f; g.fill(); } if(s_){ g.strokeStyle=s_; g.lineWidth=lw||1.5; g.stroke(); } };
     const keyIcon=(key,x,y)=>{ const cx=x+10; g.save(); g.setLineDash([]);   // a 20 px symbol centred at (cx, y)
@@ -3289,9 +3299,9 @@ async function saveMapImage(kind,btn){
       else if(key==='here'){ kc(cx,y,7,'#fff',null); kc(cx,y,5,cssVar('--focus')||'#1971c2',null); }
       else if(key==='miss'){ g.fillStyle='#c92a2a'; g.font=font(700,15); g.textAlign='center'; g.textBaseline='middle'; g.fillText('!',cx,y); }
       g.restore(); };
-    g.font=font(400,15); g.textBaseline='alphabetic';
-    krows.forEach((row,j)=>{ let x=kx; const y=k0+KH*j; for(const [key,txt,w_] of row){ keyIcon(key,x,y-5); g.font=font(400,15); g.fillStyle=key==='miss'?'#c92a2a':'#38423e'; g.fillText(txt,x+KI,y,w_-KI-6); x+=w_; } });
-    g.font=font(400,16); g.fillStyle='#5d6763';
+    g.font=font(400,19); g.textBaseline='alphabetic';
+    krows.forEach((row,j)=>{ let x=kx; const y=k0+KH*j; for(const [key,txt,w_] of row){ keyIcon(key,x,y-6); g.font=font(400,19); g.fillStyle=key==='miss'?'#c92a2a':'#38423e'; g.fillText(txt,x+KI,y,w_-KI-6); x+=w_; } });
+    g.font=font(400,18); g.fillStyle='#5d6763';
     g.fillText(T('Data: CAMS (Copernicus Atmosphere Monitoring Service), Air4Thai (PCD), OpenAQ, ECMWF, NASA FIRMS','ข้อมูล: CAMS (Copernicus Atmosphere Monitoring Service), Air4Thai (กรมควบคุมมลพิษ), OpenAQ, ECMWF, NASA FIRMS')+credits.map(c=>', '+c).join('')+T(' · Borders: World Bank',' · เส้นขอบ: World Bank'),pad,Hh-24,W-2*pad);
     const name=`SEA-HAF_${{rain:'rain',temp:'temperature',vent:'ventilation',fire:'PM25-fire',silam:'PM25-SILAM',unc:'uncertainty',nasa:'NASA-truecolour'}[shownMode]||'PM25'}_${kind==='h'?'hourly':'mean'}${RS?'_'+(provKey()?provKey().replace(/\s+/g,'-'):regSub()||$('region').value):''}${stamp?'_'+stamp:''}.png`;
     await new Promise(res=>cv.toBlob(bl=>{ const a=document.createElement('a'); a.href=URL.createObjectURL(bl); a.download=name; document.body.appendChild(a); a.click(); setTimeout(()=>{URL.revokeObjectURL(a.href); a.remove();},1000); res(); },'image/png'));

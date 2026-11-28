@@ -1,0 +1,4429 @@
+{
+ "note": "Station ids used in the logs of this branch. seen = last Thai date the station was in the list.",
+ "stations": {
+  "7880": {
+   "name": "Sikulpuikawn, Aizawl - Mizoram PCB",
+   "lat": 23.7176,
+   "lon": 92.7193,
+   "cc": "IN",
+   "provider": "CPCB",
+   "monitor": true,
+   "seen": "2026-11-28"
+  },
+  "225576": {
+   "name": "Khai Surasinghanat",
+   "lat": 12.6486,
+   "lon": 101.3225,
+   "cc": "TH",
+   "provider": "Air4Thai",
+   "monitor": true,
+   "seen": "2026-11-28"
+  },
+  "351927": {
+   "name": "Le Thai Community Park",
+   "lat": 17.0061,
+   "lon": 99.8193,
+   "cc": "TH",
+   "provider": "Air4Thai",
+   "monitor": true,
+   "seen": "2026-11-28"
+  },
+  "387511": {
+   "name": "Wiang Subdistrict Disaster Prevention and Mitigation Center",
+   "lat": 20.2575,
+   "lon": 100.4025,
+   "cc": "TH",
+   "provider": "Air4Thai",
+   "monitor": true,
+   "seen": "2026-11-28"
+  },
+  "387660": {
+   "name": "Mueang Na Subdistrict Municipality Office",
+   "lat": 19.5939,
+   "lon": 98.9617,
+   "cc": "TH",
+   "provider": "Air4Thai",
+   "monitor": true,
+   "seen": "2026-11-28"
+  },
+  "388962": {
+   "name": "Li District Office",
+   "lat": 17.8022,
+   "lon": 98.9497,
+   "cc": "TH",
+   "provider": "Air4Thai",
+   "monitor": true,
+   "seen": "2026-11-28"
+  },
+  "1235990": {
+   "name": "Kasetsart university laboratory school 1, Chatuchak, Bangkok",
+   "lat": 13.8508,
+   "lon": 100.5688,
+   "cc": "TH",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "1235999": {
+   "name": "NARIT ASTROPARK (Parking)",
+   "lat": 18.8535,
+   "lon": 98.9576,
+   "cc": "TH",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "1236013": {
+   "name": "Soemngamwitthayakhom School 2, Some-Ngam, Lampang",
+   "lat": 18.2798,
+   "lon": 99.4805,
+   "cc": "TH",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "1236024": {
+   "name": "สันโป่ง",
+   "lat": 18.9375,
+   "lon": 98.9567,
+   "cc": "TH",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "1236034": {
+   "name": "Watkhemapirataram school 1, Mueang, Nonthaburi",
+   "lat": 13.8233,
+   "lon": 100.5034,
+   "cc": "TH",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "1236035": {
+   "name": "Pathumthep witthayakarn school 1, Mueang, Nong Khai",
+   "lat": 17.8664,
+   "lon": 102.7481,
+   "cc": "TH",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "1236050": {
+   "name": "Prem Tinsulanonda International School 1",
+   "lat": 18.9626,
+   "lon": 98.9156,
+   "cc": "TH",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "1641558": {
+   "name": "Prem Tinsulanonda International School 2",
+   "lat": 18.9665,
+   "lon": 98.9151,
+   "cc": "TH",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "1646752": {
+   "name": "ดาดฟ้า",
+   "lat": 18.9326,
+   "lon": 98.9645,
+   "cc": "TH",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "2124016": {
+   "name": "Wiang Nuea Beverly Hills Goat Farm",
+   "lat": 19.3856,
+   "lon": 98.4597,
+   "cc": "TH",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "2142493": {
+   "name": "Wiang Nuea Beverly Hills Hua Chang Dam",
+   "lat": 19.3839,
+   "lon": 98.4648,
+   "cc": "TH",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "2142801": {
+   "name": "Wiang Nuea: Wat Phra Phutthabat",
+   "lat": 19.3911,
+   "lon": 98.4535,
+   "cc": "TH",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "2147304": {
+   "name": "Tin That",
+   "lat": 19.3172,
+   "lon": 98.4394,
+   "cc": "TH",
+   "provider": "N/A",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "2151718": {
+   "name": "Wiang Nuea Moat",
+   "lat": 19.3748,
+   "lon": 98.4454,
+   "cc": "TH",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "2158149": {
+   "name": "Pai: Dr. Neung Clinic near PTT gas station",
+   "lat": 19.3555,
+   "lon": 98.4367,
+   "cc": "TH",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "2161292": {
+   "name": "Số 46, phố Lưu Quang Vũ",
+   "lat": 21.0152,
+   "lon": 105.7999,
+   "cc": "VN",
+   "provider": "Hanoi Air Quality Monitoring Network",
+   "monitor": true,
+   "seen": "2026-11-28"
+  },
+  "2161306": {
+   "name": "Minh Khai - Bắc Từ Liêm",
+   "lat": 21.05,
+   "lon": 105.74,
+   "cc": "VN",
+   "provider": "Hanoi Air Quality Monitoring Network",
+   "monitor": true,
+   "seen": "2026-11-28"
+  },
+  "2165656": {
+   "name": "Mae Yen: Ing Doi Guesthouse",
+   "lat": 19.3559,
+   "lon": 98.4487,
+   "cc": "TH",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "2181641": {
+   "name": "ทองหล่อ 8",
+   "lat": 13.7316,
+   "lon": 100.5834,
+   "cc": "TH",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "2327978": {
+   "name": "Mae Hi: Pittalew Art Gallery",
+   "lat": 19.3448,
+   "lon": 98.4533,
+   "cc": "TH",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "2340282": {
+   "name": "Paina Paita Home (near Coffee In Love)",
+   "lat": 19.3368,
+   "lon": 98.4322,
+   "cc": "TH",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "2375197": {
+   "name": "Mae Khong Border Patrol",
+   "lat": 19.3856,
+   "lon": 98.4371,
+   "cc": "TH",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "2384279": {
+   "name": "Mae Na Toeng School",
+   "lat": 19.3938,
+   "lon": 98.4211,
+   "cc": "TH",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "2384280": {
+   "name": "Wiang Nuea Moo 8 Mayor",
+   "lat": 19.3793,
+   "lon": 98.4455,
+   "cc": "TH",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "2393909": {
+   "name": "Pai: NT/TOT office near Pai Hospital",
+   "lat": 19.3621,
+   "lon": 98.4376,
+   "cc": "TH",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "2439091": {
+   "name": "Wiang Nuea: Mon Far Pai Cottages",
+   "lat": 19.3698,
+   "lon": 98.45,
+   "cc": "TH",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "2439859": {
+   "name": "Wat Mo Paeng",
+   "lat": 19.3797,
+   "lon": 98.3965,
+   "cc": "TH",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "2461311": {
+   "name": "The Mud House by CMG",
+   "lat": 18.7071,
+   "lon": 98.9153,
+   "cc": "TH",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "2510432": {
+   "name": "Pa Yang School",
+   "lat": 19.3956,
+   "lon": 98.387,
+   "cc": "TH",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "2523394": {
+   "name": "Pai Immigration ",
+   "lat": 19.3617,
+   "lon": 98.439,
+   "cc": "TH",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "2575375": {
+   "name": "สันโป่ง",
+   "lat": 18.942,
+   "lon": 98.9429,
+   "cc": "TH",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "2692436": {
+   "name": "Soi Naradhiwas Rajanagarindra 17/1",
+   "lat": 13.7142,
+   "lon": 100.5346,
+   "cc": "TH",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "2692642": {
+   "name": "Suriya Thep Alley",
+   "lat": 13.7494,
+   "lon": 100.4769,
+   "cc": "TH",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "2692644": {
+   "name": "Kiak Kai Intersection",
+   "lat": 13.797,
+   "lon": 100.5223,
+   "cc": "TH",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "2692645": {
+   "name": "Vibhavadi Rangsit 11 Alley Lane 10",
+   "lat": 13.8246,
+   "lon": 100.5503,
+   "cc": "TH",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "2739142": {
+   "name": "MSK Talat",
+   "lat": 16.1033,
+   "lon": 103.1733,
+   "cc": "TH",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "2811482": {
+   "name": "โรงเรียนบ้านซำแฮด",
+   "lat": 14.8517,
+   "lon": 102.9101,
+   "cc": "TH",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "2811595": {
+   "name": "โรงเรียนบ้านสันดาบ",
+   "lat": 13.5387,
+   "lon": 100.347,
+   "cc": "TH",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "2813904": {
+   "name": "โรงเรียนวัดจันเสน",
+   "lat": 15.1178,
+   "lon": 100.4592,
+   "cc": "TH",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "2813975": {
+   "name": "โรงเรียนบ้านเกาะยวน",
+   "lat": 6.8727,
+   "lon": 99.808,
+   "cc": "TH",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "2821337": {
+   "name": "โรงเรียนผ่านศึกสงเคราะห์ 2",
+   "lat": 20.1738,
+   "lon": 100.0637,
+   "cc": "TH",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "2827389": {
+   "name": "Saraphi, Chiang Mai",
+   "lat": 18.6909,
+   "lon": 99.0472,
+   "cc": "TH",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "2827395": {
+   "name": "โรงเรียนแวงพิทยาคม",
+   "lat": 17.4277,
+   "lon": 103.6187,
+   "cc": "TH",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "2827396": {
+   "name": "โรงเรียนเสริมงามวิทยาคม",
+   "lat": 18.0504,
+   "lon": 99.2335,
+   "cc": "TH",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "2832600": {
+   "name": "โรงเรียนเสริมขวาวิทยา",
+   "lat": 18.129,
+   "lon": 99.2021,
+   "cc": "TH",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "2843720": {
+   "name": "โรงเรียนราชประชานุเคราะห์ 56",
+   "lat": 18.5561,
+   "lon": 100.7191,
+   "cc": "TH",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "2843723": {
+   "name": "โรงเรียนชุมชนวัดเขาไม้แก้ว",
+   "lat": 12.9499,
+   "lon": 101.0364,
+   "cc": "TH",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "2843771": {
+   "name": "โรงเรียนบ้านน้อยห้วยรินวิทยา",
+   "lat": 18.0271,
+   "lon": 98.6635,
+   "cc": "TH",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "2847191": {
+   "name": "โรงเรียนบ้านกาศประชานุเคราะห์",
+   "lat": 18.0828,
+   "lon": 100.1728,
+   "cc": "TH",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "2847196": {
+   "name": "โรงเรียนวัดกระเฉท",
+   "lat": 12.7557,
+   "lon": 101.2239,
+   "cc": "TH",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "2847198": {
+   "name": "โรงเรียนบ้านหนองป่าก่อ",
+   "lat": 20.1721,
+   "lon": 100.115,
+   "cc": "TH",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "2848810": {
+   "name": "International School Bangkok - Nonthaburi ",
+   "lat": 13.8929,
+   "lon": 100.5258,
+   "cc": "TH",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "2894459": {
+   "name": "โรงเรียนลพบุรีปัญญานุกูล",
+   "lat": 14.783,
+   "lon": 100.6474,
+   "cc": "TH",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "2909413": {
+   "name": "Soi Bumrungsin ",
+   "lat": 13.4055,
+   "lon": 100.9876,
+   "cc": "TH",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "2926254": {
+   "name": "โรงเรียนบ้านวังลุง",
+   "lat": 18.1773,
+   "lon": 98.611,
+   "cc": "TH",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "2927999": {
+   "name": "โรงเรียนราชประชานุเคราะห์ 46",
+   "lat": 15.185,
+   "lon": 100.1248,
+   "cc": "TH",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "3019320": {
+   "name": "Rangsit - Nakhon Nayok 25",
+   "lat": 13.9906,
+   "lon": 100.6352,
+   "cc": "TH",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "3047340": {
+   "name": "Maerim, Chiangmai",
+   "lat": 18.9326,
+   "lon": 98.949,
+   "cc": "TH",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "3090636": {
+   "name": "Uno Solutions",
+   "lat": 13.8499,
+   "lon": 100.6386,
+   "cc": "TH",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "3097120": {
+   "name": "Circle Living Prototype",
+   "lat": 13.7506,
+   "lon": 100.5562,
+   "cc": "TH",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "3133267": {
+   "name": "NASA GSFC Rutgers Calib. N17",
+   "lat": 13.8192,
+   "lon": 100.041,
+   "cc": "TH",
+   "provider": "Clarity",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "3203249": {
+   "name": "Supalai Lake Ville Phuket",
+   "lat": 7.9682,
+   "lon": 98.3782,
+   "cc": "TH",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "3276359": {
+   "name": "CMT8",
+   "lat": 10.7853,
+   "lon": 106.6703,
+   "cc": "VN",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "3332045": {
+   "name": "Soi Ramintra 62",
+   "lat": 13.8306,
+   "lon": 100.669,
+   "cc": "TH",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "3400922": {
+   "name": "Wang Pring Teen Na บ้านวังปริง-ตีนนา ",
+   "lat": 6.8017,
+   "lon": 100.4934,
+   "cc": "TH",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "3400935": {
+   "name": "MI Home",
+   "lat": 13.6986,
+   "lon": 100.596,
+   "cc": "TH",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "3400936": {
+   "name": "Thung Hua Sinn Group",
+   "lat": 13.6989,
+   "lon": 100.5967,
+   "cc": "TH",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "3400937": {
+   "name": "Khlong 3 - Lat Sawai",
+   "lat": 13.9449,
+   "lon": 100.667,
+   "cc": "TH",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "3400941": {
+   "name": "Neighbour Home",
+   "lat": 13.9135,
+   "lon": 100.6843,
+   "cc": "TH",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "3400955": {
+   "name": "Ban Lat Sombun",
+   "lat": 17.0747,
+   "lon": 103.9818,
+   "cc": "TH",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "3400984": {
+   "name": "Kok Roka",
+   "lat": 11.597,
+   "lon": 104.8038,
+   "cc": "KH",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "3400986": {
+   "name": "Chomphet Secondary School - Sisattanak, Vientiane Capital ມັດທະຍົມສົມບູນ ຈອມເພັດ",
+   "lat": 17.9103,
+   "lon": 102.6227,
+   "cc": "LA",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "3401031": {
+   "name": "Royce Private",
+   "lat": 13.7409,
+   "lon": 100.5662,
+   "cc": "TH",
+   "provider": "N/A",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "3402586": {
+   "name": "TPN FlexPak",
+   "lat": 13.5865,
+   "lon": 100.9507,
+   "cc": "TH",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "3405765": {
+   "name": "Civil Engineering, NPIC",
+   "lat": 11.5977,
+   "lon": 104.8,
+   "cc": "KH",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "3412669": {
+   "name": "Don Wai, Nong Khai",
+   "lat": 17.8001,
+   "lon": 102.6744,
+   "cc": "TH",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "3478630": {
+   "name": "Santiphab Secondary School - Luangprabang, Luangprabang ມັດທະຍົມ ສັນຕິພາບ",
+   "lat": 19.8803,
+   "lon": 102.1398,
+   "cc": "LA",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "3478631": {
+   "name": "Thaphabath Secondary School - Thaphabath, Bolikhamxai",
+   "lat": 18.3568,
+   "lon": 103.1981,
+   "cc": "LA",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "3493785": {
+   "name": "PakXeng Secondary School - PakXeng, Luangprabang ມັດທະຍົມສົມບູນ ປາກແຊງ",
+   "lat": 20.1745,
+   "lon": 102.6757,
+   "cc": "LA",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "3493786": {
+   "name": "Thakhek - Khammouan ",
+   "lat": 17.3927,
+   "lon": 104.8075,
+   "cc": "LA",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "3493787": {
+   "name": "Xebangfay Secondary School - Xebangfay, Khammouane ມັດທະຍົມສົມບູນ ເຊບັ້ງໄຟ",
+   "lat": 17.0861,
+   "lon": 104.9816,
+   "cc": "LA",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "3499026": {
+   "name": "Phoukhoune Secondary School - Phoukhoune, Luangprabang ມັດທະຍົມ ພູຄູນ",
+   "lat": 19.4388,
+   "lon": 102.428,
+   "cc": "LA",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "3501135": {
+   "name": "Tonpheung Secondary School - Tonpheung, Bokeo  ມັດທະຍົມ ຕົ້ນເຜີ້ງ",
+   "lat": 20.2924,
+   "lon": 100.0986,
+   "cc": "LA",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "3501136": {
+   "name": "Paktha - Bokeo",
+   "lat": 20.1054,
+   "lon": 100.5973,
+   "cc": "LA",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "3501137": {
+   "name": "Phonxay Secpondary School - Phonxay, Luangprabang ມັດທະຍົມສົມບູນ ເມືອງໂພນໄຊ",
+   "lat": 19.9589,
+   "lon": 102.5723,
+   "cc": "LA",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "3503722": {
+   "name": "Nampook Secondary School - Huoixai, Bokeo ມັດທະຍົມສົມບູນ ນ້ຳປຸກ",
+   "lat": 20.2178,
+   "lon": 100.5654,
+   "cc": "LA",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "3503723": {
+   "name": "Pakkading - Bolikhamxai ",
+   "lat": 18.1099,
+   "lon": 104.2813,
+   "cc": "LA",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "3503724": {
+   "name": "Nakhonxay Secondary School - Khamkeuth, - Borikhamxai ມັດທະຍົມ ນະຄອນໄຊ",
+   "lat": 18.1856,
+   "lon": 104.984,
+   "cc": "LA",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "3503725": {
+   "name": "Nhommalath - Khammouan ",
+   "lat": 17.6142,
+   "lon": 105.1703,
+   "cc": "LA",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "3510962": {
+   "name": "Viengthong - Bolikhamxai",
+   "lat": 18.5124,
+   "lon": 104.4428,
+   "cc": "LA",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "3510963": {
+   "name": "Nongbok - Khammouan",
+   "lat": 16.9624,
+   "lon": 104.8116,
+   "cc": "LA",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "3510964": {
+   "name": "Lamarm - Sekong ",
+   "lat": 15.3525,
+   "lon": 106.7224,
+   "cc": "LA",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "3510965": {
+   "name": "Pak Ou Secondary School - Luangprabang ມັດທະຍົມສົມບູນ ປາກອູ",
+   "lat": 20.0876,
+   "lon": 102.2566,
+   "cc": "LA",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "3511463": {
+   "name": "Ngoi Secondary School - Ngoi, Luangprabang ມັດທະຍົມ ເມືອງງອຍ",
+   "lat": 20.569,
+   "lon": 102.6094,
+   "cc": "LA",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "3513587": {
+   "name": "Namthuam Secondary School - Nambark, Luangprabang ມັດທະຍົມສົມບູນ ນ້ຳຖ້ວມ",
+   "lat": 20.4964,
+   "lon": 102.3575,
+   "cc": "LA",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "3524548": {
+   "name": "Natoon Secondary School - Khua, Phongsaly ມັດທະຍົມສົມບູນ ນາຕູ່ນ",
+   "lat": 21.0789,
+   "lon": 102.5058,
+   "cc": "LA",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "3524550": {
+   "name": "NamOn Secondary School - Xaychamphone, Borikhamxai ມັດທະຍົມ ນຳ້ອ້ອນ",
+   "lat": 18.5776,
+   "lon": 104.9819,
+   "cc": "LA",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "3524551": {
+   "name": "Mahaxay - Khammouan",
+   "lat": 17.4574,
+   "lon": 105.1602,
+   "cc": "LA",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "3524552": {
+   "name": "Hinboon Secondary School - Hinboon, Khammouane ມັດທະຍົມສົມບູນ ຫີນບູນ",
+   "lat": 17.7219,
+   "lon": 104.5817,
+   "cc": "LA",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "3524553": {
+   "name": "Thateng -Sekong",
+   "lat": 15.434,
+   "lon": 106.3824,
+   "cc": "LA",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "3527752": {
+   "name": "Sanam Sai, Pong Ta Long, Pak Chong",
+   "lat": 14.5598,
+   "lon": 101.5007,
+   "cc": "TH",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "3539279": {
+   "name": "Viengkham Secondary School - Viengkham, Luangprabang ມັດທະຍົມສົມບູນ ວຽງຄຳ",
+   "lat": 20.4657,
+   "lon": 102.8814,
+   "cc": "LA",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "3539280": {
+   "name": "Longsane Secondary School - Longsane , Xaysomboun ມັດທະຍົມສົມບຸນ ລ້ອງຊານ",
+   "lat": 18.5501,
+   "lon": 103.0031,
+   "cc": "LA",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "3539838": {
+   "name": "Phasang Secondary School - Fueng, Vientiane Province ມັດທະຍົມ ຜາສັງ",
+   "lat": 18.4734,
+   "lon": 101.9791,
+   "cc": "LA",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "3553302": {
+   "name": "Municipality Secondary School - Namtha, Luangnamtha ມັດທະຍົມສົມບູນ ເທດສະບານ",
+   "lat": 21.0017,
+   "lon": 101.403,
+   "cc": "LA",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "3553303": {
+   "name": "Vangxieng Secondary School - Phonthong, Luangprabang ມັດທະຍົມ ວັງຊຽງ",
+   "lat": 20.7377,
+   "lon": 103.0732,
+   "cc": "LA",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "3553304": {
+   "name": "Ekaphab Secondary School - Xayabury, Xayabury ມັດທະຍົມ ເອກະພາບ",
+   "lat": 19.2376,
+   "lon": 101.7148,
+   "cc": "LA",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "3553305": {
+   "name": "Xaysomboun Secondary School - Anouvong, Xaysomboun ມັດທະຍົມສົມບູນ ໄຊສົມບູນ",
+   "lat": 18.9047,
+   "lon": 103.0943,
+   "cc": "LA",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "3560430": {
+   "name": "Parkton Secondary School - Sangthong, Vientiane Capital ມັດທະຍົມ ປາກຕອນ",
+   "lat": 18.0948,
+   "lon": 102.2789,
+   "cc": "LA",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "3560431": {
+   "name": "Kenethao Secondary School - Kenethao, Xayabury ມັດທະຍົມສົມບຸນ ແກ່ນທ້າວ",
+   "lat": 17.7406,
+   "lon": 101.4035,
+   "cc": "LA",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "3560513": {
+   "name": "Chomphet Seconbdary School - Khoune, Xiengkhuang ມັດທະຍົມ ຈອມເພັດ",
+   "lat": 19.341,
+   "lon": 103.3714,
+   "cc": "LA",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "3560514": {
+   "name": "Phameuang Secondary School - Bolikhanh, Borikhamxay ມັດທະຍົມ ຜາເມືອງ",
+   "lat": 18.7468,
+   "lon": 103.6882,
+   "cc": "LA",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "3561013": {
+   "name": "Sithanaxay Secondary School - Parkxane, Borikhamxay ມັດທະຍົມສົົມບູນ ສີທ່ານາໄຊ",
+   "lat": 18.4037,
+   "lon": 103.6891,
+   "cc": "LA",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "3562555": {
+   "name": "Nan Secondary School - Nan, Luangprabang ມັດທະຍົມ ເມືອງນານ",
+   "lat": 19.4985,
+   "lon": 101.8839,
+   "cc": "LA",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "3562556": {
+   "name": "Viengxay Secondary School - Viengxay, Houaphan ມັດທະຍົມສົມບູນ ເມືອງວຽງໄຊ",
+   "lat": 20.4054,
+   "lon": 104.2212,
+   "cc": "LA",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "3562557": {
+   "name": "Lardkhai Secondary School - Phaxay, Xiengkhouang ມັດທະຍົມ ລາດຄ້າຍ",
+   "lat": 19.2992,
+   "lon": 103.1334,
+   "cc": "LA",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "3567155": {
+   "name": "Mayparkngum - Vientiane Capital",
+   "lat": 18.1852,
+   "lon": 103.0569,
+   "cc": "LA",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "3567156": {
+   "name": "May - Phongsaly",
+   "lat": 21.1726,
+   "lon": 102.7227,
+   "cc": "LA",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "3567157": {
+   "name": "Nalae - Louangnamtha",
+   "lat": 20.5366,
+   "lon": 101.4475,
+   "cc": "LA",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "3567158": {
+   "name": "Pha Oudom - Bokeo",
+   "lat": 20.0862,
+   "lon": 100.8317,
+   "cc": "LA",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "3567159": {
+   "name": "Phonhong - Vientiane",
+   "lat": 18.35,
+   "lon": 102.4242,
+   "cc": "LA",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "3567160": {
+   "name": "Songkhone - Savannakhet",
+   "lat": 16.2372,
+   "lon": 105.1965,
+   "cc": "LA",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "3567161": {
+   "name": "Saravane Secondary School -Saravane, Saravane ມັດທະຍົມສົມບູນ ສາລະວັນ",
+   "lat": 15.7079,
+   "lon": 106.4222,
+   "cc": "LA",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "3572812": {
+   "name": "Bountay Secondary School - Bountay, Phongsaly ມັດທະຍົມ ບຸນໄຕ້",
+   "lat": 21.3875,
+   "lon": 101.9792,
+   "cc": "LA",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "3572813": {
+   "name": "Xay Secondary School - Xay, Oudomxay ມັດທະຍົມ ເທດສະບານແຂວງ",
+   "lat": 20.7003,
+   "lon": 101.9919,
+   "cc": "LA",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "3572814": {
+   "name": "Dakcheung Secondary School - Dakcheung, Sekongມັດທະຍົມສົມບູນ ດາກຈຶງ",
+   "lat": 15.4675,
+   "lon": 107.2715,
+   "cc": "LA",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "3585655": {
+   "name": "Thongmixay Secondary School - Thongmixay, Xayabouly ມັດທະຍົມສົມບູນ ທົ່ງມີໄຊ",
+   "lat": 18.3982,
+   "lon": 101.1736,
+   "cc": "LA",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "3585656": {
+   "name": "NamNgeun Secondary School - Ngeun, Xayabouly ມັດທະຍົມສົມບູນ ນ້ຳເງິນ",
+   "lat": 19.6199,
+   "lon": 101.1124,
+   "cc": "LA",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "3585657": {
+   "name": "Parkthang Secondary School - Thoulakhom, Vientiane Province ມັດທະຍົມສົມບູນ ປາກທາງ",
+   "lat": 18.3392,
+   "lon": 102.6609,
+   "cc": "LA",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "3585658": {
+   "name": "Longcheng Secondary School - Longcheng, Xaysomboun ມັດທະຍົມສົມບູນ ລ້ອງແຈ້ງ",
+   "lat": 19.1093,
+   "lon": 102.9216,
+   "cc": "LA",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "3587757": {
+   "name": "OuTai Secondary School - NhotOu, Phongsaly ມັດທະຍົມສົມບູນ ອູໄຕ້",
+   "lat": 22.1321,
+   "lon": 101.8017,
+   "cc": "LA",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "3591604": {
+   "name": "Meung - Bokeo",
+   "lat": 20.5657,
+   "lon": 100.592,
+   "cc": "LA",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "3591605": {
+   "name": "BouamNgam Secondary School - Huameuang, Houaphan  ມັດທະຍົມ ບວມງາມ",
+   "lat": 20.1995,
+   "lon": 103.8752,
+   "cc": "LA",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "3591606": {
+   "name": "Parklai - Xaignabouly",
+   "lat": 18.2208,
+   "lon": 101.4057,
+   "cc": "LA",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "3591607": {
+   "name": "Napa Secondary School - Kham, Xiengkhouang ມັດທະຍົມ ນາປາ",
+   "lat": 19.5906,
+   "lon": 103.6624,
+   "cc": "LA",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "3591609": {
+   "name": "Vangvieng - Vientiane",
+   "lat": 18.8555,
+   "lon": 102.5297,
+   "cc": "LA",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "3591610": {
+   "name": "Toomlarn Secondary School - Toomlarn, Saravane ມັດທະຍົມສົມບູນ ຕຸ້ມລານ",
+   "lat": 15.9945,
+   "lon": 106.1924,
+   "cc": "LA",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "3591611": {
+   "name": "Lao Ngarm - Salavan",
+   "lat": 15.4611,
+   "lon": 106.1617,
+   "cc": "LA",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "3597971": {
+   "name": "Xamneua - Houaphan",
+   "lat": 20.4138,
+   "lon": 104.0507,
+   "cc": "LA",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "3597972": {
+   "name": "Xamtay - Houaphan",
+   "lat": 19.9992,
+   "lon": 104.6401,
+   "cc": "LA",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "3597974": {
+   "name": " Viengthong Secondary School - Hiem, Houaphan ມັດທະຍົມ ວຽງທອງ",
+   "lat": 20.0999,
+   "lon": 103.3804,
+   "cc": "LA",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "3597975": {
+   "name": "Kuan Secondary School - Kuan, Houaphan ມັດທະຍົມສົມບູນ ກັວນ",
+   "lat": 19.8359,
+   "lon": 104.5613,
+   "cc": "LA",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "3597976": {
+   "name": "Hongsa Secondary School - Hongsa, Xaignabouly ມັດທະຍົມສົມບູນ ຫົງສາ",
+   "lat": 19.7069,
+   "lon": 101.3429,
+   "cc": "LA",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "3597978": {
+   "name": "KeoKou Secondary School - KeoOudom, Vientiane Province ມັດທະຍົມສົມບູນ ແກ້ວກູ່",
+   "lat": 18.5549,
+   "lon": 102.5028,
+   "cc": "LA",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "3597979": {
+   "name": "Nakay - Khammouan",
+   "lat": 17.6982,
+   "lon": 105.1674,
+   "cc": "LA",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "3599598": {
+   "name": "Add Secondary School - Add, Houaphan ມັດທະຍົມ ແອດ",
+   "lat": 20.8205,
+   "lon": 104.0046,
+   "cc": "LA",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "3599599": {
+   "name": "Xiengkhor - Houaphan",
+   "lat": 20.8139,
+   "lon": 104.1467,
+   "cc": "LA",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "3599600": {
+   "name": "Kasy Secondary School - Kasy, Vientiane Province ມັດທະຍົມສົມບູນ ກາສີ",
+   "lat": 19.225,
+   "lon": 102.2522,
+   "cc": "LA",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "3600181": {
+   "name": "Mad - Vientiane",
+   "lat": 18.4489,
+   "lon": 101.7632,
+   "cc": "LA",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "3600182": {
+   "name": "Xaybuly - Savannakhet",
+   "lat": 17.0752,
+   "lon": 104.8773,
+   "cc": "LA",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "3600183": {
+   "name": "Vapy Secondary School - Vapy, Saravane ມັດທະຍົມສົມບູນ ວາປີ",
+   "lat": 15.6974,
+   "lon": 106.0747,
+   "cc": "LA",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "3600716": {
+   "name": "Sopbao Secondary School - Sopbao, Houaphan ມັດທະຍົມ ສົບເບົາ",
+   "lat": 20.7102,
+   "lon": 104.3849,
+   "cc": "LA",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "3602359": {
+   "name": "Nonghed - Xiengkhouang",
+   "lat": 19.4966,
+   "lon": 103.9861,
+   "cc": "LA",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "3612960": {
+   "name": "Naxaithong Secondary School - Naxaithong, Vientiane Capital ມັດທະຍົມ ນາຊາຍທອງ",
+   "lat": 18.0686,
+   "lon": 102.5359,
+   "cc": "LA",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "3612961": {
+   "name": "Long Secondary School - Long, LuangNamtha ມັດທະຍົມສົມບູນ ເມືອງລອງ",
+   "lat": 20.962,
+   "lon": 100.8211,
+   "cc": "LA",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "3612962": {
+   "name": "Sing Secondary School - Sing, LuangNamtha ມັດທະຍົມສົມບູນ ເມືອງສິງ",
+   "lat": 21.1902,
+   "lon": 101.1449,
+   "cc": "LA",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "3612963": {
+   "name": "Nongtang Secondary School - Phookood, Xiengkhuang ມັດທະຍົມ ໜອງຕັ່ງ",
+   "lat": 19.5206,
+   "lon": 102.8848,
+   "cc": "LA",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "3612964": {
+   "name": "Xanakharm Secondary School - Xanakharm, Vieniane Province ມັດທະຍົມສົບຸນ ຊະນະຄາມ",
+   "lat": 17.9102,
+   "lon": 101.6707,
+   "cc": "LA",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "3612965": {
+   "name": "Phonmi Secondary School - Viengkham, Vientiane Province ມັດທະຍົມສົມບຸນ ໂພນໝີ",
+   "lat": 18.4845,
+   "lon": 102.4859,
+   "cc": "LA",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "3612966": {
+   "name": "Phoummachedy Secondary School - Xayphouthong, Savannakhet ມັດທະຍົມ ພູມມະເຈດີ",
+   "lat": 16.367,
+   "lon": 105.0057,
+   "cc": "LA",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "3624137": {
+   "name": "Kaleum Secondary School - Kaleum, Sekong ມັດທະຍົມ ກະລຶມ",
+   "lat": 15.7844,
+   "lon": 106.9068,
+   "cc": "LA",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "3658671": {
+   "name": "Chansavang Secondary School - Sikhottabong, Vientiane Capital ມັດທະຍົມ ຈັນສະຫວ່າງ",
+   "lat": 18.0241,
+   "lon": 102.5207,
+   "cc": "LA",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "3663294": {
+   "name": "Lakhonesy Secondary School - Lakhonepheng, Saravane ມັດທະຍົມສົມບູນ ລະຄອນສີ",
+   "lat": 15.8912,
+   "lon": 105.5671,
+   "cc": "LA",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "3684608": {
+   "name": "Sathit Secondary School - Xaythani, Vientiane Capital ມັດທະຍົມ ສາທິດ",
+   "lat": 18.0352,
+   "lon": 102.6399,
+   "cc": "LA",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "3684609": {
+   "name": "Naxay Secondary School - Samphanh, Phongsaly ມັດທະຍົມສົມບູນ ນາໄຊ",
+   "lat": 21.346,
+   "lon": 102.3493,
+   "cc": "LA",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "3684610": {
+   "name": "Khob Secondary School - Khob, Xayabouli ມັດທະຍົມ ເມືອງຄອບ",
+   "lat": 19.6997,
+   "lon": 100.5572,
+   "cc": "LA",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "3684611": {
+   "name": "Phin Secondary School - Phin, Savannakhet ມັດທະຍົມ ພີນ",
+   "lat": 16.5279,
+   "lon": 106.0219,
+   "cc": "LA",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "3685146": {
+   "name": "Namor Secondary School - Namor, Oudomxay ມັດທະຍົມ ເມືອງນາໝໍ້",
+   "lat": 20.9141,
+   "lon": 101.7645,
+   "cc": "LA",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "3685147": {
+   "name": "Hoon Secondary School - Hoon, Oudomxay ມັດທະຍົມ ເມືອງຮຸນ",
+   "lat": 20.1464,
+   "lon": 101.4678,
+   "cc": "LA",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "3685149": {
+   "name": "Saphai Secondary School - Sanasomboun, Champasack ມັດທະຍົມ ສະຜ່າຍ",
+   "lat": 15.2022,
+   "lon": 105.7207,
+   "cc": "LA",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "3685150": {
+   "name": "Dorntalath Secondary School - Champasack, Champasack ມັດທະຍົມ ດອນຕະລາດ",
+   "lat": 14.7841,
+   "lon": 105.8198,
+   "cc": "LA",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "3685151": {
+   "name": "Kaokerng Secondary School - Phonthong, Champasack ມັດທະຍົມ ເກົ່າເກີງ",
+   "lat": 15.107,
+   "lon": 105.7721,
+   "cc": "LA",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "3685152": {
+   "name": "Sukhuma Secondary School - Sukhuma, Champasack ມັດທະຍົມ ສຸຂຸມາ",
+   "lat": 14.6495,
+   "lon": 105.8045,
+   "cc": "LA",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "3714636": {
+   "name": "Beng - Oudomxai",
+   "lat": 20.2963,
+   "lon": 101.6397,
+   "cc": "LA",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "3714637": {
+   "name": "Pakbeng - Oudomxai",
+   "lat": 19.9104,
+   "lon": 101.1558,
+   "cc": "LA",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "3714638": {
+   "name": "Phiang - Xaignabouly",
+   "lat": 19.0946,
+   "lon": 101.5296,
+   "cc": "LA",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "3714639": {
+   "name": "Xaysathan - Xaignabouly",
+   "lat": 19.4149,
+   "lon": 101.325,
+   "cc": "LA",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "3714641": {
+   "name": "Thapangthong - Savannakhet",
+   "lat": 15.9948,
+   "lon": 105.7459,
+   "cc": "LA",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "3714642": {
+   "name": "Pakse - Champasack",
+   "lat": 15.1201,
+   "lon": 105.8021,
+   "cc": "LA",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "3714643": {
+   "name": "Paksxong - Champasack",
+   "lat": 15.1817,
+   "lon": 106.2179,
+   "cc": "LA",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "3714644": {
+   "name": "Pathoomphone - Champasack",
+   "lat": 14.8435,
+   "lon": 105.9467,
+   "cc": "LA",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "3714646": {
+   "name": "Samakkhixay - Attapeu",
+   "lat": 14.8127,
+   "lon": 106.8292,
+   "cc": "LA",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "3733063": {
+   "name": "Bachiangchaleunsook - Champasack",
+   "lat": 15.0604,
+   "lon": 105.8979,
+   "cc": "LA",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "3733065": {
+   "name": "Khong - Champasack",
+   "lat": 14.0482,
+   "lon": 105.896,
+   "cc": "LA",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "3783738": {
+   "name": "Artsaphone Secondary School - Artsaphone, Savannakhet ມັດທະຍົມສົມບູນ ອາດສະພອນ",
+   "lat": 16.8447,
+   "lon": 105.3364,
+   "cc": "LA",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "3891934": {
+   "name": "หมู่บ้านแก้วสา",
+   "lat": 18.9283,
+   "lon": 98.9445,
+   "cc": "TH",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "3892436": {
+   "name": "วัดดวงดี",
+   "lat": 18.9198,
+   "lon": 98.9528,
+   "cc": "TH",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "3892437": {
+   "name": "บ้านร้องเกิด",
+   "lat": 18.9279,
+   "lon": 98.9654,
+   "cc": "TH",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "3998818": {
+   "name": "UNICEF Lao PDR CO",
+   "lat": 17.9377,
+   "lon": 102.6172,
+   "cc": "LA",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "4028033": {
+   "name": "Opposite Thammasat Chiang Rak 1 Gate - ชุมชนคุ้งผ้าพับ ธรรมศาสตร์ เชียงราก 1",
+   "lat": 14.0647,
+   "lon": 100.605,
+   "cc": "TH",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "4143979": {
+   "name": "Boon Neua - Phongsaly",
+   "lat": 21.6562,
+   "lon": 101.908,
+   "cc": "LA",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "4143980": {
+   "name": "Xienghone - Xaignabouly ",
+   "lat": 19.6318,
+   "lon": 100.8149,
+   "cc": "LA",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "4143982": {
+   "name": "Sepone - Savannakhet",
+   "lat": 16.6967,
+   "lon": 106.2091,
+   "cc": "LA",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "4143983": {
+   "name": "Champhone - SAVA",
+   "lat": 16.4891,
+   "lon": 105.0317,
+   "cc": "LA",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "4143985": {
+   "name": "Phalanxay - Savannakhet",
+   "lat": 16.6614,
+   "lon": 105.5879,
+   "cc": "LA",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "4143986": {
+   "name": "Khongxedone - Salavan",
+   "lat": 15.5909,
+   "lon": 105.8041,
+   "cc": "LA",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "4143987": {
+   "name": "Samuoi - Salavan",
+   "lat": 16.2939,
+   "lon": 106.8892,
+   "cc": "LA",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "4143988": {
+   "name": "Xaysetha - Attapeu",
+   "lat": 14.8168,
+   "lon": 106.931,
+   "cc": "LA",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "4321722": {
+   "name": "Nong - Savannakhet",
+   "lat": 16.3739,
+   "lon": 106.4957,
+   "cc": "LA",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "4588536": {
+   "name": "บ้านดอยน้อย",
+   "lat": 18.9335,
+   "lon": 99.0098,
+   "cc": "TH",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "4765764": {
+   "name": "THABO HOSPITAL - โรงพยาบาลสมเด็จพระยุพราชท่าบ่อ",
+   "lat": 17.8469,
+   "lon": 102.5764,
+   "cc": "TH",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "4894523": {
+   "name": "Nantawan Pinklao-Ratchaphruek",
+   "lat": 13.7706,
+   "lon": 100.4363,
+   "cc": "TH",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "4932270": {
+   "name": "AirGradient Demo Dashboard",
+   "lat": 18.9006,
+   "lon": 98.6951,
+   "cc": "TH",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "4946812": {
+   "name": "Công viên Nhân Chính - Khuất Duy Tiến",
+   "lat": 21.0031,
+   "lon": 105.7947,
+   "cc": "VN",
+   "provider": "Hanoi Air Quality Monitoring Network",
+   "monitor": true,
+   "seen": "2026-11-28"
+  },
+  "4985405": {
+   "name": "SM SAINS TUANKU SYED PUTRA",
+   "lat": 6.4276,
+   "lon": 100.2165,
+   "cc": "MY",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "4993065": {
+   "name": "DPSW Production",
+   "lat": 13.8434,
+   "lon": 100.7257,
+   "cc": "TH",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "5092510": {
+   "name": "Kasetsart University",
+   "lat": 13.8557,
+   "lon": 100.57,
+   "cc": "TH",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "5103390": {
+   "name": "ໂຮງໝໍມະໂຫສົດ Mahosot Hospital",
+   "lat": 17.9594,
+   "lon": 102.6137,
+   "cc": "LA",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "5108494": {
+   "name": "Magi HQ",
+   "lat": 13.7308,
+   "lon": 100.6934,
+   "cc": "TH",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "5482624": {
+   "name": "BTT APW",
+   "lat": 13.4301,
+   "lon": 99.9556,
+   "cc": "TH",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "5497795": {
+   "name": "MoNRE - Ministry of Natural Resources and Environment",
+   "lat": 17.9981,
+   "lon": 102.5822,
+   "cc": "LA",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "5551122": {
+   "name": "7-eleven",
+   "lat": 18.9444,
+   "lon": 98.9431,
+   "cc": "TH",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "5755932": {
+   "name": "AUPP Liger Leadership Academy",
+   "lat": 11.4834,
+   "lon": 104.9674,
+   "cc": "KH",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "5851170": {
+   "name": "Baan Kut Ngong",
+   "lat": 14.6808,
+   "lon": 101.6059,
+   "cc": "TH",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "5894629": {
+   "name": "Yangon",
+   "lat": 16.8642,
+   "lon": 96.1431,
+   "cc": "MM",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "5951902": {
+   "name": "Air Quality Nexus Center_GIC ",
+   "lat": 14.0821,
+   "lon": 100.6129,
+   "cc": "TH",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "5955903": {
+   "name": "Air Quality Nexus Center",
+   "lat": 14.0826,
+   "lon": 100.613,
+   "cc": "TH",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "6094818": {
+   "name": "Banpho",
+   "lat": 14.492,
+   "lon": 100.0751,
+   "cc": "TH",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "6099600": {
+   "name": "Hakuna Matata Villas Phrae",
+   "lat": 18.306,
+   "lon": 100.2806,
+   "cc": "TH",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "6101817": {
+   "name": "Hana",
+   "lat": 12.3347,
+   "lon": 99.9799,
+   "cc": "TH",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "6115454": {
+   "name": "' '",
+   "lat": 18.9236,
+   "lon": 98.9757,
+   "cc": "TH",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "6118093": {
+   "name": "Ban Lad Sombun",
+   "lat": 17.0747,
+   "lon": 103.9818,
+   "cc": "TH",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "6123215": {
+   "name": "Dragon",
+   "lat": 20.9933,
+   "lon": 105.9441,
+   "cc": "VN",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "6125288": {
+   "name": "Souphanouvong University - ມະຫາວິທະຍາໄລສຸພານຸວົງ LBP",
+   "lat": 19.9221,
+   "lon": 102.1874,
+   "cc": "LA",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "6130741": {
+   "name": "Sukhumvit101/1",
+   "lat": 13.6824,
+   "lon": 100.6138,
+   "cc": "TH",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "6149445": {
+   "name": "PHOTHARAM",
+   "lat": 13.6337,
+   "lon": 99.8328,
+   "cc": "TH",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "6151749": {
+   "name": "ໂຮງໝໍແຂວງວຽງຈັນ Vientiane Provincial Hospital",
+   "lat": 18.4738,
+   "lon": 102.485,
+   "cc": "LA",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "6152097": {
+   "name": "NongHoi",
+   "lat": 18.7475,
+   "lon": 99.0158,
+   "cc": "TH",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "6154187": {
+   "name": "Britania KhuKhot",
+   "lat": 13.951,
+   "lon": 100.6489,
+   "cc": "TH",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "6157903": {
+   "name": "ໂຮງໝໍແຂວງຊຽງຂວາງ Xieng Khuang Provincial Hospital",
+   "lat": 19.446,
+   "lon": 103.2018,
+   "cc": "LA",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "6160493": {
+   "name": "ໂຮງໝໍແຂວງສະຫວັນນະເຂດ Savannakhet Provincial Hospital",
+   "lat": 16.5505,
+   "lon": 104.7466,
+   "cc": "TH",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "6160761": {
+   "name": "Suthep",
+   "lat": 18.7852,
+   "lon": 98.9607,
+   "cc": "TH",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "6166036": {
+   "name": "ໂຮງໝໍແຂວງສາລະວັນ Salavan Provincial Hospital",
+   "lat": 15.7212,
+   "lon": 106.4238,
+   "cc": "LA",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "6182459": {
+   "name": "ໂຮງໝໍແຂວງຫຼວງນ້ຳທາ Luang Namtha Provincial Hospital",
+   "lat": 20.9971,
+   "lon": 101.4117,
+   "cc": "LA",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "6188057": {
+   "name": "Mondul 2",
+   "lat": 13.3606,
+   "lon": 103.8576,
+   "cc": "KH",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "6195103": {
+   "name": "Mityothin, Chatuchak, Bangkok",
+   "lat": 13.8238,
+   "lon": 100.5667,
+   "cc": "TH",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "6202299": {
+   "name": "PhasinHQ",
+   "lat": 14.1491,
+   "lon": 100.6139,
+   "cc": "TH",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "6204360": {
+   "name": "Ban Fah Piyarom phase 2 (Kiengsuan)",
+   "lat": 13.9417,
+   "lon": 100.7373,
+   "cc": "TH",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "6205698": {
+   "name": "AGRO🏠",
+   "lat": 13.9087,
+   "lon": 100.4354,
+   "cc": "TH",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "6205700": {
+   "name": "GappyZ HQ",
+   "lat": 13.6382,
+   "lon": 100.4821,
+   "cc": "TH",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "6205764": {
+   "name": "SM HQ",
+   "lat": 13.7656,
+   "lon": 100.7005,
+   "cc": "TH",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "6205924": {
+   "name": "Manthana 2 Bangna KM.7",
+   "lat": 13.644,
+   "lon": 100.6674,
+   "cc": "TH",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "6206920": {
+   "name": "ໂຮງໝໍເມືອງສະໝ້ວຍ Samoui District Hospital",
+   "lat": 16.2986,
+   "lon": 106.8883,
+   "cc": "LA",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "6207256": {
+   "name": "Darunee Farm, Doi Lo",
+   "lat": 18.5592,
+   "lon": 98.7939,
+   "cc": "TH",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "6207952": {
+   "name": "Siem Reap",
+   "lat": 13.3384,
+   "lon": 103.8546,
+   "cc": "KH",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "6209697": {
+   "name": "หับ โห้ หิ้น (ハップ・ホー・ヒン)",
+   "lat": 7.1983,
+   "lon": 100.5885,
+   "cc": "TH",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "6209698": {
+   "name": "OatState Home - Baan Klang Muang Phaholyothin 50",
+   "lat": 13.8878,
+   "lon": 100.618,
+   "cc": "TH",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "6210633": {
+   "name": "Wongsakorn NaMueang",
+   "lat": 13.6864,
+   "lon": 101.0607,
+   "cc": "TH",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "6210702": {
+   "name": "Mind Tiwanon Village",
+   "lat": 13.8483,
+   "lon": 100.5055,
+   "cc": "TH",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "6218293": {
+   "name": "Pa-Yang Wang Kaphi",
+   "lat": 17.575,
+   "lon": 100.1242,
+   "cc": "TH",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "6218918": {
+   "name": "สี่แยกน้ำโมง - Nam Mong, Thabo Intersection",
+   "lat": 17.8581,
+   "lon": 102.5705,
+   "cc": "TH",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "6222557": {
+   "name": "Granada Pinklao Village",
+   "lat": 13.7933,
+   "lon": 100.3626,
+   "cc": "TH",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "6223085": {
+   "name": "Tor Kasetpattana",
+   "lat": 13.8022,
+   "lon": 99.971,
+   "cc": "TH",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "6224050": {
+   "name": "Meow-nitoring Station, Thoet Rachan, Don mueang, Bangkok",
+   "lat": 13.9477,
+   "lon": 100.5954,
+   "cc": "TH",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "6226542": {
+   "name": "MaeWannee Gold 11",
+   "lat": 13.1646,
+   "lon": 100.9314,
+   "cc": "TH",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "6226788": {
+   "name": "SuanMongkol",
+   "lat": 12.933,
+   "lon": 101.912,
+   "cc": "TH",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "6229487": {
+   "name": "All Weather Farm",
+   "lat": 13.6233,
+   "lon": 100.4349,
+   "cc": "TH",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "6229488": {
+   "name": "Baan Kin",
+   "lat": 13.6266,
+   "lon": 100.4199,
+   "cc": "TH",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "6230362": {
+   "name": "บ้านหัวหาด-คุ้งตะเภา",
+   "lat": 17.6598,
+   "lon": 100.1675,
+   "cc": "TH",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "6230395": {
+   "name": "ถนนตัดใหม่-แยกวัดอรัญฯ",
+   "lat": 17.6368,
+   "lon": 100.0817,
+   "cc": "TH",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "6235850": {
+   "name": "THE LINE Phahonyothin Park",
+   "lat": 13.8176,
+   "lon": 100.5664,
+   "cc": "TH",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "6236444": {
+   "name": "Rangsit - Nakhon Nayok 50",
+   "lat": 13.9833,
+   "lon": 100.6482,
+   "cc": "TH",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "6238788": {
+   "name": "Jilawan Thai Local Treats",
+   "lat": 13.5376,
+   "lon": 101.0094,
+   "cc": "TH",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "6240774": {
+   "name": "147/23 Maneerin Park Rangsit",
+   "lat": 13.9942,
+   "lon": 100.5662,
+   "cc": "TH",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "6242472": {
+   "name": "The Miracle Thepharak",
+   "lat": 13.6011,
+   "lon": 100.6814,
+   "cc": "TH",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "6244503": {
+   "name": "Thairoj Pharmacy",
+   "lat": 20.2567,
+   "lon": 100.406,
+   "cc": "TH",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "6245573": {
+   "name": "Passorn 5",
+   "lat": 13.7061,
+   "lon": 100.4519,
+   "cc": "TH",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "6248478": {
+   "name": "ThaReang",
+   "lat": 13.8644,
+   "lon": 100.6581,
+   "cc": "TH",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "6256182": {
+   "name": "Ban Non Muang",
+   "lat": 15.7002,
+   "lon": 101.8434,
+   "cc": "TH",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "6262040": {
+   "name": "Sadao Khanchai School  สะเดาขรรค์ชัย",
+   "lat": 6.6288,
+   "lon": 100.4228,
+   "cc": "TH",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "6262415": {
+   "name": "Opposite TU Chiang Rak 1 - ชุมชนคุ้งผ้าพับ มธ. เชียงราก 1 - เครื่อง Test",
+   "lat": 14.0652,
+   "lon": 100.605,
+   "cc": "TH",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "6265530": {
+   "name": "หนองผา",
+   "lat": 17.6246,
+   "lon": 100.0797,
+   "cc": "TH",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "6266678": {
+   "name": "ถนนพาดวารี-บขส",
+   "lat": 17.6111,
+   "lon": 100.0922,
+   "cc": "TH",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "6267732": {
+   "name": "ບ້ານສະພານທອງໃຕ້ Saphanthong Village",
+   "lat": 17.9489,
+   "lon": 102.6294,
+   "cc": "LA",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "6284173": {
+   "name": "BAN HUAI THONG",
+   "lat": 18.6948,
+   "lon": 98.8099,
+   "cc": "TH",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "6285048": {
+   "name": "Ban ThaPaPao School",
+   "lat": 18.4773,
+   "lon": 99.1903,
+   "cc": "TH",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "6287521": {
+   "name": "BANTHI, LAMPHUN",
+   "lat": 18.6573,
+   "lon": 99.1127,
+   "cc": "TH",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "6289784": {
+   "name": "TimBee",
+   "lat": 14.968,
+   "lon": 102.9816,
+   "cc": "TH",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "6291584": {
+   "name": "electronic lab San Tan Lueang",
+   "lat": 19.9456,
+   "lon": 99.8352,
+   "cc": "TH",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "6291933": {
+   "name": "Mae Suai Hospital - MORU",
+   "lat": 19.6423,
+   "lon": 99.5257,
+   "cc": "TH",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "6294442": {
+   "name": "The Elements Sauna & Ice Bath",
+   "lat": 19.3759,
+   "lon": 98.9847,
+   "cc": "TH",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "6300553": {
+   "name": "TANYA Baan Bon Doi",
+   "lat": 19.8781,
+   "lon": 99.8174,
+   "cc": "TH",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "6301503": {
+   "name": "Baan Doi Chang Health Promoting Hospital - MORU Network",
+   "lat": 19.8193,
+   "lon": 99.5598,
+   "cc": "TH",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "6309947": {
+   "name": "Clinic Rot Yon Wat Thanon Khae",
+   "lat": 14.8265,
+   "lon": 100.6336,
+   "cc": "TH",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "6318469": {
+   "name": "The Nest School Chiang Mai",
+   "lat": 18.6977,
+   "lon": 98.9364,
+   "cc": "TH",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "6328962": {
+   "name": "Don Tako, Ratchaburi",
+   "lat": 13.5141,
+   "lon": 99.8045,
+   "cc": "TH",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "6410306": {
+   "name": "Mae Ann",
+   "lat": 18.9706,
+   "lon": 98.8925,
+   "cc": "TH",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "6419381": {
+   "name": "Ban ThaPaSak School",
+   "lat": 18.5445,
+   "lon": 99.2415,
+   "cc": "TH",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "6419429": {
+   "name": "Tungnangam SAO",
+   "lat": 15.3803,
+   "lon": 99.5904,
+   "cc": "TH",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "6435325": {
+   "name": "Cloud11",
+   "lat": 13.6841,
+   "lon": 100.6088,
+   "cc": "TH",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "6472300": {
+   "name": "Anuban Kud khaopun School (Peace Corps)",
+   "lat": 15.7877,
+   "lon": 104.986,
+   "cc": "TH",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "6486693": {
+   "name": "ໂຮງໝໍແຂວງອັດຕະປື Attapeu Provincial Hospital",
+   "lat": 14.8197,
+   "lon": 106.8119,
+   "cc": "LA",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "6502940": {
+   "name": "Supalai Bella Thalang",
+   "lat": 8.0418,
+   "lon": 98.3396,
+   "cc": "TH",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "6551543": {
+   "name": "Ladprao 12",
+   "lat": 13.8073,
+   "lon": 100.5663,
+   "cc": "TH",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "6551614": {
+   "name": "Navamin 70",
+   "lat": 13.8121,
+   "lon": 100.6589,
+   "cc": "TH",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "6551633": {
+   "name": "์Nongkhai",
+   "lat": 17.8808,
+   "lon": 102.7889,
+   "cc": "TH",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "6551909": {
+   "name": "Phra Khanong",
+   "lat": 13.7152,
+   "lon": 100.5906,
+   "cc": "TH",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "6551990": {
+   "name": "Samor Phrong Hua Hin",
+   "lat": 12.5988,
+   "lon": 99.9341,
+   "cc": "TH",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "6552005": {
+   "name": "Linh Trung (Vietnam)",
+   "lat": 10.8769,
+   "lon": 106.7976,
+   "cc": "VN",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "6552098": {
+   "name": "หมู่บ้าน พฤกษาเทพารักษ์-กิ่งแก้ว126",
+   "lat": 13.5992,
+   "lon": 100.6789,
+   "cc": "TH",
+   "provider": "AirGradient",
+   "monitor": false,
+   "seen": "2026-11-28"
+  },
+  "a4t:02t": {
+   "name": "Bansomdejchaopraya Rajabhat University",
+   "nameTH": "มหาวิทยาลัยราชภัฏบ้านสมเด็จเจ้าพระยา",
+   "lat": 13.7328,
+   "lon": 100.4877,
+   "cc": "TH",
+   "provider": "Air4Thai",
+   "monitor": true,
+   "seen": "2026-11-28"
+  },
+  "a4t:03t": {
+   "name": "Highway NO.3902 km.13 +600",
+   "nameTH": "ริมถนนทางหลวงหมายเลข 3902 ",
+   "lat": 13.6365,
+   "lon": 100.4143,
+   "cc": "TH",
+   "provider": "Air4Thai",
+   "monitor": true,
+   "seen": "2026-11-28"
+  },
+  "a4t:05t": {
+   "name": "Thai Meteorological Department ",
+   "nameTH": "กรมอุตุนิยมวิทยาบางนา",
+   "lat": 13.6662,
+   "lon": 100.6057,
+   "cc": "TH",
+   "provider": "Air4Thai",
+   "monitor": true,
+   "seen": "2026-11-28"
+  },
+  "a4t:08t": {
+   "name": "Prabadang Rehabiltation Center",
+   "nameTH": "ศูนย์ฟื้นฟูอาชีพคนพิการและทุพลภาพ ",
+   "lat": 13.6641,
+   "lon": 100.5434,
+   "cc": "TH",
+   "provider": "Air4Thai",
+   "monitor": true,
+   "seen": "2026-11-28"
+  },
+  "a4t:12t": {
+   "name": "Nonsi Witthaya School",
+   "nameTH": "โรงเรียนนนทรีวิทยา ",
+   "lat": 13.7081,
+   "lon": 100.5473,
+   "cc": "TH",
+   "provider": "Air4Thai",
+   "monitor": true,
+   "seen": "2026-11-28"
+  },
+  "a4t:13t": {
+   "name": "Department of Disease Control",
+   "nameTH": "กรมควบคุมโรค",
+   "lat": 13.8528,
+   "lon": 100.5294,
+   "cc": "TH",
+   "provider": "Air4Thai",
+   "monitor": true,
+   "seen": "2026-11-28"
+  },
+  "a4t:14t": {
+   "name": "Highway District",
+   "nameTH": "แขวงการทางสมุทรสาคร ",
+   "lat": 13.7055,
+   "lon": 100.3156,
+   "cc": "TH",
+   "provider": "Air4Thai",
+   "monitor": true,
+   "seen": "2026-11-28"
+  },
+  "a4t:16t": {
+   "name": "South Bangkok Power Plant",
+   "nameTH": "โรงไฟฟ้าพระนครใต้ ",
+   "lat": 13.618,
+   "lon": 100.5562,
+   "cc": "TH",
+   "provider": "Air4Thai",
+   "monitor": true,
+   "seen": "2026-11-28"
+  },
+  "a4t:17t": {
+   "name": "Residence for Dept. of Mineral Resources",
+   "nameTH": "บ้านพักกรมอุตสาหกรรมพื้นฐานและการเหมืองแร่",
+   "lat": 13.6521,
+   "lon": 100.5318,
+   "cc": "TH",
+   "provider": "Air4Thai",
+   "monitor": true,
+   "seen": "2026-11-28"
+  },
+  "a4t:18t": {
+   "name": "City Hall, Samut Prakan",
+   "nameTH": "ศาลากลางจังหวัดสมุทรปราการ ",
+   "lat": 13.5991,
+   "lon": 100.5973,
+   "cc": "TH",
+   "provider": "Air4Thai",
+   "monitor": true,
+   "seen": "2026-11-28"
+  },
+  "a4t:19t": {
+   "name": "National Housing Authority Bangplee",
+   "nameTH": "การเคหะชุมชนเมืองใหม่บางพลี ",
+   "lat": 13.5705,
+   "lon": 100.7863,
+   "cc": "TH",
+   "provider": "Air4Thai",
+   "monitor": true,
+   "seen": "2026-11-28"
+  },
+  "a4t:20t": {
+   "name": "Bangkok University Rangsit Campus",
+   "nameTH": "มหาวิทยาลัยกรุงเทพ วิทยาเขตรังสิต ",
+   "lat": 14.0374,
+   "lon": 100.6052,
+   "cc": "TH",
+   "provider": "Air4Thai",
+   "monitor": true,
+   "seen": "2026-11-28"
+  },
+  "a4t:21t": {
+   "name": "Ayutthaya Witthayalai School",
+   "nameTH": "โรงเรียนอยุธยาวิทยาลัย",
+   "lat": 14.3522,
+   "lon": 100.5653,
+   "cc": "TH",
+   "provider": "Air4Thai",
+   "monitor": true,
+   "seen": "2026-11-28"
+  },
+  "a4t:22t": {
+   "name": "Sukhothai Thammathirat Open University",
+   "nameTH": "มหาวิทยาลัยสุโขทัยธรรมาธิราช ",
+   "lat": 13.9079,
+   "lon": 100.5356,
+   "cc": "TH",
+   "provider": "Air4Thai",
+   "monitor": true,
+   "seen": "2026-11-28"
+  },
+  "a4t:24t": {
+   "name": "Na Phralan Police Station ",
+   "nameTH": "สถานีตำรวจภูธรตำบลหน้าพระลาน ",
+   "lat": 14.6858,
+   "lon": 100.872,
+   "cc": "TH",
+   "provider": "Air4Thai",
+   "monitor": true,
+   "seen": "2026-11-28"
+  },
+  "a4t:25t": {
+   "name": "Khao Noi Fire Station",
+   "nameTH": "สถานีดับเพลิงพระลักษณ์",
+   "lat": 14.5263,
+   "lon": 100.926,
+   "cc": "TH",
+   "provider": "Air4Thai",
+   "monitor": true,
+   "seen": "2026-11-28"
+  },
+  "a4t:26t": {
+   "name": "Environmental Office 8 ratchaburi",
+   "nameTH": "สำนักงานสิ่งแวดล้อมภาคที่8",
+   "lat": 13.5234,
+   "lon": 99.8141,
+   "cc": "TH",
+   "provider": "Air4Thai",
+   "monitor": true,
+   "seen": "2026-11-28"
+  },
+  "a4t:27t": {
+   "name": "Samut Sakhon Wittayalai School",
+   "nameTH": "โรงเรียนสมุทรสาครวิทยาลัย",
+   "lat": 13.5503,
+   "lon": 100.2648,
+   "cc": "TH",
+   "provider": "Air4Thai",
+   "monitor": true,
+   "seen": "2026-11-28"
+  },
+  "a4t:28t": {
+   "name": "Pluakdaeng District Health Office",
+   "nameTH": "สำนักงานสาธารณสุขอำเภอปลวกแดง",
+   "lat": 12.9738,
+   "lon": 101.2129,
+   "cc": "TH",
+   "provider": "Air4Thai",
+   "monitor": true,
+   "seen": "2026-11-28"
+  },
+  "a4t:29t": {
+   "name": "Health Promotion Hospital Maptaput",
+   "nameTH": "โรงพยาบาลส่งเสริมสุขภาพตำบลมาบตาพุด ",
+   "lat": 12.7087,
+   "lon": 101.166,
+   "cc": "TH",
+   "provider": "Air4Thai",
+   "monitor": true,
+   "seen": "2026-11-28"
+  },
+  "a4t:30t": {
+   "name": "Rayong Provincial Stadium",
+   "nameTH": "สนามกีฬากลางจังหวัดระยอง",
+   "lat": 12.6789,
+   "lon": 101.2347,
+   "cc": "TH",
+   "provider": "Air4Thai",
+   "monitor": true,
+   "seen": "2026-11-28"
+  },
+  "a4t:31t": {
+   "name": "Field Crop Research Center, Rayong",
+   "nameTH": "ศูนย์วิจัยพืชไร่ระยอง ",
+   "lat": 12.7352,
+   "lon": 101.1357,
+   "cc": "TH",
+   "provider": "Air4Thai",
+   "monitor": true,
+   "seen": "2026-11-28"
+  },
+  "a4t:33t": {
+   "name": "Health Promotion Hospital Bankhaohin",
+   "nameTH": "โรงพยาบาลส่งเสริมสุขภาพตำบลบ้านเขาหิน",
+   "lat": 13.0546,
+   "lon": 101.0981,
+   "cc": "TH",
+   "provider": "Air4Thai",
+   "monitor": true,
+   "seen": "2026-11-28"
+  },
+  "a4t:35t": {
+   "name": "City Hall, Chiangmai",
+   "nameTH": "ศูนย์ราชการจังหวัดเชียงใหม่ ",
+   "lat": 18.8407,
+   "lon": 98.9698,
+   "cc": "TH",
+   "provider": "Air4Thai",
+   "monitor": true,
+   "seen": "2026-11-28"
+  },
+  "a4t:36t": {
+   "name": "Yupparaj Wittayalai School",
+   "nameTH": "โรงเรียนยุพราชวิทยาลัย ",
+   "lat": 18.7909,
+   "lon": 98.99,
+   "cc": "TH",
+   "provider": "Air4Thai",
+   "monitor": true,
+   "seen": "2026-11-28"
+  },
+  "a4t:37t": {
+   "name": "Meteorological stations, Lampang",
+   "nameTH": "สถานีอุตุนิยมวิทยาลำปาง",
+   "lat": 18.2783,
+   "lon": 99.5065,
+   "cc": "TH",
+   "provider": "Air4Thai",
+   "monitor": true,
+   "seen": "2026-11-28"
+  },
+  "a4t:38t": {
+   "name": "Health Promotion Hospital Sob Pad, Lampang",
+   "nameTH": "โรงพยาบาลส่งเสริมสุขภาพตำบลบ้านสบป้าด ",
+   "lat": 18.2508,
+   "lon": 99.7639,
+   "cc": "TH",
+   "provider": "Air4Thai",
+   "monitor": true,
+   "seen": "2026-11-28"
+  },
+  "a4t:39t": {
+   "name": "Health Promotion Hospital Banthasri",
+   "nameTH": "โรงพยาบาลส่งเสริมสุขภาพตำบลท่าสี ",
+   "lat": 18.4268,
+   "lon": 99.7576,
+   "cc": "TH",
+   "provider": "Air4Thai",
+   "monitor": true,
+   "seen": "2026-11-28"
+  },
+  "a4t:40t": {
+   "name": "Provincial Waterworks Authority Mae Moh",
+   "nameTH": "การประปาส่วนภูมิภาคแม่เมาะ",
+   "lat": 18.2826,
+   "lon": 99.6598,
+   "cc": "TH",
+   "provider": "Air4Thai",
+   "monitor": true,
+   "seen": "2026-11-28"
+  },
+  "a4t:41t": {
+   "name": "Nakhonsawan Irrigation Project ",
+   "nameTH": "โครงการชลประทานนครสวรรค์",
+   "lat": 15.6862,
+   "lon": 100.1106,
+   "cc": "TH",
+   "provider": "Air4Thai",
+   "monitor": true,
+   "seen": "2026-11-28"
+  },
+  "a4t:42t": {
+   "name": "Environment Agency Section 14, Surat Thani",
+   "nameTH": "สำนักงานสิ่งแวดล้อมภาคที่ 14",
+   "lat": 9.126,
+   "lon": 99.3251,
+   "cc": "TH",
+   "provider": "Air4Thai",
+   "monitor": true,
+   "seen": "2026-11-28"
+  },
+  "a4t:43t": {
+   "name": "Municipal Health Center",
+   "nameTH": "ศูนย์บริการสาธารณสุขเทศบาลภูเก็ต",
+   "lat": 7.8845,
+   "lon": 98.3913,
+   "cc": "TH",
+   "provider": "Air4Thai",
+   "monitor": true,
+   "seen": "2026-11-28"
+  },
+  "a4t:44t": {
+   "name": "Hat Yai Municipality",
+   "nameTH": "เทศบาลนครหาดใหญ่ ",
+   "lat": 7.0204,
+   "lon": 100.4841,
+   "cc": "TH",
+   "provider": "Air4Thai",
+   "monitor": true,
+   "seen": "2026-11-28"
+  },
+  "a4t:46t": {
+   "name": "Hydrogeological Group Water Resources Regional Office4 khonkaen",
+   "nameTH": "ส่วนอุทกวิทยา สำนักงานทรัพยากรน้ำภาคที่4 ขอนแก่น",
+   "lat": 16.4454,
+   "lon": 102.8353,
+   "cc": "TH",
+   "provider": "Air4Thai",
+   "monitor": true,
+   "seen": "2026-11-28"
+  },
+  "a4t:47t": {
+   "name": "Municipal Waste Water Pumping Station",
+   "nameTH": "สถานีสูบน้ำประตูพลแสน",
+   "lat": 14.9795,
+   "lon": 102.0983,
+   "cc": "TH",
+   "provider": "Air4Thai",
+   "monitor": true,
+   "seen": "2026-11-28"
+  },
+  "a4t:50t": {
+   "name": "Chulalongkorn Hospital",
+   "nameTH": "โรงพยาบาลจุฬาลงกรณ์",
+   "lat": 13.7299,
+   "lon": 100.5365,
+   "cc": "TH",
+   "provider": "Air4Thai",
+   "monitor": true,
+   "seen": "2026-11-28"
+  },
+  "a4t:52t": {
+   "name": "Thonburi Power Sub-Station",
+   "nameTH": "การไฟฟ้าย่อยธนบุรี ",
+   "lat": 13.7276,
+   "lon": 100.4866,
+   "cc": "TH",
+   "provider": "Air4Thai",
+   "monitor": true,
+   "seen": "2026-11-28"
+  },
+  "a4t:53t": {
+   "name": "Chokchai Police Station",
+   "nameTH": "สถานีตำรวจนครบาลโชคชัย ",
+   "lat": 13.7954,
+   "lon": 100.593,
+   "cc": "TH",
+   "provider": "Air4Thai",
+   "monitor": true,
+   "seen": "2026-11-28"
+  },
+  "a4t:54t": {
+   "name": "National Housing Authority Dindaeng",
+   "nameTH": "การเคหะชุมชนดินแดง ",
+   "lat": 13.7625,
+   "lon": 100.5502,
+   "cc": "TH",
+   "provider": "Air4Thai",
+   "monitor": true,
+   "seen": "2026-11-28"
+  },
+  "a4t:57t": {
+   "name": "Natural Resources and Environment Office, Chiangrai",
+   "nameTH": "สำนักงานทรัพยากรธรรมชาติและสิ่งแวดล้อมจังหวัดเชียงราย",
+   "lat": 19.9092,
+   "lon": 99.8235,
+   "cc": "TH",
+   "provider": "Air4Thai",
+   "monitor": true,
+   "seen": "2026-11-28"
+  },
+  "a4t:59t": {
+   "name": "The Government Public Relations Department ",
+   "nameTH": "กรมประชาสัมพันธ์",
+   "lat": 13.7832,
+   "lon": 100.5405,
+   "cc": "TH",
+   "provider": "Air4Thai",
+   "monitor": true,
+   "seen": "2026-11-28"
+  },
+  "a4t:60t": {
+   "name": "Municipality Office Tungsadao",
+   "nameTH": "สำนักงานเทศบาลตำบลทุ่งสะเดา",
+   "lat": 13.5885,
+   "lon": 101.2863,
+   "cc": "TH",
+   "provider": "Air4Thai",
+   "monitor": true,
+   "seen": "2026-11-28"
+  },
+  "a4t:61t": {
+   "name": "Bodindecha Sing Singhaseni School",
+   "nameTH": "โรงเรียนบดินทรเดชา (สิงห์ สิงหเสนี) ",
+   "lat": 13.7696,
+   "lon": 100.6146,
+   "cc": "TH",
+   "provider": "Air4Thai",
+   "monitor": true,
+   "seen": "2026-11-28"
+  },
+  "a4t:62t": {
+   "name": "City Hall, Narathiwat",
+   "nameTH": "ศาลากลางจังหวัดนราธิวาส ",
+   "lat": 6.4269,
+   "lon": 101.8234,
+   "cc": "TH",
+   "provider": "Air4Thai",
+   "monitor": true,
+   "seen": "2026-11-28"
+  },
+  "a4t:63t": {
+   "name": "White Elephant Park",
+   "nameTH": "สนามโรงพิธีช้างเผือก ",
+   "lat": 6.5462,
+   "lon": 101.2831,
+   "cc": "TH",
+   "provider": "Air4Thai",
+   "monitor": true,
+   "seen": "2026-11-28"
+  },
+  "a4t:67t": {
+   "name": "Municipality Office, Nan",
+   "nameTH": "สำนักงานเทศบาลเมืองน่าน",
+   "lat": 18.7889,
+   "lon": 100.7763,
+   "cc": "TH",
+   "provider": "Air4Thai",
+   "monitor": true,
+   "seen": "2026-11-28"
+  },
+  "a4t:68t": {
+   "name": "Meteorological Staions, Lamphun",
+   "nameTH": "อุตุนิยมวิทยาลำพูน",
+   "lat": 18.5672,
+   "lon": 99.0386,
+   "cc": "TH",
+   "provider": "Air4Thai",
+   "monitor": true,
+   "seen": "2026-11-28"
+  },
+  "a4t:69t": {
+   "name": "Meteorology Center, Phrae",
+   "nameTH": "อุตุนิยมวิทยาจังหวัดแพร่",
+   "lat": 18.1284,
+   "lon": 100.1624,
+   "cc": "TH",
+   "provider": "Air4Thai",
+   "monitor": true,
+   "seen": "2026-11-28"
+  },
+  "a4t:70t": {
+   "name": "Phayao Provincial, Phayao",
+   "nameTH": "สนามกีฬาจังหวัดพะเยา",
+   "lat": 19.2002,
+   "lon": 99.893,
+   "cc": "TH",
+   "provider": "Air4Thai",
+   "monitor": true,
+   "seen": "2026-11-28"
+  },
+  "a4t:71t": {
+   "name": "Kanjanapisek Park",
+   "nameTH": "สวนกาญจนาภิเษก ร.9 (ฝั่งสวนหิน)",
+   "lat": 13.691,
+   "lon": 102.5104,
+   "cc": "TH",
+   "provider": "Air4Thai",
+   "monitor": true,
+   "seen": "2026-11-28"
+  },
+  "a4t:72t": {
+   "name": "60th Anniversary Queen Sirikit Public Park, Loei",
+   "nameTH": "สวนสาธารณะเฉลิมพระเกียรติ 60 พรรษามหาราชินี จังหวัดเลย",
+   "lat": 17.4846,
+   "lon": 101.7327,
+   "cc": "TH",
+   "provider": "Air4Thai",
+   "monitor": true,
+   "seen": "2026-11-28"
+  },
+  "a4t:73t": {
+   "name": "Maesai Health Office",
+   "nameTH": "สำนักงานสาธารณสุขแม่สาย",
+   "lat": 20.4273,
+   "lon": 99.8838,
+   "cc": "TH",
+   "provider": "Air4Thai",
+   "monitor": true,
+   "seen": "2026-11-28"
+  },
+  "a4t:75t": {
+   "name": "Chalermprakiet Hospital",
+   "nameTH": "โรงพยาบาลเฉลิมพระเกียรติ ",
+   "lat": 19.576,
+   "lon": 101.0815,
+   "cc": "TH",
+   "provider": "Air4Thai",
+   "monitor": true,
+   "seen": "2026-11-28"
+  },
+  "a4t:76t": {
+   "name": "Non-Formal Education Centre, Mea Sot",
+   "nameTH": "ศูนย์การศึกษานอกโรงเรียน",
+   "lat": 16.7344,
+   "lon": 98.567,
+   "cc": "TH",
+   "provider": "Air4Thai",
+   "monitor": true,
+   "seen": "2026-11-28"
+  },
+  "a4t:77t": {
+   "name": "Bu Yai Bai Hall Station",
+   "nameTH": "ศาลาประชาคมบ้านบุยายใบ",
+   "lat": 13.9176,
+   "lon": 101.5905,
+   "cc": "TH",
+   "provider": "Air4Thai",
+   "monitor": true,
+   "seen": "2026-11-28"
+  },
+  "a4t:78t": {
+   "name": "child development centers, Betong",
+   "nameTH": "ศูนย์พัฒนาเด็กเล็กเทศบาลเมืองเบตง",
+   "lat": 5.7639,
+   "lon": 101.0679,
+   "cc": "TH",
+   "provider": "Air4Thai",
+   "monitor": true,
+   "seen": "2026-11-28"
+  },
+  "a4t:80t": {
+   "name": "City Hall, Satun",
+   "nameTH": "ศาลากลาง จ.สตูล",
+   "lat": 6.6247,
+   "lon": 100.0662,
+   "cc": "TH",
+   "provider": "Air4Thai",
+   "monitor": true,
+   "seen": "2026-11-28"
+  },
+  "a4t:82t": {
+   "name": "Nong Thin Public Park, Nong Khai",
+   "nameTH": "สวนสาธารณะหนองถิ่น",
+   "lat": 17.8775,
+   "lon": 102.7289,
+   "cc": "TH",
+   "provider": "Air4Thai",
+   "monitor": true,
+   "seen": "2026-11-28"
+  },
+  "a4t:83t": {
+   "name": "OTOP Center, Ubon Ratchathani",
+   "nameTH": "ศูนย์แสดงและจำหน่ายสินค้า OTOP จังหวัดอุบลราชธานี",
+   "lat": 15.2454,
+   "lon": 104.8462,
+   "cc": "TH",
+   "provider": "Air4Thai",
+   "monitor": true,
+   "seen": "2026-11-28"
+  },
+  "a4t:84t": {
+   "name": "Samut Songkhram Health Office",
+   "nameTH": "สำนักงานสาธารณสุขจังหวัดสมุทรสงคราม",
+   "lat": 13.4286,
+   "lon": 100.0247,
+   "cc": "TH",
+   "provider": "Air4Thai",
+   "monitor": true,
+   "seen": "2026-11-28"
+  },
+  "a4t:85t": {
+   "name": "Suphan Buri Provincial Central Stadium",
+   "nameTH": "สนามกีฬากลางจังหวัดสุพรรณบุรี",
+   "lat": 14.4762,
+   "lon": 100.0861,
+   "cc": "TH",
+   "provider": "Air4Thai",
+   "monitor": true,
+   "seen": "2026-11-28"
+  },
+  "a4t:86t": {
+   "name": "Chom Nan Chaloem Phrakiat Public Park",
+   "nameTH": "สวนชมน่านเฉลิมพระเกียรติ",
+   "lat": 16.8208,
+   "lon": 100.2581,
+   "cc": "TH",
+   "provider": "Air4Thai",
+   "monitor": true,
+   "seen": "2026-11-28"
+  },
+  "a4t:87t": {
+   "name": "Trat Provincial Central Stadium",
+   "nameTH": "สนามกีฬากลางจังหวัดตราด",
+   "lat": 12.2349,
+   "lon": 102.5237,
+   "cc": "TH",
+   "provider": "Air4Thai",
+   "monitor": true,
+   "seen": "2026-11-28"
+  },
+  "a4t:88t": {
+   "name": "Meteorological stations, Nakhon Phanom",
+   "nameTH": "สถานีอุตุนิยมวิทยานครพนม",
+   "lat": 17.4123,
+   "lon": 104.7786,
+   "cc": "TH",
+   "provider": "Air4Thai",
+   "monitor": true,
+   "seen": "2026-11-28"
+  },
+  "a4t:89t": {
+   "name": "Elderly Health Rehabilitation Center",
+   "nameTH": "ศูนย์ฟื้นฟูสุขภาพผู้สูงอายุ",
+   "lat": 8.4269,
+   "lon": 99.9615,
+   "cc": "TH",
+   "provider": "Air4Thai",
+   "monitor": true,
+   "seen": "2026-11-28"
+  },
+  "a4t:90t": {
+   "name": "Meteorological stations, Sakon Nakhon",
+   "nameTH": "สถานีอุตุนิยมวิทยาสกลนคร",
+   "lat": 17.1566,
+   "lon": 104.1332,
+   "cc": "TH",
+   "provider": "Air4Thai",
+   "monitor": true,
+   "seen": "2026-11-28"
+  },
+  "a4t:91t": {
+   "name": "Nong Prajak Public Park, Udon Thani",
+   "nameTH": "สวนสาธารณะหนองประจักษ์ อุดรธานี",
+   "lat": 17.4142,
+   "lon": 102.7809,
+   "cc": "TH",
+   "provider": "Air4Thai",
+   "monitor": true,
+   "seen": "2026-11-28"
+  },
+  "a4t:92t": {
+   "name": "72nd Anniversary King Bhumibol Public Park, Uttaradit",
+   "nameTH": "สวนมหามงคลเฉลิมพระชนมพรรษา 6 รอบ 5 ธันวาคม 2552 อุตรดิตถ์",
+   "lat": 17.6314,
+   "lon": 100.099,
+   "cc": "TH",
+   "provider": "Air4Thai",
+   "monitor": true,
+   "seen": "2026-11-28"
+  },
+  "a4t:93t": {
+   "name": "Polytechnic College, Trang ",
+   "nameTH": "วิทยาลัยสารพัดช่างตรัง",
+   "lat": 7.5702,
+   "lon": 99.5887,
+   "cc": "TH",
+   "provider": "Air4Thai",
+   "monitor": true,
+   "seen": "2026-11-28"
+  },
+  "a4t:94t": {
+   "name": "Sirichit Thai Cultural Conservation Ground",
+   "nameTH": "ลานอนุรักษ์วัฒนธรรมไทยสิริจิตอุทยาน",
+   "lat": 16.4754,
+   "lon": 99.5254,
+   "cc": "TH",
+   "provider": "Air4Thai",
+   "monitor": true,
+   "seen": "2026-11-28"
+  },
+  "a4t:95t": {
+   "name": " Phichit Provincial , Phichit",
+   "nameTH": "สนามกีฬาจังหวัดพิจิตร",
+   "lat": 16.4426,
+   "lon": 100.3228,
+   "cc": "TH",
+   "provider": "Air4Thai",
+   "monitor": true,
+   "seen": "2026-11-28"
+  },
+  "a4t:97t": {
+   "name": "Phetbura garden",
+   "nameTH": "สวนเพชบุระ",
+   "lat": 16.4184,
+   "lon": 101.1566,
+   "cc": "TH",
+   "provider": "Air4Thai",
+   "monitor": true,
+   "seen": "2026-11-28"
+  },
+  "a4t:98t": {
+   "name": "Chaloem Phrakiat Park Station 80th birthday celebration",
+   "nameTH": "สถานีสวนเฉลิมพระเกียรติพระบาทสมเด็จพระเจ้าอยู่หัว เฉลิมพระชนมพรรษา 80 พรรษา",
+   "lat": 15.3847,
+   "lon": 100.025,
+   "cc": "TH",
+   "provider": "Air4Thai",
+   "monitor": true,
+   "seen": "2026-11-28"
+  },
+  "a4t:99t": {
+   "name": " Meteorological Station Lopburi",
+   "nameTH": "สถานีอุตุนิยมวิทยาลพบุรี",
+   "lat": 14.8,
+   "lon": 100.6285,
+   "cc": "TH",
+   "provider": "Air4Thai",
+   "monitor": true,
+   "seen": "2026-11-28"
+  },
+  "a4t:100t": {
+   "name": "Chanthaburi Meteorological Station",
+   "nameTH": "สถานีอุตุนิยมวิทยาจันทบุรี",
+   "lat": 12.6096,
+   "lon": 102.1041,
+   "cc": "TH",
+   "provider": "Air4Thai",
+   "monitor": true,
+   "seen": "2026-11-28"
+  },
+  "a4t:101t": {
+   "name": "Buriram City Hall",
+   "nameTH": "ศาลากลางจังหวัดบุรีรัมย์",
+   "lat": 14.9455,
+   "lon": 103.1059,
+   "cc": "TH",
+   "provider": "Air4Thai",
+   "monitor": true,
+   "seen": "2026-11-28"
+  },
+  "a4t:102t": {
+   "name": "Mukdahan Provincial Stadium",
+   "nameTH": "สนามกีฬากลางจังหวัดมุกดาหาร",
+   "lat": 16.5426,
+   "lon": 104.7192,
+   "cc": "TH",
+   "provider": "Air4Thai",
+   "monitor": true,
+   "seen": "2026-11-28"
+  },
+  "a4t:103t": {
+   "name": "Hua Hin Weather Station Prachuap Khiri Khan Meteorological Station",
+   "nameTH": " สถานีตรวจอากาศหัวหิน สถานีอุตุนิยมวิทยาประจวบคีรีขันธ์",
+   "lat": 12.5778,
+   "lon": 99.9537,
+   "cc": "TH",
+   "provider": "Air4Thai",
+   "monitor": true,
+   "seen": "2026-11-28"
+  },
+  "a4t:104t": {
+   "name": "SINGBURI SCHOOL",
+   "nameTH": "โรงเรียนสิงห์บุรี",
+   "lat": 14.8934,
+   "lon": 100.4131,
+   "cc": "TH",
+   "provider": "Air4Thai",
+   "monitor": true,
+   "seen": "2026-11-28"
+  },
+  "a4t:105t": {
+   "name": "Nakhon Nayok Municipality Public Health Service Center",
+   "nameTH": "ศูนย์บริการสาธารณสุขเทศบาลเมืองนครนายก",
+   "lat": 14.2042,
+   "lon": 101.2151,
+   "cc": "TH",
+   "provider": "Air4Thai",
+   "monitor": true,
+   "seen": "2026-11-28"
+  },
+  "a4t:106t": {
+   "name": "Nong Bueng Kan Park",
+   "nameTH": "สวนสาธารณะหนองบึงกาฬ",
+   "lat": 18.362,
+   "lon": 103.6598,
+   "cc": "TH",
+   "provider": "Air4Thai",
+   "monitor": true,
+   "seen": "2026-11-28"
+  },
+  "a4t:107t": {
+   "name": "KAENG DON KLANG PARK",
+   "nameTH": "สวนสาธารณะแก่งดอนกลาง",
+   "lat": 16.4436,
+   "lon": 103.513,
+   "cc": "TH",
+   "provider": "Air4Thai",
+   "monitor": true,
+   "seen": "2026-11-28"
+  },
+  "a4t:108t": {
+   "name": "Mueang Chaiyaphum Municipality Stadium",
+   "nameTH": "สนามกีฬาเทศบาลเมืองชัยภูมิ",
+   "lat": 15.8115,
+   "lon": 102.0228,
+   "cc": "TH",
+   "provider": "Air4Thai",
+   "monitor": true,
+   "seen": "2026-11-28"
+  },
+  "a4t:109t": {
+   "name": "Phaya Thaen Public Park",
+   "nameTH": "สวนสาธารณะพญาแถน",
+   "lat": 15.7839,
+   "lon": 104.1546,
+   "cc": "TH",
+   "provider": "Air4Thai",
+   "monitor": true,
+   "seen": "2026-11-28"
+  },
+  "a4t:110t": {
+   "name": "Amnat Charoen Municipality",
+   "nameTH": "สำนักงานเทศบาลเมืองอำนาจเจริญ",
+   "lat": 15.8758,
+   "lon": 104.6223,
+   "cc": "TH",
+   "provider": "Air4Thai",
+   "monitor": true,
+   "seen": "2026-11-28"
+  },
+  "a4t:111t": {
+   "name": "Surin Meteorological Center",
+   "nameTH": "สถานีอุตุนิยมวิทยาสุรินทร์",
+   "lat": 14.8762,
+   "lon": 103.4966,
+   "cc": "TH",
+   "provider": "Air4Thai",
+   "monitor": true,
+   "seen": "2026-11-28"
+  },
+  "a4t:112t": {
+   "name": "Sisaket Meteorological Center",
+   "nameTH": "สถานีอุตุนิยมวิทยาศรีสะเกษ",
+   "lat": 15.0871,
+   "lon": 104.3268,
+   "cc": "TH",
+   "provider": "Air4Thai",
+   "monitor": true,
+   "seen": "2026-11-28"
+  },
+  "a4t:113t": {
+   "name": "Bueng Planchai",
+   "nameTH": "บึงพลาญชัย",
+   "lat": 16.0574,
+   "lon": 103.6511,
+   "cc": "TH",
+   "provider": "Air4Thai",
+   "monitor": true,
+   "seen": "2026-11-28"
+  },
+  "a4t:114t": {
+   "name": "Pramuan Suk Health Park",
+   "nameTH": "สวนสุขภาพประมวลสุข",
+   "lat": 16.1773,
+   "lon": 103.2998,
+   "cc": "TH",
+   "provider": "Air4Thai",
+   "monitor": true,
+   "seen": "2026-11-28"
+  },
+  "a4t:115t": {
+   "name": "Nong Bua Lamphu Provincial Administrative Organization ",
+   "nameTH": "องค์การริหารส่วนจังหวัดหนองบัวลำภู",
+   "lat": 17.1938,
+   "lon": 102.4585,
+   "cc": "TH",
+   "provider": "Air4Thai",
+   "monitor": true,
+   "seen": "2026-11-28"
+  },
+  "a4t:116t": {
+   "name": "Chaloem Phra Kiat Water Park",
+   "nameTH": " สวนน้ำเฉลิมพระเกียรติ ",
+   "lat": 14.6063,
+   "lon": 100.4536,
+   "cc": "TH",
+   "provider": "Air4Thai",
+   "monitor": true,
+   "seen": "2026-11-28"
+  },
+  "a4t:117t": {
+   "name": "Chalermprakiat Rama IX Park",
+   "nameTH": "สวนสาธารณะเฉลิมพระเกียรติ ร. 9",
+   "lat": 15.1735,
+   "lon": 100.1321,
+   "cc": "TH",
+   "provider": "Air4Thai",
+   "monitor": true,
+   "seen": "2026-11-28"
+  },
+  "a4t:118t": {
+   "name": "Sports Stadium, Chumphon Province",
+   "nameTH": "สนามกีฬา จ.ชุมพร",
+   "lat": 10.4951,
+   "lon": 99.1894,
+   "cc": "TH",
+   "provider": "Air4Thai",
+   "monitor": true,
+   "seen": "2026-11-28"
+  },
+  "a4t:119t": {
+   "name": "Thara Public Park",
+   "nameTH": "สวนสาธารณะธารา",
+   "lat": 8.0506,
+   "lon": 98.918,
+   "cc": "TH",
+   "provider": "Air4Thai",
+   "monitor": true,
+   "seen": "2026-11-28"
+  },
+  "a4t:120t": {
+   "name": "Phatthalung Provincial Stadium",
+   "nameTH": "สนามกีฬากลางจังหวัดพัทลุง",
+   "lat": 7.6157,
+   "lon": 100.048,
+   "cc": "TH",
+   "provider": "Air4Thai",
+   "monitor": true,
+   "seen": "2026-11-28"
+  },
+  "a4t:121t": {
+   "name": "Pattani Provincial Forestry Center",
+   "nameTH": "ศูนย์ป่าไม้จังหวัดปัตตานี",
+   "lat": 6.8906,
+   "lon": 101.2509,
+   "cc": "TH",
+   "provider": "Air4Thai",
+   "monitor": true,
+   "seen": "2026-11-28"
+  },
+  "a4t:bkp56t": {
+   "name": "Din Dang, Bangkok",
+   "nameTH": "สำนักงานเขตดินแดง กรุงเทพฯ",
+   "lat": 13.7619,
+   "lon": 100.5586,
+   "cc": "TH",
+   "provider": "Air4Thai · Bangkok (BMA)",
+   "monitor": true,
+   "seen": "2026-11-28"
+  },
+  "a4t:bkp57t": {
+   "name": "Phra Kanong District Office,  Bangkok",
+   "nameTH": "สำนักงานเขตพระโขนง กรุงเทพฯ",
+   "lat": 13.6915,
+   "lon": 100.6146,
+   "cc": "TH",
+   "provider": "Air4Thai · Bangkok (BMA)",
+   "monitor": true,
+   "seen": "2026-11-28"
+  },
+  "a4t:bkp58t": {
+   "name": "Rat Burana District Office,  Bangkok",
+   "nameTH": "สำนักงานเขตราษฎร์บูรณะ กรุงเทพฯ",
+   "lat": 13.6821,
+   "lon": 100.5061,
+   "cc": "TH",
+   "provider": "Air4Thai · Bangkok (BMA)",
+   "monitor": true,
+   "seen": "2026-11-28"
+  },
+  "a4t:bkp59t": {
+   "name": "Ratchathewi District Office, Bangkok",
+   "nameTH": "สำนักงานเขตราชเทวี กรุงเทพฯ",
+   "lat": 13.7591,
+   "lon": 100.5346,
+   "cc": "TH",
+   "provider": "Air4Thai · Bangkok (BMA)",
+   "monitor": true,
+   "seen": "2026-11-28"
+  },
+  "a4t:bkp60t": {
+   "name": "Dusit District Office, Bangkok",
+   "nameTH": "ริมสวนหย่อมตรงข้ามสำนักงานเขตดุสิต",
+   "lat": 13.7767,
+   "lon": 100.521,
+   "cc": "TH",
+   "provider": "Air4Thai · Bangkok (BMA)",
+   "monitor": true,
+   "seen": "2026-11-28"
+  },
+  "a4t:bkp61t": {
+   "name": "National Economic and Social Development Council Office",
+   "nameTH": "สำนักงานคณะกรรมการพัฒนาเศรษฐกิจและสังคมแห่งชาติ",
+   "lat": 13.7563,
+   "lon": 100.5143,
+   "cc": "TH",
+   "provider": "Air4Thai · Bangkok (BMA)",
+   "monitor": true,
+   "seen": "2026-11-28"
+  },
+  "a4t:bkp62t": {
+   "name": "Odeon Circus",
+   "nameTH": "วงเวียนโอเดียน",
+   "lat": 13.7371,
+   "lon": 100.5127,
+   "cc": "TH",
+   "provider": "Air4Thai · Bangkok (BMA)",
+   "monitor": true,
+   "seen": "2026-11-28"
+  },
+  "a4t:bkp63t": {
+   "name": "Army Apartment Sam Sen",
+   "nameTH": "แฟลตทหารบก สามเสน",
+   "lat": 13.7836,
+   "lon": 100.5345,
+   "cc": "TH",
+   "provider": "Air4Thai · Bangkok (BMA)",
+   "monitor": true,
+   "seen": "2026-11-28"
+  },
+  "a4t:bkp64t": {
+   "name": "Wang Thonglang District Office, Bangkok",
+   "nameTH": "สำนักงานเขตวังทองหลาง",
+   "lat": 13.779,
+   "lon": 100.6223,
+   "cc": "TH",
+   "provider": "Air4Thai · Bangkok (BMA)",
+   "monitor": true,
+   "seen": "2026-11-28"
+  },
+  "a4t:bkp65t": {
+   "name": "Samyan Mitrtown",
+   "nameTH": "สามย่านมิตรทาวน์",
+   "lat": 13.7331,
+   "lon": 100.5283,
+   "cc": "TH",
+   "provider": "Air4Thai · Bangkok (BMA)",
+   "monitor": true,
+   "seen": "2026-11-28"
+  },
+  "a4t:bkp66t": {
+   "name": "Bangrak Lovely Plaza",
+   "nameTH": "ลานบางรักเลิฟลี่ พลาซ่า",
+   "lat": 13.7261,
+   "lon": 100.5281,
+   "cc": "TH",
+   "provider": "Air4Thai · Bangkok (BMA)",
+   "monitor": true,
+   "seen": "2026-11-28"
+  },
+  "a4t:bkp67t": {
+   "name": "Sathon District Office, Bangkok",
+   "nameTH": "สำนักงานเขตสาทร",
+   "lat": 13.7078,
+   "lon": 100.5268,
+   "cc": "TH",
+   "provider": "Air4Thai · Bangkok (BMA)",
+   "monitor": true,
+   "seen": "2026-11-28"
+  },
+  "a4t:bkp69t": {
+   "name": "Bank of Ayuthaya Head Office Yan Nawa, Bangkok",
+   "nameTH": "ธนาคารกรุงศรีอยุธยา สำนักงานใหญ่",
+   "lat": 13.6792,
+   "lon": 100.5469,
+   "cc": "TH",
+   "provider": "Air4Thai · Bangkok (BMA)",
+   "monitor": true,
+   "seen": "2026-11-28"
+  },
+  "a4t:bkp70t": {
+   "name": "Soi Sukhumwit 63 Roadside Wattana, Bangkok",
+   "nameTH": "ริมถนนซอยสุขุมวิท 63",
+   "lat": 13.7221,
+   "lon": 100.5846,
+   "cc": "TH",
+   "provider": "Air4Thai · Bangkok (BMA)",
+   "monitor": true,
+   "seen": "2026-11-28"
+  },
+  "a4t:bkp71t": {
+   "name": "Suan Luang District Office, Bangkok",
+   "nameTH": "สำนักงานเขตสวนหลวง",
+   "lat": 13.7311,
+   "lon": 100.6517,
+   "cc": "TH",
+   "provider": "Air4Thai · Bangkok (BMA)",
+   "monitor": true,
+   "seen": "2026-11-28"
+  },
+  "a4t:bkp72t": {
+   "name": "Big C Supercenter Bang Na",
+   "nameTH": "บิ๊กซี ซุปเปอร์เซ็นเตอร์ บางนา",
+   "lat": 13.668,
+   "lon": 100.6353,
+   "cc": "TH",
+   "provider": "Air4Thai · Bangkok (BMA)",
+   "monitor": true,
+   "seen": "2026-11-28"
+  },
+  "a4t:bkp73t": {
+   "name": "Kasertsart University",
+   "nameTH": "มหาวิทยาลัยเกษตรศาสตร์",
+   "lat": 13.8399,
+   "lon": 100.5756,
+   "cc": "TH",
+   "provider": "Air4Thai · Bangkok (BMA)",
+   "monitor": true,
+   "seen": "2026-11-28"
+  },
+  "a4t:bkp74t": {
+   "name": "Don Mueng District Office, Bangkok",
+   "nameTH": "สำนักงานเขตดอนเมือง",
+   "lat": 13.911,
+   "lon": 100.5949,
+   "cc": "TH",
+   "provider": "Air4Thai · Bangkok (BMA)",
+   "monitor": true,
+   "seen": "2026-11-28"
+  },
+  "a4t:bkp75t": {
+   "name": "Sai Mai District Office, Bangkok",
+   "nameTH": "สำนักงานเขตสายไหม",
+   "lat": 13.896,
+   "lon": 100.6606,
+   "cc": "TH",
+   "provider": "Air4Thai · Bangkok (BMA)",
+   "monitor": true,
+   "seen": "2026-11-28"
+  },
+  "a4t:bkp76t": {
+   "name": "Bang Kapi District Office, Bangkok",
+   "nameTH": "สำนักงานเขตบางกะปิ",
+   "lat": 13.7665,
+   "lon": 100.6478,
+   "cc": "TH",
+   "provider": "Air4Thai · Bangkok (BMA)",
+   "monitor": true,
+   "seen": "2026-11-28"
+  },
+  "a4t:bkp77t": {
+   "name": "Suan Sayam-Ram Intra Intersection",
+   "nameTH": "แยกสวนสยาม-รามอินทรา",
+   "lat": 13.8138,
+   "lon": 100.6866,
+   "cc": "TH",
+   "provider": "Air4Thai · Bangkok (BMA)",
+   "monitor": true,
+   "seen": "2026-11-28"
+  },
+  "a4t:bkp78t": {
+   "name": "Lat Krabang Hospital",
+   "nameTH": "โรงพยาบาลลาดกระบัง",
+   "lat": 13.7221,
+   "lon": 100.7841,
+   "cc": "TH",
+   "provider": "Air4Thai · Bangkok (BMA)",
+   "monitor": true,
+   "seen": "2026-11-28"
+  },
+  "a4t:bkp79t": {
+   "name": "Chaloem Phrakiat Rama 9 Park Min buri, Bangkok",
+   "nameTH": "สวนเฉลิมพระเกียรติ ร.9",
+   "lat": 13.8136,
+   "lon": 100.7321,
+   "cc": "TH",
+   "provider": "Air4Thai · Bangkok (BMA)",
+   "monitor": true,
+   "seen": "2026-11-28"
+  },
+  "a4t:bkp80t": {
+   "name": "Nong Chok District Office, Bangkok",
+   "nameTH": "สำนักงานเขตหนองจอก",
+   "lat": 13.8554,
+   "lon": 100.8627,
+   "cc": "TH",
+   "provider": "Air4Thai · Bangkok (BMA)",
+   "monitor": true,
+   "seen": "2026-11-28"
+  },
+  "a4t:bkp81t": {
+   "name": "Seacon Square",
+   "nameTH": "ซีคอน สแควร์",
+   "lat": 13.6956,
+   "lon": 100.6476,
+   "cc": "TH",
+   "provider": "Air4Thai · Bangkok (BMA)",
+   "monitor": true,
+   "seen": "2026-11-28"
+  },
+  "a4t:bkp82t": {
+   "name": "Mahaisawan Intersection",
+   "nameTH": "แยกมไหศวรรย์",
+   "lat": 13.7052,
+   "lon": 100.4847,
+   "cc": "TH",
+   "provider": "Air4Thai · Bangkok (BMA)",
+   "monitor": true,
+   "seen": "2026-11-28"
+  },
+  "a4t:bkp83t": {
+   "name": "Library under King Taksin Bridge",
+   "nameTH": "ห้องสมุดใต้สะพานสมเด็จพระเจ้าตากสิน",
+   "lat": 13.7197,
+   "lon": 100.5088,
+   "cc": "TH",
+   "provider": "Air4Thai · Bangkok (BMA)",
+   "monitor": true,
+   "seen": "2026-11-28"
+  },
+  "a4t:bkp84t": {
+   "name": "Tha phra Intersection",
+   "nameTH": "สี่แยกท่าพระ",
+   "lat": 13.7294,
+   "lon": 100.4744,
+   "cc": "TH",
+   "provider": "Air4Thai · Bangkok (BMA)",
+   "monitor": true,
+   "seen": "2026-11-28"
+  },
+  "a4t:bkp85t": {
+   "name": "Bangkok Noi Train Police Station",
+   "nameTH": "สถานีตำรวจรถไฟบางกอกน้อย",
+   "lat": 13.7596,
+   "lon": 100.4811,
+   "cc": "TH",
+   "provider": "Air4Thai · Bangkok (BMA)",
+   "monitor": true,
+   "seen": "2026-11-28"
+  },
+  "a4t:bkp86t": {
+   "name": "Phutthamonthon 1 - Borommaratchachonnani Intersection",
+   "nameTH": "ถนนพุทธมณฑลสาย 1 ตัดกับถนนบรมราชชนนี",
+   "lat": 13.7808,
+   "lon": 100.4267,
+   "cc": "TH",
+   "provider": "Air4Thai · Bangkok (BMA)",
+   "monitor": true,
+   "seen": "2026-11-28"
+  },
+  "a4t:bkp87t": {
+   "name": "Thon Buri Market Sanam Luang 2",
+   "nameTH": "ตลาดธนบุรีสนามหลวง 2",
+   "lat": 13.7463,
+   "lon": 100.3551,
+   "cc": "TH",
+   "provider": "Air4Thai · Bangkok (BMA)",
+   "monitor": true,
+   "seen": "2026-11-28"
+  },
+  "a4t:bkp88t": {
+   "name": "Siam University",
+   "nameTH": "มหาวิทยาลัยสยาม",
+   "lat": 13.7187,
+   "lon": 100.4539,
+   "cc": "TH",
+   "provider": "Air4Thai · Bangkok (BMA)",
+   "monitor": true,
+   "seen": "2026-11-28"
+  },
+  "a4t:bkp89t": {
+   "name": "Ma Charean Roadside, Petcha Kasem 8, Nong Khaem",
+   "nameTH": "ริมถนนมาเจริญ เพชรเกษม 8, เขตหนองแขม",
+   "lat": 13.7056,
+   "lon": 100.3432,
+   "cc": "TH",
+   "provider": "Air4Thai · Bangkok (BMA)",
+   "monitor": true,
+   "seen": "2026-11-28"
+  },
+  "a4t:bkp90t": {
+   "name": "Bang Bon 5 Market",
+   "nameTH": "ตลาดบางบอน 5",
+   "lat": 13.6392,
+   "lon": 100.373,
+   "cc": "TH",
+   "provider": "Air4Thai · Bangkok (BMA)",
+   "monitor": true,
+   "seen": "2026-11-28"
+  },
+  "a4t:bkp91t": {
+   "name": "King Mongkut's University of Technology Thonburi ",
+   "nameTH": "มหาวิทยาลัยเทคโนโลยีพระจอมเกล้าธนบุรี",
+   "lat": 13.651,
+   "lon": 100.4967,
+   "cc": "TH",
+   "provider": "Air4Thai · Bangkok (BMA)",
+   "monitor": true,
+   "seen": "2026-11-28"
+  },
+  "a4t:bkp92t": {
+   "name": "Phra Nakhon District Office, Bangkok",
+   "nameTH": "สำนักงานเขตพระนคร",
+   "lat": 13.7642,
+   "lon": 100.4991,
+   "cc": "TH",
+   "provider": "Air4Thai · Bangkok (BMA)",
+   "monitor": true,
+   "seen": "2026-11-28"
+  },
+  "a4t:bkp93t": {
+   "name": "Huai Khwang District Office, Bangkok",
+   "nameTH": "สำนักงานเขตห้วยขวาง",
+   "lat": 13.7768,
+   "lon": 100.5795,
+   "cc": "TH",
+   "provider": "Air4Thai · Bangkok (BMA)",
+   "monitor": true,
+   "seen": "2026-11-28"
+  },
+  "a4t:bkp94t": {
+   "name": "Khlong Toei District Office, Bangkok",
+   "nameTH": "สำนักงานเขตคลองเตย",
+   "lat": 13.7085,
+   "lon": 100.5837,
+   "cc": "TH",
+   "provider": "Air4Thai · Bangkok (BMA)",
+   "monitor": true,
+   "seen": "2026-11-28"
+  },
+  "a4t:bkp95t": {
+   "name": "Bang Sue District Office, Bangkok",
+   "nameTH": "สำนักงานเขตบางซื่อ",
+   "lat": 13.8096,
+   "lon": 100.5379,
+   "cc": "TH",
+   "provider": "Air4Thai · Bangkok (BMA)",
+   "monitor": true,
+   "seen": "2026-11-28"
+  },
+  "a4t:bkp96t": {
+   "name": "Ladphrao District Office, Bangkok",
+   "nameTH": "สำนักงานเขตลาดพร้าว",
+   "lat": 13.8036,
+   "lon": 100.6075,
+   "cc": "TH",
+   "provider": "Air4Thai · Bangkok (BMA)",
+   "monitor": true,
+   "seen": "2026-11-28"
+  },
+  "a4t:bkp97t": {
+   "name": "Lak Si District Office, Bangkok",
+   "nameTH": "สำนักงานเขตหลักสี่",
+   "lat": 13.8874,
+   "lon": 100.5792,
+   "cc": "TH",
+   "provider": "Air4Thai · Bangkok (BMA)",
+   "monitor": true,
+   "seen": "2026-11-28"
+  },
+  "a4t:bkp98t": {
+   "name": "Bang Khen District Office, Bangkok",
+   "nameTH": "สำนักงานเขตบางเขน",
+   "lat": 13.8736,
+   "lon": 100.5958,
+   "cc": "TH",
+   "provider": "Air4Thai · Bangkok (BMA)",
+   "monitor": true,
+   "seen": "2026-11-28"
+  },
+  "a4t:bkp99t": {
+   "name": "Saphan Sung District Office, Bangkok",
+   "nameTH": "สำนักงานเขตสะพานสูง",
+   "lat": 13.7689,
+   "lon": 100.6857,
+   "cc": "TH",
+   "provider": "Air4Thai · Bangkok (BMA)",
+   "monitor": true,
+   "seen": "2026-11-28"
+  },
+  "a4t:bkp100t": {
+   "name": "Bueng Kum District Office, Bangkok",
+   "nameTH": "สำนักงานเขตบึงกุ่ม",
+   "lat": 13.7852,
+   "lon": 100.6692,
+   "cc": "TH",
+   "provider": "Air4Thai · Bangkok (BMA)",
+   "monitor": true,
+   "seen": "2026-11-28"
+  },
+  "a4t:bkp101t": {
+   "name": "Khlong Sam Wa District Office, Bangkok",
+   "nameTH": "สำนักงานเขตคลองสามวา",
+   "lat": 13.8599,
+   "lon": 100.704,
+   "cc": "TH",
+   "provider": "Air4Thai · Bangkok (BMA)",
+   "monitor": true,
+   "seen": "2026-11-28"
+  },
+  "a4t:bkp102t": {
+   "name": "Chomthong District Office, Bangkok",
+   "nameTH": "สำนักงานเขตจอมทอง",
+   "lat": 13.6778,
+   "lon": 100.4839,
+   "cc": "TH",
+   "provider": "Air4Thai · Bangkok (BMA)",
+   "monitor": true,
+   "seen": "2026-11-28"
+  },
+  "a4t:bkp103t": {
+   "name": "Bang Phlat District Office, Bangkok",
+   "nameTH": "สำนักงานเขตบางพลัด",
+   "lat": 13.794,
+   "lon": 100.505,
+   "cc": "TH",
+   "provider": "Air4Thai · Bangkok (BMA)",
+   "monitor": true,
+   "seen": "2026-11-28"
+  },
+  "a4t:bkp104t": {
+   "name": "Bang Khae District Office, Bangkok",
+   "nameTH": "สำนักงานเขตบางแค",
+   "lat": 13.6963,
+   "lon": 100.409,
+   "cc": "TH",
+   "provider": "Air4Thai · Bangkok (BMA)",
+   "monitor": true,
+   "seen": "2026-11-28"
+  },
+  "a4t:bkp105t": {
+   "name": "Bang Khun Thian District Office, Bangkok",
+   "nameTH": "สำนักงานเขตบางขุนเทียน",
+   "lat": 13.6599,
+   "lon": 100.4359,
+   "cc": "TH",
+   "provider": "Air4Thai · Bangkok (BMA)",
+   "monitor": true,
+   "seen": "2026-11-28"
+  },
+  "a4t:bkp114t": {
+   "name": "Lumpini park",
+   "nameTH": "สวนลุมพินี ถนนพระราม 4 แขวงวังใหม่ เขตปทุมวัน",
+   "lat": 13.7322,
+   "lon": 100.5448,
+   "cc": "TH",
+   "provider": "Air4Thai · Bangkok (BMA)",
+   "monitor": true,
+   "seen": "2026-11-28"
+  },
+  "a4t:bkp115t": {
+   "name": "Wacchirabenchatat Park",
+   "nameTH": "สวนวชิรเบญจทัศ ถนนกำแพงเพชร 3 แขวงลาดยาว เขตจตุจักร",
+   "lat": 13.8119,
+   "lon": 100.5536,
+   "cc": "TH",
+   "provider": "Air4Thai · Bangkok (BMA)",
+   "monitor": true,
+   "seen": "2026-11-28"
+  },
+  "a4t:bkp116t": {
+   "name": "Chatuchak Park",
+   "nameTH": "สวนจตุจักร ถนนพหลโยธิน แขวงจตุจักร เขตจตุจักร",
+   "lat": 13.8025,
+   "lon": 100.5509,
+   "cc": "TH",
+   "provider": "Air4Thai · Bangkok (BMA)",
+   "monitor": true,
+   "seen": "2026-11-28"
+  },
+  "a4t:bkp117t": {
+   "name": "Suan Luang Rama IX",
+   "nameTH": "สวนหลวง ร.9 ถนนเฉลิมพระเกียรติ ร.9 แขวงหนองบอน เขตประเวศ",
+   "lat": 13.6881,
+   "lon": 100.658,
+   "cc": "TH",
+   "provider": "Air4Thai · Bangkok (BMA)",
+   "monitor": true,
+   "seen": "2026-11-28"
+  },
+  "a4t:bkp118t": {
+   "name": "60th Anniversary of Queen Sirikit Park ,Kheha Romklao Road, Lat Krabang, Bangkok",
+   "nameTH": "สวน 60 พรรษาสมเด็จพระนางเจ้าพระบรมราชินีนาถ ถนนเคหะร่มเกล้า เขตลาดกระบัง",
+   "lat": 13.7631,
+   "lon": 100.7302,
+   "cc": "TH",
+   "provider": "Air4Thai · Bangkok (BMA)",
+   "monitor": true,
+   "seen": "2026-11-28"
+  },
+  "a4t:bkp119t": {
+   "name": "Benchasiri Park",
+   "nameTH": "อุทยานเบญจสิริ",
+   "lat": 13.7305,
+   "lon": 100.5685,
+   "cc": "TH",
+   "provider": "Air4Thai · Bangkok (BMA)",
+   "monitor": true,
+   "seen": "2026-11-28"
+  },
+  "a4t:bkp120t": {
+   "name": "Rommani Thungsikan Park",
+   "nameTH": "สวนรมณีย์ทุ่งสีกัน",
+   "lat": 13.9289,
+   "lon": 100.5685,
+   "cc": "TH",
+   "provider": "Air4Thai · Bangkok (BMA)",
+   "monitor": true,
+   "seen": "2026-11-28"
+  },
+  "a4t:bkp121t": {
+   "name": "Thonburirom Park",
+   "nameTH": "สวนธนบุรีรมย์",
+   "lat": 13.6502,
+   "lon": 100.491,
+   "cc": "TH",
+   "provider": "Air4Thai · Bangkok (BMA)",
+   "monitor": true,
+   "seen": "2026-11-28"
+  },
+  "a4t:bkp122t": {
+   "name": "Benjakitti Park",
+   "nameTH": "สวนเบญจกิติ",
+   "lat": 13.7329,
+   "lon": 100.56,
+   "cc": "TH",
+   "provider": "Air4Thai · Bangkok (BMA)",
+   "monitor": true,
+   "seen": "2026-11-28"
+  },
+  "a4t:bkp123t": {
+   "name": "Queen Sirikit Park",
+   "nameTH": "สวนสมเด็จพระนางเจ้าสิริกิติ์ฯ",
+   "lat": 13.8055,
+   "lon": 100.5488,
+   "cc": "TH",
+   "provider": "Air4Thai · Bangkok (BMA)",
+   "monitor": true,
+   "seen": "2026-11-28"
+  },
+  "a4t:bkp124t": {
+   "name": "80th Anniversary Commemoration Park",
+   "nameTH": "สวนเฉลิมพระเกียรติ 80 พรรษา",
+   "lat": 13.7716,
+   "lon": 100.4681,
+   "cc": "TH",
+   "provider": "Air4Thai · Bangkok (BMA)",
+   "monitor": true,
+   "seen": "2026-11-28"
+  },
+  "a4t:bkp125t": {
+   "name": "Serithai Park",
+   "nameTH": "สวนเสรีไทย",
+   "lat": 13.7856,
+   "lon": 100.6733,
+   "cc": "TH",
+   "provider": "Air4Thai · Bangkok (BMA)",
+   "monitor": true,
+   "seen": "2026-11-28"
+  },
+  "a4t:bkp126t": {
+   "name": "Bang Khae Phirom Park",
+   "nameTH": "สวนบางแคภิรมย์",
+   "lat": 13.6863,
+   "lon": 100.3844,
+   "cc": "TH",
+   "provider": "Air4Thai · Bangkok (BMA)",
+   "monitor": true,
+   "seen": "2026-11-28"
+  },
+  "a4t:bkp127t": {
+   "name": "Thawee Wanarom Park",
+   "nameTH": "สวนทวีวนารมย์",
+   "lat": 13.7435,
+   "lon": 100.3527,
+   "cc": "TH",
+   "provider": "Air4Thai · Bangkok (BMA)",
+   "monitor": true,
+   "seen": "2026-11-28"
+  },
+  "a4t:bkp128t": {
+   "name": "Phra Nakhon Park",
+   "nameTH": "สวนพระนคร",
+   "lat": 13.7201,
+   "lon": 100.7807,
+   "cc": "TH",
+   "provider": "Air4Thai · Bangkok (BMA)",
+   "monitor": true,
+   "seen": "2026-11-28"
+  },
+  "a4t:bkp129t": {
+   "name": "Nong Chok Park",
+   "nameTH": "สวนหนองจอก",
+   "lat": 13.8557,
+   "lon": 100.8586,
+   "cc": "TH",
+   "provider": "Air4Thai · Bangkok (BMA)",
+   "monitor": true,
+   "seen": "2026-11-28"
+  },
+  "a4t:bkp130t": {
+   "name": "Ramintra Sports Park",
+   "nameTH": "สวนกีฬารามอินทรา",
+   "lat": 13.8779,
+   "lon": 100.6207,
+   "cc": "TH",
+   "provider": "Air4Thai · Bangkok (BMA)",
+   "monitor": true,
+   "seen": "2026-11-28"
+  },
+  "a4t:bkp131t": {
+   "name": "Public Park to commemorate the sixth anniversary of His Majesty the King",
+   "nameTH": "สวนสาธารณะเฉลิมพระเกียรติ 6 รอบพระชนมพรรษา",
+   "lat": 13.6855,
+   "lon": 100.5183,
+   "cc": "TH",
+   "provider": "Air4Thai · Bangkok (BMA)",
+   "monitor": true,
+   "seen": "2026-11-28"
+  },
+  "a4t:bkp133t": {
+   "name": "Rama VIII Park",
+   "nameTH": "สวนหลวงพระราม 8",
+   "lat": 13.7693,
+   "lon": 100.4945,
+   "cc": "TH",
+   "provider": "Air4Thai · Bangkok (BMA)",
+   "monitor": true,
+   "seen": "2026-11-28"
+  },
+  "a4t:o10": {
+   "name": "National Housing Authority Klongchan",
+   "nameTH": "เคหะชุมชนคลองจั่น",
+   "lat": 13.7799,
+   "lon": 100.646,
+   "cc": "TH",
+   "provider": "Air4Thai",
+   "monitor": true,
+   "seen": "2026-11-28"
+  },
+  "a4t:o61": {
+   "name": "Laem Chabang Municipal Stadium",
+   "nameTH": "สนามกีฬาเทศบาลแหลมฉบัง ",
+   "lat": 13.1192,
+   "lon": 100.9186,
+   "cc": "TH",
+   "provider": "Air4Thai",
+   "monitor": true,
+   "seen": "2026-11-28"
+  },
+  "a4t:o69": {
+   "name": "Water reservoir",
+   "nameTH": "อ่างเก็บน้ำประปา",
+   "lat": 13.8321,
+   "lon": 100.058,
+   "cc": "TH",
+   "provider": "Air4Thai",
+   "monitor": true,
+   "seen": "2026-11-28"
+  }
+ }
+}

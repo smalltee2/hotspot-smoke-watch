@@ -10,6 +10,7 @@
 //   latest/met/state/runlog/verify JSON are published to GitHub Pages and carried between runs in the Actions cache, not committed
 import fs from 'node:fs/promises';
 import { mergeStations } from './stationlist.mjs';
+import { PMNOW, errNow, nowcastSeries, storeForecast, pmNowCheck } from './pmnow.mjs';
 import path from 'node:path';
 import { buildDEM, sampleGrid } from './dem.mjs';
 import { regressionKriging, krigeField, clampAux } from './rk.mjs';
@@ -955,6 +956,15 @@ async function main() {
         log(m); if (process.env.GITHUB_ACTIONS) console.log(`::notice title=PM2.5 correction v2::${m}`);
         mlRec.v2 = { ...rec2, check: k }; await writeJSON(path.join(DATA, 'history', yday.slice(0, 7), `ml-${yday.replace(/-/g, '')}.json`), mlRec);
       } catch (e) { log(`PM2.5 correction v2 daily learning failed: ${e.message}`); if (process.env.GITHUB_ACTIONS) console.log(`::warning title=PM2.5 correction v2::${e.message}`); }
+      // the nowcast's daily check (scripts/pmnow.mjs): last 14 days, published only while it passes
+      try {
+        state.pmNow ||= { since: now };
+        const obsN = await loadObsHourly(path.join(DATA, 'history'), dayEnd - (PMNOW.checkDays + 2) * 864e5);
+        const k = state.pmNow.check = await pmNowCheck(path.join(DATA, 'history'), dayEnd, obsN, PMNOW.checkDays, state.pmNow.since || 0);
+        const m = `PM2.5 nowcast check (${k.days} d, ${k.n} station-hours at leads 1–${PMNOW.maxLeadH} h, ${k.high} at >= 37.5): caught ${k.hit2} with vs ${k.hit1} without, false alarms ${Math.round(k.fa2 * 100)} % vs ${Math.round(k.fa1 * 100)} %, RMSE ${k.rmse2} vs ${k.rmse1} -> ${!k.decided ? 'not enough days of rows yet, logged only' : k.ok ? 'published' : 'logged only'}`;
+        log(m); if (process.env.GITHUB_ACTIONS) console.log(`::notice title=PM2.5 nowcast::${m}`);
+        if (mlRec) { mlRec.nowcast = k; await writeJSON(path.join(DATA, 'history', yday.slice(0, 7), `ml-${yday.replace(/-/g, '')}.json`), mlRec); }
+      } catch (e) { log(`PM2.5 nowcast check failed: ${e.message}`); }
     } catch (e) { log(`ML daily learning failed: ${e.message}`); }
   }
   const mlOn = mlActive(state, season); let mlField = null;
@@ -1025,6 +1035,18 @@ async function main() {
       }
     } catch (e) { log(`ML map field failed: ${e.message}`); }
   }
+  // short-range nowcast at the hourly stations (scripts/pmnow.mjs, owner 28 Nov 2026): the newest measured hour's error against the
+  // forecast an earlier run made for it, carried into the next 1–6 h with a fade. Always computed and logged (correctedPre /
+  // correctedNC); it replaces the published station series only while its 14-day check passes. The map is not changed.
+  const ncOf = new Map(), preOf = new Map(); state.pmNow ||= { since: now }; state.pmNowFc ||= {};
+  { const useNC = state.pmNow.check?.ok === true, ids = new Set(); let nE = 0;
+    outStations.forEach((o, i) => { const s = stations[i]; if (!s.hourly) return; const base = o.corrM || o.corrA || o.corr; if (!base) return; ids.add(String(s.id));
+      const rows = a4tH.get(s.id) || [], e = errNow(rows[rows.length - 1], state.pmNowFc[s.id], now), nc = nowcastSeries(base, hours, t0, jNow, e);
+      preOf.set(s.id, base); ncOf.set(s.id, nc); if (e != null) nE++;
+      storeForecast(state.pmNowFc, s.id, base, hours, jNow, now);
+      if (useNC && e != null) { if (o.corrM) o.corrM = nc; else if (o.corrA) o.corrA = nc; else o.corr = nc; } });
+    for (const id of Object.keys(state.pmNowFc)) if (!ids.has(String(id))) delete state.pmNowFc[id];
+    log(`PM2.5 nowcast (1–${PMNOW.maxLeadH} h): ${nE} of ${preOf.size} hourly stations with a recent measured error; ${useNC ? 'published' : 'logged only'}`); }
 
   globalThis.TIMER('rk...');
   // 5. regression kriging (RIMM-type) at the analysis hour, in log space:
@@ -1184,9 +1206,9 @@ async function main() {
       s.fc24 ? m24(s.raw, j) : '', s.fc24 ? m24(s.corr, j) : '', s.fc24?.[j] != null ? s.fc24[j] : '', s.avg24 ? '24' : 'h',
       s.corrA?.[j] ?? '', s.fc24A?.[j] != null ? s.fc24A[j] : '', s.corrM?.[j] ?? '', s.fc24M?.[j] != null ? s.fc24M[j] : '',
       ...(() => { const i = stIndex.get(s.id), f = feats(stations[i], i, j); return FEAT_COLS.map(k => f[k] === '' || f[k] == null ? '' : (typeof f[k] === 'number' ? +f[k].toFixed(3) : f[k])); })(), s.monitor ? 1 : 0,
-      corr1Of.get(s.id)?.[j] ?? '', corr2Of.get(s.id)?.[j] ?? '']); }   // the live correction and the candidate v2, whichever is published (correctedML)
+      corr1Of.get(s.id)?.[j] ?? '', corr2Of.get(s.id)?.[j] ?? '', preOf.get(s.id)?.[j] ?? '', ncOf.get(s.id)?.[j] ?? '']); }   // the live correction and the candidate v2, whichever is published (correctedML); the series without / with the nowcast
   const fcstFile = path.join(hdir, `fcst-${stamp}.csv`);   // one file per issue hour: a second run in the same hour must not double-count it
-  if (await fs.access(fcstFile).then(() => false, () => true)) await appendCSV(fcstFile, 'issued_utc,valid_utc,station_id,lead_h,cams_raw,corrected,cams24,corr24,blend24,obs_basis,correctedA,blend24A,correctedML,blend24ML,' + FEAT_COLS.join(',') + ',monitor,correctedML1,correctedML2', fRows);
+  if (await fs.access(fcstFile).then(() => false, () => true)) await appendCSV(fcstFile, 'issued_utc,valid_utc,station_id,lead_h,cams_raw,corrected,cams24,corr24,blend24,obs_basis,correctedA,blend24A,correctedML,blend24ML,' + FEAT_COLS.join(',') + ',monitor,correctedML1,correctedML2,correctedPre,correctedNC', fRows);
   else log(`forecast log for ${stamp} already written this hour`);
   // long-lead forecasts beside the station climatology, to fit CFG.climBlend (scripts/fit_clim_blend.mjs): the published hourly
   // forecast F and the climatological mean and 90th percentile of the station for the valid month and hour; every 3 h
